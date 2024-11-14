@@ -7,23 +7,22 @@ The `HLEN` command in DiceDB is used to obtain the number of fields contained wi
 
 ## Syntax
 
-```
+```bash
 HLEN key
 ```
 
 ## Parameters
 
-| Parameter       | Description                                                                              | Type    | Required |
-|-----------------|------------------------------------------------------------------------------------------|---------|----------|
-| `key`           | The key associated with the hash for which the number of fields is to be retrieved       | String  | Yes      |
-
+| Parameter | Description                                                                        | Type   | Required |
+| --------- | ---------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key associated with the hash for which the number of fields is to be retrieved | String | Yes      |
 
 ## Return Value
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| If specified key exists                        | number of fields in the hash at key               |
-| If key doesn't exist                           | `0`                                               |
+| Condition               | Return Value                        |
+| ----------------------- | ----------------------------------- |
+| If specified key exists | number of fields in the hash at key |
+| If key doesn't exist    | `0`                                 |
 
 ## Behaviour
 
@@ -44,36 +43,38 @@ HLEN key
    - Error Message: `(error) -ERR wrong number of arguments for 'HLEN' command`
    - Occurs if key isn't specified in the command.
 
-
 ## Example Usage
 
 ### Basic Usage
+
 Creating hash `myhash` with two fields `field1` and `field2`. Getting hash length of `myhash`.
 
-```DiceDB
-> HSET myhash field1 "value1" field2 "value2"
+```bash
+127.0.0.1:7379> HSET myhash field1 "value1" field2 "value2"
 (integer) 2
 
-> HLEN myhash
+127.0.0.1:7379> HLEN myhash
 (integer) 2
 ```
 
 ### Invalid Usage on non-existent key
+
 Getting hash length from a non-existent hash key `nonExistentHash`.
 
-```DiceDB
-> HLEN nonExistentHash
+```bash
+127.0.0.1:7379> HLEN nonExistentHash
 (integer) 0
 ```
 
 ### Invalid Usage on non-hash key
+
 Getting hash length from a key `mystring` associated with a non-hash type.
 
-```DiceDB
-> SET mystring "This is a string"
+```bash
+127.0.0.1:7379> SET mystring "This is a string"
 OK
 
-> HLEN mystring
+127.0.0.1:7379> HLEN mystring
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
@@ -83,4 +84,3 @@ OK
 - This command is useful for quickly determining the size of a hash without needing to retrieve all the fields and values.
 
 By understanding the `HLEN` command, you can efficiently manage and interact with hash data structures in DiceDB, ensuring that your applications can handle hash-based data effectively.
-

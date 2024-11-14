@@ -7,7 +7,7 @@ The `EXPIREAT` command is used to set the expiration time of a key in DiceDB. Un
 
 ## Syntax
 
-```plaintext
+```bash
 EXPIREAT key timestamp [NX|XX|GT|LT]
 ```
 
@@ -22,68 +22,46 @@ EXPIREAT key timestamp [NX|XX|GT|LT]
 | `GT`        | Set the expiration only if the new expiration time is greater than or equal to the current one. | None    | No       |
 | `LT`        | Set the expiration only if the new expiration time is less than the current one.                | None    | No       |
 
-## Return values
+## Return Values
 
-| Condition                                          | Return Value |
-| -------------------------------------------------- | ------------ |
-| Command is successful                              | `1`          |
-| Key does not exist or the timeout could not be set | `0`          |
-| Syntax or specified constraints are invalid        | error        |
+| Condition                                                              | Return Value |
+| ---------------------------------------------------------------------- | ------------ |
+| Timeout was successfully set.                                          | `1`          |
+| Timeout was not set (e.g., key does not exist, or conditions not met). | `0`          |
 
 ## Behaviour
 
 - When the `EXPIREAT` command is executed, DiceDB will set the expiration time of the specified key to the given Unix timestamp.
 - If the key already has an expiration time, it will be overwritten with the new timestamp.
-- If the key does not exist, the command will return `0` and no expiration time will be set.
+- If the key does not exist, no timeout is set, and the command returns `0`.
+- Conditional flags (NX, XX, GT, LT) control when the expiry can be set based on existing timeouts.
 
 ## Errors
 
-### Wrong number of arguments
+1. `Syntax Error`:
 
-When the `EXPIREAT` command is called with the wrong number of arguments, an error is returned.
+   - Error Message: `(error) ERROR wrong number of arguments for 'expireat' command`
+   - Returned if the command is issued with an incorrect number of arguments.
 
-```bash
-127.0.0.1:7379> EXPIREAT testkey1
-(error) ERROR wrong number of arguments for 'EXPIREAT' command
-```
+2. `Invalid Timestamp`:
 
-### Invalid timestamp
+   - Error Message: `(error) ERROR value is not an integer or out of range`
+   - Returned if the timestamp is not a valid integer.
 
-When the provided timestamp is not a valid integer, an error is returned.
-
-```bash
-127.0.0.1:7379> EXPIREAT testkey1 17282112781a
-(error) ERROR value is not an integer or out of range
-```
-
-### Invalid format of Unix Timestamp
-
-When the provided timestamp is not a valid Unix timestamp, or is outside the supported range, an error is returned.
-
-```bash
-127.0.0.1:7379> EXPIREAT testkey1 11111111111111111
-(error) ERROR invalid expire time in 'EXPIREAT' command
-```
+3. `Invalid Unix Timestamp Format`:
+   - Error Message: `(error) ERROR invalid expire time in 'EXPIREAT' command`
+   - Returned if the timestamp is outside the supported range.
 
 ## Example Usage
 
-### Setting an Expiration Time
+### Basic Usage
 
-Setting a key `mykey` to expire at the Unix timestamp `17282126871`.
+This example demonstrates setting a key to expire at a specific Unix timestamp.
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
 OK
-127.0.0.1:7379> EXPIREAT mykey 17282126871
-(integer) 1
-```
-
-### Checking the expiration time
-
-Checking the remaining time to live of a key (in seconds).
-
-```bash
-127.0.0.1:7379> EXPIREAT mykey 17282126871
+127.0.0.1:7379> EXPIREAT mykey 1728212687
 (integer) 1
 127.0.0.1:7379> TTL mykey
 (integer) 15553913293
@@ -94,11 +72,11 @@ Checking the remaining time to live of a key (in seconds).
 Trying to set an expiration time for a non-existing key.
 
 ```bash
-127.0.0.1:7379> EXPIREAT nonexistingkey 17282126871
+127.0.0.1:7379> EXPIREAT nonexistingkey 1728212687
 (integer) 0
 ```
 
-### Setting an EXPIRYTIME only if not exists
+### Setting an EXPIRYTIME with NX option
 
 Here, the `NX` option is used to set the expiration time only if the key does not already have an expiration time.
 
@@ -111,43 +89,43 @@ OK
 (integer) 0
 ```
 
-### Setting an EXPIRYTIME only if it already has one
+### Setting an EXPIRYTIME with XX option
 
 Here, the `XX` option is used to set the expiration time only if the key already has an expiration time.
 
 ```bash
 127.0.0.1:7379> SET key value
-OK                                                                           
+OK
 127.0.0.1:7379> EXPIREAT key 12345677777 XX
 (integer) 0
 127.0.0.1:7379> EXPIREAT key 12345677777
 (integer) 1
-127.0.0.1:7379> EXPIREAT key 123456777722 XX 
+127.0.0.1:7379> EXPIREAT key 123456777722 XX
 (integer) 1
 ```
 
-### Setting an EXPIRYTIME only if the new expiry time is greater than or equal to the current one
+### Setting an EXPIRYTIME with GT option
 
 The `GT` option is used to set the expiration time only if the new expiration time is greater than or equal to the current one.
 
 ```bash
 127.0.0.1:7379> SET key value
-OK                             
+OK
 127.0.0.1:7379> EXPIREAT key 12334444444
 (integer) 1
-127.0.0.1:7379> EXPIREAT key 12334444424 GT 
+127.0.0.1:7379> EXPIREAT key 12334444424 GT
 (integer) 0
-127.0.0.1:7379> EXPIREAT key 12334444524 GT 
+127.0.0.1:7379> EXPIREAT key 12334444524 GT
 (integer) 1
 ```
 
-### Setting an EXPIRYTIME only if the new expiry time is less than or equal to the current one
+### Setting an EXPIRYTIME with LT option
 
 Similar to the `GT` option, the `LT` option is used to set the expiration time only if the new expiration time is less than (or equal to) the current one.
 
 ```bash
 127.0.0.1:7379> SET key value
-OK          
+OK
 127.0.0.1:7379> EXPIREAT key 12334444444
 (integer) 1
 127.0.0.1:7379> EXPIREAT key 12334444445 LT
@@ -156,17 +134,14 @@ OK
 (integer) 1
 ```
 
-## Additional notes
+## Best Practices
 
-- The `EXPIREAT` command is useful when you need to synchronize the expiration of keys across multiple DiceDB instances or when you need to set an expiration time based on an external event that provides a Unix timestamp.
-- The timestamp should be in seconds. If you have a timestamp in milliseconds, you need to convert it to seconds before using it with `EXPIREAT`.
-- There is an arbitrary limit to the size of the `unix-time-seconds` of [9223372036854775](https://github.com/DiceDB/dice/blob/b74dc8ffd5e518eaa9b82020d2b25a592c6472d4/internal/eval/eval.go#L69).
+- Use `TTL` command to check remaining time before expiration
+- Consider using `PERSIST` command to remove expiration if needed
+- Choose appropriate conditional flags (NX, XX, GT, LT) based on your use case
+- Ensure Unix timestamps are in seconds, not milliseconds
+- Be aware of the timestamp limit of [9223372036854775]
 
-## Related commands
+## Alternatives
 
-- `EXPIRE`: Sets the expiration time of a key in seconds from the current time.
-- `PEXPIREAT`: Sets the expiration time of a key as an absolute Unix timestamp in milliseconds.
-- `TTL`: Returns the remaining time to 127.0.0.1:7379 of a key in seconds.
-- `PTTL`: Returns the remaining time to live of a key in milliseconds.
-
-By understanding and using the `EXPIREAT` command, you can effectively manage the lifecycle of keys in your DiceDB database, ensuring that data is available only as long as it is needed.
+- Use `EXPIRE` command for simpler expiration control based on relative time

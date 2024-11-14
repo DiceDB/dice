@@ -7,19 +7,18 @@ The `HSCAN` command is used to incrementally iterate over the fields of a hash s
 
 ## Syntax
 
-```
+```bash
 HSCAN key cursor [MATCH pattern] [COUNT count]
 ```
 
 ## Parameters
 
-| Parameter       | Description                                                                                              | Type     | Required |
-|-----------------|----------------------------------------------------------------------------------------------------------|---------|----------|
-| `key`           | The key of the hash to scan.                                                                             | String   | Yes      |
-| `cursor`        | The cursor indicating the starting position of the scan.                                                 | String   | Yes      |
-| `MATCH pattern` | Specifies a pattern to match against the fields. Only the fields that match the pattern will be returned.| String   | No       |
-| `COUNT count`   | Specifies the maximum number of fields to return.                                                        | String   | Yes      |
-
+| Parameter       | Description                                                                                               | Type   | Required |
+| --------------- | --------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`           | The key of the hash to scan.                                                                              | String | Yes      |
+| `cursor`        | The cursor indicating the starting position of the scan.                                                  | String | Yes      |
+| `MATCH pattern` | Specifies a pattern to match against the fields. Only the fields that match the pattern will be returned. | String | No       |
+| `COUNT count`   | Specifies the maximum number of fields to return.                                                         | String | Yes      |
 
 ## Return Value
 
@@ -48,34 +47,37 @@ The `HSCAN` command returns an array containing the next cursor and the matching
 ## Examples
 
 ### Basic Usage
+
 Creating a hash `myhash` with two fields `field1` and `field2`. Getting `HSCAN` on `myhash` with valid cursors.
 
 ```bash
-> HSET myhash field1 "value1" field2 "value2"
+127.0.0.1:7379> HSET myhash field1 "value1" field2 "value2"
 1) (integer) 2
 
-> HSCAN myhash 0
+127.0.0.1:7379> HSCAN myhash 0
 1) "2"
 2) 1) "field1"
    2) "value1"
    3) "field2"
    4) "value2"
 
-> HSCAN myhash 0 MATCH field* COUNT 1
+127.0.0.1:7379> HSCAN myhash 0 MATCH field* COUNT 1
 1) "1"
 2) 1) "field1"
    2) "value1"
 
-> HSCAN myhash 1 MATCH field* COUNT 1
+127.0.0.1:7379> HSCAN myhash 1 MATCH field* COUNT 1
 1) "0"
 2) 1) "field2"
    2) "value2"
 ```
+
 ### Invalid Usage on non-existent key
-Getting `HSCAN` on nonExistentHash.
+
+Getting `HSCAN` on `nonExistentHash`.
 
 ```bash
-> HSCAN nonExistentHash 0
+127.0.0.1:7379> HSCAN nonExistentHash 0
 1) "0"
 2) (empty array)
 ```

@@ -12,11 +12,15 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
+	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/wal"
+	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -27,6 +31,13 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/worker"
 )
+
+type configEntry struct {
+	Key   string
+	Value interface{}
+}
+
+var configTable = []configEntry{}
 
 func init() {
 	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the DiceDB server")
@@ -46,14 +57,22 @@ func init() {
 	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
 
 	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
+	flag.StringVar(&config.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
+
+	flag.BoolVar(&config.EnableWAL, "enable-wal", false, "enable write-ahead logging")
+	flag.BoolVar(&config.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
+	flag.StringVar(&config.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
 
 	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
 	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
 	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
+
 	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the DiceDB server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
+	flag.Float64Var(&config.EvictionRatio, "eviction-ratio", 0.1, "ratio of keys to evict when the "+
+		"keys limit is reached")
 
 	flag.Parse()
 
@@ -65,23 +84,94 @@ func init() {
 	slog.SetDefault(logger.New())
 }
 
-func main() {
+func printSplash() {
 	fmt.Print(`
-██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
-██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
-██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
-██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
-██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
-╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
+	██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
+	██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
+	██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
+	██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
+	██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
+	╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
+			
+	`)
+}
 
-`)
-	slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))
-	slog.Info("running with", slog.Int("port", config.Port))
-	slog.Info("running with", slog.Bool("enable-watch", config.EnableWatch))
+// configuration function used to add configuration values to the print table at the startup.
+// add entry to this function to add a new row in the startup configuration table.
+func configuration() {
+	// Add the version of the DiceDB to the configuration table
+	addEntry("Version", config.DiceDBVersion)
 
-	if config.EnableProfiling {
-		slog.Info("running with", slog.Bool("enable-profiling", config.EnableProfiling))
+	// Add the port number on which DiceDB is running to the configuration table
+	addEntry("Port", config.Port)
+
+	// Add whether multi-threading is enabled to the configuration table
+	addEntry("Multi Threading Enabled", config.EnableMultiThreading)
+
+	// Add the number of CPU cores available on the machine to the configuration table
+	addEntry("Cores", runtime.NumCPU())
+
+	// Conditionally add the number of shards to be used for DiceDB to the configuration table
+	if config.EnableMultiThreading {
+		if config.NumShards > 0 {
+			configTable = append(configTable, configEntry{"Shards", config.NumShards})
+		} else {
+			configTable = append(configTable, configEntry{"Shards", runtime.NumCPU()})
+		}
+	} else {
+		configTable = append(configTable, configEntry{"Shards", 1})
 	}
+
+	// Add whether the watch feature is enabled to the configuration table
+	addEntry("Watch Enabled", config.EnableWatch)
+
+	// Add whether the watch feature is enabled to the configuration table
+	addEntry("HTTP Enabled", config.EnableHTTP)
+
+	// Add whether the watch feature is enabled to the configuration table
+	addEntry("Websocket Enabled", config.EnableWebsocket)
+}
+
+func addEntry(k string, v interface{}) {
+	configTable = append(configTable, configEntry{k, v})
+}
+
+// printConfigTable prints key-value pairs in a vertical table format.
+func printConfigTable() {
+	configuration()
+
+	// Find the longest key to align the values properly
+	maxKeyLength := 0
+	maxValueLength := 20 // Default value length for alignment
+	for _, entry := range configTable {
+		if len(entry.Key) > maxKeyLength {
+			maxKeyLength = len(entry.Key)
+		}
+		if len(fmt.Sprintf("%v", entry.Value)) > maxValueLength {
+			maxValueLength = len(fmt.Sprintf("%v", entry.Value))
+		}
+	}
+
+	// Create the table header and separator line
+	fmt.Println()
+	totalWidth := maxKeyLength + maxValueLength + 7 // 7 is for spacing and pipes
+	fmt.Println(strings.Repeat("-", totalWidth))
+	fmt.Printf("| %-*s | %-*s |\n", maxKeyLength, "Configuration", maxValueLength, "Value")
+	fmt.Println(strings.Repeat("-", totalWidth))
+
+	// Print each configuration key-value pair without row lines
+	for _, entry := range configTable {
+		fmt.Printf("| %-*s | %-20v |\n", maxKeyLength, entry.Key, entry.Value)
+	}
+
+	// Final bottom line
+	fmt.Println(strings.Repeat("-", totalWidth))
+	fmt.Println()
+}
+
+func main() {
+	printSplash()
+	printConfigTable()
 
 	go observability.Ping()
 
@@ -92,10 +182,52 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		queryWatchChan chan dstore.QueryWatchEvent
-		cmdWatchChan   chan dstore.CmdWatchEvent
-		serverErrCh    = make(chan error, 2)
+		queryWatchChan           chan dstore.QueryWatchEvent
+		cmdWatchChan             chan dstore.CmdWatchEvent
+		serverErrCh              = make(chan error, 2)
+		cmdWatchSubscriptionChan = make(chan watchmanager.WatchSubscription)
+		wl                       wal.AbstractWAL
 	)
+
+	wl, _ = wal.NewNullWAL()
+	slog.Info("running with", slog.Bool("enable-wal", config.EnableWAL))
+	if config.EnableWAL {
+		if config.WALEngine == "sqlite" {
+			_wl, err := wal.NewSQLiteWAL(config.LogDir)
+			if err != nil {
+				slog.Warn("could not create WAL with", slog.String("wal-engine", config.WALEngine), slog.Any("error", err))
+				sigs <- syscall.SIGKILL
+				return
+			}
+			wl = _wl
+		} else if config.WALEngine == "aof" {
+			_wl, err := wal.NewAOFWAL(config.LogDir)
+			if err != nil {
+				slog.Warn("could not create WAL with", slog.String("wal-engine", config.WALEngine), slog.Any("error", err))
+				sigs <- syscall.SIGKILL
+				return
+			}
+			wl = _wl
+		} else {
+			slog.Error("unsupported WAL engine", slog.String("engine", config.WALEngine))
+			sigs <- syscall.SIGKILL
+			return
+		}
+
+		if err := wl.Init(time.Now()); err != nil {
+			slog.Error("could not initialize WAL", slog.Any("error", err))
+		} else {
+			go wal.InitBG(wl)
+		}
+
+		slog.Debug("WAL initialization complete")
+
+		if config.RestoreFromWAL {
+			slog.Info("restoring database from WAL")
+			wal.ReplayWAL(wl)
+			slog.Info("database restored from WAL")
+		}
+	}
 
 	if config.EnableWatch {
 		bufSize := config.DiceConfig.Performance.WatchChanBufSize
@@ -114,10 +246,8 @@ func main() {
 		if config.NumShards > 0 {
 			numShards = config.NumShards
 		}
-		slog.Info("running with", slog.String("mode", "multi-threaded"), slog.Int("num-shards", numShards))
 	} else {
 		numShards = 1
-		slog.Info("running with", slog.String("mode", "single-threaded"))
 	}
 
 	// The runtime.GOMAXPROCS(numShards) call limits the number of operating system
@@ -150,11 +280,11 @@ func main() {
 		}
 
 		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchChan, serverErrCh)
+		respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, respServer, serverErrCh)
 	} else {
-		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan)
+		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, wl)
 		if err := asyncServer.FindPortAndBind(); err != nil {
 			slog.Error("Error finding and binding port", slog.Any("error", err))
 			sigs <- syscall.SIGKILL
@@ -164,14 +294,14 @@ func main() {
 		go runServer(ctx, &serverWg, asyncServer, serverErrCh)
 
 		if config.EnableHTTP {
-			httpServer := server.NewHTTPServer(shardManager)
+			httpServer := server.NewHTTPServer(shardManager, wl)
 			serverWg.Add(1)
 			go runServer(ctx, &serverWg, httpServer, serverErrCh)
 		}
 	}
 
 	if config.EnableWebsocket {
-		websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort)
+		websocketServer := server.NewWebSocketServer(shardManager, config.WebsocketPort, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
 	}
@@ -197,6 +327,11 @@ func main() {
 	}
 
 	close(sigs)
+
+	if config.EnableWAL {
+		wal.ShutdownBG()
+	}
+
 	cancel()
 
 	wg.Wait()

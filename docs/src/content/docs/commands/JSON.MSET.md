@@ -7,25 +7,21 @@ The `JSON.MSET` command in DiceDB is used to set multiple JSON values at once. T
 
 ## Parameters
 
+| Parameter | Description                                                                 | Type   | Required |
+| --------- | --------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key where the JSON value will be set.                                   | String | Yes      |
+| `json`    | The JSON value to be set at the specified key.                              | String | Yes      |
+| `...`     | Additional key-value pairs can be provided as needed.                       |        |          |
+
 The `JSON.MSET` command requires an even number of arguments. The arguments are provided in pairs, where each pair consists of a key and a JSON value.
-
-- `key1`: The first key where the JSON value will be set.
-- `json1`: The JSON value to be set at the first key.
-- `key2`: The second key where the JSON value will be set.
-- `json2`: The JSON value to be set at the second key.
-- `...`: Additional key-value pairs can be provided as needed.
-
-### Example
-
-```plaintext
-JSON.MSET key1 json1 key2 json2 ... keyN jsonN
-```
 
 ## Return Value
 
-The `JSON.MSET` command returns a simple string reply indicating the success of the operation.
+| Condition | Return Value |
+| --------- | ------------ |
+| Success   | `OK`         |
+| Error in Syntax or Wrong key type    | Error        |
 
-- `OK`: If the operation is successful and all key-value pairs are set.
 
 ## Behaviour
 
@@ -56,26 +52,26 @@ The `JSON.MSET` command can raise errors in the following scenarios:
 
 ### Setting Multiple JSON Values
 
-```plaintext
-127.0.0.1:6379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2 '{"name": "Bob", "age": 25}'
+```bash
+127.0.0.1:7379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2 '{"name": "Bob", "age": 25}'
 OK
 ```
 
 In this example, two keys (`user:1` and `user:2`) are set with their respective JSON values. The command returns `OK` indicating that both key-value pairs were successfully set.
 
-### Error Example: Odd Number of Arguments
+### Error: Odd Number of Arguments
 
-```plaintext
-127.0.0.1:6379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2
+```bash
+127.0.0.1:7379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2
 (error) ERR wrong number of arguments for 'JSON.MSET' command
 ```
 
 In this example, the command fails because the number of arguments is odd. DiceDB returns an error indicating the wrong number of arguments.
 
-### Error Example: Invalid JSON
+### Error: Invalid JSON
 
-```plaintext
-127.0.0.1:6379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2 '{name: "Bob", age: 25}'
+```bash
+127.0.0.1:7379> JSON.MSET user:1 '{"name": "Alice", "age": 30}' user:2 '{name: "Bob", age: 25}'
 (error) ERR invalid JSON string
 ```
 

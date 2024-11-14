@@ -7,22 +7,22 @@ The `PFCOUNT` command in DiceDB is used to return the approximate cardinality (i
 
 ## Syntax
 
-```
+```bash
 PFCOUNT key [key ...]
 ```
 
 ## Parameters
 
-| Parameter | Description | Type | Required |
-|-----------|-------------|------|----------|
-| `key` | The key(s) of the HyperLogLog data structure(s) whose cardinality you want to estimate. You can specify one or more keys. | String | Yes |
+| Parameter | Description                                                                                                               | Type   | Required |
+| --------- | ------------------------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key(s) of the HyperLogLog data structure(s) whose cardinality you want to estimate. You can specify one or more keys. | String | Yes      |
 
 ## Return Values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
+| Condition                                                   | Return Value                                          |
+| ----------------------------------------------------------- | ----------------------------------------------------- |
 | The specified `key` exists and contains a valid HyperLogLog | The estimated number of unique elements as an integer |
-| The `key` does not exist or is not a valid HyperLogLog | `0` |
+| The `key` does not exist or is not a valid HyperLogLog      | `0`                                                   |
 
 ## Behaviour
 
@@ -64,8 +64,6 @@ The `PFCOUNT` command can raise errors in the following scenarios:
    ```
 
 ## Example usage
-
-### Basic Usage
 
 ### Single Key
 

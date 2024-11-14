@@ -3,9 +3,38 @@ package async
 import (
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
+
+func arraysArePermutations[T comparable](a, b []T) bool {
+	// If lengths are different, they cannot be permutations
+	if len(a) != len(b) {
+		return false
+	}
+
+	// Count occurrences of each element in array 'a'
+	countA := make(map[T]int)
+	for _, elem := range a {
+		countA[elem]++
+	}
+
+	// Subtract occurrences based on array 'b'
+	for _, elem := range b {
+		countA[elem]--
+		if countA[elem] < 0 {
+			return false
+		}
+	}
+
+	// Check if all counts are zero
+	for _, count := range countA {
+		if count != 0 {
+			return false
+		}
+	}
+
+	return true
+}
 
 func TestJSONRESP(t *testing.T) {
 	conn := getLocalConnection()
@@ -52,9 +81,9 @@ func TestJSONRESP(t *testing.T) {
 				result := FireCommand(conn, cmd)
 
 				if tcase.assert_type[i] == "equal" {
-					testifyAssert.Equal(t, out, result)
+					assert.Equal(t, out, result)
 				} else if tcase.assert_type[i] == "deep_equal" {
-					assert.Assert(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
+					assert.True(t, arraysArePermutations(out.([]interface{}), result.([]interface{})))
 				}
 			}
 		})

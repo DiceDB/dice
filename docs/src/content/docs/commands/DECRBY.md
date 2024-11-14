@@ -7,34 +7,34 @@ The `DECRBY` command in DiceDB is used to decrement the integer value of a key b
 
 ## Syntax
 
-```
+```bash
 DECRBY key delta
 ```
 
 ## Parameters
 
-| Parameter | Description                                                                                                   | Type    | Required |
-|-----------|---------------------------------------------------------------------------------------------------------------|---------|----------|
-| `key`     | The key whose value you want to decrement. This key must hold a string that can be represented as an integer. | String  | Yes      |
-|`delta`    | The integer value by which the key's value should be decreased. This value can be positive or negative.       | String  | Yes      |
-
+| Parameter | Description                                                                                                   | Type   | Required |
+| --------- | ------------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key whose value you want to decrement. This key must hold a string that can be represented as an integer. | String | Yes      |
+| `delta`   | The integer value by which the key's value should be decreased. This value can be positive or negative.       | String | Yes      |
 
 ## Return values
 
-| Condition                                        | Return Value                                                     |
-|--------------------------------------------------|------------------------------------------------------------------|
-| Key exists and holds an integer string           | `(integer)` The value of the key after decrementing by delta.    |
-| Key does not exist                               | `(integer)` -delta                                               |
-
+| Condition                              | Return Value                                                  |
+| -------------------------------------- | ------------------------------------------------------------- |
+| Key exists and holds an integer string | `(integer)` The value of the key after decrementing by delta. |
+| Key does not exist                     | `(integer)` -delta                                            |
 
 ## Behaviour
+
 When the `DECRBY` command is executed, the following steps occur:
 
--  DiceDB checks if the key exists.
--  If the key does not exist, DiceDB treats the key's value as 0 before performing the decrement operation.
--  If the key exists but does not hold a string that can be represented as an integer, an error is returned.
--  The value of the key is decremented by the specified decrement value.
--  The new value of the key is returned.
+- DiceDB checks if the key exists.
+- If the key does not exist, DiceDB treats the key's value as 0 before performing the decrement operation.
+- If the key exists but does not hold a string that can be represented as an integer, an error is returned.
+- The value of the key is decremented by the specified decrement value.
+- The new value of the key is returned.
+
 ## Errors
 
 The `DECRBY` command can raise errors in the following scenarios:
@@ -55,10 +55,9 @@ The `DECRBY` command can raise errors in the following scenarios:
    - Error Message: `(error) ERR increment or decrement would overflow`
    - If the decrement operation causes the value to exceed the maximum integer value that DiceDB can handle, an overflow error will occur.
 
-## Examples
+## Example Usage
 
 ### Example with Decrementing the Value of an Existing Key
-
 
 ```bash
 127.0.0.1:7379>SET mycounter 10
@@ -66,8 +65,6 @@ OK
 127.0.0.1:7379>DECRBY mycounter 3
 (integer)7
 ```
-`Explanation:` 
-
 - In this example, the value of `mycounter` is set to 10
 - The `DECRBY` command decremented `mycounter`by 3, resulting in a new value of 7.
 
@@ -77,8 +74,9 @@ OK
 127.0.0.1:7379>DECRBY newcounter 5
 (integer)-5
 ```
-`Explanation:` 
+
 - In this example, since `newcounter` does not exist, DiceDB treats its value as 0 and decrements it by 5, resulting in a new value of -5.
+
 ### Example with Error Due to Non-Integer Value in Key
 
 ```bash
@@ -87,7 +85,7 @@ OK
 127.0.0.1:7379>DECRBY mystring 2
 (error) ERR value is not an integer or out of range
 ```
-`Explanation:` 
+
 - In this example, the key `mystring` holds a non-integer value, so the `DECRBY` command returns an error.
 
 ### Example with Error Due to Invalid Decrement Value (Non-Integer Decrement)
@@ -97,7 +95,4 @@ OK
 (error) ERR value is not an integer or out of range
 ```
 
-`Explanation:` 
 - In this example, the decrement value "two" is not a valid integer, so the `DECRBY` command returns an error.
-
-

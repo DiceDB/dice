@@ -203,6 +203,11 @@ func (ss *Set) Get(member string) (float64, bool) {
 	return score, exists
 }
 
+func (ss *Set) Len() int {
+	cardinality := len(ss.memberMap)
+	return cardinality
+}
+
 // This func is used to remove the maximum element from the sortedset.
 // It takes count as an argument which tells the number of elements to be removed from the sortedset.
 func (ss *Set) PopMax(count int) []string {

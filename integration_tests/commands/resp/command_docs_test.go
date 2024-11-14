@@ -3,7 +3,7 @@ package resp
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 var getDocsTestCases = []struct {
@@ -86,7 +86,7 @@ func TestCommandDocs(t *testing.T) {
 	for _, tc := range getDocsTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := FireCommand(conn, "COMMAND DOCS "+tc.inCmd)
-			assert.DeepEqual(t, tc.expected, result)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }

@@ -7,22 +7,22 @@ The `DECR` command in DiceDB is used to decrement the integer value of a key by 
 
 ## Syntax
 
-```plaintext
+```bash
 DECR key
 ```
 
 ## Parameters
 
-| Parameter       | Description                                      | Type    | Required |
-|-----------------|--------------------------------------------------|---------|----------|
-| `key`           | The key whose value you want to decrement. This key must hold a string that can be represented as an integer.  | String  | Yes      |
+| Parameter | Description                                                                                                   | Type   | Required |
+| --------- | ------------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key whose value you want to decrement. This key must hold a string that can be represented as an integer. | String | Yes      |
 
 ## Return Value
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Command is successful                          | `Integer`: The new value of the key after the decrement operation.                                        |
-| Syntax or specified constraints are invalid    | error                                             |
+| Condition                                   | Return Value                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------ |
+| Command is successful                       | `Integer`: The new value of the key after the decrement operation. |
+| Syntax or specified constraints are invalid | error                                                              |
 
 ## Behaviour
 
@@ -38,7 +38,7 @@ When the `DECR` command is executed, the following steps occur:
 The `DECR` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`: If the key exists but the value is not a string that can be represented as an integer, DiceDB will return an error.
-   - `Error Message`:  `(error) ERR value is not an integer or out of range`
+   - `Error Message`: `(error) ERR value is not an integer or out of range`
 1. `Out of Range Error`: If the value of the key is out of the range of a 64-bit signed integer after the decrement operation, DiceDB will return an error.
    - `Error Message`: `(error) ERR increment or decrement would overflow`
 
@@ -58,7 +58,6 @@ OK
 1. The `SET` command initializes the key `mycounter` with the value `10`.
 2. The `DECR` command decrements the value of `mycounter` by 1, resulting in `9`.
 
-
 ### Key Does Not Exist
 
 ```bash
@@ -70,7 +69,6 @@ OK
 
 1. The key `newcounter` does not exist.
 2. DiceDB sets `newcounter` to `0` and then decrements it by 1, resulting in `-1`.
-
 
 ### Error Scenario: Non-Integer Value
 
@@ -85,7 +83,6 @@ OK
 
 1. The `SET` command initializes the key `mystring` with the value `"hello"`.
 2. The `DECR` command attempts to decrement the value of `mystring`, but since it is not an integer, an error is raised.
-
 
 ### Error Scenario: Out of Range
 

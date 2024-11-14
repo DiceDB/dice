@@ -1,14 +1,39 @@
 package http
 
 import (
+	"fmt"
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
+
+func generateByteArrayForGetrangeTestCase() ([]HTTPCommand, []interface{}) {
+	var cmds []HTTPCommand
+	var exp []interface{}
+
+	str := "helloworld"
+	var binaryStr string
+
+	for _, c := range str {
+		binaryStr += fmt.Sprintf("%08b", c)
+	}
+
+	for idx, bit := range binaryStr {
+		if bit == '1' {
+			cmds = append(cmds, HTTPCommand{Command: "SETBIT", Body: map[string]interface{}{"key": "byteArrayKey", "values": []interface{}{idx, 1}}})
+			exp = append(exp, float64(0))
+		}
+	}
+
+	cmds = append(cmds, HTTPCommand{Command: "GETRANGE", Body: map[string]interface{}{"key": "byteArrayKey", "values": []interface{}{0, 4}}})
+	exp = append(exp, "hello")
+
+	return cmds, exp
+}
 
 func TestGETRANGE(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
-
+	byteArrayCmds, byteArrayExp := generateByteArrayForGetrangeTestCase()
 	testCases := []struct {
 		name     string
 		commands []HTTPCommand
@@ -69,13 +94,21 @@ func TestGETRANGE(t *testing.T) {
 				{Command: "del", Body: map[string]interface{}{"key": "test5"}},
 			},
 		},
+		{
+			name:     "GETRANGE against byte array",
+			commands: byteArrayCmds,
+			expected: byteArrayExp,
+			cleanup: []HTTPCommand{
+				{Command: "del", Body: map[string]interface{}{"key": "byteArrayKey"}},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				testifyAssert.Equal(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 			exec.FireCommand(tc.cleanup[0])
 		})

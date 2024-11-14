@@ -1,0 +1,17 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Content from "../data/roadmap.md";
+
+const title = "DiceDB Roadmap";
+const description = "";
+---
+
+<Layout {title} {description}>
+  <div class="columns is-centered">
+    <div class="column is-8">
+      <div class="content">
+        <Content />
+      </div>
+    </div>
+  </div>
+</Layout>

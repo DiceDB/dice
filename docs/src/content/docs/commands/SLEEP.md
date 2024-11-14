@@ -13,18 +13,16 @@ SLEEP seconds
 
 ## Parameters
 
-| Parameter | Description                                                               | Type   | Required |
-|-----------|---------------------------------------------------------------------------|--------|----------|
-| `seconds` | An integer representing the number of seconds to sleep. Only integers values are allowed.      | Integer  | Yes      |
-
+| Parameter | Description                                                                               | Type    | Required |
+| --------- | ----------------------------------------------------------------------------------------- | ------- | -------- |
+| `seconds` | An integer representing the number of seconds to sleep. Only integers values are allowed. | Integer | Yes      |
 
 ## Return values
 
 | Condition                               | Return Value                                    |
-|-----------------------------------------|-------------------------------------------------|
+| --------------------------------------- | ----------------------------------------------- |
 | Command is successful                   | `OK` after specified sleep duration has elapsed |
 | Syntax or specified datatype is invalid | error                                           |
-
 
 ## Behaviour
 
@@ -40,6 +38,7 @@ When the `SLEEP` command is executed, the following behavior is observed:
 The `SLEEP` command can raise errors under the following conditions:
 
 1. `Invalid Number of Arguments`:
+
    - Error Message: `ERR wrong number of arguments for 'sleep' command`
    - Occurs if the `SLEEP` command is called without the required `seconds` parameter or with more than one parameter.
 
@@ -49,7 +48,7 @@ The `SLEEP` command can raise errors under the following conditions:
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
 Pause the client for 5 seconds.
 
@@ -58,7 +57,7 @@ Pause the client for 5 seconds.
 OK
 ```
 
-### Example 2: Error Handling - Missing Parameter
+### Error Handling - Missing Parameter
 
 Attempt to call `SLEEP` without specifying the `seconds` parameter.
 
@@ -67,7 +66,7 @@ Attempt to call `SLEEP` without specifying the `seconds` parameter.
 (error) ERR wrong number of arguments for 'sleep' command
 ```
 
-### Example 3: Error Handling - Invalid Parameter Type
+### Error Handling - Invalid Parameter Type
 
 Attempt to call `SLEEP` with a non-integer parameter.
 

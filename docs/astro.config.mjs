@@ -25,22 +25,16 @@ export default defineConfig({
         // 	autogenerate: { directory: 'tutorials' }
         // },
         {
-          label: "Commands",
-          autogenerate: { directory: "commands" },
+          label: "SDK",
+          autogenerate: { directory: "sdk" },
         },
         {
           label: "Connection Protocols",
           autogenerate: { directory: "protocols" },
         },
         {
-          label: "Metrics",
-          items: [
-            {
-              label: "Memtier Benchmark",
-              link: "https://dicedb.io/metrics/memtier.html",
-              attrs: { target: "_blank" },
-            },
-          ],
+          label: "Commands",
+          autogenerate: { directory: "commands" },
         },
       ],
     }),

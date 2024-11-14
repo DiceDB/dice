@@ -187,7 +187,7 @@ mem_allocator:jemalloc-5.1.0
 
 When the `INFO` command is executed, DiceDB collects and returns the requested information about the server. If no section is specified, it returns all available information. The command does not modify the state of the server or its data; it is purely informational.
 
-## Error Handling
+## Errors
 
 The `INFO` command can raise errors in the following scenarios:
 

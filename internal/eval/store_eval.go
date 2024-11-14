@@ -1,15 +1,20 @@
 package eval
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"math"
+	"math/bits"
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
@@ -17,7 +22,153 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/gobwas/glob"
 	"github.com/ohler55/ojg/jp"
+	"github.com/rs/xid"
 )
+
+// evalEXPIRE sets an expiry time(in secs) on the specified key in args
+// args should contain 2 values, key and the expiry time to be set for the key
+// The expiry time should be in integer format; if not, it returns encoded error response
+// Returns clientio.IntegerOne if expiry was set on the key successfully.
+// Once the time is lapsed, the key will be deleted automatically
+func evalEXPIRE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) <= 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("EXPIRE"),
+		}
+	}
+
+	var key = args[0]
+	exDurationSec, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	if exDurationSec < 0 || exDurationSec > maxExDuration {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidExpireTime("EXPIRE"),
+		}
+	}
+
+	obj := store.Get(key)
+
+	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+	isExpirySet, err2 := dstore.EvaluateAndSetExpiry(args[2:], utils.AddSecondsToUnixEpoch(exDurationSec), key, store)
+
+	if isExpirySet {
+		return &EvalResponse{
+			Result: clientio.IntegerOne,
+			Error:  nil,
+		}
+	} else if err2 != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err2,
+		}
+	}
+
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+// evalEXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
+// args should contain 2 values, key and the expiry time to be set for the key
+// The expiry time should be in integer format; if not, it returns encoded error response
+// Returns response.IntegerOne if expiry was set on the key successfully.
+// Once the time is lapsed, the key will be deleted automatically
+func evalEXPIREAT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) <= 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("EXPIREAT"),
+		}
+	}
+
+	var key = args[0]
+	exUnixTimeSec, err := strconv.ParseInt(args[1], 10, 64)
+	if exUnixTimeSec < 0 || exUnixTimeSec > maxExDuration {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidExpireTime("EXPIREAT"),
+		}
+	}
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	isExpirySet, err := dstore.EvaluateAndSetExpiry(args[2:], exUnixTimeSec, key, store)
+	if isExpirySet {
+		return &EvalResponse{
+			Result: clientio.IntegerOne,
+			Error:  nil,
+		}
+	} else if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
+		}
+	}
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+// evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
+// args should contain only 1 value, the key
+// Returns expiration Unix timestamp in seconds.
+// Returns -1 if the key exists but has no associated expiration time.
+// Returns -2 if the key does not exist.
+func evalEXPIRETIME(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("EXPIRETIME"),
+		}
+	}
+
+	var key = args[0]
+
+	obj := store.Get(key)
+
+	// -2 if key doesn't exist
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeTwo,
+			Error:  nil,
+		}
+	}
+
+	exTimeMili, ok := dstore.GetExpiry(obj, store)
+	// -1 if key doesn't have expiration time set
+	if !ok {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeOne,
+			Error:  nil,
+		}
+	}
+
+	return &EvalResponse{
+		Result: exTimeMili / 1000,
+		Error:  nil,
+	}
+}
 
 // evalSET puts a new <key, value> pair in db as in the args
 // args must contain key and value.
@@ -37,16 +188,14 @@ import (
 // If the key already exists then the value will be overwritten and expiry will be discarded
 func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) <= 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("SET"),
-		}
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("SET"))
 	}
 
 	var key, value string
 	var exDurationMs int64 = -1
 	var state exDurationState = Uninitialized
 	var keepttl bool = false
+	var oldVal *interface{}
 
 	key, value = args[0], args[1]
 	oType, oEnc := deduceTypeEncoding(value)
@@ -56,32 +205,23 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		switch arg {
 		case Ex, Px:
 			if state != Uninitialized {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
+			}
+			if keepttl {
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 			i++
 			if i == len(args) {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrIntegerOutOfRange,
-				}
+				return makeEvalError(diceerrors.ErrIntegerOutOfRange)
 			}
 
 			if exDuration <= 0 || exDuration >= maxExDuration {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrInvalidExpireTime("SET"),
-				}
+				return makeEvalError(diceerrors.ErrInvalidExpireTime("SET"))
 			}
 
 			// converting seconds to milliseconds
@@ -93,31 +233,22 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 
 		case Pxat, Exat:
 			if state != Uninitialized {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
+			}
+			if keepttl {
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 			i++
 			if i == len(args) {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrSyntax,
-				}
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrIntegerOutOfRange,
-				}
+				return makeEvalError(diceerrors.ErrIntegerOutOfRange)
 			}
 
 			if exDuration < 0 {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrInvalidExpireTime("SET"),
-				}
+				return makeEvalError(diceerrors.ErrInvalidExpireTime("SET"))
 			}
 
 			if arg == Exat {
@@ -137,26 +268,26 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
-				return &EvalResponse{
-					Result: clientio.NIL,
-					Error:  nil,
-				}
+				return makeEvalResult(clientio.NIL)
 			}
 		case NX:
 			obj := store.Get(key)
 			if obj != nil {
-				return &EvalResponse{
-					Result: clientio.NIL,
-					Error:  nil,
-				}
+				return makeEvalResult(clientio.NIL)
 			}
 		case KeepTTL:
-			keepttl = true
-		default:
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+			if state != Uninitialized {
+				return makeEvalError(diceerrors.ErrSyntax)
 			}
+			keepttl = true
+		case GET:
+			getResult := evalGET([]string{key}, store)
+			if getResult.Error != nil {
+				return makeEvalError(diceerrors.ErrWrongTypeOperation)
+			}
+			oldVal = &getResult.Result
+		default:
+			return makeEvalError(diceerrors.ErrSyntax)
 		}
 	}
 
@@ -168,19 +299,15 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
 		storedValue = value
 	default:
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrUnsupportedEncoding(int(oEnc)),
-		}
+		return makeEvalError(diceerrors.ErrUnsupportedEncoding(int(oEnc)))
 	}
 
 	// putting the k and value in a Hash Table
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
-
-	return &EvalResponse{
-		Result: clientio.OK,
-		Error:  nil,
+	if oldVal != nil {
+		return makeEvalResult(*oldVal)
 	}
+	return makeEvalResult(clientio.OK)
 }
 
 // evalGET returns the value for the queried key in args
@@ -211,29 +338,40 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	switch _, oEnc := object.ExtractTypeEncoding(obj); oEnc {
 	case object.ObjEncodingInt:
 		// Value is stored as an int64, so use type assertion
-		if val, ok := obj.Value.(int64); ok {
+		if IsInt64(obj.Value) {
 			return &EvalResponse{
-				Result: val,
+				Result: obj.Value,
 				Error:  nil,
 			}
-		}
-
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrUnexpectedType("int64", obj.Value),
+		} else if IsString(obj.Value) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("int64", "string"),
+			}
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("int64", "unknown"),
+			}
 		}
 
 	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
 		// Value is stored as a string, use type assertion
-		if val, ok := obj.Value.(string); ok {
+		if IsString(obj.Value) {
 			return &EvalResponse{
-				Result: val,
+				Result: obj.Value,
 				Error:  nil,
 			}
-		}
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrUnexpectedType("string", obj.Value),
+		} else if IsInt64(obj.Value) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("string", "int64"),
+			}
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("string", "unknown"),
+			}
 		}
 
 	case object.ObjEncodingByteArray:
@@ -326,6 +464,145 @@ func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
 	return evalSET(newArgs, store)
 }
 
+// evalHEXISTS returns if field is an existing field in the hash stored at key.
+//
+// This command returns 0, if the specified field doesn't exist in the key and 1 if it exists.
+//
+// If key doesn't exist, it returns 0.
+//
+// Usage: HEXISTS key field
+func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HEXISTS"),
+		}
+	}
+
+	key := args[0]
+	hmKey := args[1]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
+			Result: nil,
+		}
+	}
+
+	hashMap = obj.Value.(HashMap)
+
+	_, ok := hashMap.Get(hmKey)
+	if ok {
+		return &EvalResponse{
+			Result: clientio.IntegerOne,
+			Error:  nil,
+		}
+	}
+	// Return 0, if specified field doesn't exist in the HashMap.
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+// evalHKEYS is used to retrieve all the keys(or field names) within a hash.
+//
+// This command returns empty array, if the specified key doesn't exist.
+//
+// Complexity is O(n) where n is the size of the hash.
+//
+// Usage: HKEYS key
+func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HKEYS"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	var result []string
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return &EvalResponse{
+				Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
+				Result: nil,
+			}
+		}
+		hashMap = obj.Value.(HashMap)
+	} else {
+		return &EvalResponse{
+			Result: clientio.EmptyArray,
+			Error:  nil,
+		}
+	}
+
+	for hmKey := range hashMap {
+		result = append(result, hmKey)
+	}
+
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
+// evalHKEYS is used to retrieve all the values within a hash.
+//
+// This command returns empty array, if the specified key doesn't exist.
+//
+// Complexity is O(n) where n is the size of the hash.
+//
+// Usage: HVALS key
+func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{Error: diceerrors.ErrWrongArgumentCount("HVALS"), Result: nil}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		// Return an empty array for non-existent keys
+		return &EvalResponse{
+			Result: clientio.EmptyArray,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
+			Result: nil,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	results := make([]string, 0, len(hashMap))
+
+	for _, value := range hashMap {
+		results = append(results, value)
+	}
+
+	return &EvalResponse{
+		Result: results,
+		Error:  nil,
+	}
+}
+
 // Key, start and end are mandatory args.
 // Returns a substring from the key(if it's a string) from start -> end.
 // Returns ""(empty string) if key is not present and if start > end.
@@ -374,6 +651,15 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 		}
 	case object.ObjEncodingInt:
 		str = strconv.FormatInt(obj.Value.(int64), 10)
+	case object.ObjEncodingByteArray:
+		if val, ok := obj.Value.(*ByteArray); ok {
+			str = string(val.data)
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
 	default:
 		return &EvalResponse{
 			Result: nil,
@@ -422,32 +708,94 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 // reinserted at the right position to ensure the correct ordering.
 // If key does not exist, a new sorted set with the specified members as sole members is created.
 func evalZADD(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 3 || len(args)%2 == 0 {
+	// if length of command is 3, throw error as it is not possible
+	if len(args) < 3 {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongArgumentCount("ZADD"),
 		}
 	}
-
 	key := args[0]
-	obj := store.Get(key)
-	var sortedSet *sortedset.Set
-
-	if obj != nil {
-		var err []byte
-		sortedSet, err = sortedset.FromObject(obj)
-		if err != nil {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongTypeOperation,
-			}
+	sortedSet, err := getOrCreateSortedSet(store, key)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
 		}
-	} else {
-		sortedSet = sortedset.New()
+	}
+	// flags parsing
+	flags, nextIndex := parseFlags(args[1:])
+	if nextIndex >= len(args) || (len(args)-nextIndex)%2 != 0 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZADD"),
+		}
+	}
+	// only valid flags works
+	if err := validateFlagsAndArgs(args[nextIndex:], flags); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
+		}
+	}
+	// all processing takes place here
+	return processMembersWithFlags(args[nextIndex:], sortedSet, store, key, flags)
+}
+
+// parseFlags identifies and parses the flags used in ZADD.
+func parseFlags(args []string) (parsedFlags map[string]bool, nextIndex int) {
+	parsedFlags = map[string]bool{
+		NX:   false,
+		XX:   false,
+		LT:   false,
+		GT:   false,
+		CH:   false,
+		INCR: false,
+	}
+	for i := 0; i < len(args); i++ {
+		switch strings.ToUpper(args[i]) {
+		case NX:
+			parsedFlags[NX] = true
+		case XX:
+			parsedFlags[XX] = true
+		case LT:
+			parsedFlags[LT] = true
+		case GT:
+			parsedFlags[GT] = true
+		case CH:
+			parsedFlags[CH] = true
+		case INCR:
+			parsedFlags[INCR] = true
+		default:
+			return parsedFlags, i + 1
+		}
 	}
 
-	added := 0
-	for i := 1; i < len(args); i += 2 {
+	return parsedFlags, len(args) + 1
+}
+
+// only valid combination of options works
+func validateFlagsAndArgs(args []string, flags map[string]bool) error {
+	if len(args)%2 != 0 {
+		return diceerrors.ErrGeneral("syntax error")
+	}
+	if flags[NX] && flags[XX] {
+		return diceerrors.ErrGeneral("xx and nx options at the same time are not compatible")
+	}
+	if (flags[GT] && flags[NX]) || (flags[LT] && flags[NX]) || (flags[GT] && flags[LT]) {
+		return diceerrors.ErrGeneral("gt and LT and NX options at the same time are not compatible")
+	}
+	if flags[INCR] && len(args)/2 > 1 {
+		return diceerrors.ErrGeneral("incr option supports a single increment-element pair")
+	}
+	return nil
+}
+
+// processMembersWithFlags processes the members and scores while handling flags.
+func processMembersWithFlags(args []string, sortedSet *sortedset.Set, store *dstore.Store, key string, flags map[string]bool) *EvalResponse {
+	added, updated := 0, 0
+
+	for i := 0; i < len(args); i += 2 {
 		scoreStr := args[i]
 		member := args[i+1]
 
@@ -459,20 +807,91 @@ func evalZADD(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 
+		currentScore, exists := sortedSet.Get(member)
+
+		// If INCR is used, increment the score first
+		if flags[INCR] {
+			if exists {
+				score += currentScore
+			} else {
+				score = 0.0 + score
+			}
+
+			// Now check GT and LT conditions based on the incremented score and return accordingly
+			if (flags[GT] && exists && score <= currentScore) ||
+				(flags[LT] && exists && score >= currentScore) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  nil,
+				}
+			}
+		}
+
+		// Check if the member should be skipped based on NX or XX flags
+		if shouldSkipMember(score, currentScore, exists, flags) {
+			continue
+		}
+
+		// Insert or update the member in the sorted set
 		wasInserted := sortedSet.Upsert(score, member)
 
-		if wasInserted {
-			added += 1
+		if wasInserted && !exists {
+			added++
+		} else if exists && score != currentScore {
+			updated++
+		}
+
+		// If INCR is used, exit after processing one score-member pair
+		if flags[INCR] {
+			return &EvalResponse{
+				Result: score,
+				Error:  nil,
+			}
 		}
 	}
 
-	obj = store.NewObj(sortedSet, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
-	store.Put(key, obj, dstore.WithPutCmd(dstore.ZAdd))
+	// Store the updated sorted set in the store
+	storeUpdatedSet(store, key, sortedSet)
 
+	if flags[CH] {
+		return &EvalResponse{
+			Result: added + updated,
+			Error:  nil,
+		}
+	}
+
+	// Return only the count of added members
 	return &EvalResponse{
 		Result: added,
 		Error:  nil,
 	}
+}
+
+// shouldSkipMember determines if a member should be skipped based on flags.
+func shouldSkipMember(score, currentScore float64, exists bool, flags map[string]bool) bool {
+	useNX, useXX, useLT, useGT := flags[NX], flags[XX], flags[LT], flags[GT]
+
+	return (useNX && exists) || (useXX && !exists) ||
+		(exists && useLT && score >= currentScore) ||
+		(exists && useGT && score <= currentScore)
+}
+
+// storeUpdatedSet stores the updated sorted set in the store.
+func storeUpdatedSet(store *dstore.Store, key string, sortedSet *sortedset.Set) {
+	store.Put(key, store.NewObj(sortedSet, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree), dstore.WithPutCmd(dstore.ZAdd))
+}
+
+// getOrCreateSortedSet fetches the sorted set if it exists, otherwise creates a new one.
+func getOrCreateSortedSet(store *dstore.Store, key string) (*sortedset.Set, error) {
+	obj := store.Get(key)
+	if obj != nil {
+		sortedSet, err := sortedset.FromObject(obj)
+		if err != nil {
+			return nil, diceerrors.ErrWrongTypeOperation
+		}
+		return sortedSet, nil
+	}
+	return sortedset.New(), nil
 }
 
 // The ZCOUNT command in DiceDB counts the number of members in a sorted set at the specified key
@@ -601,6 +1020,48 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalZREM removes the specified members from the sorted set stored at key.
+// Non-existing members are ignored.
+// Returns the number of members removed.
+func evalZREM(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZREM"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	countRem := 0
+	for i := 1; i < len(args); i++ {
+		if sortedSet.Remove(args[i]) {
+			countRem += 1
+		}
+	}
+
+	return &EvalResponse{
+		Result: int64(countRem),
+		Error:  nil,
+	}
+}
+
 // evalAPPEND takes two arguments: the key and the value to append to the key's current value.
 // If the key does not exist, it creates a new key with the given value (so APPEND will be similar to SET in this special case)
 // If key already exists and is a string (or integers stored as strings), this command appends the value at the end of the string
@@ -653,6 +1114,12 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 	// Key exists path
+	if _, ok := obj.Value.(*sortedset.Set); ok {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
 	_, currentEnc := object.ExtractTypeEncoding(obj)
 
 	var currentValueStr string
@@ -740,6 +1207,39 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: rank,
+		Error:  nil,
+	}
+}
+
+// evalZCARD returns the cardinality (number of elements) of the sorted set stored at key.
+// Returns 0 if the key does not exist.
+func evalZCARD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 || len(args) > 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("ZCARD"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	sortedSet, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+	return &EvalResponse{
+		Result: int64(sortedSet.Len()),
 		Error:  nil,
 	}
 }
@@ -852,6 +1352,350 @@ func evalJSONCLEAR(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalJSONGET retrieves a JSON value stored at the specified key
+// args must contain at least the key;  (path unused in this implementation)
+// Returns response.RespNIL if key is expired, or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// The RESP value of the key is encoded and then returned
+func evalJSONGET(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.GET"),
+		}
+	}
+
+	key := args[0]
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+	return jsonGETHelper(store, path, key)
+}
+
+// helper function used by evalJSONGET and evalJSONMGET to prepare the results
+func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+
+	// If path is root, return the entire JSON
+	if path == defaultRootPath {
+		resultBytes, err := sonic.Marshal(jsonData)
+		fmt.Println(string(resultBytes))
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("could not serialize result"),
+			}
+		}
+
+		return &EvalResponse{
+			Result: string(resultBytes),
+			Error:  nil,
+		}
+	}
+
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("invalid JSONPath"),
+		}
+	}
+
+	// Execute the JSONPath query
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	// Serialize the result
+	var resultBytes []byte
+	if len(results) == 1 {
+		resultBytes, err = sonic.Marshal(results[0])
+	} else {
+		resultBytes, err = sonic.Marshal(results)
+	}
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("could not serialize result"),
+		}
+	}
+	return &EvalResponse{
+		Result: string(resultBytes),
+		Error:  nil,
+	}
+}
+
+// evalJSONSET stores a JSON value at the specified key
+// args must contain at least the key, path (unused in this implementation), and JSON string
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON string is invalid
+// Returns response.RespOK if the JSON value is successfully stored
+func evalJSONSET(args []string, store *dstore.Store) *EvalResponse {
+	// Check if there are enough arguments
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.SET"),
+		}
+	}
+
+	key := args[0]
+	path := args[1]
+	jsonStr := args[2]
+	for i := 3; i < len(args); i++ {
+		switch strings.ToUpper(args[i]) {
+		case NX:
+			if i != len(args)-1 {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			obj := store.Get(key)
+			if obj != nil {
+				return &EvalResponse{
+					Result: clientio.NIL,
+					Error:  nil,
+				}
+			}
+		case XX:
+			if i != len(args)-1 {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			obj := store.Get(key)
+			if obj == nil {
+				return &EvalResponse{
+					Result: clientio.NIL,
+					Error:  nil,
+				}
+			}
+
+		default:
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			}
+		}
+	}
+
+	// Parse the JSON string
+	var jsonValue interface{}
+	if err := sonic.UnmarshalString(jsonStr, &jsonValue); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("invalid JSON"),
+		}
+	}
+
+	// Retrieve existing object or create new one
+	obj := store.Get(key)
+	var rootData interface{}
+
+	if obj == nil {
+		// If the key doesn't exist, create a new object
+		if path != defaultRootPath {
+			rootData = make(map[string]interface{})
+		} else {
+			rootData = jsonValue
+		}
+	} else {
+		// If the key exists, check if it's a JSON object
+		err := object.AssertType(obj.TypeEncoding, object.ObjTypeJSON)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		err = object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingJSON)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		rootData = obj.Value
+	}
+
+	// If path is not root, use JSONPath to set the value
+	if path != defaultRootPath {
+		expr, err := jp.ParseString(path)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid JSONPath"),
+			}
+		}
+
+		err = expr.Set(rootData, jsonValue)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("failed to set value"),
+			}
+		}
+	} else {
+		// If path is root, replace the entire JSON
+		rootData = jsonValue
+	}
+
+	// Create a new object with the updated JSON data
+	newObj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+	store.Put(key, newObj)
+	return &EvalResponse{
+		Result: clientio.OK,
+		Error:  nil,
+	}
+}
+
+// evalJSONINGEST stores a value at a dynamically generated key
+// The key is created using a provided key prefix combined with a unique identifier
+// args must contains key_prefix and path and json value
+// It will call to evalJSONSET internally.
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON string is invalid
+// Returns unique identifier if the JSON value is successfully stored
+func evalJSONINGEST(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.INGEST"),
+		}
+	}
+
+	keyPrefix := args[0]
+
+	uniqueID := xid.New()
+	uniqueKey := keyPrefix + uniqueID.String()
+
+	var setArgs []string
+	setArgs = append(setArgs, uniqueKey)
+	setArgs = append(setArgs, args[1:]...)
+
+	result := evalJSONSET(setArgs, store)
+	if resultValue, ok := result.Result.(clientio.RespType); ok {
+		// If Result is of type RespType, check equality
+		if resultValue == clientio.OK {
+			return &EvalResponse{
+				Result: uniqueID.String(),
+				Error:  nil,
+			}
+		}
+	}
+	return result
+}
+
+// evalJSONTYPE retrieves a JSON value type stored at the specified key
+// args must contain at least the key;  (path unused in this implementation)
+// Returns response.RespNIL if key is expired, or it does not exist
+// Returns encoded error response if incorrect number of arguments
+// The RESP value of the key's value type is encoded and then returned
+func evalJSONTYPE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.TYPE"),
+		}
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+
+	if path == defaultRootPath {
+		_, err := sonic.Marshal(jsonData)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("could not serialize result"),
+			}
+		}
+		// If path is root and len(args) == 1, return "object" instantly
+		if len(args) == 1 {
+			return &EvalResponse{
+				Result: utils.ObjectType,
+				Error:  nil,
+			}
+		}
+	}
+
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("invalid JSONPath"),
+		}
+	}
+
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return &EvalResponse{
+			Result: clientio.EmptyArray,
+			Error:  nil,
+		}
+	}
+
+	typeList := make([]string, 0, len(results))
+	for _, result := range results {
+		jsonType := utils.GetJSONFieldType(result)
+		typeList = append(typeList, jsonType)
+	}
+	return &EvalResponse{
+		Result: typeList,
+		Error:  nil,
+	}
+}
+
 // PFADD Adds all the element arguments to the HyperLogLog data structure stored at the variable
 // name specified as first argument.
 //
@@ -878,7 +1722,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 
 		obj = store.NewObj(hll, -1, object.ObjTypeString, object.ObjEncodingRaw)
 
-		store.Put(key, obj)
+		store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 		return &EvalResponse{
 			Result: int64(1),
 			Error:  nil,
@@ -896,6 +1740,9 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 	for _, arg := range args[1:] {
 		existingHll.Insert([]byte(arg))
 	}
+
+	obj = store.NewObj(existingHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+	store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 
 	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
 		return &EvalResponse{
@@ -1216,10 +2063,98 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 
 	// Save the mergedHll
 	obj = store.NewObj(mergedHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
-	store.Put(destKey, obj)
+	store.Put(destKey, obj, dstore.WithPutCmd(dstore.PFMERGE))
 
 	return &EvalResponse{
 		Result: clientio.OK,
+		Error:  nil,
+	}
+}
+
+// evalPTTL returns Time-to-Live in millisecs for the queried key in args
+// The key should be the only param in args else returns with an error
+// Returns	RESP encoded time (in secs) remaining for the key to expire
+//
+//	RESP encoded -2 stating key doesn't exist or key is expired
+//	RESP encoded -1 in case no expiration is set on the key
+func evalPTTL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("PTTL"),
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeTwo,
+			Error:  nil,
+		}
+	}
+
+	exp, isExpirySet := dstore.GetExpiry(obj, store)
+
+	if !isExpirySet {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeOne,
+			Error:  nil,
+		}
+	}
+
+	// compute the time remaining for the key to expire and
+	// return the RESP encoded form of it
+	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
+	return &EvalResponse{
+		Result: durationMs,
+		Error:  nil,
+	}
+}
+
+// evalTTL returns Time-to-Live in secs for the queried key in args
+// The key should be the only param in args else returns with an error
+// Returns	RESP encoded time (in secs) remaining for the key to expire
+//
+//	RESP encoded -2 stating key doesn't exist or key is expired
+//	RESP encoded -1 in case no expiration is set on the key
+func evalTTL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("TTL"),
+		}
+	}
+
+	var key = args[0]
+
+	obj := store.Get(key)
+
+	// if key does not exist, return RESP encoded -2 denoting key does not exist
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeTwo,
+			Error:  nil,
+		}
+	}
+
+	// if object exist, but no expiration is set on it then send -1
+	exp, isExpirySet := dstore.GetExpiry(obj, store)
+	if !isExpirySet {
+		return &EvalResponse{
+			Result: clientio.IntegerNegativeOne,
+			Error:  nil,
+		}
+	}
+
+	// compute the time remaining for the key to expire and
+	// return the RESP encoded form of it
+	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
+
+	return &EvalResponse{
+		Result: durationMs / 1000,
 		Error:  nil,
 	}
 }
@@ -1702,6 +2637,57 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+func evalDUMP(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("DUMP"))
+	}
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult(clientio.NIL)
+	}
+
+	serializedValue, err := rdbSerialize(obj)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("serialization failed"))
+	}
+	encodedResult := base64.StdEncoding.EncodeToString(serializedValue)
+
+	return makeEvalResult(encodedResult)
+}
+
+func evalRestore(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("RESTORE"))
+	}
+
+	key := args[0]
+	ttlStr := args[1]
+	ttl, _ := strconv.ParseInt(ttlStr, 10, 64)
+
+	encodedValue := args[2]
+	serializedData, err := base64.StdEncoding.DecodeString(encodedValue)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("failed to decode base64 value"))
+	}
+
+	obj, err := rdbDeserialize(serializedData)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("deserialization failed"))
+	}
+
+	newobj := store.NewObj(obj.Value, ttl, obj.TypeEncoding, obj.TypeEncoding)
+	var keepttl = true
+
+	if ttl > 0 {
+		store.Put(key, newobj, dstore.WithKeepTTL(keepttl))
+	} else {
+		store.Put(key, obj)
+	}
+
+	return makeEvalResult(clientio.OK)
+}
+
 // evalHLEN returns the number of fields contained in the hash stored at key.
 //
 // If key doesn't exist, it returns 0.
@@ -2043,4 +3029,2848 @@ func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
 		Result: res,
 		Error:  nil,
 	}
+}
+
+// evalJSONARRTRIM trim an array so that it contains only the specified inclusive range of elements
+// an array of integer replies for each path, the array's new size, or nil, if the matching JSON value is not an array.
+func evalJSONARRTRIM(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 4 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRTRIM"),
+		}
+	}
+	var err error
+
+	start := args[2]
+	stop := args[3]
+	var startIdx, stopIdx int
+	startIdx, err = strconv.Atoi(start)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+	stopIdx, err = strconv.Atoi(stop)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("key does not exist"),
+		}
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(string(errWithMessage)),
+		}
+	}
+
+	jsonData := obj.Value
+
+	_, err = sonic.Marshal(jsonData)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("Existing key has wrong Dice type"),
+		}
+	}
+
+	path := args[1]
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return &EvalResponse{
+			Result: clientio.RespEmptyArray,
+			Error:  nil,
+		}
+	}
+
+	var resultsArray []interface{}
+	// Capture the modified data when modifying the root path
+	newData, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+		arr, ok := data.([]interface{})
+		if !ok {
+			// Not an array
+			resultsArray = append(resultsArray, nil)
+			return data, false
+		}
+
+		updatedArray := trimElementAndUpdateArray(arr, startIdx, stopIdx)
+
+		resultsArray = append(resultsArray, len(updatedArray))
+		return updatedArray, true
+	})
+	if modifyErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("ERR failed to modify JSON data: %v", modifyErr)),
+		}
+	}
+
+	jsonData = newData
+	obj.Value = jsonData
+
+	return &EvalResponse{
+		Result: resultsArray,
+		Error:  nil,
+	}
+}
+
+// evalLPUSH inserts value(s) one by one at the head of of the list
+//
+// # Returns list length after command execution
+//
+// Usage: LPUSH key value [value...]
+func evalLPUSH(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("LPUSH"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		obj = store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	store.Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).LPush(args[i])
+	}
+
+	deq := obj.Value.(*Deque)
+
+	return &EvalResponse{
+		Result: deq.Length,
+		Error:  nil,
+	}
+}
+
+// evalRPUSH inserts value(s) one by one at the tail of of the list
+//
+// # Returns list length after command execution
+//
+// Usage: RPUSH key value [value...]
+func evalRPUSH(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("RPUSH"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		obj = store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	store.Put(args[0], obj)
+	for i := 1; i < len(args); i++ {
+		obj.Value.(*Deque).RPush(args[i])
+	}
+
+	deq := obj.Value.(*Deque)
+
+	return &EvalResponse{
+		Result: deq.Length,
+		Error:  nil,
+	}
+}
+
+// evalLPOP pops the element at the head of the list and returns it
+//
+// # Returns the element at the head of the list
+//
+// Usage: LPOP key
+func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
+	// By default we pop only 1
+	popNumber := 1
+
+	// LPOP accepts 1 or 2 arguments only - LPOP key [count]
+
+	if len(args) < 1 || len(args) > 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("LPOP"),
+		}
+	}
+
+	if len(args) == 2 {
+		nos, err := strconv.Atoi(args[1])
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidNumberFormat,
+			}
+		}
+		if nos == 0 {
+			// returns empty string if count given is 0
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			}
+		}
+		if nos < 0 {
+			// returns an out of range err if count is negetive
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+		popNumber = nos
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	deq := obj.Value.(*Deque)
+
+	// holds the elements popped
+	var elements []string
+	for iter := 0; iter < popNumber; iter++ {
+		x, err := deq.LPop()
+		if err != nil {
+			if errors.Is(err, ErrDequeEmpty) {
+				break
+			}
+		}
+		elements = append(elements, x)
+	}
+
+	if len(elements) == 0 {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if len(elements) == 1 {
+		return &EvalResponse{
+			Result: elements[0],
+			Error:  nil,
+		}
+	}
+
+	return &EvalResponse{
+		Result: elements,
+		Error:  nil,
+	}
+}
+
+// evalRPOP pops the element at the tail of the list and returns it
+//
+// # Returns the element at the tail of the list
+//
+// Usage: RPOP key
+func evalRPOP(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("RPOP"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	deq := obj.Value.(*Deque)
+	x, err := deq.RPop()
+	if err != nil {
+		if errors.Is(err, ErrDequeEmpty) {
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			}
+		}
+	}
+
+	return &EvalResponse{
+		Result: x,
+		Error:  nil,
+	}
+}
+
+// evalLLEN returns the number of elements in the list
+//
+// Usage: LLEN key
+func evalLLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("LLEN"),
+		}
+	}
+
+	obj := store.Get(args[0])
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeByteList, object.ObjEncodingDeque); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	deq := obj.Value.(*Deque)
+	return &EvalResponse{
+		Result: deq.Length,
+		Error:  nil,
+	}
+}
+
+// evalJSONARRAPPEND appends the value(s) provided in the args to the given array path
+// in the JSON object saved at key in arguments.
+// Args must contain atleast a key, path and value.
+// If the key does not exist or is expired, it returns response.NIL.
+// If the object at given path is not an array, it returns response.NIL.
+// Returns the new length of the array at path.
+func evalJSONARRAPPEND(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRAPPEND"),
+		}
+	}
+
+	key := args[0]
+	path := args[1]
+	values := args[2:]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+	jsonData := obj.Value
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	// Parse the input values as JSON
+	parsedValues := make([]interface{}, len(values))
+	for i, v := range values {
+		var parsedValue interface{}
+		err := sonic.UnmarshalString(v, &parsedValue)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral(err.Error()),
+			}
+		}
+		parsedValues[i] = parsedValue
+	}
+
+	var resultsArray []interface{}
+	modified := false
+
+	// Capture the modified data when modifying the root path
+	var newData interface{}
+	var modifyErr error
+
+	newData, modifyErr = expr.Modify(jsonData, func(data any) (interface{}, bool) {
+		arr, ok := data.([]interface{})
+		if !ok {
+			// Not an array
+			resultsArray = append(resultsArray, clientio.NIL)
+			return data, false
+		}
+
+		// Append the parsed values to the array
+		arr = append(arr, parsedValues...)
+
+		resultsArray = append(resultsArray, int64(len(arr)))
+		modified = true
+		return arr, modified
+	})
+
+	if modifyErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(modifyErr.Error()),
+		}
+	}
+
+	if !modified {
+		// If no modification was made, it means the path did not exist or was not an array
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	jsonData = newData
+	obj.Value = jsonData
+
+	return &EvalResponse{
+		Result: resultsArray,
+		Error:  nil,
+	}
+}
+
+// evalJSONARRLEN return the length of the JSON array at path in key
+// Returns an array of integer replies, an integer for each matching value,
+// each is the array's length, or nil, if the matching value is not an array.
+// Returns encoded error if the key doesn't exist or key is expired or the matching value is not an array.
+// Returns encoded error response if incorrect number of arguments
+func evalJSONARRLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRLEN"),
+		}
+	}
+	key := args[0]
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+
+	// If the object is not present in the store or if its nil, then we should simply return nil.
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// This is the case if only argument passed to JSON.ARRLEN is the key itself.
+	// This is valid only if the key holds an array; otherwise, an error should be returned.
+	if len(args) == 1 {
+		if utils.GetJSONFieldType(jsonData) == utils.ArrayType {
+			return &EvalResponse{
+				Result: len(jsonData.([]interface{})),
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	path := args[1] // Getting the path to find the length of the array
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	results := expr.Get(jsonData)
+
+	// If there are no results, that means the JSONPath does not exist
+	if len(results) == 0 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	// If the results are greater than one, we need to print them as a list
+	// This condition should be updated in future when supporting Complex JSONPaths
+	if len(results) > 1 {
+		arrlenList := make([]interface{}, 0, len(results))
+		for _, result := range results {
+			switch utils.GetJSONFieldType(result) {
+			case utils.ArrayType:
+				arrlenList = append(arrlenList, len(result.([]interface{})))
+			default:
+				arrlenList = append(arrlenList, clientio.NIL)
+			}
+		}
+
+		return &EvalResponse{
+			Result: arrlenList,
+			Error:  nil,
+		}
+	}
+
+	// Single result should be printed as single integer instead of list
+	jsonValue := results[0]
+
+	if utils.GetJSONFieldType(jsonValue) == utils.ArrayType {
+		return &EvalResponse{
+			Result: len(jsonValue.([]interface{})),
+			Error:  nil,
+		}
+	}
+
+	// If execution reaches this point, the provided path either does not exist.
+	return &EvalResponse{
+		Result: nil,
+		Error:  diceerrors.ErrJSONPathNotFound(path),
+	}
+}
+
+// popElementAndUpdateArray removes an element at the given index
+// Returns popped element, remaining array and error
+func popElementAndUpdateArray(arr []any, index string) (popElem any, updatedArray []any, err error) {
+	if len(arr) == 0 {
+		return nil, nil, nil
+	}
+
+	var idx int
+	// if index is empty, pop last element
+	if index == "" {
+		idx = len(arr) - 1
+	} else {
+		var err error
+		idx, err = strconv.Atoi(index)
+		if err != nil {
+			return nil, nil, err
+		}
+		// convert index to a valid index
+		idx = adjustIndex(idx, arr)
+	}
+
+	popElem = arr[idx]
+	arr = append(arr[:idx], arr[idx+1:]...)
+
+	return popElem, arr, nil
+}
+
+func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRPOP"),
+		}
+	}
+	key := args[0]
+
+	var path = defaultRootPath
+	if len(args) >= 2 {
+		path = args[1]
+	}
+
+	var index string
+	if len(args) >= 3 {
+		index = args[2]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrKeyNotFound,
+		}
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if path == defaultRootPath {
+		arr, ok := jsonData.([]any)
+		// if value can not be converted to array, it is of another type
+		// returns nil in this case similar to redis
+		// also, return nil if array is empty
+		if !ok || len(arr) == 0 {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		popElem, arr, err := popElementAndUpdateArray(arr, index)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral(err.Error()),
+			}
+		}
+
+		// save the remaining array
+		newObj := store.NewObj(arr, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+		store.Put(key, newObj)
+
+		return &EvalResponse{
+			Result: popElem,
+			Error:  nil,
+		}
+	}
+
+	// if path is not root then extract value at path
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+	results := expr.Get(jsonData)
+
+	// process value at each path
+	popArr := make([]any, 0, len(results))
+	for _, result := range results {
+		arr, ok := result.([]any)
+		// if value can not be converted to array, it is of another type
+		// returns nil in this case similar to redis
+		// also, return nil if array is empty
+		if !ok || len(arr) == 0 {
+			popArr = append(popArr, clientio.NIL)
+			continue
+		}
+
+		popElem, arr, err := popElementAndUpdateArray(arr, index)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral(err.Error()),
+			}
+		}
+
+		// update array in place in the json object
+		err = expr.Set(jsonData, arr)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral(err.Error()),
+			}
+		}
+
+		popArr = append(popArr, popElem)
+	}
+	return &EvalResponse{
+		Result: popArr,
+		Error:  nil,
+	}
+}
+
+// evalJSONARRINSERT insert the json values into the array at path before the index (shifts to the right)
+// returns an array of integer replies for each path, the array's new size, or nil.
+func evalJSONARRINSERT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 4 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRINSERT"),
+		}
+	}
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("key does not exist"),
+		}
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(string(errWithMessage)),
+		}
+	}
+
+	jsonData := obj.Value
+	var err error
+	_, err = sonic.Marshal(jsonData)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("Existing key has wrong Dice type"),
+		}
+	}
+
+	path := args[1]
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(path),
+		}
+	}
+
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return &EvalResponse{
+			Result: clientio.RespEmptyArray,
+			Error:  nil,
+		}
+	}
+	index := args[2]
+	var idx int
+	idx, err = strconv.Atoi(index)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	values := args[3:]
+	// Parse the input values as JSON
+	parsedValues := make([]interface{}, len(values))
+	for i, v := range values {
+		var parsedValue interface{}
+		err := sonic.UnmarshalString(v, &parsedValue)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral(err.Error()),
+			}
+		}
+		parsedValues[i] = parsedValue
+	}
+
+	var resultsArray []interface{}
+	// Capture the modified data when modifying the root path
+	modified := false
+	newData, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+		arr, ok := data.([]interface{})
+		if !ok {
+			// Not an array
+			resultsArray = append(resultsArray, nil)
+			return data, false
+		}
+
+		// Append the parsed values to the array
+		updatedArray, insertErr := insertElementAndUpdateArray(arr, idx, parsedValues)
+		if insertErr != nil {
+			err = insertErr
+			return data, false
+		}
+		modified = true
+		resultsArray = append(resultsArray, len(updatedArray))
+		return updatedArray, true
+	})
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(err.Error()),
+		}
+	}
+
+	if modifyErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("ERR failed to modify JSON data: %v", modifyErr)),
+		}
+	}
+
+	if !modified {
+		return &EvalResponse{
+			Result: resultsArray,
+			Error:  nil,
+		}
+	}
+
+	jsonData = newData
+	obj.Value = jsonData
+	return &EvalResponse{
+		Result: resultsArray,
+		Error:  nil,
+	}
+}
+
+// evalJSONOBJKEYS retrieves the keys of a JSON object stored at path specified.
+// It takes two arguments: the key where the JSON document is stored, and an optional JSON path.
+// It returns a list of keys from the object at the specified path or an error if the path is invalid.
+func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.OBJKEYS"),
+		}
+	}
+
+	key := args[0]
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("could not perform this operation on a key that doesn't exist"),
+		}
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(string(errWithMessage)),
+		}
+	}
+
+	jsonData := obj.Value
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("Existing key has wrong Dice type"),
+		}
+	}
+
+	// If path is root, return all keys of the entire JSON
+	if len(args) == 1 {
+		if utils.GetJSONFieldType(jsonData) == utils.ObjectType {
+			keys := make([]string, 0)
+			for key := range jsonData.(map[string]interface{}) {
+				keys = append(keys, key)
+			}
+			return &EvalResponse{
+				Result: keys,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(err.Error()),
+		}
+	}
+
+	// Execute the JSONPath query
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return &EvalResponse{
+			Result: clientio.RespEmptyArray,
+			Error:  nil,
+		}
+	}
+
+	keysList := make([]interface{}, 0, len(results))
+
+	for _, result := range results {
+		switch utils.GetJSONFieldType(result) {
+		case utils.ObjectType:
+			keys := make([]string, 0)
+			for key := range result.(map[string]interface{}) {
+				keys = append(keys, key)
+			}
+			keysList = append(keysList, keys)
+		default:
+			keysList = append(keysList, nil)
+		}
+	}
+
+	return &EvalResponse{
+		Result: keysList,
+		Error:  nil,
+	}
+}
+
+// GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
+// PXAT unix-time-milliseconds | PERSIST]
+// Get the value of key and optionally set its expiration.
+// GETEX is similar to GET, but is a write command with additional options.
+// The GETEX command supports a set of options that modify its behavior:
+// EX seconds -- Set the specified expire time, in seconds.
+// PX milliseconds -- Set the specified expire time, in milliseconds.
+// EXAT timestamp-seconds -- Set the specified Unix time at which the key will expire, in seconds.
+// PXAT timestamp-milliseconds -- Set the specified Unix time at which the key will expire, in milliseconds.
+// PERSIST -- Remove the time to live associated with the key.
+// The RESP value of the key is encoded and then returned
+// evalGET returns response.RespNIL if key is expired or it does not exist
+func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GETEX"),
+		}
+	}
+
+	var key = args[0]
+
+	var exDurationMs int64 = -1
+	var state = Uninitialized
+	var persist = false
+	for i := 1; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		switch arg {
+		case Ex, Px:
+			if state != Uninitialized {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			i++
+			if i == len(args) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
+			}
+			if exDuration <= 0 || exDuration > maxExDuration {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidExpireTime("GETEX"),
+				}
+			}
+
+			// converting seconds to milliseconds
+			if arg == Ex {
+				exDuration *= 1000
+			}
+			exDurationMs = exDuration
+			state = Initialized
+
+		case Pxat, Exat:
+			if state != Uninitialized {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			i++
+			if i == len(args) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			exDuration, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
+			}
+
+			if exDuration < 0 || exDuration > maxExDuration {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidExpireTime("GETEX"),
+				}
+			}
+
+			if arg == Exat {
+				exDuration *= 1000
+			}
+			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
+			// If the expiry time is in the past, set exDurationMs to 0
+			// This will be used to signal immediate expiration
+			if exDurationMs < 0 {
+				exDurationMs = 0
+			}
+			state = Initialized
+
+		case Persist:
+			if state != Uninitialized {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			persist = true
+			state = Initialized
+		default:
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+	}
+
+	// Get the key from the hash table
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil ||
+		object.AssertType(obj.TypeEncoding, object.ObjTypeJSON) == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get EvalResponse with correct data type
+	getResp := evalGET([]string{key}, store)
+
+	// If there is an error return the error response
+	if getResp.Error != nil {
+		return getResp
+	}
+
+	if state == Initialized {
+		if persist {
+			dstore.DelExpiry(obj, store)
+		} else {
+			store.SetExpiry(obj, exDurationMs)
+		}
+	}
+
+	// return an EvalResponse with the value
+	return getResp
+}
+
+// evalGETDEL returns the value for the queried key in args
+// The key should be the only param in args
+// The RESP value of the key is encoded and then returned
+// In evalGETDEL  If the key exists, it will be deleted before its value is returned.
+// evalGETDEL returns response.RespNIL if key is expired or it does not exist
+func evalGETDEL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GETDEL"),
+		}
+	}
+
+	key := args[0]
+
+	// getting the key based on previous touch value
+	obj := store.GetNoTouch(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a Set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// If the object exists, check if it is a JSON object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeJSON); err == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the key from the hash table
+	objVal := store.GetDel(key)
+
+	// Decode and return the value based on its encoding
+	switch _, oEnc := object.ExtractTypeEncoding(objVal); oEnc {
+	case object.ObjEncodingInt:
+		// Value is stored as an int64, so use type assertion
+		if IsInt64(objVal.Value) {
+			return &EvalResponse{
+				Result: objVal.Value,
+				Error:  nil,
+			}
+		} else if IsString(objVal.Value) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("int64", "string"),
+			}
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("int64", "unknown"),
+			}
+		}
+
+	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		// Value is stored as a string, use type assertion
+		if IsString(objVal.Value) {
+			return &EvalResponse{
+				Result: objVal.Value,
+				Error:  nil,
+			}
+		} else if IsInt64(objVal.Value) {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("string", "int64"),
+			}
+		} else {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnexpectedType("string", "unknown"),
+			}
+		}
+
+	case object.ObjEncodingByteArray:
+		// Value is stored as a bytearray, use type assertion
+		if val, ok := objVal.Value.(*ByteArray); ok {
+			return &EvalResponse{
+				Result: string(val.data),
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+}
+
+// helper function to insert key value in hashmap associated with the given hash
+func insertInHashMap(args []string, store *dstore.Store) (int64, error) {
+	key := args[0]
+
+	obj := store.Get(key)
+
+	var hashMap HashMap
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return 0, diceerrors.ErrWrongTypeOperation
+		}
+		hashMap = obj.Value.(HashMap)
+	}
+
+	keyValuePairs := args[1:]
+
+	hashMap, numKeys, err := hashMapBuilder(keyValuePairs, hashMap)
+	if err != nil {
+		return 0, err
+	}
+
+	obj = store.NewObj(hashMap, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+	store.Put(key, obj)
+
+	return numKeys, nil
+}
+
+// evalHSET sets the specified fields to their
+// respective values in a hashmap stored at key
+//
+// This command overwrites the values of specified
+// fields that exist in the hash.
+//
+// If key doesn't exist, a new key holding a hash is created.
+//
+// Usage: HSET key field value [field value ...]
+func evalHSET(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HSET"),
+		}
+	}
+
+	numKeys, err := insertInHashMap(args, store)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
+		}
+	}
+
+	return &EvalResponse{
+		Result: numKeys,
+		Error:  nil,
+	}
+}
+
+// evalHMSET sets the specified fields to their
+// respective values in a hashmap stored at key
+//
+// This command overwrites the values of specified
+// fields that exist in the hash.
+//
+// If key doesn't exist, a new key holding a hash is created.
+//
+// Usage: HMSET key field value [field value ...]
+func evalHMSET(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HMSET"),
+		}
+	}
+
+	_, err := insertInHashMap(args, store)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err,
+		}
+	}
+
+	return &EvalResponse{
+		Result: clientio.OK,
+		Error:  nil,
+	}
+}
+
+// evalHMGET returns an array of values associated with the given fields,
+// in the same order as they are requested.
+// If a field does not exist, returns a corresponding nil value in the array.
+// If the key does not exist, returns an array of nil values.
+func evalHMGET(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HMGET"),
+		}
+	}
+	key := args[0]
+
+	// Fetch the object from the store using the key
+	obj := store.Get(key)
+
+	// Initialize the results slice
+	results := make([]interface{}, len(args[1:]))
+
+	// If the object is nil, return empty results for all requested fields
+	if obj == nil {
+		for i := range results {
+			results[i] = nil // Return nil for non-existent fields
+		}
+		return &EvalResponse{
+			Result: results,
+			Error:  nil,
+		}
+	}
+
+	// Assert that the object is of type HashMap
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+
+	// Loop through the requested fields
+	for i, hmKey := range args[1:] {
+		hmValue, present := hashMap.Get(hmKey)
+		if present {
+			results[i] = *hmValue // Set the value if it exists
+		} else {
+			results[i] = nil // Set to nil if field does not exist
+		}
+	}
+
+	// Return the results and no error
+	return &EvalResponse{
+		Result: results,
+		Error:  nil,
+	}
+}
+
+func evalHGET(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HGET"),
+		}
+	}
+
+	key := args[0]
+	hmKey := args[1]
+
+	response := getValueFromHashMap(key, hmKey, store)
+	if response.Error != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  response.Error,
+		}
+	}
+
+	return &EvalResponse{
+		Result: response.Result,
+		Error:  nil,
+	}
+}
+
+func evalHGETALL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HGETALL"),
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	var hashMap HashMap
+	var results []string
+
+	if obj != nil {
+		if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		hashMap = obj.Value.(HashMap)
+	}
+
+	for hmKey, hmValue := range hashMap {
+		results = append(results, hmKey, hmValue)
+	}
+
+	return &EvalResponse{
+		Result: results,
+		Error:  nil,
+	}
+}
+
+func evalHSETNX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HSETNX"),
+		}
+	}
+
+	key := args[0]
+	hmKey := args[1]
+
+	response := getValueFromHashMap(key, hmKey, store)
+	if response.Error != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  response.Error,
+		}
+	}
+
+	if response.Result != clientio.NIL {
+		return &EvalResponse{
+			Result: int64(0),
+			Error:  nil,
+		}
+	}
+
+	evalHSET(args, store)
+
+	return &EvalResponse{
+		Result: int64(1),
+		Error:  nil,
+	}
+}
+
+func evalHDEL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("HDEL"),
+		}
+	}
+
+	key := args[0]
+	fields := args[1:]
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: int64(0),
+			Error:  nil,
+		}
+	}
+
+	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeHashMap, object.ObjEncodingHashMap); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	hashMap := obj.Value.(HashMap)
+	count := int64(0)
+	for _, field := range fields {
+		if _, ok := hashMap[field]; ok {
+			delete(hashMap, field)
+			count++
+		}
+	}
+
+	if count > 0 {
+		store.Put(key, obj)
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalSADD adds one or more members to a set
+// args must contain a key and one or more members to add the set
+// If the set does not exist, a new set is created and members are added to it
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+// Returns an integer which represents the number of members that were added to the set, not including
+// the members that were already present
+func evalSADD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SADD"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+	lengthOfItems := len(args[1:])
+
+	var count = 0
+	if obj == nil {
+		var exDurationMs int64 = -1
+		var keepttl = false
+		// If the object does not exist, create a new set object.
+		value := make(map[string]struct{}, lengthOfItems)
+		// Create a new object.
+		obj = store.NewObj(value, exDurationMs, object.ObjTypeSet, object.ObjEncodingSetStr)
+		store.Put(key, obj, dstore.WithKeepTTL(keepttl))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+
+	for _, arg := range args[1:] {
+		if _, ok := set[arg]; !ok {
+			set[arg] = struct{}{}
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalSREM removes one or more members from a set
+// Members that are not member of this set are ignored
+// Returns the number of members that are removed from set
+// If set does not exist, 0 is returned
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+func evalSREM(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SREM"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	var count = 0
+	if obj == nil {
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+
+	for _, arg := range args[1:] {
+		if _, ok := set[arg]; ok {
+			delete(set, arg)
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalSCARD returns the number of elements of the set stored at key
+// Returns 0 if the key does not exist
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+func evalSCARD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SCARD"),
+		}
+	}
+
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: 0,
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	count := len(obj.Value.(map[string]struct{}))
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalSMEMBERS returns all the members of a set
+// An error response is returned if the command is used on a key that contains a non-set value(eg: string)
+// An empty set is returned if no set exists for given key
+func evalSMEMBERS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SMEMBERS"),
+		}
+	}
+	key := args[0]
+
+	// Get the set object from the store.
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: []string{},
+			Error:  nil,
+		}
+	}
+
+	// If the object exists, check if it is a set object.
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Get the set object.
+	set := obj.Value.(map[string]struct{})
+	// Get the members of the set.
+	members := make([]string, 0, len(set))
+	for k := range set {
+		members = append(members, k)
+	}
+
+	return &EvalResponse{
+		Result: members,
+		Error:  nil,
+	}
+}
+
+// evalLRANGE returns the specified elements of the list stored at key.
+//
+// Returns Array reply: a list of elements in the specified range, or an empty array if the key doesn't exist.
+//
+// Usage: LRANGE key start stop
+func evalLRANGE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return makeEvalError(errors.New("-wrong number of arguments for LRANGE"))
+	}
+	key := args[0]
+	start, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return makeEvalError(errors.New("-ERR value is not an integer or out of range"))
+	}
+	stop, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return makeEvalError(errors.New("-ERR value is not an integer or out of range"))
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult([]string{})
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return makeEvalError(err)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return makeEvalError(err)
+	}
+
+	q := obj.Value.(*Deque)
+	res, err := q.LRange(start, stop)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(res)
+}
+
+// evalLINSERT command inserts the element at a key before / after the pivot element.
+//
+// Returns the list length (integer) after a successful insert operation, 0 when the key doesn't exist, -1 when the pivot wasn't found.
+//
+// Usage: LINSERT key <BEFORE | AFTER> pivot element
+func evalLINSERT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 4 {
+		return makeEvalError(errors.New("-wrong number of arguments for LINSERT"))
+	}
+
+	key := args[0]
+	beforeAfter := strings.ToLower(args[1])
+	pivot := args[2]
+	element := args[3]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult(0)
+	}
+
+	// if object is a set type, return error
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeSet) == nil {
+		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return makeEvalError(err)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return makeEvalError(err)
+	}
+
+	q := obj.Value.(*Deque)
+	res, err := q.LInsert(pivot, element, beforeAfter)
+	if err != nil {
+		return makeEvalError(err)
+	}
+	return makeEvalResult(res)
+}
+
+// SETBIT key offset value
+func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
+	var err error
+
+	if len(args) != 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("SETBIT"),
+		}
+	}
+
+	key := args[0]
+	offset, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("bit offset is not an integer or out of range"),
+		}
+	}
+
+	value, err := strconv.ParseBool(args[2])
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("bit is not an integer or out of range"),
+		}
+	}
+
+	obj := store.Get(key)
+	requiredByteArraySize := offset>>3 + 1
+
+	if obj == nil {
+		obj = store.NewObj(NewByteArray(int(requiredByteArraySize)), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+		store.Put(args[0], obj)
+	}
+
+	if object.AssertType(obj.TypeEncoding, object.ObjTypeByteArray) == nil ||
+		object.AssertType(obj.TypeEncoding, object.ObjTypeString) == nil ||
+		object.AssertType(obj.TypeEncoding, object.ObjTypeInt) == nil {
+		var byteArray *ByteArray
+		oType, oEnc := object.ExtractTypeEncoding(obj)
+
+		switch oType {
+		case object.ObjTypeByteArray:
+			byteArray = obj.Value.(*ByteArray)
+		case object.ObjTypeString, object.ObjTypeInt:
+			byteArray, err = NewByteArrayFromObj(obj)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrWrongTypeOperation,
+				}
+			}
+		default:
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+
+		// Perform the resizing check
+		byteArrayLength := byteArray.Length
+
+		// check whether resize required or not
+		if requiredByteArraySize > byteArrayLength {
+			// resize as per the offset
+			byteArray = byteArray.IncreaseSize(int(requiredByteArraySize))
+		}
+
+		resp := byteArray.GetBit(int(offset))
+		byteArray.SetBit(int(offset), value)
+
+		// We are returning newObject here so it is thread-safe
+		// Old will be removed by GC
+		newObj, err := ByteSliceToObj(store, obj, byteArray.data, oType, oEnc)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+
+		exp, ok := dstore.GetExpiry(obj, store)
+		var exDurationMs int64 = -1
+		if ok {
+			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+		}
+		// newObj has bydefault expiry time -1 , we need to set it
+		if exDurationMs > 0 {
+			store.SetExpiry(newObj, exDurationMs)
+		}
+
+		store.Put(key, newObj)
+		if resp {
+			return &EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+	return &EvalResponse{
+		Result: nil,
+		Error:  diceerrors.ErrWrongTypeOperation,
+	}
+}
+
+// GETBIT key offset
+func evalGETBIT(args []string, store *dstore.Store) *EvalResponse {
+	var err error
+
+	if len(args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GETBIT"),
+		}
+	}
+
+	key := args[0]
+	offset, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrIntegerOutOfRange,
+		}
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	requiredByteArraySize := offset>>3 + 1
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeSet:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	case object.ObjTypeByteArray:
+		byteArray := obj.Value.(*ByteArray)
+		byteArrayLength := byteArray.Length
+
+		// check whether offset, length exists or not
+		if requiredByteArraySize > byteArrayLength {
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
+		}
+		value := byteArray.GetBit(int(offset))
+		if value {
+			return &EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+
+	case object.ObjTypeString, object.ObjTypeInt:
+		byteArray, err := NewByteArrayFromObj(obj)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			}
+		}
+		if requiredByteArraySize > byteArray.Length {
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
+		}
+		value := byteArray.GetBit(int(offset))
+		if value {
+			return &EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			}
+		}
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+
+	default:
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+}
+
+func evalBITCOUNT(args []string, store *dstore.Store) *EvalResponse {
+	var err error
+
+	// if no key is provided, return error
+	if len(args) == 0 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("BITCOUNT"),
+		}
+	}
+
+	// if more than 4 arguments are provided, return error
+	if len(args) > 4 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrSyntax,
+		}
+	}
+
+	// fetching value of the key
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	var value []byte
+	var valueLength int64
+
+	switch {
+	case object.AssertType(obj.TypeEncoding, object.ObjTypeByteArray) == nil:
+		byteArray := obj.Value.(*ByteArray)
+		value = byteArray.data
+		valueLength = byteArray.Length
+	case object.AssertType(obj.TypeEncoding, object.ObjTypeString) == nil:
+		value = []byte(obj.Value.(string))
+		valueLength = int64(len(value))
+	case object.AssertType(obj.TypeEncoding, object.ObjTypeInt) == nil:
+		value = []byte(strconv.FormatInt(obj.Value.(int64), 10))
+		valueLength = int64(len(value))
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// defining constants of the function
+	start, end := int64(0), valueLength-1
+	unit := BYTE
+
+	// checking which arguments are present and validating arguments
+	if len(args) > 1 {
+		start, err = strconv.ParseInt(args[1], 10, 64)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+		if len(args) <= 2 {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			}
+		}
+		end, err = strconv.ParseInt(args[2], 10, 64)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+	}
+	if len(args) > 3 {
+		unit = strings.ToUpper(args[3])
+	}
+
+	switch unit {
+	case BYTE:
+		if start < 0 {
+			start += valueLength
+		}
+		if end < 0 {
+			end += valueLength
+		}
+		if start > end || start >= valueLength {
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
+		}
+		end = min(end, valueLength-1)
+		bitCount := 0
+		for i := start; i <= end; i++ {
+			bitCount += bits.OnesCount8(value[i])
+		}
+		return &EvalResponse{
+			Result: bitCount,
+			Error:  nil,
+		}
+	case BIT:
+		if start < 0 {
+			start += valueLength * 8
+		}
+		if end < 0 {
+			end += valueLength * 8
+		}
+		if start > end {
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
+		}
+		startByte, endByte := start/8, min(end/8, valueLength-1)
+		startBitOffset, endBitOffset := start%8, end%8
+
+		if endByte == valueLength-1 {
+			endBitOffset = 7
+		}
+
+		if startByte >= valueLength {
+			return &EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			}
+		}
+
+		bitCount := 0
+
+		// Use bit masks to count the bits instead of a loop
+		if startByte == endByte {
+			mask := byte(0xFF >> startBitOffset)
+			mask &= byte(0xFF << (7 - endBitOffset))
+			bitCount = bits.OnesCount8(value[startByte] & mask)
+		} else {
+			// Handle first byte
+			firstByteMask := byte(0xFF >> startBitOffset)
+			bitCount += bits.OnesCount8(value[startByte] & firstByteMask)
+
+			// Handle all the middle ones
+			for i := startByte + 1; i < endByte; i++ {
+				bitCount += bits.OnesCount8(value[i])
+			}
+
+			// Handle last byte
+			lastByteMask := byte(0xFF << (7 - endBitOffset))
+			bitCount += bits.OnesCount8(value[endByte] & lastByteMask)
+		}
+		return &EvalResponse{
+			Result: bitCount,
+			Error:  nil,
+		}
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrSyntax,
+		}
+	}
+}
+
+// Generic method for both BITFIELD and BITFIELD_RO.
+// isReadOnly method is true for BITFIELD_RO command.
+func bitfieldEvalGeneric(args []string, store *dstore.Store, isReadOnly bool) *EvalResponse {
+	var ops []utils.BitFieldOp
+	ops, err2 := utils.ParseBitfieldOps(args, isReadOnly)
+
+	if err2 != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  err2,
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		obj = store.NewObj(NewByteArray(1), -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+		store.Put(args[0], obj)
+	}
+	var value *ByteArray
+	var err error
+
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeByteArray:
+		value = obj.Value.(*ByteArray)
+	case object.ObjTypeString, object.ObjTypeInt:
+		value, err = NewByteArrayFromObj(obj)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("value is not a valid byte array"),
+			}
+		}
+	default:
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	result := executeBitfieldOps(value, ops)
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
+// evalBITFIELD evaluates BITFIELD operations on a key store string, int or bytearray types
+// it returns an array of results depending on the subcommands
+// it allows mutation using SET and INCRBY commands
+// returns arity error, offset type error, overflow type error, encoding type error, integer error, syntax error
+// GET <encoding> <offset> -- Returns the specified bit field.
+// SET <encoding> <offset> <value> -- Set the specified bit field
+// and returns its old value.
+// INCRBY <encoding> <offset> <increment> -- Increments or decrements
+// (if a negative increment is given) the specified bit field and returns the new value.
+// There is another subcommand that only changes the behavior of successive
+// INCRBY and SET subcommands calls by setting the overflow behavior:
+// OVERFLOW [WRAP|SAT|FAIL]`
+func evalBITFIELD(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("BITFIELD"),
+		}
+	}
+
+	return bitfieldEvalGeneric(args, store, false)
+}
+
+// Read-only variant of the BITFIELD command. It is like the original BITFIELD but only accepts GET subcommand and can safely be used in read-only replicas.
+func evalBITFIELDRO(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("BITFIELD_RO"),
+		}
+	}
+
+	return bitfieldEvalGeneric(args, store, true)
+}
+
+func evalGetObject(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInternalServer,
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	// if key does not exist, return RESP encoded nil
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	exp, ok := dstore.GetExpiry(obj, store)
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+	}
+
+	exObj := &object.InternalObj{
+		Obj:        obj,
+		ExDuration: exDurationMs,
+	}
+
+	// Decode and return the value based on its encoding
+	return &EvalResponse{
+		Result: exObj,
+		Error:  nil,
+	}
+}
+
+// evalJSONSTRAPPEND appends a string value to the JSON string value at the specified path
+// in the JSON object saved at the key in arguments.
+// Args must contain at least a key and the string value to append.
+// If the key does not exist or is expired, it returns an error response.
+// If the value at the specified path is not a string, it returns an error response.
+// Returns the new length of the string at the specified path if successful.
+func evalJSONSTRAPPEND(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("JSON.STRAPPEND"))
+	}
+
+	key := args[0]
+	path := args[1]
+	value := args[2]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	jsonData := obj.Value
+
+	var resultsArray []interface{}
+
+	if path == "$" {
+		// Handle root-level string
+		if str, ok := jsonData.(string); ok {
+			unquotedValue := strings.Trim(value, "\"")
+			newValue := str + unquotedValue
+			resultsArray = append(resultsArray, len(newValue))
+			jsonData = newValue
+		} else {
+			return makeEvalResult(clientio.EmptyArray)
+		}
+	} else {
+		expr, err := jp.ParseString(path)
+		if err != nil {
+			return makeEvalResult(clientio.EmptyArray)
+		}
+
+		_, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
+			switch v := data.(type) {
+			case string:
+				unquotedValue := strings.Trim(value, "\"")
+				newValue := v + unquotedValue
+				resultsArray = append([]interface{}{len(newValue)}, resultsArray...)
+				return newValue, true
+			default:
+				resultsArray = append([]interface{}{clientio.RespNIL}, resultsArray...)
+				return data, false
+			}
+		})
+
+		if modifyErr != nil {
+			return makeEvalResult(clientio.EmptyArray)
+		}
+	}
+
+	if len(resultsArray) == 0 {
+		return makeEvalResult(clientio.EmptyArray)
+	}
+
+	obj.Value = jsonData
+	return makeEvalResult(resultsArray[0])
+}
+
+// evalJSONTOGGLE toggles a boolean value stored at the specified key and path.
+// args must contain at least the key and path (where the boolean is located).
+// If the key does not exist or is expired, it returns response.RespNIL.
+// If the field at the specified path is not a boolean, it returns an encoded error response.
+// If the boolean is `true`, it toggles to `false` (returns :0), and if `false`, it toggles to `true` (returns :1).
+// Returns an encoded error response if the incorrect number of arguments is provided.
+func evalJSONTOGGLE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("JSON.TOGGLE"))
+	}
+	key := args[0]
+	path := args[1]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	jsonData := obj.Value
+	_, err := sonic.Marshal(jsonData)
+
+	if err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	expr, err := jp.ParseString(path)
+
+	if err != nil {
+		return makeEvalError(diceerrors.ErrJSONPathNotFound(path))
+	}
+
+	matches := expr.Get(jsonData)
+	if len(matches) == 0 {
+		return makeEvalError(diceerrors.ErrJSONPathNotFound(path))
+	}
+
+	var toggleResults []interface{}
+	modified := false
+
+	_, err = expr.Modify(jsonData, func(value interface{}) (interface{}, bool) {
+		boolValue, ok := value.(bool)
+		if !ok {
+			toggleResults = append(toggleResults, nil)
+			return value, false
+		}
+		newValue := !boolValue
+		toggleResults = append(toggleResults, utils.BoolToInt(newValue))
+		modified = true
+		return newValue, true
+	})
+
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("failed to toggle values"))
+	}
+
+	if modified {
+		obj.Value = jsonData
+	}
+
+	toggleResults = ReverseSlice(toggleResults)
+	return makeEvalResult(toggleResults)
+}
+
+// evaLJSONFORGET removes the field specified by the given JSONPath from the JSON document stored under the provided key.
+// calls the evalJSONDEL() with the arguments passed
+// If the specified key has expired or does not exist, it returns 0.
+// Returns encoded error response if incorrect number of arguments
+// If the JSONPath points to the root of the JSON document, the entire key is deleted from the store.
+// Returns an integer reply specified as the number of paths deleted (0 or more)
+func evalJSONFORGET(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("JSON.FORGET"),
+		}
+	}
+
+	return evalJSONDEL(args, store)
+}
+
+// evalJSONDEL deletes a value specified by the given JSON path from the store.
+// It returns an integer indicating the number of paths deleted (0 or more).
+// If the specified key has expired or does not exist, it returns 0.
+// If the number of arguments provided is incorrect, it returns an encoded error response.
+func evalJSONDEL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("JSON.DEL"))
+	}
+	key := args[0]
+
+	// Default path is root if not specified
+	path := defaultRootPath
+	if len(args) > 1 {
+		path = args[1]
+	}
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalResult(clientio.IntegerZero)
+	}
+
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	jsonData := obj.Value
+
+	_, err := sonic.Marshal(jsonData)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	if len(args) == 1 || path == defaultRootPath {
+		store.Del(key)
+		return makeEvalResult(1)
+	}
+
+	expr, err := jp.ParseString(path)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrJSONPathNotFound(path))
+	}
+	results := expr.Get(jsonData)
+
+	hasBrackets := strings.Contains(path, "[") && strings.Contains(path, "]")
+
+	// If the command has square brackets then we have to delete an element inside an array
+	if hasBrackets {
+		_, err = expr.Remove(jsonData)
+	} else {
+		err = expr.Del(jsonData)
+	}
+
+	if err != nil {
+		return makeEvalError(diceerrors.ErrInternalServer) // no need to send actual internal error
+	}
+	// Create a new object with the updated JSON data
+	newObj := store.NewObj(jsonData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+	store.Put(key, newObj)
+
+	return makeEvalResult(len(results))
+}
+
+// Returns the new value after incrementing or multiplying the existing value
+func incrMultValue(value any, multiplier interface{}, operation jsonOperation) (newVal interface{}, resultString string, isModified bool) {
+	switch utils.GetJSONFieldType(value) {
+	case utils.NumberType:
+		oldVal := value.(float64)
+		var newVal float64
+		if v, ok := multiplier.(float64); ok {
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + v
+			case MultBy:
+				newVal = oldVal * v
+			}
+		} else {
+			v, _ := multiplier.(int64)
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + float64(v)
+			case MultBy:
+				newVal = oldVal * float64(v)
+			}
+		}
+		resultString := strconv.FormatFloat(newVal, 'f', -1, 64)
+		return newVal, resultString, true
+	case utils.IntegerType:
+		if v, ok := multiplier.(float64); ok {
+			oldVal := float64(value.(int64))
+			var newVal float64
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + v
+			case MultBy:
+				newVal = oldVal * v
+			}
+			resultString := strconv.FormatFloat(newVal, 'f', -1, 64)
+			return newVal, resultString, true
+		} else {
+			v, _ := multiplier.(int64)
+			oldVal := value.(int64)
+			var newVal int64
+			switch operation {
+			case IncrBy:
+				newVal = oldVal + v
+			case MultBy:
+				newVal = oldVal * v
+			}
+			resultString := strconv.FormatInt(newVal, 10)
+			return newVal, resultString, true
+		}
+	default:
+		return value, "null", false
+	}
+}
+
+// evalJSONNUMMULTBY multiplies the JSON fields matching the specified JSON path at the specified key
+// args must contain key, JSON path and the multiplier value
+// Returns encoded error response if incorrect number of arguments
+// Returns encoded error if the JSON path or key is invalid
+// Returns bulk string reply specified as a stringified updated values for each path
+// Returns null if matching field is non-numerical
+func evalJSONNUMMULTBY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("JSON.NUMMULTBY"))
+	}
+	key := args[0]
+
+	// Retrieve the object from the database
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+	path := args[1]
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+
+	if err != nil {
+		return makeEvalError(diceerrors.ErrJSONPathNotFound(path))
+	}
+
+	// Get json matching expression
+	jsonData := obj.Value
+	results := expr.Get(jsonData)
+	if len(results) == 0 {
+		return makeEvalResult("[]")
+	}
+
+	for i, r := range args[2] {
+		if !unicode.IsDigit(r) && r != '.' && r != '-' && r != 'e' && r != 'E' {
+			if i == 0 {
+				return makeEvalError(diceerrors.ErrGeneral(fmt.Sprintf("expected value at line 1 column %d", i+1)))
+			}
+
+			return makeEvalError(diceerrors.ErrGeneral(fmt.Sprintf("trailing characters at line 1 column %d", i+1)))
+		}
+	}
+
+	// Parse the mulplier value
+	multiplier, err := parseFloatInt(args[2])
+	if err != nil {
+		return makeEvalError(diceerrors.ErrIntegerOutOfRange)
+	}
+
+	// Update matching values using Modify
+	resultArray := make([]string, 0, len(results))
+	if path == defaultRootPath {
+		newValue, resultString, modified := incrMultValue(jsonData, multiplier, MultBy)
+		if modified {
+			jsonData = newValue
+		}
+		resultArray = append(resultArray, resultString)
+	} else {
+		_, err := expr.Modify(jsonData, func(value any) (interface{}, bool) {
+			newValue, resultString, modified := incrMultValue(value, multiplier, MultBy)
+			resultArray = append(resultArray, resultString)
+			return newValue, modified
+		})
+		if err != nil {
+			return makeEvalError(diceerrors.ErrJSONPathNotFound(path))
+		}
+	}
+
+	// Stringified updated values
+	resultString := `[` + strings.Join(resultArray, ",") + `]`
+
+	newObj := &object.Obj{
+		Value:        jsonData,
+		TypeEncoding: object.ObjTypeJSON,
+	}
+	exp, ok := dstore.GetExpiry(obj, store)
+
+	var exDurationMs int64 = -1
+	if ok {
+		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+	}
+	// newObj has default expiry time of -1 , we need to set it
+	if exDurationMs > 0 {
+		store.SetExpiry(newObj, exDurationMs)
+	}
+
+	store.Put(key, newObj)
+	return makeEvalResult(resultString)
+}
+
+// evalSetObject stores an object in the store with a given key and optional expiry.
+// If an object with the same key exists, it is replaced.
+// This function is usually specifc to multishard multi-op commands
+func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	args := cd.Args
+
+	var isReplace bool
+	if len(cd.Args) > 1 {
+		if cd.Args[1] == "REPLACE" {
+			isReplace = true
+		}
+	}
+
+	key := args[0]
+
+	obj := store.Get(key)
+
+	if !isReplace && obj != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("ERR target key already exists"),
+		}
+	}
+
+	store.Del(key)
+
+	copyObj := cd.InternalObj.Obj.DeepCopy()
+	if copyObj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	exDurationMs := cd.InternalObj.ExDuration
+
+	store.Put(key, copyObj)
+
+	if exDurationMs > 0 {
+		store.SetExpiry(copyObj, exDurationMs)
+	}
+
+	return &EvalResponse{
+		Result: clientio.IntegerOne,
+		Error:  nil,
+	}
+}
+
+// takes original value, increment values (float or int), a flag representing if increment is float
+// returns new value, string representation, a boolean representing if the value was modified
+func incrementValue(value any, isIncrFloat bool, incrFloat float64, incrInt int64) (newVal interface{}, stringRepresentation string, isModified bool) {
+	switch utils.GetJSONFieldType(value) {
+	case utils.NumberType:
+		oldVal := value.(float64)
+		var newVal float64
+		if isIncrFloat {
+			newVal = oldVal + incrFloat
+		} else {
+			newVal = oldVal + float64(incrInt)
+		}
+		resultString := formatFloat(newVal, isIncrFloat)
+		return newVal, resultString, true
+	case utils.IntegerType:
+		if isIncrFloat {
+			oldVal := float64(value.(int64))
+			newVal := oldVal + incrFloat
+			resultString := formatFloat(newVal, isIncrFloat)
+			return newVal, resultString, true
+		} else {
+			oldVal := value.(int64)
+			newVal := oldVal + incrInt
+			resultString := fmt.Sprintf("%d", newVal)
+			return newVal, resultString, true
+		}
+	default:
+		return value, null, false
+	}
+}
+
+func evalJSONNUMINCRBY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("JSON.NUMINCRBY"))
+	}
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
+	}
+
+	// Check if the object is of JSON type
+	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if errWithMessage != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	path := args[1]
+
+	jsonData := obj.Value
+	// Parse the JSONPath expression
+	expr, err := jp.ParseString(path)
+
+	if err != nil {
+		return makeEvalError(diceerrors.ErrJSONPathNotFound(path))
+	}
+
+	isIncrFloat := false
+
+	for i, r := range args[2] {
+		if !unicode.IsDigit(r) && r != '.' && r != '-' {
+			if i == 0 {
+				return makeEvalError(diceerrors.ErrGeneral(fmt.Sprintf("expected value at line 1 column %d", i+1)))
+			}
+			return makeEvalError(diceerrors.ErrGeneral(fmt.Sprintf("trailing characters at line 1 column %d", i+1)))
+		}
+		if r == '.' {
+			isIncrFloat = true
+		}
+	}
+	var incrFloat float64
+	var incrInt int64
+	if isIncrFloat {
+		incrFloat, err = strconv.ParseFloat(args[2], 64)
+		if err != nil {
+			return makeEvalError(diceerrors.ErrIntegerOutOfRange)
+		}
+	} else {
+		incrInt, err = strconv.ParseInt(args[2], 10, 64)
+
+		if err != nil {
+			return makeEvalError(diceerrors.ErrIntegerOutOfRange)
+		}
+	}
+	results := expr.Get(jsonData)
+
+	if len(results) == 0 {
+		respString := "[]"
+		return makeEvalResult(respString)
+	}
+
+	resultArray := make([]string, 0, len(results))
+
+	if path == defaultRootPath {
+		newValue, resultString, isModified := incrementValue(jsonData, isIncrFloat, incrFloat, incrInt)
+		if isModified {
+			jsonData = newValue
+		}
+		resultArray = append(resultArray, resultString)
+	} else {
+		// Execute the JSONPath query
+		_, err := expr.Modify(jsonData, func(value any) (interface{}, bool) {
+			newValue, resultString, isModified := incrementValue(value, isIncrFloat, incrFloat, incrInt)
+			resultArray = append(resultArray, resultString)
+			return newValue, isModified
+		})
+		if err != nil {
+			return makeEvalError(diceerrors.ErrJSONPathNotFound(path))
+		}
+	}
+
+	resultString := `[` + strings.Join(resultArray, ",") + `]`
+
+	obj.Value = jsonData
+
+	return makeEvalResult(resultString)
 }

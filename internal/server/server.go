@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/wal"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
@@ -44,7 +45,7 @@ type AsyncServer struct {
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer(shardManager *shard.ShardManager, queryWatchChan chan dstore.QueryWatchEvent) *AsyncServer {
+func NewAsyncServer(shardManager *shard.ShardManager, queryWatchChan chan dstore.QueryWatchEvent, wl wal.AbstractWAL) *AsyncServer {
 	return &AsyncServer{
 		maxClients:             config.DiceConfig.Performance.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
@@ -258,6 +259,7 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 		return err
 	}
 
+	// function used within package, limit the scope
 	s.EvalAndRespond(commands, client)
 	if hasAbort {
 		return diceerrors.ErrAborted
@@ -419,9 +421,6 @@ func (s *AsyncServer) handleTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm
 
 func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
 	switch diceDBCmd.Cmd {
-	case eval.MultiCmdMeta.Name:
-		c.TxnBegin()
-		buf.Write(clientio.RespOK)
 	case eval.ExecCmdMeta.Name:
 		buf.Write(diceerrors.NewErrWithMessage("EXEC without MULTI"))
 	case eval.DiscardCmdMeta.Name:

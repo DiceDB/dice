@@ -3,7 +3,7 @@ package http
 import (
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAPPEND(t *testing.T) {
@@ -90,13 +90,24 @@ func TestAPPEND(t *testing.T) {
 				{Command: "del", Body: map[string]interface{}{"key": "key"}},
 			},
 		},
+		{
+			name: "APPEND to key created using ZADD",
+			commands: []HTTPCommand{
+				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one"}}},
+				{Command: "APPEND", Body: map[string]interface{}{"key": "myzset", "value": "two"}},
+			},
+			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			cleanup: []HTTPCommand{
+				{Command: "del", Body: map[string]interface{}{"key": "myzset"}},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				testifyAssert.Equal(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 			exec.FireCommand(tc.cleanup[0])
 		})

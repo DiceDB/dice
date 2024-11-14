@@ -20,7 +20,10 @@ This command does not accept any parameters.
 
 ## Return values
 
-- **Integer**: The command returns an integer representing the total number of commands available in the DiceDB server.
+| Condition | Return Value |
+|-----------|--------------|
+| Command is successful | Integer |
+| Error | An error is returned if the command fails. |
 
 ## Behavior
 

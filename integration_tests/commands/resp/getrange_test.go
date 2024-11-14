@@ -1,10 +1,36 @@
 package resp
 
 import (
+	"fmt"
+	"strconv"
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
+
+func generateByteArrayForGetrangeTestCase() ([]string, []interface{}) {
+	var cmds []string
+	var exp []interface{}
+
+	str := "helloworld"
+	var binaryStr string
+
+	for _, c := range str {
+		binaryStr += fmt.Sprintf("%08b", c)
+	}
+
+	for idx, bit := range binaryStr {
+		if bit == '1' {
+			cmds = append(cmds, string("SETBIT byteArrayKey "+strconv.Itoa(idx)+" 1"))
+			exp = append(exp, int64(0))
+		}
+	}
+
+	cmds = append(cmds, "GETRANGE byteArrayKey 0 4")
+	exp = append(exp, "hello")
+
+	return cmds, exp
+}
 
 func TestGETRANGE(t *testing.T) {
 	conn := getLocalConnection()
@@ -12,6 +38,8 @@ func TestGETRANGE(t *testing.T) {
 
 	FireCommand(conn, "FLUSHDB")
 	defer FireCommand(conn, "FLUSHDB")
+
+	byteArrayCmds, byteArrayExp := generateByteArrayForGetrangeTestCase()
 
 	testCases := []struct {
 		name     string
@@ -55,6 +83,12 @@ func TestGETRANGE(t *testing.T) {
 			expected: []interface{}{"OK", ""},
 			cleanup:  []string{"del test6"},
 		},
+		{
+			name:     "GETRANGE against byte array",
+			commands: byteArrayCmds,
+			expected: byteArrayExp,
+			cleanup:  []string{"del byteArrayKey"},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -62,7 +96,7 @@ func TestGETRANGE(t *testing.T) {
 			for i := 0; i < len(tc.commands); i++ {
 				result := FireCommand(conn, tc.commands[i])
 				expected := tc.expected[i]
-				testifyAssert.Equal(t, expected, result)
+				assert.Equal(t, expected, result)
 			}
 
 			for _, cmd := range tc.cleanup {

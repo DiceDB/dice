@@ -3,11 +3,12 @@ package resp
 import (
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAPPEND(t *testing.T) {
 	conn := getLocalConnection()
+	FireCommand(conn, "FLUSHDB")
 	defer conn.Close()
 
 	testCases := []struct {
@@ -58,6 +59,12 @@ func TestAPPEND(t *testing.T) {
 			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
 			cleanup:  []string{"del key"},
 		},
+		{
+			name:     "APPEND to key created using ZADD",
+			commands: []string{"ZADD key 1 one", "APPEND key two"},
+			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			cleanup:  []string{"del key"},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -65,7 +72,7 @@ func TestAPPEND(t *testing.T) {
 			for i := 0; i < len(tc.commands); i++ {
 				result := FireCommand(conn, tc.commands[i])
 				expected := tc.expected[i]
-				testifyAssert.Equal(t, expected, result)
+				assert.Equal(t, expected, result)
 			}
 
 			for _, cmd := range tc.cleanup {

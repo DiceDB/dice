@@ -9,11 +9,11 @@ import (
 
 	"github.com/dicedb/dice/internal/clientio"
 	dstore "github.com/dicedb/dice/internal/store"
-	assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBloomFilter(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	// This test only contains some basic checks for all the bloom filter
 	// operations like BFRESERVE, BFADD, BFEXISTS. It assumes that the
 	// functions called in the main function are working correctly and
@@ -94,7 +94,7 @@ func TestBloomFilter(t *testing.T) {
 }
 
 func TestGetOrCreateBloomFilter(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	// Create a key and default opts
 	key := "bf"
 	opts := defaultBloomOpts()

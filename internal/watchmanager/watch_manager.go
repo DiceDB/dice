@@ -18,58 +18,62 @@ type (
 	}
 
 	Manager struct {
-		querySubscriptionMap map[string]map[uint32]struct{}              // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
-		tcpSubscriptionMap   map[uint32]map[chan *cmd.DiceDBCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
-		fingerprintCmdMap    map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
+		querySubscriptionMap     map[string]map[uint32]struct{}              // querySubscriptionMap is a map of Key -> [fingerprint1, fingerprint2, ...]
+		tcpSubscriptionMap       map[uint32]map[chan *cmd.DiceDBCmd]struct{} // tcpSubscriptionMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
+		fingerprintCmdMap        map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
+		cmdWatchSubscriptionChan chan WatchSubscription                      // cmdWatchSubscriptionChan is the channel to send/receive watch subscription requests.
+		cmdWatchChan             chan dstore.CmdWatchEvent                   // cmdWatchChan is the channel to send/receive watch events.
 	}
 )
 
 var (
-	CmdWatchSubscriptionChan chan WatchSubscription
-	affectedCmdMap           = map[string]map[string]struct{}{
-		dstore.Set:    {dstore.Get: struct{}{}},
-		dstore.Del:    {dstore.Get: struct{}{}},
-		dstore.Rename: {dstore.Get: struct{}{}},
-		dstore.ZAdd:   {dstore.ZRange: struct{}{}},
+	affectedCmdMap = map[string]map[string]struct{}{
+		dstore.Set:     {dstore.Get: struct{}{}},
+		dstore.Del:     {dstore.Get: struct{}{}},
+		dstore.Rename:  {dstore.Get: struct{}{}},
+		dstore.ZAdd:    {dstore.ZRange: struct{}{}},
+		dstore.PFADD:   {dstore.PFCOUNT: struct{}{}},
+		dstore.PFMERGE: {dstore.PFCOUNT: struct{}{}},
 	}
 )
 
-func NewManager() *Manager {
-	CmdWatchSubscriptionChan = make(chan WatchSubscription)
+func NewManager(cmdWatchSubscriptionChan chan WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent) *Manager {
 	return &Manager{
-		querySubscriptionMap: make(map[string]map[uint32]struct{}),
-		tcpSubscriptionMap:   make(map[uint32]map[chan *cmd.DiceDBCmd]struct{}),
-		fingerprintCmdMap:    make(map[uint32]*cmd.DiceDBCmd),
+		querySubscriptionMap:     make(map[string]map[uint32]struct{}),
+		tcpSubscriptionMap:       make(map[uint32]map[chan *cmd.DiceDBCmd]struct{}),
+		fingerprintCmdMap:        make(map[uint32]*cmd.DiceDBCmd),
+		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
+		cmdWatchChan:             cmdWatchChan,
 	}
 }
 
 // Run starts the watch manager, listening for subscription requests and events
-func (m *Manager) Run(ctx context.Context, cmdWatchChan chan dstore.CmdWatchEvent) {
+func (m *Manager) Run(ctx context.Context) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
-		m.listenForEvents(ctx, cmdWatchChan)
+		m.listenForEvents(ctx)
 	}()
 
 	<-ctx.Done()
 	wg.Wait()
 }
 
-func (m *Manager) listenForEvents(ctx context.Context, cmdWatchChan chan dstore.CmdWatchEvent) {
+func (m *Manager) listenForEvents(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case sub := <-CmdWatchSubscriptionChan:
+		case sub := <-m.cmdWatchSubscriptionChan:
 			if sub.Subscribe {
 				m.handleSubscription(sub)
 			} else {
 				m.handleUnsubscription(sub)
 			}
-		case watchEvent := <-cmdWatchChan:
+		case watchEvent := <-m.cmdWatchChan:
 			m.handleWatchEvent(watchEvent)
 		}
 	}
@@ -107,8 +111,6 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 		if len(clients) == 0 {
 			// Remove the fingerprint from tcpSubscriptionMap
 			delete(m.tcpSubscriptionMap, fingerprint)
-			// Also remove the fingerprint from fingerprintCmdMap
-			delete(m.fingerprintCmdMap, fingerprint)
 		}
 	}
 
@@ -123,6 +125,8 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 				delete(m.querySubscriptionMap, key)
 			}
 		}
+		// Also remove the fingerprint from fingerprintCmdMap
+		delete(m.fingerprintCmdMap, fingerprint)
 	}
 }
 

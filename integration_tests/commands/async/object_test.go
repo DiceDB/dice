@@ -1,11 +1,10 @@
 package async
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestObjectCommand(t *testing.T) {
@@ -72,11 +71,11 @@ func TestObjectCommand(t *testing.T) {
 		},
 		{
 			name:       "Object Encoding check for json",
-			commands:   []string{`JSON.SET k1 $ ` + simpleJSON, "OBJECT ENCODING k1"},
+			commands:   []string{`JSON.SET k10 $ ` + simpleJSON, "OBJECT ENCODING k10"},
 			expected:   []interface{}{"OK", "json"},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
-			cleanup:    []string{"DEL k1"},
+			cleanup:    []string{"DEL k10"},
 		},
 		{
 			name:       "Object Encoding check for bytearray",
@@ -124,11 +123,10 @@ func TestObjectCommand(t *testing.T) {
 
 				result := FireCommand(conn, cmd)
 
-				fmt.Println(cmd, result, tc.expected[i])
 				if tc.assertType[i] == "equal" {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				} else {
-					assert.Assert(t, result.(int64) >= tc.expected[i].(int64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
+					assert.True(t, result.(int64) >= tc.expected[i].(int64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
 				}
 			}
 			for _, cmd := range tc.cleanup { // run cleanup

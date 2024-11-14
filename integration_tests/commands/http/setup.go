@@ -50,6 +50,10 @@ type HTTPCommand struct {
 	Body    map[string]interface{}
 }
 
+func (cmd HTTPCommand) IsEmptyCommand() bool {
+	return cmd.Command == ""
+}
+
 func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) {
 	command := strings.ToUpper(cmd.Command)
 	var body []byte
@@ -108,7 +112,7 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	queryWatcherLocal := querymanager.NewQueryManager()
 	config.HTTPPort = opt.Port
 	// Initialize the HTTPServer
-	testServer := server.NewHTTPServer(shardManager)
+	testServer := server.NewHTTPServer(shardManager, nil)
 	// Inform the user that the server is starting
 	fmt.Println("Starting the test server on port", config.HTTPPort)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)

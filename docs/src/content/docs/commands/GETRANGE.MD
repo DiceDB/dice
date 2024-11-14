@@ -2,6 +2,7 @@
 title: GETRANGE
 description: The `GETRANGE` command in DiceDB is used to get a substring of a string, provided the start and end indices
 ---
+
 The `GETRANGE` command in DiceDB is used to get a substring of a string, provided the start and end indices.
 
 ## Syntax
@@ -11,28 +12,32 @@ GETRANGE key start end
 ```
 
 ## Parameters
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The name of the key containing the string.                                           | String  | Yes      |
-| `start`   | The starting index of the required substring.                              | Integer | Yes      |
-| `end`     | The ending index of the required substring.                               | Integer | Yes      |
+
+| Parameter | Description                                   | Type    | Required |
+| --------- | --------------------------------------------- | ------- | -------- |
+| `key`     | The name of the key containing the string.    | String  | Yes      |
+| `start`   | The starting index of the required substring. | Integer | Yes      |
+| `end`     | The ending index of the required substring.   | Integer | Yes      |
+
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| if key contains a valid string                 | a substring based on the start and end indices    |
-| if `start` is greater than `end`               | an empty string is returned                       |
-| if the `end` exceeds the length of the string present at `key` | the entire string is returned     |
-| if the `start` is greater than the length of the string | an empty string is returned.             |
+| Condition                                                      | Return Value                                   |
+| -------------------------------------------------------------- | ---------------------------------------------- |
+| if key contains a valid string                                 | a substring based on the start and end indices |
+| if `start` is greater than `end`                               | an empty string is returned                    |
+| if the `end` exceeds the length of the string present at `key` | the entire string is returned                  |
+| if the `start` is greater than the length of the string        | an empty string is returned.                   |
 
 ## Behaviour
-- If the specified key does not exist, the `GETRANGE` command returns an empty string. 
+
+- If the specified key does not exist, the `GETRANGE` command returns an empty string.
 - If `start` is greater than `end`, the `GETRANGE` command returns an empty string.
 - If `start` is not within the length of the string, the `GETRANGE` command returns an empty string.
 - `start` and `end` can be negative which removed `end + 1` characters from the other side of the string.
 - Both `start` and `end` can be negative, which removes characters from the string, starting from the `end + 1` position on the right.
 
 ## Errors
+
 1. `Wrong type of value or key`:
 
    - Error Message: `(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value`
@@ -82,6 +87,25 @@ OK
 ```bash
 127.0.0.1:7379> GETRANGE foo 0 1001
 "apple"
+```
+
+`GETRANGE` returns string representation of byte array stored in bitmap
+
+```bash
+127.0.0.1:7379> SETBIT bitmapkey 2 1
+(integer) 0
+127.0.0.1:7379> SETBIT bitmapkey 3 1
+(integer) 0
+127.0.0.1:7379> SETBIT bitmapkey 5 1
+(integer) 0
+127.0.0.1:7379> SETBIT bitmapkey 10 1
+(integer) 0
+127.0.0.1:7379> SETBIT bitmapkey 11 1
+(integer) 0
+127.0.0.1:7379> SETBIT bitmapkey 14 1
+(integer) 0
+127.0.0.1:7379> GETRANGE bitmapkey 0 -1
+"42"
 ```
 
 ### Invalid usage

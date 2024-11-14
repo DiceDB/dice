@@ -1,7 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap");
 
-$family-serif: "Assistant";
+$family-serif: "Spline Sans Mono", monospace;
 $family-primary: $family-serif;
 $family-secondary: "Merriweather", serif;
 
@@ -33,11 +33,11 @@ $button-border-color: #111;
 $button-hover-border-color: $link;
 
 pre {
-    background-color: #111 !important;
+  background-color: #111 !important;
 }
 
 figcaption.header {
-    display: none !important;
+  display: none !important;
 }
 
 .hnavbar {
@@ -105,6 +105,10 @@ ul.horizontal a {
     0 4px 8px 0 rgba(100, 100, 100, 0.2),
     0 6px 20px 0 rgba(500, 500, 500, 0.19);
   cursor: pointer;
+}
+
+.content img {
+  border-radius: 0.5em;
 }
 
 img.logo {
@@ -193,150 +197,8 @@ pre {
   padding: 1.75em !important;
 }
 
+.title {
+  line-height: 1.5em !important;
+}
+
 @import "../../node_modules/bulma/bulma.sass";
-
-@-webkit-keyframes bg-scrolling-reverse {
-  100% {
-    background-position: 50px 50px;
-  }
-}
-@-moz-keyframes bg-scrolling-reverse {
-  100% {
-    background-position: 50px 50px;
-  }
-}
-@-o-keyframes bg-scrolling-reverse {
-  100% {
-    background-position: 50px 50px;
-  }
-}
-@keyframes bg-scrolling-reverse {
-  100% {
-    background-position: 50px 50px;
-  }
-}
-@-webkit-keyframes bg-scrolling {
-  0% {
-    background-position: 50px 50px;
-  }
-}
-@-moz-keyframes bg-scrolling {
-  0% {
-    background-position: 50px 50px;
-  }
-}
-@-o-keyframes bg-scrolling {
-  0% {
-    background-position: 50px 50px;
-  }
-}
-@keyframes bg-scrolling {
-  0% {
-    background-position: 50px 50px;
-  }
-}
-
-#hero {
-  background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAIAAACRXR/mAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAABnSURBVHja7M5RDYAwDEXRDgmvEocnlrQS2SwUFST9uEfBGWs9c97nbGtDcquqiKhOImLs/UpuzVzWEi1atGjRokWLFi1atGjRokWLFi1atGjRokWLFi1af7Ukz8xWp8z8AAAA//8DAJ4LoEAAlL1nAAAAAElFTkSuQmCC")
-    repeat 0 0;
-  -webkit-animation: bg-scrolling-reverse 0.92s infinite;
-  -moz-animation: bg-scrolling-reverse 0.92s infinite;
-  -o-animation: bg-scrolling-reverse 0.92s infinite;
-  animation: bg-scrolling-reverse 0.92s infinite;
-  -webkit-animation-timing-function: linear;
-  -moz-animation-timing-function: linear;
-  -o-animation-timing-function: linear;
-  animation-timing-function: linear;
-}
-
-$color-light-gray: #ecf0f1;
-$color-medium-gray: #bdc3c7;
-$color-dark-gray: #3f0a0a;
-$color-light-green: #ff6060;
-
-$cube-size: 250px;
-$animation-duration: 15s;
-
-.cube {
-  width: $cube-size;
-  height: $cube-size;
-  position: relative;
-  transform-style: preserve-3d;
-  animation: rotate $animation-duration linear infinite;
-
-  &:after {
-    content: "";
-    width: 100%;
-    height: 100%;
-    box-shadow: 0 0 50px rgba(0, 0, 0, 0.2);
-    position: absolute;
-    transform-origin: bottom;
-    transform-style: preserve-3d;
-    transform: rotateX(90deg) translateY($cube-size/2) translateZ(-$cube-size/2);
-    background-color: rgba(0, 0, 0, 0.1);
-  }
-
-  div {
-    background-color: rgba($color-light-green, 0.7);
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border: 1px solid $color-dark-gray;
-    box-shadow: 0 0 2px rgba($color-light-green, 0.7);
-
-    // Back face
-    &:nth-child(1) {
-      transform: translateZ(-$cube-size/2);
-      animation: shade #{$animation-duration} #{-$animation-duration/2} linear infinite;
-    }
-
-    // Front face
-    &:nth-child(2) {
-      transform: translateZ($cube-size/2) rotateY(180deg);
-      animation: shade $animation-duration linear infinite;
-    }
-
-    // Right face
-    &:nth-child(3) {
-      transform-origin: right;
-      transform: translateZ($cube-size/2) rotateY(270deg);
-      animation: shade #{$animation-duration} #{-$animation-duration/4} linear infinite;
-    }
-
-    // Left face
-    &:nth-child(4) {
-      transform-origin: left;
-      transform: translateZ($cube-size/2) rotateY(90deg);
-      animation: shade #{$animation-duration} #{-($animation-duration * 3)/4} linear
-        infinite;
-    }
-
-    // Bottom face
-    &:nth-child(5) {
-      transform-origin: bottom;
-      transform: translateZ($cube-size/2) rotateX(90deg);
-      background-color: rgba(black, 0.7);
-    }
-
-    // Top face
-    &:nth-child(6) {
-      transform-origin: top;
-      transform: translateZ($cube-size/2) rotateX(270deg);
-    }
-  }
-}
-
-@keyframes rotate {
-  0% {
-    transform: rotateX(-15deg) rotateY(0deg);
-  }
-  100% {
-    transform: rotateX(-15deg) rotateY(360deg);
-  }
-}
-
-@keyframes shade {
-  50% {
-    background-color: rgba(black, 0.7);
-  }
-}

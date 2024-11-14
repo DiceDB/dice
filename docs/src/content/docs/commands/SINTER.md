@@ -7,22 +7,23 @@ The `SINTER` command in DiceDB is used to compute the intersection of multiple s
 
 ## Syntax
 
-```
+```bash
 SINTER key [key ...]
 ```
+
 ## Parameters
 
-| Parameter      | Description                                                                                   | Type    | Required |
-|----------------|-----------------------------------------------------------------------------------------------|---------|----------|
-| `key [key ...]`| One or more identifier keys representing sets to intersect. At least one key must be provided.| String  | Yes      |
+| Parameter       | Description                                                                                    | Type   | Required |
+| --------------- | ---------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key [key ...]` | One or more identifier keys representing sets to intersect. At least one key must be provided. | String | Yes      |
 
 ## Return Values
 
-| Condition                                      | Return Value                                                              |
-|------------------------------------------------|---------------------------------------------------------------------------|
-| Common elements exist                          | array of elements (as strings) that are present in all the specified sets |
-| No common elements exist                       | `(empty array)`                                                           |
-| Invalid syntax or no specified keys            | error                                                                     |
+| Condition                           | Return Value                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| Common elements exist               | array of elements (as strings) that are present in all the specified sets |
+| No common elements exist            | `(empty array)`                                                           |
+| Invalid syntax or no specified keys | error                                                                     |
 
 ## Behaviour
 
@@ -36,16 +37,18 @@ If any of the specified keys do not exist, they are treated as empty sets. The i
 
 ## Error Handling
 
-- `Wrong Type Error`: If any of the specified keys exist but are not of the set data type, DiceDB will return an error.
+- `Wrong Type Error`: 
   - `Error Message`: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-- `No Key Error`: If no keys are provided, DiceDB will return an error.
+  - If any of the specified keys exist but are not of the set data type, DiceDB will return an error.
+- `No Key Error`:
   - `Error Message`: `(error) ERR wrong number of arguments for 'sinter' command`
+  - If no keys are provided, DiceDB will return an error.
 
 ## Example Usage
 
-### Example 1: Basic Intersection
+### Basic Intersection
 
-```shell
+```bash
 # Add elements to sets
 127.0.0.1:7379> SADD set1 "a" "b" "c"
 (integer) 3
@@ -59,9 +62,9 @@ If any of the specified keys do not exist, they are treated as empty sets. The i
 1) "c"
 ```
 
-### Example 2: Intersection with Non-Existent Set
+### Intersection with Non-Existent Set
 
-```shell
+```bash
 # Add elements to sets
 127.0.0.1:7379> SADD set1 "a" "b" "c"
 (integer) 3
@@ -72,11 +75,12 @@ If any of the specified keys do not exist, they are treated as empty sets. The i
 127.0.0.1:7379> SINTER set1 set2 set3
 (empty array)
 ```
+
 Note: By default, non-existent keys (such as set3 in the example above) are treated like empty sets. There's no built-in way to create an empty set.
 
-### Example 3: Error Handling - Wrong Type
+### Error Handling - Wrong Type
 
-```shell
+```bash
 # Add elements to sets
 127.0.0.1:7379> SADD set1 "a" "b" "c"
 (integer) 3
@@ -89,9 +93,9 @@ SINTER set1 stringKey
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-### Example 4: Error Handling - No Keys Provided
+### Error Handling - No Keys Provided
 
-```shell
+```bash
 # Attempt to compute intersection without providing any keys
 127.0.0.1:7379> SINTER
 (error) ERR wrong number of arguments for 'sinter' command

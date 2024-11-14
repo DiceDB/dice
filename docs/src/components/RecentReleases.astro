@@ -1,0 +1,27 @@
+---
+const { releases } = Astro.props;
+---
+
+<div class="content">
+  <div>
+    <ul>
+      {
+        releases.map((release) => (
+          <li>
+            <span class="is-hidden-mobile has-text-grey is-family-monospace">
+              {release.data.published_at.toLocaleString("en-us", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+              :
+            </span>
+            <span>
+              <a href={"/releases/" + release.slug}>{release.data.title}</a>
+            </span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</div>

@@ -6,30 +6,34 @@ description: The `EXISTS` command in DiceDB is used to determine if one or more 
 The `EXISTS` command in DiceDB is used to determine if one or more specified keys exist in the database. It returns the number of keys that exist among the specified ones.
 
 ## Syntax
-```
+
+```bash
 EXISTS key [key ...]
 ```
 
 ## Parameters
 
-| Parameter | Description                                    | Type   | Required |
-|-----------|------------------------------------------------|--------|----------|
+| Parameter | Description                                                                                | Type   | Required |
+| --------- | ------------------------------------------------------------------------------------------ | ------ | -------- |
 | `key`     | The key(s) to check for existence. One or more keys can be specified, separated by spaces. | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| None of the specified keys exist               | `0`                                               |
-| One or more specified keys exist               | Integer representing the count of keys that exist |
+| Condition                        | Return Value                                      |
+| -------------------------------- | ------------------------------------------------- |
+| None of the specified keys exist | `0`                                               |
+| One or more specified keys exist | Integer representing the count of keys that exist |
 
 ## Behaviour
+
 - The `EXISTS` command checks whether the specified keys are present in the database.
 - Returns 1 or 0, or for multiple keys returns the count of existing keys.
 - The command performs a read-only operation and does not modify the database.
 
 ## Errors
+
 1. `Wrong number of arguments`:
+
    - Error Message: `(error) ERR wrong number of arguments for 'exists' command`
    - Occurs when no key is provided.
 
@@ -40,6 +44,7 @@ EXISTS key [key ...]
 ## Example Usage
 
 ### Single Key Check
+
 Checking if a key `mykey` exists in the database:
 
 ```bash
@@ -50,6 +55,7 @@ OK
 ```
 
 ### Multiple Keys Check
+
 Checking if multiple keys (`key1`, `key2`, `key3`) exist in the database:
 
 ```bash
@@ -60,15 +66,18 @@ OK
 127.0.0.1:7379> EXISTS key1 key2 key3
 (integer) 2
 ```
+
 In this case, `key1` and `key2` exist, but `key3` does not.
 
 ### Non-Existent Key
+
 Checking if a non-existent key (`nonExistentKey`) is present in the database:
 
 ```bash
 127.0.0.1:7379> EXISTS nonExistentKey
 (integer) 0
 ```
+
 ### All Non-Existent Keys
 
 Checking if all non-existent keys return 0:
