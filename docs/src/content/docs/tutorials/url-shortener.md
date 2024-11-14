@@ -1,6 +1,6 @@
 ---
-title: "Building a URL Shortner"
-description: "Create a simple URL Shortner using DiceDB Go SDK."
+title: "Building a URL Shortener"
+description: "Create a simple URL Shortener using DiceDB Go SDK."
 ---
 
 This tutorial guides you through creating a URL shortener using DiceDB, a key-value store, with Go. We’ll set up endpoints to generate short URLs and redirect them to the original URLs.
