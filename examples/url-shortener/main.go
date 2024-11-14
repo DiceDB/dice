@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"fmt"
 	
 	"log"
 	"net/http"
@@ -13,22 +15,30 @@ import (
 )
 
 type URL struct {
-	ID       string `json:"id"`
 	LongURL  string `json:"long_url"`
-	ShortURL string `json:"short_url"`
 }
 
 var db *dicedb.Client
 
 // Initialize DiceDB connection
 func init() {
+	dhost := "localhost"
+	if val := os.Getenv("DICEDB_HOST"); val != "" {
+		dhost = val
+	}
+
+	dport := "7379"
+	if val := os.Getenv("DICEDB_PORT"); val != "" {
+		dport = val
+	}
+
 	db = dicedb.NewClient(&dicedb.Options{
-		Addr: "localhost:7379",
+		Addr: fmt.Sprintf("%s:%s", dhost, dport),
 	})
 }
 
 // Creates a short URL from a given long URL
-func CreateShortURL(c *gin.Context) {
+func createShortURL(c *gin.Context) {
 	var requestBody URL
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
@@ -37,8 +47,7 @@ func CreateShortURL(c *gin.Context) {
 
 	// Generate unique short ID and construct the short URL
 	shortID := uuid.New().String()[:8]
-	requestBody.ID = shortID
-	requestBody.ShortURL = "http://localhost:8080/" + shortID
+	shortURL := "http://localhost:8080/" + shortID
 
 	// Serialize URL struct to JSON and store it in DiceDB
 	urlData, err := json.Marshal(requestBody)
@@ -52,11 +61,11 @@ func CreateShortURL(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"short_url": requestBody.ShortURL})
+	c.JSON(http.StatusCreated, gin.H{"short_url": shortURL})
 }
 
 // Redirects to the original URL based on the short URL ID
-func RedirectURL(c *gin.Context) {
+func redirectURL(c *gin.Context) {
 	id := c.Param("id")
 
 	// Retrieve stored URL data from DiceDB
@@ -81,8 +90,8 @@ func main() {
 	router := gin.Default()
 
 	// Define endpoints for creating short URLs and redirecting
-	router.POST("/shorten", CreateShortURL)
-	router.GET("/:id", RedirectURL)
+	router.POST("/shorten", createShortURL)
+	router.GET("/:id", redirectURL)
 
 	// Start the server on port 8080
 	if err := router.Run(":8080"); err != nil {
