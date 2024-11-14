@@ -432,7 +432,7 @@ func evalSLEEP(args []string, store *dstore.Store) []byte {
 	return clientio.RespOK
 }
 
-func EvalCLIENT(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
+func evalCLIENT(args []string, httpOp bool, client *comm.Client, store *dstore.Store) []byte {
 	if len(args) == 0 {
 		return clientio.Encode(diceerrors.ErrWrongArgumentCount("CLIENT"), false)
 	}

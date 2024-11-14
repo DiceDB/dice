@@ -72,7 +72,7 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 	// to the new implementation soon for all commands
 
 	case "CLIENT":
-		return &EvalResponse{Result: EvalCLIENT(e.cmd.Args, e.isHTTPOperation, e.client, e.store), Error: nil}
+		return &EvalResponse{Result: evalCLIENT(e.cmd.Args, e.isHTTPOperation, e.client, e.store), Error: nil}
 	case "SUBSCRIBE", "Q.WATCH":
 		return &EvalResponse{Result: EvalQWATCH(e.cmd.Args, e.isHTTPOperation, e.isWebSocketOperation, e.client, e.store), Error: nil}
 	case "UNSUBSCRIBE", "Q.UNWATCH":
