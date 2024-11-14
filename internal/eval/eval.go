@@ -1366,12 +1366,12 @@ func executeBitfieldOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} 
 // evalRANDOMKEY returns a random key from the currently selected database.
 func evalRANDOMKEY(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) > 0 {
-		return &EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("RANDOMKEY")}
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("RANDOMKEY"))
 	}
 
 	availKeys, err := store.Keys("*")
 	if err != nil {
-		return &EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("could not get keys")}
+		return makeEvalError(diceerrors.ErrGeneral("could not get keys"))
 	}
 
 	if len(availKeys) > 0 {
@@ -1391,10 +1391,10 @@ func evalRANDOMKEY(args []string, store *dstore.Store) *EvalResponse {
 			currTimeMs := uint64(utils.GetCurrentTime().UnixMilli())
 			expireTimeMs, isExpirySet := dstore.GetExpiry(keyObj, store)
 			if (isExpirySet && expireTimeMs > currTimeMs) || !isExpirySet {
-				return &EvalResponse{Result: clientio.Encode(randKey, false), Error: nil}
+				return makeEvalResult(clientio.Encode(randKey, false))
 			}
 		}
 	}
 
-	return &EvalResponse{Result: clientio.RespNIL, Error: nil}
+	return makeEvalResult(clientio.RespNIL)
 }
