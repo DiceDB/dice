@@ -12,17 +12,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/internal/eval/sortedset"
-	"github.com/dicedb/dice/internal/server/utils"
-
-	"github.com/bytedance/sonic"
-	"github.com/ohler55/ojg/jp"
-
 	"github.com/axiomhq/hyperloglog"
+	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/ohler55/ojg/jp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,7 +40,7 @@ func setupTest(store *dstore.Store) *dstore.Store {
 }
 
 func TestEval(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	testEvalMSET(t, store)
 	testEvalECHO(t, store)
@@ -61,6 +59,7 @@ func TestEval(t *testing.T) {
 	testEvalJSONTYPE(t, store)
 	testEvalJSONGET(t, store)
 	testEvalJSONSET(t, store)
+	testEvalJSONNUMINCRBY(t, store)
 	testEvalJSONNUMMULTBY(t, store)
 	testEvalJSONTOGGLE(t, store)
 	testEvalJSONARRAPPEND(t, store)
@@ -81,6 +80,7 @@ func TestEval(t *testing.T) {
 	testEvalPFCOUNT(t, store)
 	testEvalPFMERGE(t, store)
 	testEvalHGET(t, store)
+	testEvalHGETALL(t, store)
 	testEvalHMGET(t, store)
 	testEvalHSTRLEN(t, store)
 	testEvalHEXISTS(t, store)
@@ -100,7 +100,6 @@ func TestEval(t *testing.T) {
 	testEvalLRANGE(t, store)
 	testEvalGETDEL(t, store)
 	testEvalGETEX(t, store)
-	testEvalJSONNUMINCRBY(t, store)
 	testEvalDUMP(t, store)
 	testEvalTYPE(t, store)
 	testEvalCOMMAND(t, store)
@@ -1571,7 +1570,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -1614,7 +1613,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
-				Result: 0,
+				Result: clientio.IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -1631,7 +1630,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
-				Result: int64(1),
+				Result: 1,
 				Error:  nil,
 			},
 		},
@@ -1649,7 +1648,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 
 			input: []string{"EXISTING_KEY", "$..language"},
 			migratedOutput: EvalResponse{
-				Result: int64(2),
+				Result: 2,
 				Error:  nil,
 			},
 		},
@@ -1667,7 +1666,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 
 			input: []string{"EXISTING_KEY", "$.*"},
 			migratedOutput: EvalResponse{
-				Result: int64(6),
+				Result: 6,
 				Error:  nil,
 			},
 		},
@@ -1691,7 +1690,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
-				Result: 0,
+				Result: clientio.IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -1708,7 +1707,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
-				Result: int64(1),
+				Result: 1,
 				Error:  nil,
 			},
 		},
@@ -1726,7 +1725,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 
 			input: []string{"EXISTING_KEY", "$..language"},
 			migratedOutput: EvalResponse{
-				Result: int64(2),
+				Result: 2,
 				Error:  nil,
 			},
 		},
@@ -1744,7 +1743,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 
 			input: []string{"EXISTING_KEY", "$.*"},
 			migratedOutput: EvalResponse{
-				Result: int64(6),
+				Result: 6,
 				Error:  nil,
 			},
 		},
@@ -1928,19 +1927,27 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'json.type' command\r\n"),
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.TYPE"),
+			},
 		},
 		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'json.type' command\r\n"),
+			setup: func() {},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.TYPE"),
+			},
 		},
 		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NONEXISTENT_KEY"},
-			output: clientio.RespNIL,
+			setup: func() {},
+			input: []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
 		},
 		"object type value": {
 			setup: func() {
@@ -1952,8 +1959,11 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 
-			input:  []string{"EXISTING_KEY"},
-			output: []byte("$6\r\nobject\r\n"),
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: "object",
+				Error:  nil,
+			},
 		},
 		"array type value": {
 			setup: func() {
@@ -1965,8 +1975,11 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 
-			input:  []string{"EXISTING_KEY", "$.language"},
-			output: []byte("*1\r\n$5\r\narray\r\n"),
+			input: []string{"EXISTING_KEY", "$.language"},
+			migratedOutput: EvalResponse{
+				Result: "array",
+				Error:  nil,
+			},
 		},
 		"string type value": {
 			setup: func() {
@@ -1978,8 +1991,11 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 
-			input:  []string{"EXISTING_KEY", "$.a"},
-			output: []byte("*1\r\n$6\r\nstring\r\n"),
+			input: []string{"EXISTING_KEY", "$.a"},
+			migratedOutput: EvalResponse{
+				Result: "string",
+				Error:  nil,
+			},
 		},
 		"boolean type value": {
 			setup: func() {
@@ -1991,8 +2007,11 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 
-			input:  []string{"EXISTING_KEY", "$.flag"},
-			output: []byte("*1\r\n$7\r\nboolean\r\n"),
+			input: []string{"EXISTING_KEY", "$.flag"},
+			migratedOutput: EvalResponse{
+				Result: "boolean",
+				Error:  nil,
+			},
 		},
 		"number type value": {
 			setup: func() {
@@ -2004,8 +2023,11 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 
-			input:  []string{"EXISTING_KEY", "$.price"},
-			output: []byte("*1\r\n$6\r\nnumber\r\n"),
+			input: []string{"EXISTING_KEY", "$.price"},
+			migratedOutput: EvalResponse{
+				Result: "number",
+				Error:  nil,
+			},
 		},
 		"null type value": {
 			setup: func() {
@@ -2017,8 +2039,11 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 
-			input:  []string{"EXISTING_KEY", "$.language"},
-			output: clientio.RespEmptyArray,
+			input: []string{"EXISTING_KEY", "$.language"},
+			migratedOutput: EvalResponse{
+				Result: clientio.EmptyArray,
+				Error:  nil,
+			},
 		},
 		"multi type value": {
 			setup: func() {
@@ -2030,30 +2055,42 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 
-			input:  []string{"EXISTING_KEY", "$..name"},
-			output: []byte("*2\r\n$6\r\nstring\r\n$6\r\nstring\r\n"),
+			input: []string{"EXISTING_KEY", "$..name"},
+			migratedOutput: EvalResponse{
+				Result: "string",
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalJSONTYPE, store)
+	runMigratedEvalTests(t, tests, evalJSONTYPE, store)
 }
 
 func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'json.get' command\r\n"),
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.GET"),
+			},
 		},
 		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'json.get' command\r\n"),
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.GET"),
+			},
 		},
 		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NONEXISTENT_KEY"},
-			output: clientio.RespNIL,
+			setup: func() {},
+			input: []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
 		},
 		"key exists invalid value": {
 			setup: func() {
@@ -2065,8 +2102,11 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: []byte("-ERR Existing key has wrong Dice type\r\n"),
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
 		},
 		"key exists value": {
 			setup: func() {
@@ -2078,8 +2118,11 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 
-			input:  []string{"EXISTING_KEY"},
-			output: []byte("$7\r\n{\"a\":2}\r\n"),
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: "{\"a\":2}",
+				Error:  nil,
+			},
 		},
 		"key exists but expired": {
 			setup: func() {
@@ -2093,49 +2136,63 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 
 				store.SetExpiry(obj, int64(-2*time.Millisecond))
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: clientio.RespNIL,
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalJSONGET, store)
+	runMigratedEvalTests(t, tests, evalJSONGET, store)
 }
 
 func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.SET"),
+			},
 		},
 		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.SET"),
+			},
 		},
 		"insufficient args": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'json.set' command\r\n"),
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.SET"),
+			},
 		},
 		"invalid json path": {
-			setup:  func() {},
-			input:  []string{"doc", "$", "{\"a\":}"},
-			output: nil,
-			validator: func(output []byte) {
-				assert.True(t, output != nil)
-				assert.True(t, strings.Contains(string(output), "-ERR invalid JSON:"))
+			setup: func() {},
+			input: []string{"doc", "$", "{\"a\":}"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid JSON"),
 			},
 		},
 		"valid json path": {
 			setup: func() {
 			},
-			input:  []string{"doc", "$", "{\"a\":2}"},
-			output: clientio.RespOK,
+			input: []string{"doc", "$", "{\"a\":2}"},
+			migratedOutput: EvalResponse{
+				Result: clientio.OK,
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalJSONSET, store)
+	runMigratedEvalTests(t, tests, evalJSONSET, store)
 }
 
 func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
@@ -3157,6 +3214,70 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 	}
 
 	runMigratedEvalTests(t, tests, evalHGET, store)
+}
+
+func testEvalHGETALL(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"wrong number of args passed": {
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("HGETALL"),
+			},
+		},
+		"key doesn't exist": {
+			setup: func() {},
+			input: []string{"NON_EXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: []string{}, // Expect empty result as the key doesn't exist
+				Error:  nil,
+			},
+		},
+		"key exists but is empty": {
+			setup: func() {
+				key := "EMPTY_HASH"
+				newMap := make(HashMap) // Empty hash map
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input: []string{"EMPTY_HASH"},
+			migratedOutput: EvalResponse{
+				Result: []string{}, // Expect empty result as the hash is empty
+				Error:  nil,
+			},
+		},
+		"key exists with multiple fields": {
+			setup: func() {
+				key := "HASH_WITH_FIELDS"
+				newMap := make(HashMap)
+				newMap["field1"] = "value1"
+				newMap["field2"] = "value2"
+				newMap["field3"] = "value3"
+
+				obj := &object.Obj{
+					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Value:          newMap,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+
+				store.Put(key, obj)
+			},
+			input: []string{"HASH_WITH_FIELDS"},
+			migratedOutput: EvalResponse{
+				Result: []string{"field1", "value1", "field2", "value2", "field3", "value3"},
+				Error:  nil,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalHGETALL, store)
 }
 
 func testEvalHMGET(t *testing.T, store *dstore.Store) {
@@ -4224,6 +4345,8 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			// TODO: Make this generic so that all kind of slices can be handled
 			if b, ok := output.Result.([]byte); ok && tc.migratedOutput.Result != nil {
 				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
+					fmt.Println(string(b))
+					fmt.Println(string(expectedBytes))
 					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else if a, ok := output.Result.([]string); ok && tc.migratedOutput.Result != nil {
@@ -4242,13 +4365,13 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 func BenchmarkEvalMSET(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store := dstore.NewStore(nil, nil)
+		store := dstore.NewStore(nil, nil, nil)
 		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 	}
 }
 
 func BenchmarkEvalHSET(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -4541,7 +4664,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHKEYS(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
@@ -4553,7 +4676,7 @@ func BenchmarkEvalHKEYS(b *testing.B) {
 }
 
 func BenchmarkEvalPFCOUNT(b *testing.B) {
-	store := *dstore.NewStore(nil, nil)
+	store := *dstore.NewStore(nil, nil, nil)
 
 	// Helper function to create and insert HLL objects
 	createAndInsertHLL := func(key string, items []string) {
@@ -4625,41 +4748,40 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		// invalid subcommand tests
 		"no subcommand passed": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'json.debug' command\r\n"),
+			setup:          func() {},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("JSON.DEBUG")},
 		},
 
 		"wrong subcommand passed": {
-			setup:  func() {},
-			input:  []string{"WRONG_SUBCOMMAND"},
-			output: []byte("-ERR unknown subcommand - try `JSON.DEBUG HELP`\r\n"),
+			setup:          func() {},
+			input:          []string{"WRONG_SUBCOMMAND"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrGeneral("unknown subcommand - try `JSON.DEBUG HELP`")},
 		},
 
 		// help subcommand tests
 		"help no args": {
-			setup:  func() {},
-			input:  []string{"HELP"},
-			output: []byte("*2\r\n$42\r\nMEMORY <key> [path] - reports memory usage\r\n$34\r\nHELP                - this message\r\n"),
+			setup:          func() {},
+			input:          []string{"HELP"},
+			migratedOutput: EvalResponse{Result: []string{"MEMORY <key> [path] - reports memory usage", "HELP                - this message"}, Error: nil},
 		},
 
 		"help with args": {
-			setup:  func() {},
-			input:  []string{"HELP", "EXTRA_ARG"},
-			output: []byte("*2\r\n$42\r\nMEMORY <key> [path] - reports memory usage\r\n$34\r\nHELP                - this message\r\n"),
+			setup:          func() {},
+			input:          []string{"HELP", "EXTRA_ARG"},
+			migratedOutput: EvalResponse{Result: []string{"MEMORY <key> [path] - reports memory usage", "HELP                - this message"}, Error: nil},
 		},
 
 		// memory subcommand tests
 		"memory without args": {
-			setup:  func() {},
-			input:  []string{"MEMORY"},
-			output: []byte("-ERR wrong number of arguments for 'json.debug' command\r\n"),
+			setup:          func() {},
+			input:          []string{"MEMORY"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("JSON.DEBUG")},
 		},
 
 		"memory nonexistent key": {
-			setup:  func() {},
-			input:  []string{"MEMORY", "NONEXISTENT_KEY"},
-			output: clientio.RespZero,
+			setup:          func() {},
+			input:          []string{"MEMORY", "NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
 		},
 
 		// memory subcommand tests for existing key
@@ -4672,8 +4794,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY"},
-			output: []byte(":89\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY"},
+			migratedOutput: EvalResponse{Result: 89, Error: nil},
 		},
 
 		"root path": {
@@ -4685,8 +4807,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$"},
-			output: []byte(":89\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$"},
+			migratedOutput: EvalResponse{Result: 89, Error: nil},
 		},
 
 		"invalid path": {
@@ -4698,8 +4820,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "INVALID_PATH"},
-			output: []byte("-ERR Path '$.INVALID_PATH' does not exist\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "INVALID_PATH"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrFormatted("Path '$.%v' does not exist", "INVALID_PATH")},
 		},
 
 		"valid path": {
@@ -4711,8 +4833,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$.a"},
-			output: []byte("*1\r\n:16\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$.a"},
+			migratedOutput: EvalResponse{Result: []interface{}{16}, Error: nil},
 		},
 
 		// only the first path is picked whether it's valid or not for an object json
@@ -4726,8 +4848,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$.a", "$.b"},
-			output: []byte("*1\r\n:16\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$.a", "$.b"},
+			migratedOutput: EvalResponse{Result: []interface{}{16}, Error: nil},
 		},
 
 		"single index path for array json": {
@@ -4739,8 +4861,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$[1]"},
-			output: []byte("*1\r\n:19\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$[1]"},
+			migratedOutput: EvalResponse{Result: []interface{}{19}, Error: nil},
 		},
 
 		"multiple index paths for array json": {
@@ -4752,8 +4874,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$[1,2]"},
-			output: []byte("*2\r\n:19\r\n:21\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$[1,2]"},
+			migratedOutput: EvalResponse{Result: []interface{}{19, 21}, Error: nil},
 		},
 
 		"index path out of range for array json": {
@@ -4765,8 +4887,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$[4]"},
-			output: clientio.RespEmptyArray,
+			input:          []string{"MEMORY", "EXISTING_KEY", "$[4]"},
+			migratedOutput: EvalResponse{Result: clientio.EmptyArray, Error: nil},
 		},
 
 		"multiple valid and invalid index paths": {
@@ -4778,8 +4900,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$[1,2,4]"},
-			output: []byte("*2\r\n:19\r\n:21\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$[1,2,4]"},
+			migratedOutput: EvalResponse{Result: []interface{}{19, 21}, Error: nil},
 		},
 
 		"negative index path": {
@@ -4791,11 +4913,11 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$[-1]"},
-			output: []byte("*1\r\n:21\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$[-1]"},
+			migratedOutput: EvalResponse{Result: []interface{}{21}, Error: nil},
 		},
 
-		"multiple negative indexe paths": {
+		"multiple negative index paths": {
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "[\"roll\", \"the\", \"dices\"]"
@@ -4804,8 +4926,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$[-1,-2]"},
-			output: []byte("*2\r\n:21\r\n:19\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$[-1,-2]"},
+			migratedOutput: EvalResponse{Result: []interface{}{21, 19}, Error: nil},
 		},
 
 		"negative index path out of bound": {
@@ -4817,8 +4939,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$[-4]"},
-			output: []byte("-ERR Path '$.$[-4]' does not exist\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$[-4]"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrFormatted("Path '$.%v' does not exist", "$[-4]")},
 		},
 
 		"all paths with asterix for array json": {
@@ -4830,8 +4952,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$[*]"},
-			output: []byte("*3\r\n:20\r\n:19\r\n:21\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$[*]"},
+			migratedOutput: EvalResponse{Result: []interface{}{20, 19, 21}, Error: nil},
 		},
 
 		"all paths with semicolon for array json": {
@@ -4843,8 +4965,8 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$[:]"},
-			output: []byte("*3\r\n:20\r\n:19\r\n:21\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$[:]"},
+			migratedOutput: EvalResponse{Result: []interface{}{20, 19, 21}, Error: nil},
 		},
 
 		"array json with mixed types": {
@@ -4856,12 +4978,12 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MEMORY", "EXISTING_KEY", "$[:]"},
-			output: []byte("*9\r\n:16\r\n:16\r\n:16\r\n:16\r\n:20\r\n:16\r\n:16\r\n:82\r\n:64\r\n"),
+			input:          []string{"MEMORY", "EXISTING_KEY", "$[:]"},
+			migratedOutput: EvalResponse{Result: []interface{}{16, 16, 16, 16, 20, 16, 16, 82, 64}, Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalJSONDebug, store)
+	runMigratedEvalTests(t, tests, evalJSONDebug, store)
 }
 
 func testEvalHLEN(t *testing.T, store *dstore.Store) {
@@ -4900,7 +5022,7 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalHLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000}
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("HashSize_%d", size), func(b *testing.B) {
@@ -5212,7 +5334,7 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalTYPE(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	// Define different types of objects to benchmark
 	objectTypes := map[string]func(){
@@ -5556,7 +5678,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -5814,7 +5936,7 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
 
 	inputs := []struct {
@@ -5839,7 +5961,7 @@ func BenchmarkEvalGETRANGE(b *testing.B) {
 }
 
 func BenchmarkEvalHSETNX(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSETNX([]string{"KEY", fmt.Sprintf("FIELD_%d", i/2), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -5942,7 +6064,7 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 	runMigratedEvalTests(t, tests, evalHSETNX, store)
 }
 func TestMSETConsistency(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
 
 	assert.Equal(t, "VAL", store.Get("KEY").Value)
@@ -5950,7 +6072,7 @@ func TestMSETConsistency(t *testing.T) {
 }
 
 func BenchmarkEvalHINCRBY(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	// creating new fields
 	for i := 0; i < b.N; i++ {
@@ -6202,7 +6324,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalSETEX(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -6381,7 +6503,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	store.Put("key1", store.NewObj("1", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
 	store.Put("key2", store.NewObj("1.2", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
 
@@ -6620,7 +6742,7 @@ func testEvalBITOP(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalBITOP(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	// Setup initial data for benchmarking
 	store.Put("key1", store.NewObj(&ByteArray{data: []byte{0x01, 0x02, 0xff}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
@@ -6934,7 +7056,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalAPPEND(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalAPPEND([]string{"key", fmt.Sprintf("val_%d", i)}, store)
 	}
@@ -6943,14 +7065,14 @@ func BenchmarkEvalAPPEND(b *testing.B) {
 func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"wrong number of args passed": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'json.resp' command\r\n"),
+			setup:          func() {},
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("JSON.RESP")},
 		},
 		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NOTEXISTANT_KEY"},
-			output: []byte("$-1\r\n"),
+			setup:          func() {},
+			input:          []string{"NOTEXISTANT_KEY"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
 		},
 		"string json": {
 			setup: func() {
@@ -6961,8 +7083,8 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MOCK_KEY"},
-			output: []byte("*1\r\n$13\r\nRoll the Dice\r\n"),
+			input:          []string{"MOCK_KEY"},
+			migratedOutput: EvalResponse{Result: []interface{}{"Roll the Dice"}, Error: nil},
 		},
 		"integer json": {
 			setup: func() {
@@ -6973,8 +7095,8 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MOCK_KEY"},
-			output: []byte("*1\r\n:10\r\n"),
+			input:          []string{"MOCK_KEY"},
+			migratedOutput: EvalResponse{Result: []interface{}{float64(10)}, Error: nil},
 		},
 		"bool json": {
 			setup: func() {
@@ -6985,8 +7107,8 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MOCK_KEY"},
-			output: []byte("*1\r\n+true\r\n"),
+			input:          []string{"MOCK_KEY"},
+			migratedOutput: EvalResponse{Result: []interface{}{true}, Error: nil},
 		},
 		"nil json": {
 			setup: func() {
@@ -6996,8 +7118,8 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MOCK_KEY"},
-			output: []byte("*1\r\n$-1\r\n"),
+			input:          []string{"MOCK_KEY"},
+			migratedOutput: EvalResponse{Result: []interface{}{nil}, Error: nil},
 		},
 		"empty array": {
 			setup: func() {
@@ -7008,8 +7130,8 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MOCK_KEY"},
-			output: []byte("*1\r\n+[\r\n"),
+			input:          []string{"MOCK_KEY"},
+			migratedOutput: EvalResponse{Result: []interface{}{"["}, Error: nil},
 		},
 		"empty object": {
 			setup: func() {
@@ -7020,8 +7142,8 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MOCK_KEY"},
-			output: []byte("*1\r\n+{\r\n"),
+			input:          []string{"MOCK_KEY"},
+			migratedOutput: EvalResponse{Result: []interface{}{"{"}, Error: nil},
 		},
 		"array with mixed types": {
 			setup: func() {
@@ -7032,8 +7154,8 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MOCK_KEY"},
-			output: []byte("*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+			input:          []string{"MOCK_KEY"},
+			migratedOutput: EvalResponse{Result: []interface{}{"[", "dice", float64(10), float64(10.5), true, interface{}(nil)}, Error: nil},
 		},
 		"one layer of nesting no path": {
 			setup: func() {
@@ -7044,8 +7166,8 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MOCK_KEY"},
-			output: []byte("*3\r\n+{\r\n$1\r\nb\r\n*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+			input:          []string{"MOCK_KEY"},
+			migratedOutput: EvalResponse{Result: []interface{}{"{", "b", []interface{}{"[", "dice", float64(10), float64(10.5), true, interface{}(nil)}}, Error: nil},
 		},
 		"one layer of nesting with path": {
 			setup: func() {
@@ -7056,12 +7178,12 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"MOCK_KEY", "$.b"},
-			output: []byte("*1\r\n*6\r\n+[\r\n$4\r\ndice\r\n:10\r\n$4\r\n10.5\r\n+true\r\n$-1\r\n"),
+			input:          []string{"MOCK_KEY", "$.b"},
+			migratedOutput: EvalResponse{Result: []interface{}{[]interface{}{"[", "dice", float64(10), float64(10.5), true, interface{}(nil)}}, Error: nil},
 		},
 	}
 
-	runEvalTests(t, tests, evalJSONRESP, store)
+	runMigratedEvalTests(t, tests, evalJSONRESP, store)
 }
 
 func testEvalSADD(t *testing.T, store *dstore.Store) {
@@ -7662,7 +7784,7 @@ func BenchmarkEvalZPOPMIN(b *testing.B) {
 		},
 	}
 
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
@@ -7828,7 +7950,7 @@ func testEvalZREM(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalZRANK(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	// Set up initial sorted set
 	evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
@@ -8110,7 +8232,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	// Setting initial fields with some values
 	store.Put("key1", store.NewObj(HashMap{"field1": "1.0", "field2": "1.2"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingHashMap))
@@ -8142,19 +8264,28 @@ func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
 func testEvalDUMP(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'dump' command\r\n"),
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("DUMP"),
+			},
 		},
 		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'dump' command\r\n"),
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("DUMP"),
+			},
 		},
 		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NONEXISTENT_KEY"},
-			output: []byte("-ERR nil\r\n"),
+			setup: func() {},
+			input: []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
 		}, "dump string value": {
 			setup: func() {
 				key := "user"
@@ -8163,13 +8294,15 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input: []string{"user"},
-			output: clientio.Encode(
-				base64.StdEncoding.EncodeToString([]byte{
+			migratedOutput: EvalResponse{
+				Result: base64.StdEncoding.EncodeToString([]byte{
 					0x09, 0x00, 0x00, 0x00, 0x00, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f,
 					0xFF, // End marker
 					// CRC64 checksum here:
 					0x00, 0x47, 0x97, 0x93, 0xBE, 0x36, 0x45, 0xC7,
-				}), false),
+				}),
+				Error: nil,
+			},
 		},
 		"dump integer value": {
 			setup: func() {
@@ -8179,13 +8312,16 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input: []string{"INTEGER_KEY"},
-			output: clientio.Encode(base64.StdEncoding.EncodeToString([]byte{
-				0x09,
-				0xC0,
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A,
-				0xFF,
-				0x12, 0x77, 0xDE, 0x29, 0x53, 0xDB, 0x44, 0xC2,
-			}), false),
+			migratedOutput: EvalResponse{
+				Result: base64.StdEncoding.EncodeToString([]byte{
+					0x09,
+					0xC0,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A,
+					0xFF,
+					0x12, 0x77, 0xDE, 0x29, 0x53, 0xDB, 0x44, 0xC2,
+				}),
+				Error: nil,
+			},
 		},
 		"dump expired key": {
 			setup: func() {
@@ -8196,12 +8332,15 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 				var exDurationMs int64 = -1
 				store.SetExpiry(obj, exDurationMs)
 			},
-			input:  []string{"EXPIRED_KEY"},
-			output: []byte("-ERR nil\r\n"),
+			input: []string{"EXPIRED_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalDUMP, store)
+	runMigratedEvalTests(t, tests, evalDUMP, store)
 }
 
 func testEvalBitFieldRO(t *testing.T, store *dstore.Store) {
@@ -8439,15 +8578,21 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"doc1", "$.nested1.a", "\"baz\""},
-			output: []byte("*1\r\n:8\r\n"), // Expected length after append
+			input: []string{"doc1", "$.nested1.a", "\"baz\""},
+			migratedOutput: EvalResponse{
+				Result: 8,
+				Error:  nil,
+			},
 		},
 		"append to non-existing key": {
 			setup: func() {
 				// No setup needed as we are testing a non-existing document.
 			},
-			input:  []string{"non_existing_doc", "$..a", "\"err\""},
-			output: []byte("-ERR Could not perform this operation on a key that doesn't exist\r\n"),
+			input: []string{"non_existing_doc", "$..a", "\"err\""},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrKeyDoesNotExist,
+			},
 		},
 		"append to root node": {
 			setup: func() {
@@ -8458,17 +8603,20 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
 				store.Put(key, obj)
 			},
-			input:  []string{"doc1", "$", "\"piu\""},
-			output: []byte("*1\r\n:7\r\n"), // Expected length after appending to "abcd"
+			input: []string{"doc1", "$", "\"piu\""},
+			migratedOutput: EvalResponse{
+				Result: 7,
+				Error:  nil,
+			},
 		},
 	}
 
 	// Run the tests
-	runEvalTests(t, tests, evalJSONSTRAPPEND, store)
+	runMigratedEvalTests(t, tests, evalJSONSTRAPPEND, store)
 }
 
 func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	// Setup a sample JSON document
 	key := "doc1"
@@ -8592,7 +8740,7 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 		},
 	}
 
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
@@ -8608,7 +8756,7 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 	}
 }
 func BenchmarkZCOUNT(b *testing.B) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	// Populate the sorted set with some members for basic benchmarks
 	evalZADD([]string{"key", "10", "member1", "20", "member2", "30", "member3"}, store)
@@ -8637,7 +8785,7 @@ func BenchmarkZCOUNT(b *testing.B) {
 	// Benchmark for edge cases
 	b.Run("Edge Case ZCOUNT", func(b *testing.B) {
 		// Reset the store and set up members
-		store = dstore.NewStore(nil, nil)
+		store = dstore.NewStore(nil, nil, nil)
 		evalZADD([]string{"key", "5", "member1", "15", "member2", "25", "member3"}, store)
 
 		b.ResetTimer()

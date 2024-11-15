@@ -3,6 +3,7 @@ package eval
 import (
 	"strings"
 
+	"github.com/dicedb/dice/internal/cmd"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -29,6 +30,15 @@ type DiceCmdMeta struct {
 	// will utilize this function for evaluation, allowing for better handling of
 	// complex command execution scenarios and improved response consistency.
 	NewEval func([]string, *dstore.Store) *EvalResponse
+
+	// StoreObjectEval is a specialized evaluation function for commands that operate on an object.
+	// It is designed for scenarios where the command and subsequent dependent command requires
+	// an object as part of its execution. This function processes the command,
+	// evaluates it based on the provided object, and returns an EvalResponse struct
+	// Commands that involve object manipulation, is not recommended for general use.
+	// Only commands that really requires full object definition to pass across multiple shards
+	// should implement this function. e.g. COPY, RENAME etc
+	StoreObjectEval func(*cmd.DiceDBCmd, *dstore.Store) *EvalResponse
 }
 
 type KeySpecs struct {
@@ -38,8 +48,11 @@ type KeySpecs struct {
 }
 
 var (
-	DiceCmds = map[string]DiceCmdMeta{}
+	PreProcessing = map[string]func([]string, *dstore.Store) *EvalResponse{}
+	DiceCmds      = map[string]DiceCmdMeta{}
+)
 
+var (
 	echoCmdMeta = DiceCmdMeta{
 		Name:  "ECHO",
 		Info:  `ECHO returns the string given as argument.`,
@@ -125,9 +138,10 @@ var (
 		Sets a JSON value at the specified key.
 		Returns OK if successful.
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
-		Eval:     evalJSONSET,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONSET,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsongetCmdMeta = DiceCmdMeta{
 		Name: "JSON.GET",
@@ -135,9 +149,10 @@ var (
 		Returns the encoded RESP value of the key, if present
 		Null reply: If the key doesn't exist or has expired.
 		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:     evalJSONGET,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONGET,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsonMGetCmdMeta = DiceCmdMeta{
 		Name: "JSON.MGET",
@@ -161,10 +176,10 @@ var (
     	1.String ("true"/"false") that represents the resulting Boolean value.
     	2.NONEXISTENT if the document key does not exist.
     	3.WRONGTYPE error if the value at the path is not a Boolean value.`,
+		NewEval:    evalJSONTOGGLE,
 		Arity:      2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
-		NewEval:    evalJSONTOGGLE,
 	}
 	jsontypeCmdMeta = DiceCmdMeta{
 		Name: "JSON.TYPE",
@@ -172,9 +187,10 @@ var (
 		Returns string reply for each path, specified as the value's type.
 		Returns RespNIL If the key doesn't exist.
 		Error reply: If the number of arguments is incorrect.`,
-		Eval:     evalJSONTYPE,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONTYPE,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsonclearCmdMeta = DiceCmdMeta{
 		Name: "JSON.CLEAR",
@@ -193,10 +209,10 @@ var (
 		Returns an integer reply specified as the number of paths deleted (0 or more).
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
+		NewEval:    evalJSONDEL,
 		Arity:      -2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
-		NewEval:    evalJSONDEL,
 	}
 	jsonarrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRAPPEND",
@@ -213,10 +229,10 @@ var (
 		Returns an integer reply specified as the number of paths deleted (0 or more).
 		Returns RespZero if the key doesn't exist or key is expired.
 		Error reply: If the number of arguments is incorrect.`,
+		NewEval:    evalJSONFORGET,
 		Arity:      -2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
-		NewEval:    evalJSONFORGET,
 	}
 	jsonarrlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRLEN",
@@ -233,10 +249,10 @@ var (
 		Name: "JSON.NUMMULTBY",
 		Info: `JSON.NUMMULTBY key path value
 		Multiply the number value stored at the specified path by a value.`,
+		NewEval:    evalJSONNUMMULTBY,
 		Arity:      3,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
-		NewEval:    evalJSONNUMMULTBY,
 	}
 	jsonobjlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.OBJLEN",
@@ -255,9 +271,10 @@ var (
 		JSON.DEBUG MEMORY returns memory usage by key in bytes
 		JSON.DEBUG HELP displays help message
 		`,
-		Eval:     evalJSONDebug,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONDebug,
 	}
 	jsonobjkeysCmdMeta = DiceCmdMeta{
 		Name: "JSON.OBJKEYS",
@@ -288,9 +305,10 @@ var (
 		the generated key is then used to store the provided JSON value at specified path.
 		Returns unique identifier if successful.
 		Returns encoded error message if the number of arguments is incorrect or the JSON string is invalid.`,
-		Eval:     evalJSONINGEST,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONINGEST,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	jsonarrinsertCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRINSERT",
@@ -308,9 +326,10 @@ var (
 		Name: "JSON.RESP",
 		Info: `JSON.RESP key [path]
 		Return the JSON in key in Redis serialization protocol specification form`,
-		Eval:     evalJSONRESP,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+		NewEval:    evalJSONRESP,
 	}
 	jsonarrtrimCmdMeta = DiceCmdMeta{
 		Name: "JSON.ARRTRIM",
@@ -436,13 +455,6 @@ var (
 		Eval:  evalLATENCY,
 		Arity: -2,
 	}
-	lruCmdMeta = DiceCmdMeta{
-		Name: "LRU",
-		Info: `LRU deletes all the keys from the LRU
-		returns encoded RESP OK`,
-		Eval:  evalLRU,
-		Arity: 1,
-	}
 	sleepCmdMeta = DiceCmdMeta{
 		Name: "SLEEP",
 		Info: `SLEEP sets db to sleep for the specified number of seconds.
@@ -510,16 +522,6 @@ var (
 		Info: `Unsubscribes or QUnwatches the client from the given key's watch session.
 		It removes the key from the watch list for the caller client.`,
 		Eval:  nil,
-		Arity: 1,
-	}
-	MultiCmdMeta = DiceCmdMeta{
-		Name: "MULTI",
-		Info: `MULTI marks the start of the transaction for the client.
-		All subsequent commands fired will be queued for atomic execution.
-		The commands will not be executed until EXEC is triggered.
-		Once EXEC is triggered it executes all the commands in queue,
-		and closes the MULTI transaction.`,
-		Eval:  evalMULTI,
 		Arity: 1,
 	}
 	ExecCmdMeta = DiceCmdMeta{
@@ -615,10 +617,12 @@ var (
 	}
 
 	keysCmdMeta = DiceCmdMeta{
-		Name: "KEYS",
-		Info: "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
-		Eval: evalKeys,
+		Name:  "KEYS",
+		Info:  "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
+		Eval:  evalKeys,
+		Arity: 1,
 	}
+
 	MGetCmdMeta = DiceCmdMeta{
 		Name: "MGET",
 		Info: `The MGET command returns an array of RESP values corresponding to the provided keys.
@@ -634,12 +638,24 @@ var (
 		Info: "PERSIST removes the expiration from a key",
 		Eval: evalPersist,
 	}
+
+	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
 	copyCmdMeta = DiceCmdMeta{
 		Name:  "COPY",
 		Info:  `COPY command copies the value stored at the source key to the destination key.`,
 		Eval:  evalCOPY,
 		Arity: -2,
 	}
+
+	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
+	objectCopyCmdMeta = DiceCmdMeta{
+		Name:            "OBJECTCOPY",
+		Info:            `COPY command copies the value stored at the source key to the destination key.`,
+		StoreObjectEval: evalCOPYObject,
+		IsMigrated:      true,
+		Arity:           -2,
+	}
+
 	decrCmdMeta = DiceCmdMeta{
 		Name: "DECR",
 		Info: `DECR decrements the value of the specified key in args by 1,
@@ -768,9 +784,10 @@ var (
 		Name: "HGETALL",
 		Info: `Returns all fields and values of the hash stored at key. In the returned value,
         every field name is followed by its value, so the length of the reply is twice the size of the hash.`,
-		Eval:     evalHGETALL,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalHGETALL,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 	hValsCmdMeta = DiceCmdMeta{
 		Name:       "HVALS",
@@ -1041,26 +1058,28 @@ var (
 	jsonnumincrbyCmdMeta = DiceCmdMeta{
 		Name:       "JSON.NUMINCRBY",
 		Info:       `Increment the number value stored at path by number.`,
+		NewEval:    evalJSONNUMINCRBY,
 		Arity:      3,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
-		NewEval:    evalJSONNUMINCRBY,
 	}
 	dumpkeyCMmdMeta = DiceCmdMeta{
 		Name: "DUMP",
 		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval:     evalDUMP,
-		Arity:    1,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalDUMP,
+		IsMigrated: true,
+		Arity:      1,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	restorekeyCmdMeta = DiceCmdMeta{
 		Name: "RESTORE",
 		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
 				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
-		Eval:     evalRestore,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalRestore,
+		IsMigrated: true,
+		Arity:      2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	typeCmdMeta = DiceCmdMeta{
 		Name:  "TYPE",
@@ -1275,9 +1294,10 @@ var (
 		Append the JSON string values to the string at path
 		Returns an array of integer replies for each path, the string's new length, or nil, if the matching JSON value is not a string.
 		Error reply: If the value at path is not a string or if the key doesn't exist.`,
-		Eval:     evalJSONSTRAPPEND,
-		Arity:    3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONSTRAPPEND,
+		IsMigrated: true,
+		Arity:      3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	cmsInitByDimCmdMeta = DiceCmdMeta{
 		Name:       "CMS.INITBYDIM",
@@ -1373,6 +1393,9 @@ var (
 )
 
 func init() {
+	PreProcessing["COPY"] = evalGetObject
+	PreProcessing["RENAME"] = evalGET
+
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
 	DiceCmds["AUTH"] = authCmdMeta
@@ -1396,6 +1419,7 @@ func init() {
 	DiceCmds["COMMAND|DOCS"] = commandDocsCmdMeta
 	DiceCmds["COMMAND|GETKEYSANDFLAGS"] = commandGetKeysAndFlagsCmdMeta
 	DiceCmds["COPY"] = copyCmdMeta
+	DiceCmds["OBJECTCOPY"] = objectCopyCmdMeta
 	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["DECR"] = decrCmdMeta
 	DiceCmds["DECRBY"] = decrByCmdMeta
@@ -1464,10 +1488,8 @@ func init() {
 	DiceCmds["LLEN"] = llenCmdMeta
 	DiceCmds["LPOP"] = lpopCmdMeta
 	DiceCmds["LPUSH"] = lpushCmdMeta
-	DiceCmds["LRU"] = lruCmdMeta
 	DiceCmds["MGET"] = MGetCmdMeta
 	DiceCmds["MSET"] = msetCmdMeta
-	DiceCmds["MULTI"] = MultiCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["PERSIST"] = persistCmdMeta
 	DiceCmds["PFADD"] = pfAddCmdMeta

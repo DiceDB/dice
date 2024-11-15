@@ -58,6 +58,6 @@ require (
 	github.com/twmb/murmur3 v1.1.8
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	golang.org/x/crypto v0.29.0
-	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
+	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
 	google.golang.org/protobuf v1.35.1
 )

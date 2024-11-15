@@ -55,16 +55,24 @@ const (
 	CmdGetSet        = "GETSET"
 	CmdGetEx         = "GETEX"
 	CmdGetDel        = "GETDEL"
+	CmdLrange        = "LRANGE"
+	CmdLinsert       = "LINSERT"
 	CmdJSONArrAppend = "JSON.ARRAPPEND"
 	CmdJSONArrLen    = "JSON.ARRLEN"
 	CmdJSONArrPop    = "JSON.ARRPOP"
-	CmdLrange		= "LRANGE"
-	CmdLinsert		= "LINSERT"
-	CmdJSONForget    = "JSON.FORGET"
+	CmdJSONClear     = "JSON.CLEAR"
 	CmdJSONDel       = "JSON.DEL"
-	CmdJSONToggle    = "JSON.TOGGLE"
+	CmdJSONForget    = "JSON.FORGET"
+	CmdJSONGet       = "JSON.GET"
+	CmdJSONStrlen    = "JSON.STRLEN"
+	CmdJSONObjlen    = "JSON.OBJLEN"
 	CmdJSONNumIncrBY = "JSON.NUMINCRBY"
+	CmdJSONNumMultBy = "JSON.NUMMULTBY"
+	CmdJSONType      = "JSON.TYPE"
+	CmdJSONToggle    = "JSON.TOGGLE"
 	CmdJSONNumMultBY = "JSON.NUMMULTBY"
+	CmdJSONDebug     = "JSON.DEBUG"
+	CmdJSONResp      = "JSON.RESP"
 	CmdLPush         = "LPUSH"
 	CmdRPush         = "RPUSH"
 	CmdLPop          = "LPOP"
@@ -74,8 +82,12 @@ const (
 
 // Multi-shard commands.
 const (
-	CmdMset = "MSET"
-	CmdMget = "MGET"
+	CmdMset     = "MSET"
+	CmdMget     = "MGET"
+	CmdSInter   = "SINTER"
+	CmdSDiff    = "SDIFF"
+	CmdJSONMget = "JSON.MGET"
+	CmdKeys     = "KEYS"
 )
 
 // Multi-Step-Multi-Shard commands
@@ -86,21 +98,10 @@ const (
 
 // Watch commands
 const (
-	CmdSadd     = "SADD"
-	CmdSrem     = "SREM"
-	CmdScard    = "SCARD"
-	CmdSmembers = "SMEMBERS"
-
-	CmdGetWatch      = "GET.WATCH"
-	CmdGetUnWatch    = "GET.UNWATCH"
-	CmdZRangeWatch   = "ZRANGE.WATCH"
 	CmdHExists       = "HEXISTS"
 	CmdHKeys         = "HKEYS"
 	CmdHVals         = "HVALS"
 	CmdZPopMin       = "ZPOPMIN"
-	CmdJSONClear     = "JSON.CLEAR"
-	CmdJSONStrlen    = "JSON.STRLEN"
-	CmdJSONObjlen    = "JSON.OBJLEN"
 	CmdZAdd          = "ZADD"
 	CmdZRange        = "ZRANGE"
 	CmdZRank         = "ZRANK"
@@ -149,6 +150,19 @@ const (
 	CmdBitField      = "BITFIELD"
 	CmdBitPos        = "BITPOS"
 	CmdBitFieldRO    = "BITFIELD_RO"
+	CmdSadd          = "SADD"
+	CmdSrem          = "SREM"
+	CmdScard         = "SCARD"
+	CmdSmembers      = "SMEMBERS"
+	CmdDump          = "DUMP"
+	CmdRestore       = "RESTORE"
+)
+
+// Watch commands
+const (
+	CmdGetWatch    = "GET.WATCH"
+	CmdGetUnWatch  = "GET.UNWATCH"
+	CmdZRangeWatch = "ZRANGE.WATCH"
 )
 
 type CmdMeta struct {
@@ -169,14 +183,14 @@ type CmdMeta struct {
 	// If set to true, it signals that a preliminary step (such as fetching values from shards)
 	// is necessary before the main command is executed. This is important for commands that depend
 	// on the current state of data in the database.
-	preProcessingReq bool
+	preProcessing bool
 
 	// preProcessResponse is a function that handles the preprocessing of a DiceDB command by
 	// preparing the necessary operations (e.g., fetching values from shards) before the command
 	// is executed. It takes the worker and the original DiceDB command as parameters and
 	// ensures that any required information is retrieved and processed in advance. Use this when set
 	// preProcessingReq = true.
-	preProcessResponse func(worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd)
+	preProcessResponse func(worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd) error
 }
 
 var CommandsMeta = map[string]CmdMeta{
@@ -241,16 +255,43 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdJSONArrPop: {
 		CmdType: SingleShard,
 	},
-	CmdGetRange: {
+	CmdJSONClear: {
 		CmdType: SingleShard,
 	},
-	CmdJSONClear: {
+	CmdJSONDel: {
+		CmdType: SingleShard,
+	},
+	CmdJSONForget: {
+		CmdType: SingleShard,
+	},
+	CmdJSONGet: {
 		CmdType: SingleShard,
 	},
 	CmdJSONStrlen: {
 		CmdType: SingleShard,
 	},
 	CmdJSONObjlen: {
+		CmdType: SingleShard,
+	},
+	CmdJSONNumIncrBY: {
+		CmdType: SingleShard,
+	},
+	CmdJSONNumMultBy: {
+		CmdType: SingleShard,
+	},
+	CmdJSONType: {
+		CmdType: SingleShard,
+	},
+	CmdJSONToggle: {
+		CmdType: SingleShard,
+	},
+	CmdJSONDebug: {
+		CmdType: SingleShard,
+	},
+	CmdJSONResp: {
+		CmdType: SingleShard,
+	},
+	CmdGetRange: {
 		CmdType: SingleShard,
 	},
 	CmdPFAdd: {
@@ -310,21 +351,6 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdLinsert: {
 		CmdType: SingleShard,
 	},
-	CmdJSONForget: {
-		CmdType: SingleShard,
-	},
-	CmdJSONDel: {
-		CmdType: SingleShard,
-	},
-	CmdJSONToggle: {
-		CmdType: SingleShard,
-	},
-	CmdJSONNumIncrBY: {
-		CmdType: SingleShard,
-	},
-	CmdJSONNumMultBY: {
-		CmdType: SingleShard,
-	},
 	CmdLPush: {
 		CmdType: SingleShard,
 	},
@@ -339,35 +365,6 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdLLEN: {
 		CmdType: SingleShard,
-	},
-
-	// Multi-shard commands.
-	CmdRename: {
-		CmdType:            MultiShard,
-		preProcessingReq:   true,
-		preProcessResponse: preProcessRename,
-		decomposeCommand:   decomposeRename,
-		composeResponse:    composeRename,
-	},
-
-	CmdCopy: {
-		CmdType:            MultiShard,
-		preProcessingReq:   true,
-		preProcessResponse: preProcessCopy,
-		decomposeCommand:   decomposeCopy,
-		composeResponse:    composeCopy,
-	},
-
-	CmdMset: {
-		CmdType:          MultiShard,
-		decomposeCommand: decomposeMSet,
-		composeResponse:  composeMSet,
-	},
-
-	CmdMget: {
-		CmdType:          MultiShard,
-		decomposeCommand: decomposeMGet,
-		composeResponse:  composeMGet,
 	},
 	CmdCMSQuery: {
 		CmdType: SingleShard,
@@ -405,31 +402,6 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdHMGet: {
 		CmdType: SingleShard,
 	},
-
-	// Custom commands.
-	CmdAbort: {
-		CmdType: Custom,
-	},
-	CmdAuth: {
-		CmdType: Custom,
-	},
-
-	// Watch commands
-	CmdGetWatch: {
-		CmdType: Watch,
-	},
-	CmdZRangeWatch: {
-		CmdType: Watch,
-	},
-	CmdPFCountWatch: {
-		CmdType: Watch,
-	},
-
-	// Unwatch commands
-	CmdGetUnWatch: {
-		CmdType: Unwatch,
-	},
-
 	// Sorted set commands
 	CmdZAdd: {
 		CmdType: SingleShard,
@@ -473,7 +445,6 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdZPopMax: {
 		CmdType: SingleShard,
 	},
-
 	// Bloom Filter
 	CmdBFAdd: {
 		CmdType: SingleShard,
@@ -486,6 +457,83 @@ var CommandsMeta = map[string]CmdMeta{
 	},
 	CmdBFReserve: {
 		CmdType: SingleShard,
+	},
+	CmdDump: {
+		CmdType: SingleShard,
+	},
+	CmdRestore: {
+		CmdType: SingleShard,
+	},
+
+	// Multi-shard commands.
+	CmdRename: {
+		CmdType:            MultiShard,
+		preProcessing:      true,
+		preProcessResponse: preProcessRename,
+		decomposeCommand:   decomposeRename,
+		composeResponse:    composeRename,
+	},
+
+	CmdCopy: {
+		CmdType:            MultiShard,
+		preProcessing:      true,
+		preProcessResponse: customProcessCopy,
+		decomposeCommand:   decomposeCopy,
+		composeResponse:    composeCopy,
+	},
+
+	CmdMset: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeMSet,
+		composeResponse:  composeMSet,
+	},
+
+	CmdMget: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeMGet,
+		composeResponse:  composeMGet,
+	},
+
+	CmdSInter: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeSInter,
+		composeResponse:  composeSInter,
+	},
+
+	CmdSDiff: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeSDiff,
+		composeResponse:  composeSDiff,
+	},
+
+	CmdJSONMget: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeJSONMget,
+		composeResponse:  composeJSONMget,
+	},
+
+	// Custom commands.
+	CmdAbort: {
+		CmdType: Custom,
+	},
+	CmdAuth: {
+		CmdType: Custom,
+	},
+
+	// Watch commands
+	CmdGetWatch: {
+		CmdType: Watch,
+	},
+	CmdZRangeWatch: {
+		CmdType: Watch,
+	},
+	CmdPFCountWatch: {
+		CmdType: Watch,
+	},
+
+	// Unwatch commands
+	CmdGetUnWatch: {
+		CmdType: Unwatch,
 	},
 }
 

@@ -10,12 +10,7 @@ import (
 )
 
 var deqRandGenerator *rand.Rand
-var deqRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_!@#$%^&*()-=+[]\\;':,.<>/?~.|")
-
-var (
-	deqNormalValues []string
-	deqEdgeValues   []string
-)
+var deqRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func deqRandStr(n int) string {
 	b := make([]rune, n)
@@ -25,7 +20,7 @@ func deqRandStr(n int) string {
 	return string(b)
 }
 
-func deqTestInit() {
+func deqTestInit() (deqNormalValues, deqEdgeValues []string) {
 	randSeed := time.Now().UnixNano()
 	deqRandGenerator = rand.New(rand.NewSource(randSeed))
 	fmt.Printf("rand seed: %v", randSeed)
@@ -66,10 +61,11 @@ func deqTestInit() {
 		"-9223372036854775808", // min 64 bit int
 		"9223372036854775807",  // max 64 bit int
 	}
+	return deqNormalValues, deqEdgeValues
 }
 
 func TestLPush(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	exec := NewHTTPCommandExecutor()
 	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
@@ -112,7 +108,7 @@ func TestLPush(t *testing.T) {
 }
 
 func TestRPush(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	exec := NewHTTPCommandExecutor()
 	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
@@ -155,7 +151,7 @@ func TestRPush(t *testing.T) {
 }
 
 func TestLPushLPop(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	exec := NewHTTPCommandExecutor()
 	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
@@ -233,7 +229,7 @@ func TestLPushLPop(t *testing.T) {
 }
 
 func TestLPushRPop(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	exec := NewHTTPCommandExecutor()
 	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
@@ -312,7 +308,7 @@ func TestLPushRPop(t *testing.T) {
 }
 
 func TestRPushLPop(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	exec := NewHTTPCommandExecutor()
 	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
@@ -391,7 +387,7 @@ func TestRPushLPop(t *testing.T) {
 }
 
 func TestRPushRPop(t *testing.T) {
-	deqTestInit()
+	deqNormalValues, deqEdgeValues := deqTestInit()
 	exec := NewHTTPCommandExecutor()
 	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
@@ -470,7 +466,6 @@ func TestRPushRPop(t *testing.T) {
 }
 
 func TestLRPushLRPop(t *testing.T) {
-	deqTestInit()
 	exec := NewHTTPCommandExecutor()
 	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
@@ -511,7 +506,6 @@ func TestLRPushLRPop(t *testing.T) {
 }
 
 func TestLLEN(t *testing.T) {
-	deqTestInit()
 	exec := NewHTTPCommandExecutor()
 	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
@@ -558,7 +552,6 @@ func TestLLEN(t *testing.T) {
 }
 
 func TestLPOPCount(t *testing.T) {
-	deqTestInit()
 	exec := NewHTTPCommandExecutor()
 	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
 
