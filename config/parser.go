@@ -3,6 +3,7 @@ package config
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"reflect"
 	"strconv"
@@ -89,7 +90,8 @@ func processConfigData(scanner *bufio.Scanner, p *ConfigParser) error {
 
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
-			return fmt.Errorf("invalid config line: %s", line)
+			slog.Warn("invalid config line", slog.String("line", line))
+			continue
 		}
 
 		key := strings.TrimSpace(parts[0])
