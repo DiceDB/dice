@@ -102,7 +102,7 @@ type network struct {
 }
 
 func init() {
-	configFilePath := filepath.Join(".", DefaultConfigName)
+	configFilePath := filepath.Join(DefaultConfigDir, DefaultConfigName)
 	if err := loadDiceConfig(configFilePath); err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
