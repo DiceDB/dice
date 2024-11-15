@@ -41,8 +41,8 @@ func validateConfig(config *Config) error {
 
 func validateShardCount(sl validator.StructLevel) {
 	config := sl.Current().Interface().(Config)
-	if config.NumShards <= 0 && config.NumShards != -1 {
-		sl.ReportError(config.NumShards, "NumShards", "NumShards", "invalidValue", "must be -1 or greater than 0")
+	if config.Performance.NumShards <= 0 && config.Performance.NumShards != -1 {
+		sl.ReportError(config.Performance.NumShards, "NumShards", "NumShards", "invalidValue", "must be -1 or greater than 0")
 	}
 }
 

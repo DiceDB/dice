@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/dicedb/dice/internal/server/utils"
 )
 
 const (
@@ -18,38 +16,9 @@ const (
 	EvictAllKeysRandom string = "allkeys-random"
 	EvictAllKeysLRU    string = "allkeys-lru"
 	EvictAllKeysLFU    string = "allkeys-lfu"
-)
 
-var (
-	Host = "0.0.0.0"
-	Port = 7379
-
-	EnableMultiThreading = false
-	EnableHTTP           = true
-	HTTPPort             = 8082
-
-	EnableWebsocket     = true
-	WebsocketPort       = 8379
-	NumShards       int = -1
-
-	// if RequirePass is set to an empty string, no authentication is required
-	RequirePass = utils.EmptyStr
-
-	CustomConfigFilePath = utils.EmptyStr
-	FileLocation         = utils.EmptyStr
-
-	InitConfigCmd = false
-
-	KeysLimit = 200000000
-
-	EnableProfiling = false
-
-	EnableWatch = true
-	LogDir      = ""
-
-	EnableWAL      = true
-	RestoreFromWAL = false
-	WALEngine      = "sqlite"
+	DefaultKeysLimit     int     = 200000000
+	DefaultEvictionRatio float64 = 0.1
 )
 
 type Config struct {
@@ -64,12 +33,11 @@ type Config struct {
 	Persistence persistence `config:"persistence"`
 	Logging     logging     `config:"logging"`
 	Network     network     `config:"network"`
-	NumShards   int         `config:"num_shards" default:"-1" validate:"oneof=-1|min=1,lte=128"`
 }
 
 type auth struct {
 	UserName string `config:"username" default:"dice"`
-	Password string `validate:"min=8"`
+	Password string `config:"password"`
 }
 
 type asyncServer struct {
@@ -102,6 +70,7 @@ type performance struct {
 	AdhocReqChanBufSize    int           `config:"adhoc_req_chan_buf_size" default:"20"`
 	EnableProfiling        bool          `config:"profiling" default:"false"`
 	EnableWatch            bool          `config:"enable_watch" default:"false"`
+	NumShards              int           `config:"num_shards" default:"-1" validate:"oneof=-1|min=1,lte=128"`
 }
 
 type memory struct {
@@ -116,6 +85,10 @@ type persistence struct {
 	AOFFile            string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
 	PersistenceEnabled bool   `config:"persistence_enabled" default:"true"`
 	WriteAOFOnCleanup  bool   `config:"write_aof_on_cleanup" default:"false"`
+	EnableWAL          bool   `config:"enable-wal" default:"false"`
+	WALDir             string `config:"wal-dir" default:"./" validate:"dirpath"`
+	RestoreFromWAL     bool   `config:"restore-wal" default:"false"`
+	WALEngine          string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`
 }
 
 type logging struct {
