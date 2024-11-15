@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -101,10 +102,7 @@ func render() {
 
 func Execute() {
 	if len(os.Args) < 2 {
-		parser := config.NewConfigParser()
-		if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-			log.Fatal(err)
-		}
+		config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, "dicedb.conf"))
 
 		render()
 		return
