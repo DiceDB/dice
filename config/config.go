@@ -11,6 +11,7 @@ import (
 const (
 	DiceDBVersion     string = "0.0.5"
 	DefaultConfigName string = "dicedb.conf"
+	DefaultConfigDir  string = "."
 
 	EvictSimpleFirst   string = "simple-first"
 	EvictAllKeysRandom string = "allkeys-random"
@@ -181,7 +182,7 @@ logging.log_level = "info"
 
 # Authentication Configuration
 auth.username = "dice"
-auth.password = "vinit"
+auth.password = ""
 
 # Network Configuration
 network.io_buffer_length = 512
