@@ -76,8 +76,6 @@ func init() {
 
 	flag.Parse()
 
-	config.SetupConfig()
-
 	iid := observability.GetOrCreateInstanceID()
 	config.DiceConfig.InstanceID = iid
 
