@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -45,7 +46,7 @@ func configuration() {
 	}
 
 	// Add whether the watch feature is enabled to the configuration table
-	// addEntry("Watch Enabled", config.EnableWatch)
+	addEntry("Watch Enabled", config.DiceConfig.Performance.EnableWatch)
 
 	// Add whether the watch feature is enabled to the configuration table
 	addEntry("HTTP Enabled", config.DiceConfig.HTTP.Enabled)
@@ -102,8 +103,9 @@ func render() {
 
 func Execute() {
 	if len(os.Args) < 2 {
-		config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, "dicedb.conf"))
-
+		if err := config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, "dicedb.conf")); err != nil {
+			log.Fatal(err)
+		}
 		render()
 		return
 	}
@@ -127,7 +129,6 @@ func Execute() {
 		}
 		fmt.Println(config.DiceConfig.Version)
 	case "-o", "--output":
-		// TODO: Implement output to file of config
 		if len(os.Args) < 3 {
 			log.Fatal("Output file path not provided")
 		} else {
@@ -146,32 +147,37 @@ func Execute() {
 				log.Fatal("Output file path is not a directory")
 			}
 
-			var filePath string
-			if strings.HasSuffix(dirPath, "/") {
-				filePath = dirPath + "dicedb.conf"
-			} else {
-				filePath = dirPath + "/dicedb.conf"
+			filePath := filepath.Join(dirPath, "dicedb.conf")
+			if _, err := os.Stat(filePath); err == nil {
+				slog.Warn("Config file already exists at the specified path", slog.String("path", filePath), slog.String("action", "skipping file creation"))
+				return
 			}
-			config.CreateConfigFile(filePath)
+			if err := config.CreateConfigFile(filePath); err != nil {
+				log.Fatal(err)
+			}
 			render()
 		}
 	case "-c", "--config":
 		if len(os.Args) >= 3 {
 			filePath := os.Args[2]
 			if filePath == "" {
-				log.Fatal("Config file path not provided")
+				log.Fatal("Error: Config file path not provided")
 			}
 
 			info, err := os.Stat(filePath)
-			if err != nil {
-				if os.IsNotExist(err) {
-					log.Fatal("Config file does not exist")
-				}
-				log.Fatalf("Error checking config file: %v", err)
+			switch {
+			case os.IsNotExist(err):
+				log.Fatalf("Config file does not exist: %s", filePath)
+			case err != nil:
+				log.Fatalf("Unable to check config file: %v", err)
 			}
 
-			if info.IsDir() || !strings.HasSuffix(filePath, ".conf") {
-				log.Fatal("Config file must be a regular file with a .conf extension")
+			if info.IsDir() {
+				log.Fatalf("Config file path points to a directory: %s", filePath)
+			}
+
+			if !strings.HasSuffix(filePath, ".conf") {
+				log.Fatalf("Config file must have a .conf extension: %s", filePath)
 			}
 
 			parser := config.NewConfigParser()
@@ -181,7 +187,6 @@ func Execute() {
 			if err := parser.Loadconfig(config.DiceConfig); err != nil {
 				log.Fatal(err)
 			}
-
 			render()
 		} else {
 			log.Fatal("Config file path not provided")
@@ -195,7 +200,7 @@ func Execute() {
 
 func printUsage() {
 	fmt.Println(`Usage: ./dicedb [/path/to/dice.conf] [options] [-]
-	   ./dicedb - (read config from stdin)
+	   ./dicedb - (read config from stdin) e.g. echo "version=1.0" | ./dicedb -
 	   ./dicedb -v or --version
 	   ./dicedb -h or --help`)
 }
