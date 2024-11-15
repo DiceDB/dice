@@ -132,15 +132,18 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
 	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 
-	publisher.Del(context.Background(), getUnwatchKey)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	publisher.Del(ctx, getUnwatchKey)
 
 	// subscribe for updates
 	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
 	for i, subscriber := range subscribers {
-		watch := subscriber.client.WatchConn(context.Background())
+		watch := subscriber.client.WatchConn(ctx)
 		subscribers[i].watch = watch
 		assert.NotNil(t, watch)
-		firstMsg, err := watch.Watch(context.Background(), "GET", getUnwatchKey)
+		firstMsg, err := watch.Watch(ctx, "GET", getUnwatchKey)
 		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, "GET")
 		assert.Equal(t, "426696421", firstMsg.Fingerprint)
@@ -148,7 +151,7 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	}
 
 	// Fire updates and validate receipt
-	err := publisher.Set(context.Background(), getUnwatchKey, "check", 0).Err()
+	err := publisher.Set(ctx, getUnwatchKey, "check", 0).Err()
 	assert.Nil(t, err)
 
 	for _, channel := range channels {
@@ -160,12 +163,12 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 
 	// unsubscribe from updates
 	for _, subscriber := range subscribers {
-		err := subscriber.watch.Unwatch(context.Background(), "GET", "426696421")
+		err := subscriber.watch.Unwatch(ctx, "GET", "426696421")
 		assert.Nil(t, err)
 	}
 
 	// fire updates and validate that they are not received
-	err = publisher.Set(context.Background(), getUnwatchKey, "final", 0).Err()
+	err = publisher.Set(ctx, getUnwatchKey, "final", 0).Err()
 	assert.Nil(t, err)
 	for _, channel := range channels {
 		go func(ch <-chan *dicedb.WatchResult) {
