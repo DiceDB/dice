@@ -3273,7 +3273,7 @@ func testEvalHGETALL(t *testing.T, store *dstore.Store) {
 		"key exists but is empty": {
 			setup: func() {
 				key := "EMPTY_HASH"
-				newMap := make(HashMap) // Empty hash map
+				newMap := NewHash() // Empty hash map
 
 				obj := &object.Obj{
 					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
@@ -3292,10 +3292,10 @@ func testEvalHGETALL(t *testing.T, store *dstore.Store) {
 		"key exists with multiple fields": {
 			setup: func() {
 				key := "HASH_WITH_FIELDS"
-				newMap := make(HashMap)
-				newMap["field1"] = "value1"
-				newMap["field2"] = "value2"
-				newMap["field3"] = "value3"
+				newMap := NewHash()
+				newMap.Set("field1", "value1")
+				newMap.Set("field2", "value2")
+				newMap.Set("field3", "value3")
 
 				obj := &object.Obj{
 					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
