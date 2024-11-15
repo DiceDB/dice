@@ -32,6 +32,8 @@ github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/r
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/dicedb/dicedb-go v0.0.0-20241114115413-2d2cf121af84 h1:ZQ6K/qcO7gzXjdkIr9BDSdOnhhtBL1JW4wrkONiDwK4=
 github.com/dicedb/dicedb-go v0.0.0-20241114115413-2d2cf121af84/go.mod h1:iY/0GYI5j2eTcL/LBsCJpd62j6AIJ/g9ZXii7tL7/jc=
+github.com/dicedb/dicedb-go v0.0.0-20241115080651-aed374f4ebba h1:Yvk7Chdc6VaoQqbVOjOcIYXK8wDf6H23qSSJEOO7/lc=
+github.com/dicedb/dicedb-go v0.0.0-20241115080651-aed374f4ebba/go.mod h1:iY/0GYI5j2eTcL/LBsCJpd62j6AIJ/g9ZXii7tL7/jc=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
 github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7zb5vbUoiM6w0=
 github.com/fsnotify/fsnotify v1.8.0 h1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=
