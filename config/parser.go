@@ -35,25 +35,25 @@ func (p *ConfigParser) ParseFromFile(filename string) error {
 	return processConfigData(scanner, p)
 }
 
-// processConfigData reads the configuration data line by line and stores it in the ConfigParser
-func processConfigData(scanner *bufio.Scanner, p *ConfigParser) error {
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
+// ParseFromStdin reads the configuration data from stdin
+func (p *ConfigParser) ParseFromStdin() error {
+	scanner := bufio.NewScanner(os.Stdin)
+	return processConfigData(scanner, p)
+}
 
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-
-		key := strings.TrimSpace(parts[0])
-		value := strings.Trim(strings.TrimSpace(parts[1]), "\"")
-		p.store[key] = value
+// ParseDefaults populates a struct with default values based on struct tag `default`
+func (p *ConfigParser) ParseDefaults(cfg interface{}) error {
+	val := reflect.ValueOf(cfg)
+	if val.Kind() != reflect.Ptr || val.IsNil() {
+		return fmt.Errorf("config must be a non-nil pointer to a struct")
 	}
 
-	return scanner.Err()
+	val = val.Elem()
+	if val.Kind() != reflect.Struct {
+		return fmt.Errorf("config must be a pointer to a struct")
+	}
+
+	return p.unmarshalStruct(val, "")
 }
 
 // Loadconfig populates a struct with configuration values based on struct tags
@@ -77,6 +77,27 @@ func (p *ConfigParser) Loadconfig(cfg interface{}) error {
 	}
 
 	return nil
+}
+
+// processConfigData reads the configuration data line by line and stores it in the ConfigParser
+func processConfigData(scanner *bufio.Scanner, p *ConfigParser) error {
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid config line: %s", line)
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.Trim(strings.TrimSpace(parts[1]), "\"")
+		p.store[key] = value
+	}
+
+	return scanner.Err()
 }
 
 // unmarshalStruct handles the recursive struct parsing.
@@ -202,25 +223,4 @@ func setField(field reflect.Value, value string) error {
 	}
 
 	return nil
-}
-
-// perse from stdin reads the configuration data from stdin
-func (p *ConfigParser) ParseFromStdin() error {
-	scanner := bufio.NewScanner(os.Stdin)
-	return processConfigData(scanner, p)
-}
-
-// ParseDefaults populates a struct with default values, will be used in case the config file is missing
-func (p *ConfigParser) ParseDefaults(cfg interface{}) error {
-	val := reflect.ValueOf(cfg)
-	if val.Kind() != reflect.Ptr || val.IsNil() {
-		return fmt.Errorf("config must be a non-nil pointer to a struct")
-	}
-
-	val = val.Elem()
-	if val.Kind() != reflect.Struct {
-		return fmt.Errorf("config must be a pointer to a struct")
-	}
-
-	return p.unmarshalStruct(val, "")
 }
