@@ -110,11 +110,11 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel)
 	queryWatcherLocal := querymanager.NewQueryManager()
-	config.HTTPPort = opt.Port
+	config.DiceConfig.HTTP.Port = opt.Port
 	// Initialize the HTTPServer
 	testServer := server.NewHTTPServer(shardManager, nil)
 	// Inform the user that the server is starting
-	fmt.Println("Starting the test server on port", config.HTTPPort)
+	fmt.Println("Starting the test server on port", config.DiceConfig.HTTP.Port)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)
 	go func() {

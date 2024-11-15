@@ -31,9 +31,7 @@ func getCommandDefault(connection net.Conn) []interface{} {
 		return nil
 	}
 	var cmds []interface{}
-	for _, v := range responseValue.([]interface{}) {
-		cmds = append(cmds, v)
-	}
+	cmds = append(cmds, responseValue.([]interface{})...)
 	return cmds
 }
 
