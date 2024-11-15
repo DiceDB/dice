@@ -61,6 +61,7 @@ func TestCreateConfigFile_InvalidPath(t *testing.T) {
 	}
 }
 
+// TestCreateConfigFile_NoPermission tests creation without write permissions
 func TestCreateConfigFile_NoPermission(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("Skipping test when running as root")
