@@ -34,8 +34,8 @@ func configuration() {
 
 	// Conditionally add the number of shards to be used for DiceDB to the configuration table
 	if config.DiceConfig.Performance.EnableMultiThreading {
-		if config.DiceConfig.NumShards > 0 {
-			configTable = append(configTable, configEntry{"Shards", config.DiceConfig.NumShards})
+		if config.DiceConfig.Performance.NumShards > 0 {
+			configTable = append(configTable, configEntry{"Shards", config.DiceConfig.Performance.NumShards})
 		} else {
 			configTable = append(configTable, configEntry{"Shards", runtime.NumCPU()})
 		}
