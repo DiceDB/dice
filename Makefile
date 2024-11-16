@@ -85,7 +85,7 @@ GOLANGCI_LINT_VERSION := 1.60.1
 lint: check-golangci-lint ## run golangci-lint
 	golangci-lint run ./...
 
-check-golangci-lint: ## check if golangci-lint is installed and the correct version
+check-golangci-lint:
 	@if ! command -v golangci-lint > /dev/null || ! golangci-lint version | grep -q "$(GOLANGCI_LINT_VERSION)"; then \
 		echo "Required golangci-lint version $(GOLANGCI_LINT_VERSION) not found."; \
 		echo "Please install golangci-lint version $(GOLANGCI_LINT_VERSION) with the following command:"; \
