@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -86,7 +87,7 @@ type persistence struct {
 	AOFFile            string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
 	PersistenceEnabled bool   `config:"persistence_enabled" default:"true"`
 	WriteAOFOnCleanup  bool   `config:"write_aof_on_cleanup" default:"false"`
-	EnableWAL          bool   `config:"enable-wal" default:"false"`
+	EnableWAL          bool   `config:"enable-wal" default:"true"`
 	WALDir             string `config:"wal-dir" default:"./" validate:"dirpath"`
 	RestoreFromWAL     bool   `config:"restore-wal" default:"false"`
 	WALEngine          string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`
@@ -104,31 +105,35 @@ type network struct {
 func init() {
 	configFilePath := filepath.Join(DefaultConfigDir, DefaultConfigName)
 	if err := loadDiceConfig(configFilePath); err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		log.Fatalf("failed to load configuration: %v", err)
 	}
 }
 
 // DiceConfig is the global configuration object for dice
 var DiceConfig = &Config{}
 
-func CreateConfigFile(configFilePath string) {
+func CreateConfigFile(configFilePath string) error {
+	// Check if the config file already exists
 	if _, err := os.Stat(configFilePath); err == nil {
-		slog.Warn("config file already exists", slog.String("path", configFilePath))
 		if err := loadDiceConfig(configFilePath); err != nil {
-			log.Fatalf("Failed to load configuration: %v", err)
+			return fmt.Errorf("failed to load existing configuration: %w", err)
 		}
-		return
+		return nil
 	}
 
+	// Attempt to write a new config file
 	if err := writeConfigFile(configFilePath); err != nil {
-		slog.Warn("starting DiceDB with default configurations.", slog.Any("error", err))
-		return
+		slog.Warn("Failed to create config file, starting with defaults.", slog.Any("error", err))
+		return nil // Continuing with defaults; may reconsider behavior.
 	}
 
+	// Load the new configuration
 	if err := loadDiceConfig(configFilePath); err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		return fmt.Errorf("failed to load newly created configuration: %w", err)
 	}
-	slog.Info("config file created at", slog.Any("path", configFilePath))
+
+	slog.Info("Config file successfully created.", slog.String("path", configFilePath))
+	return nil
 }
 
 // writeConfigFile writes the default configuration to the specified file path
@@ -164,6 +169,8 @@ performance.enable_multithreading = false
 performance.store_map_init_size = 1024000
 performance.adhoc_req_chan_buf_size = 20
 performance.enable_profiling = false
+performance.enable_watch = false
+performance.num_shards = -1
 
 # Memory Configuration
 memory.max_memory = 0
@@ -176,6 +183,10 @@ memory.lfu_log_factor = 10
 persistence.aof_file = "./dice-master.aof"
 persistence.persistence_enabled = true
 persistence.write_aof_on_cleanup = false
+persistence.enable-wal = true
+persistence.wal-dir = "./"
+persistence.restore-wal = false
+persistence.wal-engine = "aof"
 
 # Logging Configuration
 logging.log_level = "info"
@@ -186,8 +197,7 @@ auth.password = ""
 
 # Network Configuration
 network.io_buffer_length = 512
-network.io_buffer_length_max = 51200
-`
+network.io_buffer_length_max = 51200`
 
 	// Check if the directory exists or not
 	dir := filepath.Dir(configFilePath)

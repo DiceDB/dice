@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -102,7 +103,9 @@ func render() {
 
 func Execute() {
 	if len(os.Args) < 2 {
-		config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, "dicedb.conf"))
+		if err := config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, "dicedb.conf")); err != nil {
+			log.Fatal(err)
+		}
 		render()
 		return
 	}
@@ -145,7 +148,13 @@ func Execute() {
 			}
 
 			filePath := filepath.Join(dirPath, "dicedb.conf")
-			config.CreateConfigFile(filePath)
+			if _, err := os.Stat(filePath); err == nil {
+				slog.Warn("Config file already exists at the specified path", slog.String("path", filePath), slog.String("action", "skipping file creation"))
+				return
+			}
+			if err := config.CreateConfigFile(filePath); err != nil {
+				log.Fatal(err)
+			}
 			render()
 		}
 	case "-c", "--config":
