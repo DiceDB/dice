@@ -31,6 +31,8 @@ const (
 	PFMERGE          string = "PFMERGE"
 	KEYSPERSHARD     string = "KEYSPERSHARD"
 	Evict            string = "EVICT"
+	SADD         string = "SADD"
+	SMEMBERS     string = "SMEMBERS"
 	SingleShardSize  string = "SINGLEDBSIZE"
 	SingleShardTouch string = "SINGLETOUCH"
 	SingleShardKeys  string = "SINGLEKEYS"
