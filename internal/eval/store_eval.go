@@ -4753,50 +4753,59 @@ func evalHDEL(args []string, store *dstore.Store) *EvalResponse {
 // Returns an integer which represents the number of members that were added to the set, not including
 // the members that were already present
 func evalSADD(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 2 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("SADD"),
-		}
-	}
-	key := args[0]
+    if len(args) < 2 {
+        return &EvalResponse{
+            Result: nil,
+            Error:  diceerrors.ErrWrongArgumentCount("SADD"),
+        }
+    }
+    key := args[0]
 
-	// Get the set object from the store.
-	obj := store.Get(key)
-	lengthOfItems := len(args[1:])
+    // Get the set object from the store.
+    obj := store.Get(key)
+    lengthOfItems := len(args[1:])
 
-	var count = 0
-	if obj == nil {
-		var exDurationMs int64 = -1
-		var keepttl = false
-		// If the object does not exist, create a new set object.
-		value := make(map[string]struct{}, lengthOfItems)
-		// Create a new object.
-		obj = store.NewObj(value, exDurationMs, object.ObjTypeSet)
-		store.Put(key, obj, dstore.WithKeepTTL(keepttl))
-	}
+    var count = 0
+    var set map[string]struct{}
+    
+    if obj == nil {
+        // If the object does not exist, create a new set
+        set = make(map[string]struct{}, lengthOfItems)
+    } else {
+        // Type and encoding checks
+        if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
+            return &EvalResponse{
+                Result: nil,
+                Error:  diceerrors.ErrWrongTypeOperation,
+            }
+        }
 
-	if err := object.AssertType(obj.Type, object.ObjTypeSet); err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
-		}
-	}
+        if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+            return &EvalResponse{
+                Result: nil,
+                Error:  diceerrors.ErrWrongTypeOperation,
+            }
+        }
 
-	// Get the set object.
-	set := obj.Value.(map[string]struct{})
+        set = obj.Value.(map[string]struct{})
+    }
 
-	for _, arg := range args[1:] {
-		if _, ok := set[arg]; !ok {
-			set[arg] = struct{}{}
-			count++
-		}
-	}
+    // Add elements to the set
+    for _, arg := range args[1:] {
+        if _, ok := set[arg]; !ok {
+            set[arg] = struct{}{}
+            count++
+        }
+    }
 
-	return &EvalResponse{
-		Result: count,
-		Error:  nil,
-	}
+    // Single Put operation at the end
+    obj = store.NewObj(set, -1, object.ObjTypeSet, object.ObjEncodingSetStr)
+    store.Put(key, obj, dstore.WithKeepTTL(false), dstore.WithPutCmd(dstore.SADD))
+
+    return &EvalResponse{
+        Result: count,
+        Error:  nil,
+    }
 }
 
 // evalSREM removes one or more members from a set
