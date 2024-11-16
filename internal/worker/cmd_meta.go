@@ -154,6 +154,7 @@ const (
 	CmdSrem          = "SREM"
 	CmdScard         = "SCARD"
 	CmdSmembers      = "SMEMBERS"
+	CmdSMembersWatch = "SMEMBERS.WATCH"
 	CmdDump          = "DUMP"
 	CmdRestore       = "RESTORE"
 )
@@ -528,6 +529,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: Watch,
 	},
 	CmdPFCountWatch: {
+		CmdType: Watch,
+	},
+	CmdSMembersWatch: {
 		CmdType: Watch,
 	},
 
