@@ -128,6 +128,15 @@ func (c *Client) String() string {
 	s.WriteString(c.flag())
 	s.WriteString(" ")
 
+	// multi
+	s.WriteString("multi=")
+	multi := -1
+	if c.IsTxn {
+		multi = len(c.Cqueue.Cmds)
+	}
+	s.WriteString(strconv.FormatInt(int64(multi), 10))
+	s.WriteString(" ")
+
 	// cmd
 	s.WriteString("cmd=")
 	// todo: handle `CLIENT ID` as "client|id" and `SET k 1` as "set"
