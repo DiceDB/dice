@@ -32,7 +32,7 @@ func NewShardManager(shardCount uint8, queryWatchChan chan dstore.QueryWatchEven
 	shardReqMap := make(map[ShardID]chan *ops.StoreOp)
 	shardErrorChan := make(chan *ShardError)
 
-	maxKeysPerShard := config.DiceConfig.Memory.KeysLimit / int(shardCount)
+	maxKeysPerShard := config.KeysLimit / int(shardCount)
 	for i := uint8(0); i < shardCount; i++ {
 		evictionStrategy := dstore.NewBatchEvictionLRU(maxKeysPerShard, config.DiceConfig.Memory.EvictionRatio)
 		// Shards are numbered from 0 to shardCount-1

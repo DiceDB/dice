@@ -108,7 +108,7 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel)
 	queryWatcherLocal := querymanager.NewQueryManager()
-	config.DiceConfig.WebSocket.Port = opt.Port
+	config.WebsocketPort = opt.Port
 	testServer := server.NewWebSocketServer(shardManager, testPort1, nil)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 

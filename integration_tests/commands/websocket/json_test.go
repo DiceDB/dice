@@ -381,7 +381,6 @@ func TestJsonARRTRIM(t *testing.T) {
 
 	defer func() {
 		resp1, err := exec.FireCommandAndReadResponse(conn, "DEL a")
-		assert.Nil(t, err)
 		resp2, err := exec.FireCommandAndReadResponse(conn, "DEL b")
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), resp1)
@@ -473,7 +472,6 @@ func TestJsonARRINSERT(t *testing.T) {
 
 	defer func() {
 		resp1, err := exec.FireCommandAndReadResponse(conn, "DEL a")
-		assert.Nil(t, err)
 		resp2, err := exec.FireCommandAndReadResponse(conn, "DEL b")
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), resp1)

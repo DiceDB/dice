@@ -18,11 +18,6 @@ var testServerOptions = commands.TestServerOptions{
 	Port: 8740,
 }
 
-func init() {
-	parser := config.NewConfigParser()
-	parser.ParseDefaults(config.DiceConfig)
-}
-
 func TestAbortCommand(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

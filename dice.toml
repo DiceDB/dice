@@ -1,0 +1,53 @@
+# Dice configuration file example.
+#
+# Note that in order to read the configuration file, Dice must be
+# started with the c flag and file path as first argument:
+#
+# go run main.go -c /path/to/dice.toml
+
+Version = '0.0.5'
+InstanceID = ''
+
+[AsyncServer]
+Addr = '0.0.0.0'
+Port = 7379
+KeepAlive = 300
+Timeout = 300
+MaxConn = 0
+
+[HTTP]
+Enabled = true
+Port = 8082
+
+[WebSocket]
+Enabled = true
+Port = 8379
+
+[Performance]
+WatchChanBufSize = 20000
+ShardCronFrequency = 1000000000
+MultiplexerPollTimeout = 100000000
+MaxClients = 20000
+EnableMultiThreading = false
+StoreMapInitSize = 1024000
+AdhocReqChanBufSize = 20
+
+[Memory]
+MaxMemory = 0
+EvictionPolicy = 'allkeys-lfu'
+EvictionRatio = 0.1
+KeysLimit = 200000000
+LFULogFactor = 10
+
+[Persistence]
+AOFFile = './dice-master.aof'
+PersistenceEnabled = true
+WriteAOFOnCleanup = false
+
+[Auth]
+UserName = 'dice'
+Password = ''
+
+[Network]
+IOBufferLength = 512
+IOBufferLengthMAX = 51200
