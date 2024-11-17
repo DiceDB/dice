@@ -1330,6 +1330,8 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 		typeStr = "set"
 	case object.ObjTypeHashMap:
 		typeStr = "hash"
+	case object.ObjTypeSortedSet:
+		typeStr = "zset"
 	default:
 		typeStr = "non-supported type"
 	}

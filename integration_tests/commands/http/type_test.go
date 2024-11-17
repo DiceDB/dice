@@ -82,6 +82,24 @@ func TestType(t *testing.T) {
 			expected:      []interface{}{"OK", "OK", float64(6), "string"},
 			errorExpected: false,
 		},
+		{
+			name: "TYPE for key with value created from ZADD command",
+			commands: []HTTPCommand{
+				{Command: "ZADD", Body: map[string]interface{}{"key": "k11", "values": [...]string{"1", "member11"}}},
+				{Command: "TYPE", Body: map[string]interface{}{"key": "k11"}},
+			},
+			expected:      []interface{}{float64(1), "zset"},
+			errorExpected: false,
+		},
+		{
+			name: "TYPE for key with value created from GEOADD command",
+			commands: []HTTPCommand{
+				{Command: "GEOADD", Body: map[string]interface{}{"key": "k12", "values": [...]string{"13.361389", "38.115556", "Palermo"}}},
+				{Command: "TYPE", Body: map[string]interface{}{"key": "k12"}},
+			},
+			expected:      []interface{}{float64(1), "zset"},
+			errorExpected: false,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -96,6 +114,7 @@ func TestType(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
+				println(result)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
