@@ -25,7 +25,7 @@ The `RANDOMKEY` command does not take any parameters.
 ## Behaviour
 
 - When executed, `RANDOMKEY` fetches the keyspace from currently selected database and picks a random key from it.
-- The operation is slow and may return an expired key if it hasn't been evicted.
+- The operation is slow and runs in O(N) time complexity where N is the number of keys in the database.
 - The command does not modify the database in any way; it is purely informational.
 
 ## Errors
