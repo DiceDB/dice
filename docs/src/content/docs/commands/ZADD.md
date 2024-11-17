@@ -116,7 +116,6 @@ ZADD key [NX|XX] [GT|LT] [CH] [INCR] score member [score member ...]
 - Use appropriate score values to maintain the desired order of elements in the sorted set.
 - Consider using the `NX` or `XX` options when you want to specifically add new elements or update existing ones, respectively.
 - Use the `CH` option when you need to know the total number of elements changed, including both additions and updates.
-- Be cautious when using the `INCR` option, as it changes the behavior of the command to act like ZINCRBY.
 
 ## Notes
 
