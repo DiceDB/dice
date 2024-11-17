@@ -782,13 +782,13 @@ func validateFlagsAndArgs(args []string, flags map[string]bool) error {
 		return diceerrors.ErrGeneral("syntax error")
 	}
 	if flags[NX] && flags[XX] {
-		return diceerrors.ErrGeneral("xx and nx options at the same time are not compatible")
+		return diceerrors.ErrGeneral("XX and NX options at the same time are not compatible")
 	}
 	if (flags[GT] && flags[NX]) || (flags[LT] && flags[NX]) || (flags[GT] && flags[LT]) {
-		return diceerrors.ErrGeneral("gt and LT and NX options at the same time are not compatible")
+		return diceerrors.ErrGeneral("GT, LT, and/or NX options at the same time are not compatible")
 	}
 	if flags[INCR] && len(args)/2 > 1 {
-		return diceerrors.ErrGeneral("incr option supports a single increment-element pair")
+		return diceerrors.ErrGeneral("INCR option supports a single increment-element pair")
 	}
 	return nil
 }
