@@ -2,6 +2,7 @@ package comm
 
 import (
 	"io"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -49,19 +50,11 @@ func (c *Client) flag() string {
 	return flagNrml
 }
 
-func (c *Client) String() string {
-	var s strings.Builder
-
-	// id
-	s.WriteString("id=")
-	s.WriteString(strconv.FormatUint(uint64(c.ClientIdentifierID), 10))
-	s.WriteString(" ")
-
+func (c *Client) addr() (string, string, error) {
 	// addr
-	s.WriteString("addr=")
 	sa, err := syscall.Getpeername(c.Fd)
 	if err != nil {
-		return ""
+		return "", "", err
 	}
 	var addr string
 	switch v := sa.(type) {
@@ -70,14 +63,11 @@ func (c *Client) String() string {
 	case *syscall.SockaddrInet6:
 		addr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
 	}
-	s.WriteString(addr)
-	s.WriteString(" ")
 
 	// laddr
-	s.WriteString("laddr=")
 	sa, err = syscall.Getsockname(c.Fd)
 	if err != nil {
-		return ""
+		return "", "", err
 	}
 	var laddr string
 	switch v := sa.(type) {
@@ -86,6 +76,30 @@ func (c *Client) String() string {
 	case *syscall.SockaddrInet6:
 		laddr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
 	}
+
+	return addr, laddr, nil
+}
+
+func (c *Client) String() string {
+	var s strings.Builder
+
+	// id
+	s.WriteString("id=")
+	s.WriteString(strconv.FormatUint(uint64(c.ClientIdentifierID), 10))
+	s.WriteString(" ")
+
+	// addr and laddr
+	addr, laddr, err := c.addr()
+	if err != nil {
+		// log error?
+		log.Println(err)
+	}
+
+	s.WriteString("addr=")
+	s.WriteString(addr)
+	s.WriteString(" ")
+
+	s.WriteString("laddr=")
 	s.WriteString(laddr)
 	s.WriteString(" ")
 
