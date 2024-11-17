@@ -201,6 +201,10 @@ func evalCFRESERVE(args []string, store *dstore.Store) []byte {
 		useDefaults = true
 	}
 
+	if cfInstanceExists := store.Get(args[0]); cfInstanceExists != nil {
+		return diceerrors.NewErrWithMessage("item exists")
+	}
+
 	response, err := createAndStoreCuckooFilter(store, args[0], args, useDefaults)
 
 	if err != nil {
