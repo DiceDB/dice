@@ -22,6 +22,7 @@ type QwatchResponse struct {
 
 type Client struct {
 	io.ReadWriter
+	Name                   string
 	HTTPQwatchResponseChan chan QwatchResponse // Response channel to send back the operation response
 	Fd                     int
 	Cqueue                 cmd.RedisCmds

@@ -408,11 +408,6 @@ func evalINFO(args []string, store *dstore.Store) []byte {
 }
 
 // TODO: Placeholder to support monitoring
-func evalCLIENT(args []string, store *dstore.Store) []byte {
-	return clientio.RespOK
-}
-
-// TODO: Placeholder to support monitoring
 func evalLATENCY(args []string, store *dstore.Store) []byte {
 	return clientio.Encode([]string{}, false)
 }
@@ -432,6 +427,36 @@ func evalSLEEP(args []string, store *dstore.Store) []byte {
 	}
 	time.Sleep(time.Duration(durationSec) * time.Second)
 	return clientio.RespOK
+}
+
+func evalCLIENT(args []string, client *comm.Client) []byte {
+	if len(args) == 0 {
+		return clientio.Encode(diceerrors.ErrWrongArgumentCount("CLIENT"), false)
+	}
+
+	subcommand := strings.ToUpper(args[0])
+	switch subcommand {
+	case GETNAME:
+		if len(args) != 1 {
+			return clientio.Encode(diceerrors.ErrWrongArgumentCount("CLIENT|GETNAME"), false)
+		}
+		if client.Name == utils.EmptyStr {
+			return clientio.RespNIL
+		}
+		return clientio.Encode(client.Name, false)
+	case SETNAME:
+		if len(args) != 2 {
+			return clientio.Encode(diceerrors.ErrWrongArgumentCount("CLIENT|SETNAME"), false)
+		}
+		clientName := args[1]
+		if containsSpacesNewlinesOrSpecialChars(clientName) {
+			return clientio.Encode(diceerrors.NewErrWithMessage("Client names cannot contain spaces, newlines or special characters."), false)
+		}
+		client.Name = clientName
+		return clientio.RespOK
+	default:
+		return clientio.Encode(diceerrors.ErrUnknownSubcommand("CLIENT", subcommand), false)
+	}
 }
 
 // EvalQWATCH adds the specified key to the watch list for the caller client.
@@ -696,7 +721,7 @@ func evalCommand(args []string, store *dstore.Store) []byte {
 	case Docs:
 		return evalCommandDocs(args[1:])
 	default:
-		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
+		return clientio.Encode(diceerrors.ErrUnknownSubcommand("COMMAND", subcommand), false)
 	}
 }
 
