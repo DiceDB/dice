@@ -1387,11 +1387,7 @@ func evalRANDOMKEY(args []string, store *dstore.Store) *EvalResponse {
 				continue
 			}
 
-			currTimeMs := uint64(utils.GetCurrentTime().UnixMilli())
-			expireTimeMs, isExpirySet := dstore.GetExpiry(keyObj, store)
-			if (isExpirySet && expireTimeMs > currTimeMs) || !isExpirySet {
-				return makeEvalResult(clientio.Encode(randKey, false))
-			}
+			return makeEvalResult(clientio.Encode(randKey, false))
 		}
 	}
 
