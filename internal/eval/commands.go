@@ -101,7 +101,7 @@ var (
 		Info:       `RANDOMKEY returns a random key from the currently selected database.`,
 		Arity:      1,
 		IsMigrated: false,
-		NewEval:    evalRANDOMKEY,
+		Eval:       evalRANDOMKEY,
 	}
 
 	getSetCmdMeta = DiceCmdMeta{
