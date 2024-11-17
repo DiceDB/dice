@@ -466,7 +466,7 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdRestore: {
 		CmdType: SingleShard,
 	},
-	//geoCommands
+	// geoCommands
 	CmdGeoAdd: {
 		CmdType: SingleShard,
 	},
