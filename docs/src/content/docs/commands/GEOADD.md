@@ -37,13 +37,11 @@ GEOADD key [NX | XX] [CH] longitude latitude member [longitude latitude member .
 
 When the GEOADD command is issued, DiceDB performs the following steps:
 
-1. It checks if argument count is valid or not. If not an error is thrown.
-2. It checks whether optional parameters are applied or not.
-3. It checks whether longitude and latitude are valid or not. If not an error is thrown. 
-3. It checks whether the set exists or not.
-4. If set doesn't exist new set is created or else the same set is used. 
-5. It adds or updates the member in the set.
-6. It returns number of members added. 
+1. It checks whether longitude and latitude are valid or not. If not an error is thrown. 
+2. It checks whether the set exists or not.
+3. If set doesn't exist new set is created or else the same set is used. 
+4. It adds or updates the member in the set.
+5. It returns number of members added. 
 
 ## Errors
 
