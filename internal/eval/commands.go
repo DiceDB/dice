@@ -100,7 +100,7 @@ var (
 		Name:       "RANDOMKEY",
 		Info:       `RANDOMKEY returns a random key from the currently selected database.`,
 		Arity:      1,
-		IsMigrated: true,
+		IsMigrated: false,
 		NewEval:    evalRANDOMKEY,
 	}
 
