@@ -35,6 +35,7 @@ require (
 	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
 	github.com/dicedb/dicedb-go v0.0.0-20241026093718-570de4575be3
+	github.com/fatih/color v1.18.0
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/gobwas/glob v0.2.3
 	github.com/google/btree v1.1.3

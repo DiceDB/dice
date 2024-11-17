@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"log/slog"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/config"
+	"github.com/fatih/color"
 )
 
 type configEntry struct {
@@ -61,6 +63,7 @@ func addEntry(k string, v interface{}) {
 
 // printConfigTable prints key-value pairs in a vertical table format.
 func render() {
+	color.Set(color.FgHiRed)
 	fmt.Print(`
 	██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
 	██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
@@ -70,11 +73,21 @@ func render() {
 	╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 			
 	`)
-	configuration()
+	color.Unset()
+	renderConfigTable()
+}
 
+func renderConfigTable() {
+	configuration()
+	color.Set(color.FgGreen)
 	// Find the longest key to align the values properly
+	// Default value length for alignment
+	// Create the table header and separator line
+	// 7 is for spacing and pipes
+	// Print each configuration key-value pair without row lines
+	// Final bottom line
 	maxKeyLength := 0
-	maxValueLength := 20 // Default value length for alignment
+	maxValueLength := 20
 	for _, entry := range configTable {
 		if len(entry.Key) > maxKeyLength {
 			maxKeyLength = len(entry.Key)
@@ -84,24 +97,96 @@ func render() {
 		}
 	}
 
-	// Create the table header and separator line
+	color.Set(color.FgGreen)
 	fmt.Println()
-	totalWidth := maxKeyLength + maxValueLength + 7 // 7 is for spacing and pipes
+	totalWidth := maxKeyLength + maxValueLength + 7
 	fmt.Println(strings.Repeat("-", totalWidth))
 	fmt.Printf("| %-*s | %-*s |\n", maxKeyLength, "Configuration", maxValueLength, "Value")
 	fmt.Println(strings.Repeat("-", totalWidth))
 
-	// Print each configuration key-value pair without row lines
 	for _, entry := range configTable {
 		fmt.Printf("| %-*s | %-20v |\n", maxKeyLength, entry.Key, entry.Value)
 	}
 
-	// Final bottom line
 	fmt.Println(strings.Repeat("-", totalWidth))
 	fmt.Println()
+	color.Unset()
 }
 
 func Execute() {
+	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the DiceDB server")
+
+	flag.IntVar(&config.Port, "port", 7379, "port for the DiceDB server")
+
+	flag.IntVar(&config.HTTPPort, "http-port", 7380, "port for accepting requets over HTTP")
+	flag.BoolVar(&config.EnableHTTP, "enable-http", false, "enable DiceDB to listen, accept, and process HTTP")
+
+	flag.IntVar(&config.WebsocketPort, "websocket-port", 7381, "port for accepting requets over WebSocket")
+	flag.BoolVar(&config.EnableWebsocket, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
+
+	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "enable multithreading execution and leverage multiple CPU cores")
+	flag.IntVar(&config.NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
+
+	flag.BoolVar(&config.EnableWatch, "enable-watch", false, "enable support for .WATCH commands and real-time reactivity")
+	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
+
+	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
+	flag.StringVar(&config.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
+
+	flag.BoolVar(&config.EnableWAL, "enable-wal", false, "enable write-ahead logging")
+	flag.BoolVar(&config.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
+	flag.StringVar(&config.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
+
+	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
+	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
+	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
+	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
+
+	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the DiceDB server. "+
+		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
+		"total number of shard threads to estimate how much memory will be required at system start up.")
+	flag.Float64Var(&config.EvictionRatio, "eviction-ratio", 0.1, "ratio of keys to evict when the "+
+		"keys limit is reached")
+
+	flag.Usage = func() {
+		color.Set(color.FgYellow)
+		fmt.Println("Usage: ./dicedb [options] [config-file]")
+		color.Unset()
+
+		color.Set(color.FgGreen)
+		fmt.Println("Options:")
+		color.Unset()
+
+		color.Set(color.FgCyan)
+		fmt.Println("  -v, --version          Show the version of DiceDB")
+		fmt.Println("  -h, --help             Show this help message")
+		fmt.Println("  -host                  Host for the DiceDB server (default: \"0.0.0.0\")")
+		fmt.Println("  -port                  Port for the DiceDB server (default: 7379)")
+		fmt.Println("  -http-port             Port for accepting requests over HTTP (default: 7380)")
+		fmt.Println("  -enable-http           Enable DiceDB to listen, accept, and process HTTP (default: false)")
+		fmt.Println("  -websocket-port        Port for accepting requests over WebSocket (default: 7381)")
+		fmt.Println("  -enable-websocket      Enable DiceDB to listen, accept, and process WebSocket (default: false)")
+		fmt.Println("  -enable-multithreading Enable multithreading execution and leverage multiple CPU cores (default: false)")
+		fmt.Println("  -num-shards            Number of shards to create. Defaults to number of cores (default: -1)")
+		fmt.Println("  -enable-watch          Enable support for .WATCH commands and real-time reactivity (default: false)")
+		fmt.Println("  -enable-profiling      Enable profiling and capture critical metrics and traces in .prof files (default: false)")
+		fmt.Println("  -log-level             Log level, values: info, debug (default: \"info\")")
+		fmt.Println("  -log-dir               Log directory path (default: \"/tmp/dicedb\")")
+		fmt.Println("  -enable-wal            Enable write-ahead logging (default: false)")
+		fmt.Println("  -restore-wal           Restore the database from the WAL files (default: false)")
+		fmt.Println("  -wal-engine            WAL engine to use, values: sqlite, aof (default: \"null\")")
+		fmt.Println("  -requirepass           Enable authentication for the default user (default: \"\")")
+		fmt.Println("  -o                     Directory path to create the config file (default: \"\")")
+		fmt.Println("  -c                     File path of the config file (default: \"\")")
+		fmt.Println("  -init-config           Initialize a new config file (default: false)")
+		fmt.Println("  -keys-limit            Keys limit for the DiceDB server (default: 0)")
+		fmt.Println("  -eviction-ratio        Ratio of keys to evict when the keys limit is reached (default: 0.1)")
+		color.Unset()
+		os.Exit(0)
+	}
+
+	flag.Parse()
+
 	if len(os.Args) < 2 {
 		if err := config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, "dicedb.conf")); err != nil {
 			log.Fatal(err)
@@ -113,10 +198,6 @@ func Execute() {
 	switch os.Args[1] {
 	case "-v", "--version":
 		fmt.Println("dicedb version", config.DiceDBVersion)
-		os.Exit(0)
-
-	case "-h", "--help":
-		printUsage()
 		os.Exit(0)
 
 	case "-":
@@ -191,16 +272,7 @@ func Execute() {
 		} else {
 			log.Fatal("Config file path not provided")
 		}
-
 	default:
-		fmt.Printf("Unknown option: %s\n", os.Args[1])
-		printUsage()
+		render()
 	}
-}
-
-func printUsage() {
-	fmt.Println(`Usage: ./dicedb [/path/to/dice.conf] [options] [-]
-	   ./dicedb - (read config from stdin) e.g. echo "version=1.0" | ./dicedb -
-	   ./dicedb -v or --version
-	   ./dicedb -h or --help`)
 }

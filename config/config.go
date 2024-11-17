@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/dicedb/dice/internal/server/utils"
 )
 
 const (
@@ -18,9 +20,43 @@ const (
 	EvictAllKeysRandom string = "allkeys-random"
 	EvictAllKeysLRU    string = "allkeys-lru"
 	EvictAllKeysLFU    string = "allkeys-lfu"
+	EvictBatchKeysLRU  string = "batch_keys_lru"
 
 	DefaultKeysLimit     int     = 200000000
 	DefaultEvictionRatio float64 = 0.1
+)
+
+var (
+	Host string = "0.0.0.0"
+	Port int    = 7379
+
+	EnableMultiThreading bool = false
+	EnableHTTP           bool = true
+	HTTPPort             int  = 8082
+
+	EnableWebsocket bool = true
+	WebsocketPort   int  = 8379
+	NumShards       int  = -1
+
+	// if RequirePass is set to an empty string, no authentication is required
+	RequirePass = utils.EmptyStr
+
+	CustomConfigFilePath = utils.EmptyStr
+	FileLocation         = utils.EmptyStr
+
+	InitConfigCmd = false
+
+	KeysLimit     = DefaultKeysLimit
+	EvictionRatio = DefaultEvictionRatio
+
+	EnableProfiling = false
+
+	EnableWatch = true
+	LogDir      = ""
+
+	EnableWAL      = true
+	RestoreFromWAL = false
+	WALEngine      = "sqlite"
 )
 
 type Config struct {
@@ -43,8 +79,8 @@ type auth struct {
 }
 
 type asyncServer struct {
-	Addr      string `config:"addr" default:"0.0.0.0"`
-	Port      int    `config:"port" default:"7379" validate:"min=1024,max=65535"`
+	Addr      string `config:"addr" default:"0.0.0.0" validate:"ipv4"`
+	Port      int    `config:"port" default:"7379" validate:"number,gte=0,lte=65535"`
 	KeepAlive int32  `config:"keepalive" default:"300"`
 	Timeout   int32  `config:"timeout" default:"300"`
 	MaxConn   int32  `config:"max_conn" default:"0"`
@@ -52,12 +88,12 @@ type asyncServer struct {
 
 type http struct {
 	Enabled bool `config:"enabled" default:"true"`
-	Port    int  `config:"port" default:"8082" validate:"min=1024,max=65535"`
+	Port    int  `config:"port" default:"8082" validate:"number,gte=0,lte=65535"`
 }
 
 type websocket struct {
 	Enabled                 bool          `config:"enabled" default:"true"`
-	Port                    int           `config:"port" default:"8379" validate:"min=1024,max=65535"`
+	Port                    int           `config:"port" default:"8379" validate:"number,gte=0,lte=65535"`
 	MaxWriteResponseRetries int           `config:"max_write_response_retries" default:"3" validate:"min=0"`
 	WriteResponseTimeout    time.Duration `config:"write_response_timeout" default:"10s"`
 }
@@ -76,7 +112,7 @@ type performance struct {
 }
 
 type memory struct {
-	MaxMemory      int64   `config:"max_memory" default:"0"`
+	MaxMemory      int64   `config:"max_memory" default:"0" validate:"min=0"`
 	EvictionPolicy string  `config:"eviction_policy" default:"allkeys-lfu" validate:"oneof=simple-first allkeys-random allkeys-lru allkeys-lfu"`
 	EvictionRatio  float64 `config:"eviction_ratio" default:"0.9" validate:"min=0,lte=1"`
 	KeysLimit      int     `config:"keys_limit" default:"200000000" validate:"min=0"`
