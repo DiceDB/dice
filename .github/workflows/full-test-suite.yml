@@ -41,11 +41,19 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - uses: dorny/paths-filter@v3
+        id: file_types
+        with:
+          filters: |
+            watch_file_changes:
+              - '**/*.go'
       - name: Install dependencies
         run: go get -v . # Check if there is any version changes from the cache
       - name: Build
         run: make build
       - name: Run Unit tests
+        if: steps.file_types.outputs.watch_file_changes == 'true'
         run: make unittest
       - name: Run Integration tests
+        if: steps.file_types.outputs.watch_file_changes == 'true'
         run: make test

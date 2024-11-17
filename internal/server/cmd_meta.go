@@ -435,6 +435,14 @@ var (
 		Cmd:     "RESTORE",
 		CmdType: SingleShard,
 	}
+	geoaddCmdMeta = CmdsMeta{
+		Cmd:     "GEOADD",
+		CmdType: SingleShard,
+	}
+	geodistCmdMeta = CmdsMeta{
+		Cmd:     "GEODIST",
+		CmdType: SingleShard,
+	}
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -559,5 +567,7 @@ func init() {
 	WorkerCmdsMeta["HGETALL"] = hGetAllCmdMeta
 	WorkerCmdsMeta["DUMP"] = dumpCmdMeta
 	WorkerCmdsMeta["RESTORE"] = restoreCmdMeta
+	WorkerCmdsMeta["GEOADD"] = geoaddCmdMeta
+	WorkerCmdsMeta["GEODIST"] = geodistCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }
