@@ -1470,6 +1470,27 @@ var (
 		Arity:    3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+
+	cfMeExistsCmdMeta = DiceCmdMeta{
+		Name: "CF.MEXISTS",
+		Info: `CF.MEXISTS key item [item ...]
+				The CF.MEXISTS command determines whether one or more items were added to a cuckoo filter.
+
+				Parameters:
+				- key: The name of the Cuckoo Filter.
+				- item: One or more items to check.
+
+				Returns:
+				- Array reply of Integer reply:
+				- "1" means that, with high probability, the item was already added to the filter.
+				- "0" means that the key does not exist or that the item was not added to the filter.
+				- [] (empty array) on error (e.g., invalid arguments, wrong key type, etc.).
+
+		`,
+		Eval:     evalCFMEXISTS,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1619,6 +1640,7 @@ func init() {
 	DiceCmds["CF.ADD"] = cfAddCmdMeta
 	DiceCmds["CF.EXISTS"] = cfExistsCmdMeta
 	DiceCmds["CF.DEL"] = cfDelCmdMeta
+	DiceCmds["CF.MEXISTS"] = cfMeExistsCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

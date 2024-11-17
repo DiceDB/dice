@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -286,4 +287,34 @@ func evalCFDEL(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.RespOne
+}
+
+func evalCFMEXISTS(args []string, store *dstore.Store) []byte {
+	if len(args) < 2 {
+		return diceerrors.NewErrArity("CF.MEXISTS")
+	}
+
+	key := args[0]
+	items := args[1:]
+	cfInstance := store.Get(key)
+	if cfInstance == nil {
+		return diceerrors.NewErrWithFormattedMessage("key %s does not exist", key)
+	}
+
+	cf, ok := cfInstance.Value.(*CuckooFilter)
+	if !ok {
+		return clientio.RespEmptyArray
+	}
+
+	var result strings.Builder
+	for i, item := range items {
+		if exists := cf.lookup([]byte(item)); exists {
+			result.WriteString(fmt.Sprintf("%d) (integer) %d\n", i+1, 1))
+		} else {
+			result.WriteString(fmt.Sprintf("%d) (integer) %d\n", i+1, 0))
+		}
+	}
+
+	// @TODO formatting
+	return clientio.Encode(result.String(), false)
 }
