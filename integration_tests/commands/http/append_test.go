@@ -101,6 +101,23 @@ func TestAPPEND(t *testing.T) {
 				{Command: "del", Body: map[string]interface{}{"key": "myzset"}},
 			},
 		},
+		{
+			name: "APPEND to key created using SETBIT",
+			commands: []HTTPCommand{
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "bitkey", "values": []string{"2", "1"}}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "bitkey", "values": []string{"3", "1"}}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "bitkey", "values": []string{"5", "1"}}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "bitkey", "values": []string{"10", "1"}}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "bitkey", "values": []string{"11", "1"}}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "bitkey", "values": []string{"14", "1"}}},
+				{Command: "APPEND", Body: map[string]interface{}{"key": "bitkey", "value": "1"}},
+				{Command: "GET", Body: map[string]interface{}{"key": "bitkey"}},
+			},
+			expected: []interface{}{float64(0), float64(0), float64(0), float64(0), float64(0), float64(0), float64(3), "421"},
+			cleanup: []HTTPCommand{
+				{Command: "del", Body: map[string]interface{}{"key": "bitkey"}},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
