@@ -137,6 +137,11 @@ func (c *Client) String() string {
 	s.WriteString(strconv.FormatInt(int64(multi), 10))
 	s.WriteString(" ")
 
+	// argv-mem
+	s.WriteString("argv-mem=")
+	s.WriteString(strconv.FormatInt(int64(c.ArgLenSum), 10))
+	s.WriteString(" ")
+
 	// cmd
 	s.WriteString("cmd=")
 	// todo: handle `CLIENT ID` as "client|id" and `SET k 1` as "set"
@@ -151,12 +156,6 @@ func (c *Client) String() string {
 		s.WriteString(c.Session.User.Username)
 	}
 	s.WriteString(" ")
-
-	// argv-mem
-	s.WriteString("argv-mem=")
-	s.WriteString(strconv.FormatInt(int64(c.ArgLenSum), 10))
-	s.WriteString(" ")
-
 	return s.String()
 }
 
