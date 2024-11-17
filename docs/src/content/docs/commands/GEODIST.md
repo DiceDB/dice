@@ -39,10 +39,9 @@ GEODIST key member1 member2 [m | km | ft | mi]
 
 When the GEODIST command is issued, DiceDB performs the following steps:
 
-1. It checks if argument count is valid or not. If not an error is thrown.
-2. It gets the sorted set(key).
-3. It gets the scores(geohashes) from the sorted sets for both the members.
-4. It calculates the distance bw them and returns it.
+1. It gets the sorted set(key).
+2. It gets the scores(geohashes) from the sorted sets for both the members.
+3. It calculates the distance bw them and returns it.
 
 ## Errors
 
