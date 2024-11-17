@@ -10,7 +10,6 @@ import (
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/id"
 )
 
 const (
@@ -168,7 +167,7 @@ func NewClient(fd int) *Client {
 			Cmds: cmds,
 		},
 		Session:            auth.NewSession(),
-		ClientIdentifierID: uint32(id.NextClientID()), // this should be int64 as per redis
+		ClientIdentifierID: uint32(nextClientID()), // this should be int64 as per redis
 	}
 }
 
