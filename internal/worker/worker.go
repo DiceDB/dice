@@ -219,10 +219,9 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			if err != nil {
 				var workerErr error
 				// Check if it's a CustomError
-				if customErr, ok := err.(*diceerrors.PreProcessError); ok {
+				var customErr *diceerrors.PreProcessError
+				if errors.As(err, &customErr) {
 					workerErr = w.ioHandler.Write(ctx, customErr.Result)
-				} else {
-					workerErr = w.ioHandler.Write(ctx, err)
 				}
 				if workerErr != nil {
 					slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", workerErr))
