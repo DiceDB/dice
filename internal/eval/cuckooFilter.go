@@ -318,3 +318,40 @@ func evalCFMEXISTS(args []string, store *dstore.Store) []byte {
 	// @TODO formatting
 	return clientio.Encode(result.String(), false)
 }
+
+func evalCFADDNX(args []string, store *dstore.Store) []byte {
+
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("CF.ADDNX")
+	}
+
+	key := args[0]
+	item := []byte(args[1])
+
+	cfInstance := store.Get(key)
+
+	if cfInstance == nil {
+		_, err := createAndStoreCuckooFilter(store, key, args, true)
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage("%w for 'CF.ADDNX' command", err)
+		}
+
+		cfInstance = store.Get(key)
+	}
+
+	cf, ok := cfInstance.Value.(*CuckooFilter)
+
+	if !ok {
+		return clientio.RespEmptyArray
+	}
+
+	if exists := cf.lookup([]byte(item)); exists {
+		return clientio.RespZero
+	}
+
+	if added := cf.add(item); !added {
+		return clientio.RespEmptyArray
+	}
+
+	return clientio.RespOne
+}

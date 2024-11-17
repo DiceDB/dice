@@ -1491,6 +1491,24 @@ var (
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	cfAddNXCmdMeta = DiceCmdMeta{
+		Name: "CF.ADDNX",
+		Info: `CF.ADDNX key item
+	The CF.ADDNX command adds an item to a Cuckoo Filter if it does not already exist.
+
+	Parameters:
+	- key: The name of the Cuckoo Filter. If the filter does not exist, it will be created.
+	- item: The item to add to the filter.
+
+	Returns:
+	- 1: If the item was successfully added to the filter.
+	- 0: If the item's fingerprint already exists in the filter.
+	- [] (empty array) on error (e.g., invalid arguments, wrong key type, etc.).
+	`,
+		Eval:     evalCFADDNX,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1641,6 +1659,7 @@ func init() {
 	DiceCmds["CF.EXISTS"] = cfExistsCmdMeta
 	DiceCmds["CF.DEL"] = cfDelCmdMeta
 	DiceCmds["CF.MEXISTS"] = cfMeExistsCmdMeta
+	DiceCmds["CF.ADDNX"] = cfAddNXCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
