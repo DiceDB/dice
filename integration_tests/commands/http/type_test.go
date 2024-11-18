@@ -114,7 +114,6 @@ func TestType(t *testing.T) {
 
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				println(result)
 				assert.Equal(t, tc.expected[i], result)
 			}
 		})
