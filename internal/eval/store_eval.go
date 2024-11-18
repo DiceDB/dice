@@ -6229,15 +6229,15 @@ func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
 	return makeEvalResult(hashMap.Values())
 }
 
-func hMultiSetGeneric(cmd string, args []string, store *dstore.Store) *EvalResponse {
+func hMultiSetGeneric(cmdName string, args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 3 {
-		return makeEvalError(diceerrors.ErrWrongArgumentCount(cmd))
+		return makeEvalError(diceerrors.ErrWrongArgumentCount(cmdName))
 	}
 
 	key := args[0]
 	size := len(args) - 1
 	if size < 0 || size%2 != 0 {
-		return makeEvalError(diceerrors.ErrWrongArgumentCount(cmd))
+		return makeEvalError(diceerrors.ErrWrongArgumentCount(cmdName))
 	}
 
 	obj := store.Get(key)
@@ -6257,7 +6257,7 @@ func hMultiSetGeneric(cmd string, args []string, store *dstore.Store) *EvalRespo
 			count++
 		}
 	}
-	switch cmd {
+	switch cmdName {
 	case "HSET":
 		return makeEvalResult(count)
 	default:
