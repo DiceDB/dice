@@ -50,13 +50,12 @@ func (c *Client) flag() string {
 	return flagNrml
 }
 
-func (c *Client) addr() (string, string, error) {
+func (c *Client) addr() (addr, laddr string, err error) {
 	// addr
 	sa, err := syscall.Getpeername(c.Fd)
 	if err != nil {
 		return "", "", err
 	}
-	var addr string
 	switch v := sa.(type) {
 	case *syscall.SockaddrInet4:
 		addr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
@@ -69,7 +68,6 @@ func (c *Client) addr() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	var laddr string
 	switch v := sa.(type) {
 	case *syscall.SockaddrInet4:
 		laddr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
@@ -193,7 +191,7 @@ func NewClient(fd int) *Client {
 			Cmds: cmds,
 		},
 		Session:            auth.NewSession(),
-		ClientIdentifierID: uint32(nextClientID()), // this should be int64 as per redis
+		ClientIdentifierID: uint32(nextClientID()), //nolint:gosec // this should be int64 as per redis
 	}
 }
 
