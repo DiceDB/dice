@@ -12,7 +12,6 @@ import (
 
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/abstractserver"
-	"github.com/rs/xid"
 
 	"github.com/dicedb/dice/internal/sql"
 

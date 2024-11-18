@@ -1,7 +1,6 @@
 package eval
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/dicedb/dice/internal/auth"
@@ -66,8 +65,6 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 		// This path likely involves evaluating the command based on its provided arguments.
 		return diceCmd.NewEval(e.cmd.Args, e.store)
 	}
-
-	fmt.Println(":", diceCmd.Name)
 
 	// The following commands could be handled at the shard level, however, we can randomly let any shard handle them
 	// to reduce load on main server.
