@@ -446,3 +446,83 @@ func evalCFINSERT(args []string, store *dstore.Store) []byte {
 	// @TODO formatting
 	return clientio.Encode(result.String(), false)
 }
+
+func evalCFINSERTNX(args []string, store *dstore.Store) []byte {
+
+	if len(args) < 3 {
+		return diceerrors.NewErrArity("CF.INSERT")
+	}
+
+	key := args[0]
+	itemsIdx := -1
+	capacity := defaultCapacity
+	noCreate := false
+
+	for i := 1; i < len(args); i++ {
+		arg := strings.ToUpper(args[i])
+		switch arg {
+		case "CAPACITY":
+			if i+1 >= len(args) {
+				return diceerrors.NewErrWithMessage("Missing value for 'CAPACITY' in CF.INSERT")
+			}
+
+			parsedCapacity, err := strconv.ParseUint(args[i+1], 10, 64)
+
+			if err != nil {
+				return diceerrors.NewErrWithMessage("Invalid value for 'CAPACITY'")
+			}
+
+			capacity = parsedCapacity
+
+			i++
+
+		case "NOCREATE":
+			noCreate = true
+		case "ITEMS":
+			itemsIdx = i + 1
+			break
+		}
+	}
+
+	if itemsIdx == -1 || itemsIdx >= len(args) {
+		return diceerrors.NewErrWithFormattedMessage("Missing 'ITEMS' argument in 'CF.INSERT'")
+	}
+
+	items := args[itemsIdx:]
+
+	cfInstance := store.Get(key)
+
+	if cfInstance == nil {
+		if noCreate {
+			return clientio.RespEmptyArray
+		}
+
+		_, err := createAndStoreCuckooFilterWithCapacity(store, key, uint(capacity))
+		if err != nil {
+			return diceerrors.NewErrWithFormattedMessage("%w for 'CF.INSERT' command", err)
+		}
+
+		cfInstance = store.Get(key)
+	}
+
+	cf, ok := cfInstance.Value.(*CuckooFilter)
+
+	if !ok {
+		return clientio.RespEmptyArray
+	}
+
+	var result strings.Builder
+	for i, item := range items {
+
+		if exists := cf.lookup([]byte(item)); exists {
+			result.WriteString(fmt.Sprintf("%d) (integer) %d\n", i+1, 0))
+		} else if added := cf.add([]byte(item)); added {
+			result.WriteString(fmt.Sprintf("%d) (integer) %d\n", i+1, 1))
+		} else {
+			result.WriteString(fmt.Sprintf("%d) (integer) %d\n", i+1, 0))
+		}
+	}
+
+	// @TODO formatting
+	return clientio.Encode(result.String(), false)
+}

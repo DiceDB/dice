@@ -1531,6 +1531,28 @@ var (
 		Arity:    -3, // Arity is variable because of optional parameters and multiple items.
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+
+	cfInsertNXCmdMeta = DiceCmdMeta{
+		Name: "CF.INSERTNX",
+		Info: `CF.INSERTNX key [CAPACITY capacity] [NOCREATE] ITEMS item [item ...]
+			The CF.INSERTNX command adds one or more items to a Cuckoo Filter if it already does not exist, allowing the filter to be created with a custom capacity if it does not exist.
+
+			Parameters:
+			- key: The name of the Cuckoo Filter.
+			- CAPACITY capacity (optional): Specifies the desired capacity for the new filter if it does not exist. Ignored if the filter already exists.
+			- NOCREATE (optional): Prevents automatic filter creation if the filter does not exist.
+			- ITEMS item [item ...]: One or more items to add to the filter.
+
+			Returns:
+			- Array reply:
+				- 1: If the item was successfully added to the filter.
+				- -1: If the item was not added because the filter is full.
+			- Error: If invalid arguments are provided, the key does not exist when NOCREATE is specified, or another failure occurs.
+		`,
+		Eval:     evalCFINSERTNX,
+		Arity:    -3, // Arity is variable because of optional parameters and multiple items.
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1683,6 +1705,7 @@ func init() {
 	DiceCmds["CF.MEXISTS"] = cfMeExistsCmdMeta
 	DiceCmds["CF.ADDNX"] = cfAddNXCmdMeta
 	DiceCmds["CF.INSERT"] = cfInsertCmdMeta
+	DiceCmds["CF.INSERTNX"] = cfInsertNXCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
