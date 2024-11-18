@@ -1385,6 +1385,7 @@ func init() {
 	DiceCmds["GEOPOS"] = geoPosCmdMeta
 	DiceCmds["GEOHASH"] = geoHashCmdMeta
 	DiceCmds["GET"] = getCmdMeta // moved to ironhawk
+	DiceCmds["GEORADIUSBYMEMBER"] = geoRadiusByMemberCmdMeta
 	DiceCmds["GETBIT"] = getBitCmdMeta
 	DiceCmds["GETDEL"] = getDelCmdMeta
 	DiceCmds["GETEX"] = getexCmdMeta

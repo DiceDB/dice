@@ -37,6 +37,8 @@ var (
 	ErrInvalidFingerprint         = errors.New("invalid fingerprint")
 	ErrKeyDoesNotExist            = errors.New("ERR could not perform this operation on a key that doesn't exist")
 	ErrKeyExists                  = errors.New("ERR key exists")
+	ErrInvalidFloat               = errors.New("ERR value is not a valid float")
+	ErrUnsupportedUnit            = errors.New("ERR unsupported unit provided. please use m, km, ft, mi")
 
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {

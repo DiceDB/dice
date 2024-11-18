@@ -7149,3 +7149,93 @@ func parseFloatInt(input string) (result interface{}, err error) {
 	err = errors.New("invalid input: not a valid int or float")
 	return
 }
+
+func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 4 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEODIST"),
+		}
+	}
+
+	key := args[0]
+	member := args[1]
+	dist := args[2]
+	unit := args[3]
+
+	distVal, parseErr := strconv.ParseFloat(dist, 64)
+	if parseErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrInvalidFloat,
+		}
+	}
+
+	// TODO parse options
+	// parseGeoRadiusOptions(args[4:])
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	ss, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	memberHash, ok := ss.Get(member)
+	if !ok {
+		return &EvalResponse{
+			Result: nil,
+			Error:  nil,
+		}
+	}
+
+	radius, ok := geo.ToMeters(distVal, unit)
+	if !ok {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrUnsupportedUnit,
+		}
+	}
+
+	area, steps := geo.Area(memberHash, radius)
+
+	/* When a huge Radius (in the 5000 km range or more) is used,
+	 * adjacent neighbors can be the same, leading to duplicated
+	 * elements. Skip every range which is the same as the one
+	 * processed previously. */
+
+	var members []string
+	var lastProcessed uint64
+	for _, hash := range area {
+		if hash == 0 {
+			continue
+		}
+
+		if lastProcessed == hash {
+			continue
+		}
+
+		// TODO handle COUNT arg to limit number of returned members
+
+		hashMin, hashMax := geo.HashMinMax(hash, steps)
+		rangeMembers := ss.GetScoreRange(float64(hashMin), float64(hashMax), false, false)
+		for _, member := range rangeMembers {
+			members = append(members, fmt.Sprintf("%q", member))
+		}
+	}
+
+	// TODO handle options
+
+	return &EvalResponse{
+		Result: clientio.Encode(members, false),
+	}
+}
