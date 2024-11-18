@@ -235,7 +235,7 @@ func (s *AsyncServer) acceptConnection() error {
 
 	client := comm.NewClient(fd)
 	s.connectedClients[fd] = client
-	abstractserver.Clients = append(abstractserver.Clients, client)
+	abstractserver.AddClient(client)
 
 	if err := syscall.SetNonblock(fd, true); err != nil {
 		return err

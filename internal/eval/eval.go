@@ -417,8 +417,8 @@ func EvalCLIENT(args []string, httpOp bool, client *comm.Client, store *dstore.S
 	subcommand := strings.ToUpper(args[0])
 	switch subcommand {
 	case List:
-		o := make([]string, 0, len(abstractserver.Clients))
-		for _, client := range abstractserver.Clients {
+		o := make([]string, 0, len(abstractserver.GetClients()))
+		for _, client := range abstractserver.GetClients() {
 			o = append(o, client.String())
 		}
 		return clientio.Encode(strings.Join(o, "\n"), false)
