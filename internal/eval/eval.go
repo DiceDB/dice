@@ -3,7 +3,6 @@ package eval
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/base64"
 
 	"errors"
 	"fmt"
@@ -13,7 +12,6 @@ import (
 	"math"
 	"math/big"
 	"math/bits"
-	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -4128,14 +4126,19 @@ func evalPFDEBUG(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
 	}
 
-	sparseField := reflect.ValueOf(hll).Elem().FieldByName("sparseList")
-	sparseFieldValue := reflect.NewAt(sparseField.Type(), unsafe.Pointer(sparseField.UnsafeAddr())).Elem()
+	data, err := hll.MarshalBinary()
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+	}
 
 	var encoding string
-	if sparseFieldValue.IsNil() {
-		encoding = "dense"
-	} else {
+	var endodingByteSequence = 3
+	// Third byte of HLL binary encoded representation tells
+	// if it's stored in sparse or dense representation
+	if data[endodingByteSequence] == 1 {
 		encoding = "sparse"
+	} else {
+		encoding = "dense"
 	}
 
 	switch subcommand {
@@ -4152,27 +4155,30 @@ func evalPFDEBUG(args []string, store *dstore.Store) []byte {
 			}
 		}
 
-		// registers := reflect.ValueOf(hll).Elem().FieldByName("regs")
-		// registersValue := reflect.NewAt(registers.Type(), unsafe.Pointer(registers.UnsafeAddr())).Elem()
 		data, error := hll.MarshalBinary()
 		if error != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
 		}
 
-		return clientio.Encode(base64.StdEncoding.EncodeToString(data), false)
+		var registersStartByteSequence = 8
+		return clientio.Encode(data[registersStartByteSequence:], false)
 
 	case "DECODE":
 		if encoding != "sparse" {
 			return diceerrors.NewErrWithMessage(diceerrors.HllEncodingErr)
 		}
 
+		// Calling Estimate dumps the temp list into the sparse list so a
+		// simpler binary representation can be sent to the client.
+		hll.Estimate()
 		data, err := hll.MarshalBinary()
 
 		if err != nil {
 			return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
 		}
 
-		return clientio.Encode(base64.StdEncoding.EncodeToString(data), false)
+		var sparseListSTartByteSequence = 12
+		return clientio.Encode(data[sparseListSTartByteSequence:], false)
 
 	case "ENCODING":
 		return clientio.Encode(encoding, false)
