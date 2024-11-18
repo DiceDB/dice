@@ -145,7 +145,11 @@ func (c *Client) String() string {
 	// cmd
 	s.WriteString("cmd=")
 	// todo: handle `CLIENT ID` as "client|id" and `SET k 1` as "set"
-	s.WriteString(strings.ToLower(c.LastCmd.Cmd))
+	if c.LastCmd == nil {
+		s.WriteString("NULL")
+	} else {
+		s.WriteString(strings.ToLower(c.LastCmd.Cmd))
+	}
 	s.WriteString(" ")
 
 	// user

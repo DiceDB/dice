@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/dicedb/dice/internal/auth"
@@ -41,6 +42,7 @@ func (e *Eval) PreProcessCommand() *EvalResponse {
 func (e *Eval) ExecuteCommand() *EvalResponse {
 	diceCmd, ok := DiceCmds[e.cmd.Cmd]
 	if !ok {
+		e.client.LastCmd = nil
 		return &EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", e.cmd.Cmd, strings.Join(e.cmd.Args, " ")), Error: nil}
 	}
 
@@ -73,7 +75,7 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 	// Old implementation kept as it is, but we will be moving
 	// to the new implementation soon for all commands
 	case "CLIENT":
-		return &EvalResponse{Result: EvalCLIENT(c.Args, httpOp, client, store), Error: nil}
+		return &EvalResponse{Result: EvalCLIENT(e.cmd.Args, e.isHTTPOperation, e.client, e.store), Error: nil}
 	case "SUBSCRIBE", "Q.WATCH":
 		return &EvalResponse{Result: EvalQWATCH(e.cmd.Args, e.isHTTPOperation, e.isWebSocketOperation, e.client, e.store), Error: nil}
 	case "UNSUBSCRIBE", "Q.UNWATCH":
