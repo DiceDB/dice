@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"sort"
 	"testing"
 	"time"
 
 	"github.com/dicedb/dice/internal/clientio"
 	dicedb "github.com/dicedb/dicedb-go"
 	"gotest.tools/v3/assert"
+    testifyAssert "github.com/stretchr/testify/assert"
 )
 
 type smembersWatchTestCase struct {
@@ -57,25 +57,6 @@ func TestSMEMBERSWATCH(t *testing.T) {
     })
 }
 
-func sortSlice(v any) any {
-    switch v := v.(type) {
-    case []interface{}:
-        sorted := make([]interface{}, len(v))
-        copy(sorted, v)
-        sort.Slice(sorted, func(i, j int) bool {
-            return sorted[i].(string) < sorted[j].(string)
-        })
-        return sorted
-    case []string:
-        sorted := make([]string, len(v))
-        copy(sorted, v)
-        sort.Strings(sorted)
-        return sorted
-    default:
-        return v
-    }
-}
-
 func setUpSmembersRespParsers(t *testing.T, subscribers []net.Conn) []*clientio.RESPParser {
     respParsers := make([]*clientio.RESPParser, len(subscribers))
     for i, subscriber := range subscribers {
@@ -113,7 +94,7 @@ func verifySmembersWatchResults(t *testing.T, respParsers []*clientio.RESPParser
         assert.Equal(t, 3, len(castedValue))
         assert.Equal(t, smembersCommand, castedValue[0])
         assert.Equal(t, smembersWatchFingerPrint, castedValue[1])
-        assert.DeepEqual(t, sortSlice(expected), sortSlice(castedValue[2]))
+        testifyAssert.ElementsMatch(t, expected, castedValue[2])
     }
 }
 
@@ -189,7 +170,7 @@ func verifySmembersWatchResultsSDK(t *testing.T, channels []<-chan *dicedb.Watch
                 receivedStrings[i] = str
             }
             
-            assert.DeepEqual(t, sortSlice(expected), sortSlice(receivedStrings))
+            testifyAssert.ElementsMatch(t, expected, receivedStrings)
         case <-time.After(defaultTimeout):
             t.Fatal("timeout waiting for watch result")
         }
