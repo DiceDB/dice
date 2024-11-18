@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/object"
+	"github.com/ohler55/ojg/jp"
 
 	"github.com/dicedb/dice/internal/sql"
 
@@ -22,7 +23,6 @@ import (
 	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/ohler55/ojg/jp"
 )
 
 type exDurationState int

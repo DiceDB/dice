@@ -1767,6 +1767,99 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+func evalPFDEBUG(args []string, store *dstore.Store) []byte {
+	if len(args) != 2 {
+		return diceerrors.NewErrArity("PFDEBUG")
+	}
+
+	subcommand := strings.ToUpper(args[0])
+	key := args[1]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return diceerrors.NewErrWithMessage("Key does not exist")
+	}
+
+	hll, ok := obj.Value.(*hyperloglog.Sketch)
+	if !ok {
+		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeHllErr)
+	}
+
+	data, err := hll.MarshalBinary()
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+	}
+
+	var encoding string
+	var endodingByteSequence = 3
+	// Third byte of HLL binary encoded representation tells
+	// if it's stored in sparse or dense representation
+	if data[endodingByteSequence] == 1 {
+		encoding = "sparse"
+	} else {
+		encoding = "dense"
+	}
+
+	switch subcommand {
+	case "GETREG":
+		// For call to GETREG, encoding is converted from sparse to dense.
+		// We'll merge a sparse and an empty dense HLL to get a dense HLL
+		// with values of sparse HLL.
+		if encoding == "sparse" {
+			emptyDenseHLL := hyperloglog.NewNoSparse()
+			err := hll.Merge(emptyDenseHLL)
+
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+			}
+		}
+
+		data, error := hll.MarshalBinary()
+		if error != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+		}
+
+		var registersStartByteSequence = 8
+		return clientio.Encode(data[registersStartByteSequence:], false)
+
+	case "DECODE":
+		if encoding != "sparse" {
+			return diceerrors.NewErrWithMessage(diceerrors.HllEncodingErr)
+		}
+
+		// Calling Estimate dumps the temp list into the sparse list so a
+		// simpler binary representation can be sent to the client.
+		hll.Estimate()
+		data, err := hll.MarshalBinary()
+
+		if err != nil {
+			return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+		}
+
+		var sparseListSTartByteSequence = 12
+		return clientio.Encode(data[sparseListSTartByteSequence:], false)
+
+	case "ENCODING":
+		return clientio.Encode(encoding, false)
+
+	case "TODENSE":
+		changed := 0
+		if encoding == "sparse" {
+			emptyDenseHLL := hyperloglog.NewNoSparse()
+			err := hll.Merge(emptyDenseHLL)
+			changed = 1
+
+			if err != nil {
+				return diceerrors.NewErrWithMessage(diceerrors.InvalidHllErr)
+			}
+		}
+		return clientio.Encode(changed, false)
+
+	default:
+		return diceerrors.NewErrWithMessage(fmt.Sprintf("Unknown PFDEBUG subcommand: %s", subcommand))
+	}
+}
+
 // evalJSONSTRLEN Report the length of the JSON String at path in key
 // Returns by recursive descent an array of integer replies for each path,
 // the string's length, or nil, if the matching JSON value is not a string.
