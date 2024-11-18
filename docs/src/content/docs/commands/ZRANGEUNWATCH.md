@@ -40,36 +40,32 @@ ZRANGE.UNWATCH <fingerprint>
 ## Errors
 
 1. `Missing fingerprint`
-   - Error Message: `(error) ERROR wrong number of arguments for 'zrange.watch' command`
+   - Error Message: `(error) ERROR wrong number of arguments for 'zrange.unwatch' command`
    - Occurs if no fingerprint is provided.
 
 ## Example Usage
 
 ### Basic Usage
 
-Let's explore a practical example of using the `ZRANGE.WATCH` command to create a real-time journal which takes backup periodically.
+Let's explore a practical example of using the `ZRANGE.WATCH` command to create a real-time submission leaderboard for a game match.
 
 ```bash
-127.0.0.1:7379> ZRANGE.WATCH journal:user:0
+127.0.0.1:7379> ZRANGE.WATCH match:100 0 1 REV WITHSCORES
 ZRANGE.WATCH
-here 4016579015
 Command: ZRANGE
 Fingerprint: 4016579015
-Data: Hello World
+Data: 
 ```
-
-This query does the following:
-
-- Monitors key matching the name `journal:user:0`
-
-When the key is updated using following set of commands from another client:
+When the sorted set is updated using following set of commands from another client:
     
 ```bash
-127.0.0.1:7379> set journal:user:0 "Hello World, I am user 0 of dice db"
+127.0.0.1:7379> ZADD match:100 1 "player1"
 OK
-127.0.0.1:7379> set journal:user:0 "Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch commands"
+127.0.0.1:7379> ZADD match:100 2 "player2"
 OK
-127.0.0.1:7379> set journal:user:0 "Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch and unwatch commands."
+127.0.0.1:7379> ZADD match:100 1 "player3"
+OK
+127.0.0.1:7379> ZADD match:100 4 "player4"
 OK
 ```
 
@@ -77,13 +73,16 @@ The client will receive a message similar to the following:
 ```bash
 Command: ZRANGE
 Fingerprint: 4016579015
-Data: Hello World, I am user 0 of dice db
+Data: player1
 Command: ZRANGE
 Fingerprint: 4016579015
-Data: Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch commands
+Data: player2
 Command: ZRANGE
 Fingerprint: 4016579015
-Data: Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch and unwatch commands.
+Data: player2
+Command: ZRANGE
+Fingerprint: 4016579015
+Data: player4
 ```
 
 To stop receiving updates on the key, use the `ZRANGE.UNWATCH` command.
@@ -96,12 +95,11 @@ OK
 
 ## Notes
 
-Use the `ZRANGE.WATCH` command to subscribe to a key. This will allow the client to receive updates on the key. Please refer to
+Use the `ZRANGE.WATCH` command to subscribe to a key. This will allow the client to receive updates on the sorted set. Please refer to
 the [ZRANGE.WATCH](/commands/zrangewatch) command documentation for more information.
 
 ## Related commands
 
 following are the related commands to `ZRANGE.UNWATCH`:
-- [ZRANGE.UNWATCH](/commands/zrangeunwatch)
-- [Q.UNWATCH](/commands/qunwatch)
+- [GET.UNWATCH](/commands/getunwatch)
 

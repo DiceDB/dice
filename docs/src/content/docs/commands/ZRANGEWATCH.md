@@ -27,6 +27,7 @@ ZRANGE.WATCH <key> <start> <stop>
 | `key` | key which the client would like to get updates on | String | Yes      |
 | `start` | start index of the sorted set | Integer | Yes      |
 | `stop` | stop index of the sorted set | Integer | Yes      |
+| options | Additional options to be passed to the command `ZRANGE` | String | No       |
 
 
 ## Return Value
@@ -45,61 +46,65 @@ ZRANGE.WATCH <key> <start> <stop>
 ## Errors
 
 1. `Missing Key`
-   - Error Message: `(error) ERROR wrong number of arguments for 'get.watch' command`
+   - Error Message: `(error) ERROR wrong number of arguments for 'zrange.watch' command`
    - Occurs if no Key is provided.
 
 ## Example Usage
 
 ### Basic Usage
 
-Let's explore a practical example of using the `GET.WATCH` command to create a real-time journal which takes backup periodically.
+
+Let's explore a practical example of using the `ZRANGE.WATCH` command to create a real-time submission leaderboard for a game match.
 
 ```bash
-127.0.0.1:7379> GET.WATCH journal:user:0
-GET.WATCH
-Command: GET
+127.0.0.1:7379> ZRANGE.WATCH match:100 0 1 REV WITHSCORES
+ZRANGE.WATCH
+Command: ZRANGE
 Fingerprint: 4016579015
-Data: Hello World
+Data: 
 ```
 
 This query does the following:
 
-- Monitors key matching the name `journal:user:0`
+- Monitors key matching the name `match:100`
 
-When the key is updated using following set of commands from another client:
+When the sorted set is updated using following set of commands from another client:
     
 ```bash
-127.0.0.1:7379> set journal:user:0 "Hello World, I am user 0 of dice db"
+127.0.0.1:7379> ZADD match:100 1 "player1"
 OK
-127.0.0.1:7379> set journal:user:0 "Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch commands"
+127.0.0.1:7379> ZADD match:100 2 "player2"
 OK
-127.0.0.1:7379> set journal:user:0 "Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch and unwatch commands."
+127.0.0.1:7379> ZADD match:100 1 "player3"
+OK
+127.0.0.1:7379> ZADD match:100 4 "player4"
 OK
 ```
 
 The client will receive a message similar to the following:
 ```bash
-Command: GET
+Command: ZRANGE
 Fingerprint: 4016579015
-Data: Hello World, I am user 0 of dice db
-here 4016579015
-Command: GET
+Data: player1
+Command: ZRANGE
 Fingerprint: 4016579015
-Data: Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch commands
-here 4016579015
-Command: GET
+Data: player2
+Command: ZRANGE
 Fingerprint: 4016579015
-Data: Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch and unwatch commands.
+Data: player2
+Command: ZRANGE
+Fingerprint: 4016579015
+Data: player4
 ```
 
 ## Notes
 
-Use the `GET.UNWATCH` command to unsubscribe from a key. This will stop the client from receiving updates on the key. Please refer to
-the [GET.UNWATCH](/commands/getunwatch) command documentation for more information.
+Use the `ZRANGE.UNWATCH` command to unsubscribe from a sorted set. This will stop the client from receiving updates on the sorted set. Please refer to
+the [ZRANGE.UNWATCH](/commands/zrangeunwatch) command documentation for more information.
 
 ## Related commands
 
-following are the related commands to `GET.WATCH`:
-- [ZRANGE.WATCH](/commands/zrangewatch)
+following are the related commands to `ZRANGE.WATCH`:
+- [GET.WATCH](/commands/getwatch)
 - [Q.WATCH](/commands/qwatch)
 

@@ -16,7 +16,7 @@ The `GET.UNWATCH` command is a feature to stop receiving updates on a key.
 ## Syntax
 
 ```bash
-GET.WATCH <fingerprint>
+GET.UNWATCH <fingerprint>
 ```
 
 ## Parameters
@@ -102,5 +102,4 @@ the [GET.WATCH](/commands/getwatch) command documentation for more information.
 
 following are the related commands to `GET.UNWATCH`:
 - [ZRANGE.UNWATCH](/commands/zrangeunwatch)
-- [Q.UNWATCH](/commands/qunwatch)
 
