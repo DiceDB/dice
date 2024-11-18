@@ -1,47 +1,56 @@
 ---
 title: JSON.STRLEN
-description: Documentation for the DiceDB command JSON.STRLEN
+description: The 'JSON.STRLEN' command is used to get the length of a string at a given path in a JSON Document stored in DiceDB
 ---
 
-The `JSON.STRLEN` command is part of the DiceDBJSON module, which allows you to work with JSON data in DiceDB. This command is used to determine the length of a JSON string at a specified path within a JSON document stored in DiceDB.
+The `JSON.STRLEN` command is used to determine the length of a JSON string at a specified path within a JSON document stored in DiceDB.
 
 ## Syntax
 
-```plaintext
+```bash
 JSON.STRLEN <key> <path>
 ```
 
 ## Parameters
 
-- `key`: The key under which the JSON document is stored in DiceDB.
-- `path`: The JSONPath expression that specifies the location of the JSON string within the document. The path must point to a JSON string.
+| Parameter | Description                                                                          | Type   | Required |
+| --------- | ------------------------------------------------------------------------------------ | ------ | -------- |
+| `key`     | The key under which the JSON document is stored.                                     | String | Yes      |
+| `path`    | The JSONPath to the string within the JSON document. The path must contain a string. | String | No       |
 
 ## Return Value
 
-- `Integer`: The length of the JSON string at the specified path.
-- `Null`: If the path does not exist or does not point to a JSON string.
+| Condition                                  | Return Value                                                                     |
+| ------------------------------------------ | -------------------------------------------------------------------------------- |
+| JSON string is found at the specified path | Length of the JSON string.                                                       |
+| JSONPath contains `*` wildcard             | Indicates the length of each key in the JSON. Returns `nil` for non-string keys. |
 
 ## Behaviour
 
 When the `JSON.STRLEN` command is executed, DiceDB will:
 
-1. Retrieve the JSON document stored at the specified key.
-2. Navigate to the specified path within the JSON document.
-3. If the path points to a JSON string, return the length of the string.
-4. If the path does not exist or does not point to a JSON string, return `null`.
+1. If the specified `key` does not exist, the command returns `(nil)`.
+2. If `path` is not specified, the command takes `$` as root path and if the data at root path is string, returns an integer that represents the length of the string and if the data at root is not a string, returns an error indicating a type mismatch.
+3. `$` is considered as root path which returns the length of the string if the data at root path is of type string or returns `nil` if the data at root is not of type string.
+4. If the specified path exists and points to a JSON string, the command returns the length of the string.
+5. Multiple results are represented as a list in case of wildcards(\*), where each string length is returned in order of appearance and `nil` is returned if it's not a string.
 
-## Error Handling
-
+## Errors
 The following errors may be raised when executing the `JSON.STRLEN` command:
 
-- `(error) ERR wrong number of arguments for 'JSON.STRLEN' command`: This error occurs if the number of arguments provided to the command is incorrect.
-- `(error) ERR key does not exist`: This error occurs if the specified key does not exist in the DiceDB database.
-- `(error) ERR path does not exist`: This error occurs if the specified path does not exist within the JSON document.
-- `(error) ERR path is not a string`: This error occurs if the specified path does not point to a JSON string.
+1. `Incorrect Number of Arguments`:
+   - `(error) ERROR wrong number of arguments for 'JSON.STRLEN' command`
+   - This error occurs if the number of arguments provided to the command is incorrect.
+2. `Invalid JSONPath`:
+    - `(error)  ERROR invalid JSONPath`
+    - This error occurs if the specified path does not exist within the JSON document.
+3. `Wrong Type Error`:
+    - `(error) WRONGTYPE wrong type of path value - expected string but found {DataType at root path}`
+    - This error occurs when a valid key is provided but no specific path value is given. By default, DiceDB assumes the root path ($) in such cases. If the data at the root path is not of type string, this error is returned, indicating a type mismatch between the expected string and the actual data type at the root.  
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
 Assume we have a JSON document stored under the key `user:1001`:
 
@@ -58,46 +67,40 @@ Assume we have a JSON document stored under the key `user:1001`:
 
 To get the length of the `name` string:
 
-```plaintext
+```bash
 JSON.STRLEN user:1001 $.name
+(integer) 8
 ```
 
-`Return Value`: `8`
-
-### Example 2: Nested JSON String
+### Nested JSON String
 
 To get the length of the `city` string within the `address` object:
 
-```plaintext
+```bash
 JSON.STRLEN user:1001 $.address.city
+(integer) 8
 ```
 
-`Return Value`: `8`
-
-### Example 3: Non-Existent Path
+### Non-Existent Path
 
 If the path does not exist:
 
-```plaintext
+```bash
 JSON.STRLEN user:1001 $.phone
+(empty array)
 ```
 
-`Return Value`: `null`
-
-### Example 4: Path is Not a String
+### Path is Not a String
 
 If the path points to a non-string value:
 
-```plaintext
+```bash
 JSON.STRLEN user:1001 $.address
+(nil)
 ```
-
-`Return Value`: `null`
 
 ## Notes
 
-- The `JSON.STRLEN` command is specific to the DiceDBJSON module and will not work unless the module is installed and loaded in your DiceDB instance.
 - JSONPath expressions are used to navigate within the JSON document. Ensure that the path provided is valid and points to a JSON string to avoid errors.
 
 By following this documentation, users should be able to effectively utilize the `JSON.STRLEN` command to determine the length of JSON strings stored within their DiceDB database.
-

@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package wal;
+option go_package = "internal/wal";
+
+// WALLogEntry represents a single log entry in the WAL.
+message WALLogEntry {
+    bytes checksum = 1; // SHA-256 checksum of the command for integrity
+    string command = 2; // Command
+}

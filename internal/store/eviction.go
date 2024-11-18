@@ -1,83 +1,81 @@
 package store
 
 import (
-	"math/rand"
+	"time"
 
-	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
-// Evicts the first key it found while iterating the map
-// TODO: Make it efficient by doing thorough sampling
-func evictFirst(store *Store) {
-	store.store.All(func(k string, obj *object.Obj) bool {
-		store.delByPtr(k, WithDelCmd(Del))
-		// stop after iterating over the first element
-		return false
-	})
+// EvictionStats tracks common statistics for all eviction strategies
+type EvictionStats struct {
+	totalEvictions     uint64
+	totalKeysEvicted   uint64
+	lastEvictionCount  int64
+	lastEvictionTimeMs int64
 }
 
-// Randomly removes keys to make space for the new data added.
-// The number of keys removed will be sufficient to free up at least 10% space
-func evictAllkeysRandom(store *Store) {
-	evictCount := int64(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))
-	// Iteration of Golang dictionary can be considered as a random
-	// because it depends on the hash of the inserted key
-	store.store.All(func(k string, obj *object.Obj) bool {
-		store.delByPtr(k, WithDelCmd(Del))
-		evictCount--
-		// continue if evictCount > 0
-		return evictCount > 0
-	})
+func (s *EvictionStats) recordEviction(count int64) {
+	s.totalEvictions++
+	s.totalKeysEvicted += uint64(count)
+	s.lastEvictionCount = count
+	s.lastEvictionTimeMs = time.Now().UnixMilli()
 }
 
-/*
- *  The approximated LRU algorithm
- */
+// EvictionResult represents the outcome of an eviction operation
+type EvictionResult struct {
+	Victims map[string]*object.Obj // Keys and objects that were selected for eviction
+	Count   int64                  // Number of items selected for eviction
+}
+
+// AccessType represents different types of access to a key
+type AccessType int
+
+const (
+	AccessGet AccessType = iota
+	AccessSet
+	AccessDel
+)
+
+// evictionItem stores essential data needed for eviction decision
+type evictionItem struct {
+	key          string
+	lastAccessed uint32
+}
+
+// EvictionStrategy defines the interface for different eviction strategies
+type EvictionStrategy interface {
+	// ShouldEvict checks if eviction should be triggered based on the current store state
+	// Returns the number of items that should be evicted, or 0 if no eviction is needed
+	ShouldEvict(store *Store) int
+
+	// EvictVictims evicts items from the store based on the eviction strategy
+	EvictVictims(store *Store, toEvict int)
+
+	// AfterEviction is called after victims have been evicted from the store
+	// This allows strategies to update their internal state if needed
+	// AfterEviction(result EvictionResult)
+
+	// OnAccess is called when an item is accessed (get/set)
+	// This allows strategies to update access patterns/statistics
+	OnAccess(key string, obj *object.Obj, accessType AccessType)
+}
+
+// BaseEvictionStrategy provides common functionality for all eviction strategies
+type BaseEvictionStrategy struct {
+	stats EvictionStats
+}
+
+func (b *BaseEvictionStrategy) AfterEviction(result EvictionResult) {
+	b.stats.recordEviction(result.Count)
+}
+
+func (b *BaseEvictionStrategy) GetStats() EvictionStats {
+	return b.stats
+}
+
 func getCurrentClock() uint32 {
 	return uint32(utils.GetCurrentTime().Unix()) & 0x00FFFFFF
-}
-
-func GetLFULogCounter(lastAccessedAt uint32) uint8 {
-	return uint8((lastAccessedAt & 0xFF000000) >> 24)
-}
-
-func UpdateLFULastAccessedAt(lastAccessedAt uint32) uint32 {
-	currentUnixTime := getCurrentClock()
-	counter := GetLFULogCounter(lastAccessedAt)
-
-	counter = incrLogCounter(counter)
-	return (uint32(counter) << 24) | currentUnixTime
-}
-
-func GetLastAccessedAt(lastAccessedAt uint32) uint32 {
-	return lastAccessedAt & 0x00FFFFFF
-}
-
-func UpdateLastAccessedAt(lastAccessedAt uint32) uint32 {
-	if config.DiceConfig.Server.EvictionPolicy == config.EvictAllKeysLFU {
-		return UpdateLFULastAccessedAt(lastAccessedAt)
-	}
-	return getCurrentClock()
-}
-
-/*
-  - Similar to redis implementation of increasing access counter for a key
-  - The larger the counter value, the lesser is probability of its increment in counter value
-  - This counter is 8-bit number that will represent an approximate access counter of a key and will
-    piggyback first 8 bits of `LastAccessedAt` field of Dice Object
-*/
-func incrLogCounter(counter uint8) uint8 {
-	if counter == 255 {
-		return 255
-	}
-	randomFactor := rand.Float32() //nolint:gosec
-	approxFactor := 1.0 / float32(counter*uint8(config.DiceConfig.Server.LFULogFactor)+1)
-	if approxFactor > randomFactor {
-		counter++
-	}
-	return counter
 }
 
 func GetIdleTime(lastAccessedAt uint32) uint32 {
@@ -87,48 +85,4 @@ func GetIdleTime(lastAccessedAt uint32) uint32 {
 		return c - lastAccessedAt
 	}
 	return (0x00FFFFFF - lastAccessedAt) + c
-}
-
-func PopulateEvictionPool(store *Store) {
-	sampleSize := 5
-	// TODO: if we already have obj, why do we need to
-	// look up in store.store again?
-	store.store.All(func(k string, obj *object.Obj) bool {
-		v, ok := store.store.Get(k)
-		if ok {
-			EPool.Push(k, v.LastAccessedAt)
-			sampleSize--
-		}
-		// continue if sample size > 0
-		// stop as soon as it hits 0
-		return sampleSize > 0
-	})
-}
-
-// EvictAllkeysLRUOrLFU evicts keys based on LRU or LFU policy.
-// TODO: no need to populate everytime. should populate only when the number of keys to evict is less than what we have in the pool
-func EvictAllkeysLRUOrLFU(store *Store) {
-	PopulateEvictionPool(store)
-	evictCount := int16(config.DiceConfig.Server.EvictionRatio * float64(config.DiceConfig.Server.KeysLimit))
-
-	for i := 0; i < int(evictCount) && len(EPool.pool) > 0; i++ {
-		item := EPool.Pop()
-		if item == nil {
-			return
-		}
-		store.DelByPtr(item.keyPtr, WithDelCmd(Del))
-	}
-}
-
-func (store *Store) evict() {
-	switch config.DiceConfig.Server.EvictionPolicy {
-	case config.EvictSimpleFirst:
-		evictFirst(store)
-	case config.EvictAllKeysRandom:
-		evictAllkeysRandom(store)
-	case config.EvictAllKeysLRU:
-		EvictAllkeysLRUOrLFU(store)
-	case config.EvictAllKeysLFU:
-		EvictAllkeysLRUOrLFU(store)
-	}
 }

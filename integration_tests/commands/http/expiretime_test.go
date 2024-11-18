@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExpireTimeHttp(t *testing.T) {
@@ -95,11 +95,11 @@ func TestExpireTimeHttp(t *testing.T) {
 					t.Fatalf("Not enough results. Expected %d, got %d", len(tc.expected), len(results))
 				}
 
-				if expected == "(nil)" {
-					assert.Assert(t, results[i] == "(nil)" || results[i] == "",
+				if expected == nil {
+					assert.True(t, results[i] == nil || results[i] == "",
 						"Expected nil or empty result, got %v", results[i])
 				} else {
-					assert.DeepEqual(t, expected, results[i])
+					assert.Equal(t, expected, results[i])
 				}
 			}
 		})

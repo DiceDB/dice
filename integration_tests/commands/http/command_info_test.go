@@ -3,7 +3,7 @@ package http
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCommandInfo(t *testing.T) {
@@ -15,28 +15,28 @@ func TestCommandInfo(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"key": "SET"}},
 			},
-			expected: []interface{}{[]interface{}{[]interface{}{"SET", float64(-3), float64(1), float64(0), float64(0)}}},
+			expected: []interface{}{[]interface{}{[]interface{}{"set", float64(-3), float64(1), float64(0), float64(0), []any{}}}},
 		},
 		{
 			name: "Get command",
 			commands: []HTTPCommand{
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"key": "GET"}},
 			},
-			expected: []interface{}{[]interface{}{[]interface{}{"GET", float64(2), float64(1), float64(0), float64(0)}}},
+			expected: []interface{}{[]interface{}{[]interface{}{"get", float64(2), float64(1), float64(0), float64(0), []any{}}}},
 		},
 		{
 			name: "PING command",
 			commands: []HTTPCommand{
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"key": "PING"}},
 			},
-			expected: []interface{}{[]interface{}{[]interface{}{"PING", float64(-1), float64(0), float64(0), float64(0)}}},
+			expected: []interface{}{[]interface{}{[]interface{}{"ping", float64(-1), float64(0), float64(0), float64(0), []any{}}}},
 		},
 		{
 			name: "Invalid command",
 			commands: []HTTPCommand{
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"key": "INVALID_CMD"}},
 			},
-			expected: []interface{}{[]interface{}{"(nil)"}},
+			expected: []interface{}{[]interface{}{nil}},
 		},
 		{
 			name: "Combination of valid and Invalid command",
@@ -44,8 +44,8 @@ func TestCommandInfo(t *testing.T) {
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"keys": []interface{}{"SET", "INVALID_CMD"}}},
 			},
 			expected: []interface{}{[]interface{}{
-				[]interface{}{"SET", float64(-3), float64(1), float64(0), float64(0)},
-				"(nil)",
+				[]interface{}{"set", float64(-3), float64(1), float64(0), float64(0), []any{}},
+				nil,
 			}},
 		},
 		{
@@ -54,8 +54,8 @@ func TestCommandInfo(t *testing.T) {
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"keys": []interface{}{"SET", "GET"}}},
 			},
 			expected: []interface{}{[]interface{}{
-				[]interface{}{"SET", float64(-3), float64(1), float64(0), float64(0)},
-				[]interface{}{"GET", float64(2), float64(1), float64(0), float64(0)},
+				[]interface{}{"set", float64(-3), float64(1), float64(0), float64(0), []any{}},
+				[]interface{}{"get", float64(2), float64(1), float64(0), float64(0), []any{}},
 			}},
 		},
 	}
@@ -64,7 +64,7 @@ func TestCommandInfo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}

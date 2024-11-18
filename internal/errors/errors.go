@@ -21,7 +21,7 @@ const (
 	InvalidHllErr          = "-INVALIDOBJ Corrupted HLL object detected"
 	HllEncodingErr         = "HLL encoding is not sparse"
 	WorkerNotFoundErr      = "worker with ID %s not found"
-	JSONPathValueTypeErr   = "-WRONGTYPE wrong type of path value - expected string but found integer"
+	JSONPathValueTypeErr   = "-WRONGTYPE wrong type of path value - expected string but found %s"
 	HashValueNotIntegerErr = "hash value is not an integer"
 	InternalServerError    = "-ERR: Internal server error, unable to process command"
 	InvalidFloatErr        = "-ERR value is not a valid float"

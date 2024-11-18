@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetDel(t *testing.T) {
@@ -24,7 +24,7 @@ func TestGetDel(t *testing.T) {
 				{Command: "GETDEL", Body: map[string]interface{}{"key": "k"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "v", "(nil)", "(nil)"},
+			expected: []interface{}{"OK", "v", nil, nil},
 			delays:   []time.Duration{0, 0, 0, 0},
 		},
 		{
@@ -34,7 +34,7 @@ func TestGetDel(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "ex": 2}},
 				{Command: "GETDEL", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"(nil)", "OK", "(nil)"},
+			expected: []interface{}{nil, "OK", nil},
 			delays:   []time.Duration{0, 0, 3 * time.Second},
 		},
 		{
@@ -64,7 +64,7 @@ func TestGetDel(t *testing.T) {
 				{Command: "GETDEL", Body: map[string]interface{}{"key": "k"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{float64(0), "@", "@", "(nil)"},
+			expected: []interface{}{float64(0), "@", "@", nil},
 			delays:   []time.Duration{0, 0, 0, 0},
 		},
 		{

@@ -3,6 +3,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Package errors provides error definitions and utility functions for handling
@@ -30,13 +31,15 @@ var (
 	ErrAborted                    = errors.New("server received ABORT command")
 	ErrEmptyCommand               = errors.New("empty command")
 	ErrInvalidIPAddress           = errors.New("invalid IP address")
+	ErrInvalidFingerprint         = errors.New("invalid fingerprint")
+	ErrKeyDoesNotExist            = errors.New("ERR could not perform this operation on a key that doesn't exist")
 
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {
-		return fmt.Errorf("ERR wrong number of arguments for '%s' command", command) // Indicates an incorrect number of arguments for a given command.
+		return fmt.Errorf("ERR wrong number of arguments for '%s' command", strings.ToLower(command)) // Indicates an incorrect number of arguments for a given command.
 	}
 	ErrInvalidExpireTime = func(command string) error {
-		return fmt.Errorf("ERR invalid expire time in '%s' command", command) // Represents an invalid expiration time for a specific command.
+		return fmt.Errorf("ERR invalid expire time in '%s' command", strings.ToLower(command)) // Represents an invalid expiration time for a specific command.
 	}
 
 	ErrInvalidElementPeekCount = func(max int) error {
@@ -47,6 +50,9 @@ var (
 		return fmt.Errorf("ERR %s", err) // General error format for various commands.
 	}
 
+	ErrFormatted = func(errMsg string, opts ...any) error {
+		return ErrGeneral(fmt.Sprintf(errMsg, opts...))
+	}
 	ErrWorkerNotFound = func(workerID string) error {
 		return fmt.Errorf("ERR worker with ID %s not found", workerID) // Indicates that a worker with the specified ID does not exist.
 	}
@@ -62,4 +68,16 @@ var (
 	ErrUnexpectedType = func(expectedType string, actualType interface{}) error {
 		return fmt.Errorf("ERR expected %s but got another type: %s", expectedType, actualType) // Signals an unexpected type received when an integer was expected.
 	}
+
+	ErrUnexpectedJSONPathType = func(expectedType string, actualType interface{}) error {
+		return fmt.Errorf("ERR wrong type of path value - expected %s but found %s", expectedType, actualType) // Signals an unexpected type received when an integer was expected.
+	}
 )
+
+type PreProcessError struct {
+	Result interface{}
+}
+
+func (e *PreProcessError) Error() string {
+	return fmt.Sprintf("%v", e.Result)
+}

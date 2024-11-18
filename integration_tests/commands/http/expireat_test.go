@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExpireAtHttp(t *testing.T) {
@@ -36,7 +36,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+1, 10)}},
 				{Command: "GET", Body: map[string]interface{}{"key": "test_key"}},
 			},
-			expected:      []interface{}{float64(1), "(nil)"},
+			expected:      []interface{}{float64(1), nil},
 			delay:         []time.Duration{0, 1100 * time.Millisecond},
 			errorExpected: false,
 		},
@@ -160,7 +160,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+2, 10), "xx": true, "lt": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "test_key"}},
 			},
-			expected:      []interface{}{float64(1), float64(1), "(nil)"},
+			expected:      []interface{}{float64(1), float64(1), nil},
 			delay:         []time.Duration{0, 0, 2 * time.Second},
 			errorExpected: false,
 		},
@@ -172,7 +172,7 @@ func TestExpireAtHttp(t *testing.T) {
 				{Command: "EXPIREAT", Body: map[string]interface{}{"key": "test_key", "seconds": strconv.FormatInt(time.Now().Unix()+2, 10), "nx": true}},
 				{Command: "GET", Body: map[string]interface{}{"key": "test_key"}},
 			},
-			expected:      []interface{}{float64(1), "(nil)"},
+			expected:      []interface{}{float64(1), nil},
 			delay:         []time.Duration{0, 2 * time.Second},
 			errorExpected: false,
 		},
@@ -229,11 +229,11 @@ func TestExpireAtHttp(t *testing.T) {
 					t.Fatalf("Not enough results. Expected %d, got %d", len(tc.expected), len(results))
 				}
 
-				if expected == "(nil)" {
-					assert.Assert(t, results[i] == "(nil)" || results[i] == "",
+				if expected == nil {
+					assert.True(t, results[i] == nil || results[i] == "",
 						"Expected nil or empty result, got %v", results[i])
 				} else {
-					assert.DeepEqual(t, expected, results[i])
+					assert.Equal(t, expected, results[i])
 				}
 			}
 		})

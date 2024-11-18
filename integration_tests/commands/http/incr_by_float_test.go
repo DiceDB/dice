@@ -4,15 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestINCRBYFLOAT(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 
 	invalidArgMessage := "ERR wrong number of arguments for 'incrbyfloat' command"
-	invalidValueTypeMessage := "WRONGTYPE Operation against a key holding the wrong kind of value"
-	invalidIncrTypeMessage := "ERR value is not an integer or a float"
+	invalidIncrTypeMessage := "ERR value is not a valid float"
 	valueOutOfRangeMessage := "ERR value is out of range"
 
 	testCases := []struct {
@@ -67,7 +66,7 @@ func TestINCRBYFLOAT(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
 				{Command: "INCRBYFLOAT", Body: map[string]interface{}{"key": "foo", "value": 0.1}},
 			},
-			expected: []interface{}{"OK", invalidValueTypeMessage},
+			expected: []interface{}{"OK", invalidIncrTypeMessage},
 			delays:   []time.Duration{0, 0},
 		},
 		{

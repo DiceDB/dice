@@ -2,11 +2,12 @@ package shard
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/dicedb/dice/config"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/dicedb/dice/internal/ops"
@@ -26,14 +27,16 @@ type ShardManager struct {
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
-func NewShardManager(shardCount uint8, queryWatchChan chan dstore.QueryWatchEvent, cmdWatchChan chan dstore.CmdWatchEvent, globalErrorChan chan error, logger *slog.Logger) *ShardManager {
+func NewShardManager(shardCount uint8, queryWatchChan chan dstore.QueryWatchEvent, cmdWatchChan chan dstore.CmdWatchEvent, globalErrorChan chan error) *ShardManager {
 	shards := make([]*ShardThread, shardCount)
 	shardReqMap := make(map[ShardID]chan *ops.StoreOp)
 	shardErrorChan := make(chan *ShardError)
 
+	maxKeysPerShard := config.KeysLimit / int(shardCount)
 	for i := uint8(0); i < shardCount; i++ {
+		evictionStrategy := dstore.NewBatchEvictionLRU(maxKeysPerShard, config.DiceConfig.Memory.EvictionRatio)
 		// Shards are numbered from 0 to shardCount-1
-		shard := NewShardThread(i, globalErrorChan, shardErrorChan, queryWatchChan, cmdWatchChan, logger)
+		shard := NewShardThread(i, globalErrorChan, shardErrorChan, queryWatchChan, cmdWatchChan, evictionStrategy)
 		shards[i] = shard
 		shardReqMap[i] = shard.ReqChan
 	}
@@ -102,9 +105,9 @@ func (manager *ShardManager) GetShard(id ShardID) *ShardThread {
 }
 
 // RegisterWorker registers a worker with all Shards present in the ShardManager.
-func (manager *ShardManager) RegisterWorker(workerID string, workerChan chan *ops.StoreResponse) {
+func (manager *ShardManager) RegisterWorker(workerID string, request, processing chan *ops.StoreResponse) {
 	for _, shard := range manager.shards {
-		shard.registerWorker(workerID, workerChan)
+		shard.registerWorker(workerID, request, processing)
 	}
 }
 

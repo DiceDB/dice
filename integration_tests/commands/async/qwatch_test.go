@@ -10,8 +10,8 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/sql"
-	dicedb "github.com/dicedb/go-dice"
-	"gotest.tools/v3/assert"
+	dicedb "github.com/dicedb/dicedb-go"
+	"github.com/stretchr/testify/assert"
 )
 
 type qWatchTestCase struct {
@@ -89,7 +89,7 @@ func setupQWATCHTest(t *testing.T, query string) (net.Conn, []net.Conn, func()) 
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
 		for _, sub := range subscribers {
-			FireCommand(sub, fmt.Sprintf("QUNWATCH \"%s\"", query))
+			FireCommand(sub, fmt.Sprintf("Q.UNWATCH \"%s\"", query))
 			time.Sleep(100 * time.Millisecond)
 			if err := sub.Close(); err != nil {
 				t.Errorf("Error closing subscriber connection: %v", err)
@@ -141,12 +141,12 @@ func subscribeToQWATCH(t *testing.T, subscribers []net.Conn, query string) []*cl
 	t.Helper()
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", query))
-		assert.Assert(t, rp != nil)
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("Q.WATCH \"%s\"", query))
+		assert.True(t, rp != nil)
 		respParsers[i] = rp
 
 		v, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		castedValue, ok := v.([]interface{})
 		if !ok {
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
@@ -164,9 +164,9 @@ func subscribeToQWATCHWithSDK(t *testing.T, subscribers []qWatchSDKSubscriber) [
 	for i, subscriber := range subscribers {
 		qwatch := subscriber.client.QWatch(ctx)
 		subscribers[i].qwatch = qwatch
-		assert.Assert(t, qwatch != nil)
+		assert.True(t, qwatch != nil)
 		err := qwatch.WatchQuery(ctx, qWatchQuery)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		channels[i] = qwatch.Channel()
 		<-channels[i] // Get the first message
 	}
@@ -188,7 +188,7 @@ func publishUpdate(t *testing.T, publisher interface{}, tc qWatchTestCase) {
 		FireCommand(p, fmt.Sprintf("SET %s %d", key, tc.score))
 	case *dicedb.Client:
 		err := p.Set(context.Background(), key, tc.score, 0).Err()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 	}
 }
 
@@ -206,13 +206,13 @@ func verifyUpdates(t *testing.T, receivers interface{}, expectedUpdates [][]inte
 func verifyRESPUpdates(t *testing.T, respParsers []*clientio.RESPParser, expectedUpdate []interface{}, query string) {
 	for _, rp := range respParsers {
 		v, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		update, ok := v.([]interface{})
 		if !ok {
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			return
 		}
-		assert.DeepEqual(t, []interface{}{sql.Qwatch, query, expectedUpdate}, update)
+		assert.Equal(t, []interface{}{sql.Qwatch, query, expectedUpdate}, update)
 	}
 }
 
@@ -221,7 +221,7 @@ func verifySDKUpdates(t *testing.T, channels []<-chan *dicedb.QMessage, expected
 		v := <-ch
 		assert.Equal(t, len(v.Updates), len(expectedUpdate), v.Updates)
 		for i, update := range v.Updates {
-			assert.DeepEqual(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
+			assert.Equal(t, expectedUpdate[i], []interface{}{update.Key, update.Value})
 		}
 	}
 }
@@ -324,7 +324,7 @@ func setupJSONTest(t *testing.T, tests []JSONTestCase) (net.Conn, []net.Conn, fu
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
 		for i, sub := range subscribers {
-			FireCommand(sub, fmt.Sprintf("QUNWATCH \"%s\"", tests[i].qwatchQuery))
+			FireCommand(sub, fmt.Sprintf("Q.UNWATCH \"%s\"", tests[i].qwatchQuery))
 			if err := sub.Close(); err != nil {
 				t.Errorf("Error closing subscriber connection: %v", err)
 			}
@@ -338,12 +338,12 @@ func setupJSONTest(t *testing.T, tests []JSONTestCase) (net.Conn, []net.Conn, fu
 func subscribeToJSONQueries(t *testing.T, subscribers []net.Conn, tests []JSONTestCase) []*clientio.RESPParser {
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, testCase := range tests {
-		rp := fireCommandAndGetRESPParser(subscribers[i], fmt.Sprintf("QWATCH \"%s\"", testCase.qwatchQuery))
-		assert.Assert(t, rp != nil)
+		rp := fireCommandAndGetRESPParser(subscribers[i], fmt.Sprintf("Q.WATCH \"%s\"", testCase.qwatchQuery))
+		assert.True(t, rp != nil)
 		respParsers[i] = rp
 
 		v, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, 3, len(v.([]interface{})), fmt.Sprintf("Expected 3 elements, got %v", v))
 	}
 	return respParsers
@@ -359,7 +359,7 @@ func runJSONScenarios(t *testing.T, publisher net.Conn, respParsers []*clientio.
 func verifyJSONUpdates(t *testing.T, rp *clientio.RESPParser, tc JSONTestCase) {
 	for _, expectedUpdate := range tc.expectedUpdates {
 		v, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		response, ok := v.([]interface{})
 		if !ok {
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
@@ -377,9 +377,9 @@ func verifyJSONUpdates(t *testing.T, rp *clientio.RESPParser, tc JSONTestCase) {
 		assert.Equal(t, expectedUpdate[0].([]interface{})[0], update[0].([]interface{})[0], "Key mismatch")
 
 		var expectedJSON, actualJSON interface{}
-		assert.NilError(t, sonic.UnmarshalString(tc.value, &expectedJSON))
-		assert.NilError(t, sonic.UnmarshalString(update[0].([]interface{})[1].(string), &actualJSON))
-		assert.DeepEqual(t, expectedJSON, actualJSON)
+		assert.Nil(t, sonic.UnmarshalString(tc.value, &expectedJSON))
+		assert.Nil(t, sonic.UnmarshalString(update[0].([]interface{})[1].(string), &actualJSON))
+		assert.Equal(t, expectedJSON, actualJSON)
 	}
 }
 
@@ -406,7 +406,7 @@ func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func(), string) {
 		if err := publisher.Close(); err != nil {
 			t.Errorf("Error closing publisher connection: %v", err)
 		}
-		FireCommand(subscriber, fmt.Sprintf("QUNWATCH \"%s\"", watchquery))
+		FireCommand(subscriber, fmt.Sprintf("Q.UNWATCH \"%s\"", watchquery))
 		time.Sleep(100 * time.Millisecond)
 		if err := subscriber.Close(); err != nil {
 			t.Errorf("Error closing subscriber connection: %v", err)
@@ -417,11 +417,11 @@ func setupJSONOrderByTest(t *testing.T) (net.Conn, net.Conn, func(), string) {
 }
 
 func subscribeToJSONOrderByQuery(t *testing.T, subscriber net.Conn, watchquery string) *clientio.RESPParser {
-	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("QWATCH \"%s\"", watchquery))
-	assert.Assert(t, rp != nil)
+	rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("Q.WATCH \"%s\"", watchquery))
+	assert.True(t, rp != nil)
 
 	v, err := rp.DecodeOne()
-	assert.NilError(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, 3, len(v.([]interface{})), fmt.Sprintf("Expected 3 elements, got %v", v))
 
 	return rp
@@ -483,11 +483,11 @@ func verifyJSONOrderByUpdates(t *testing.T, rp *clientio.RESPParser, tc struct {
 
 	// Decode the response
 	v, err := rp.DecodeOne()
-	assert.NilError(t, err, "Failed to decode response")
+	assert.Nil(t, err, "Failed to decode response")
 
 	// Cast the response to []interface{}
 	response, ok := v.([]interface{})
-	assert.Assert(t, ok, "Response is not of type []interface{}: %v", v)
+	assert.True(t, ok, "Response is not of type []interface{}: %v", v)
 
 	// Verify response structure
 	assert.Equal(t, 3, len(response), "Expected response to have 3 elements")
@@ -495,7 +495,7 @@ func verifyJSONOrderByUpdates(t *testing.T, rp *clientio.RESPParser, tc struct {
 
 	// Extract updates from the response
 	updates, ok := response[2].([]interface{})
-	assert.Assert(t, ok, "Updates are not of type []interface{}: %v", response[2])
+	assert.True(t, ok, "Updates are not of type []interface{}: %v", response[2])
 
 	// Verify number of updates
 	assert.Equal(t, len(expectedUpdates), len(updates),
@@ -504,7 +504,7 @@ func verifyJSONOrderByUpdates(t *testing.T, rp *clientio.RESPParser, tc struct {
 	// Verify each update
 	for i, expectedRow := range expectedUpdates {
 		actualRow, ok := updates[i].([]interface{})
-		assert.Assert(t, ok, "Update row is not of type []interface{}: %v", updates[i])
+		assert.True(t, ok, "Update row is not of type []interface{}: %v", updates[i])
 
 		// Verify key
 		assert.Equal(t, expectedRow.([]interface{})[0], actualRow[0],
@@ -513,9 +513,9 @@ func verifyJSONOrderByUpdates(t *testing.T, rp *clientio.RESPParser, tc struct {
 		// Verify JSON value
 		var actualJSON interface{}
 		err := sonic.UnmarshalString(actualRow[1].(string), &actualJSON)
-		assert.NilError(t, err, "Failed to unmarshal JSON at index %d", i)
+		assert.Nil(t, err, "Failed to unmarshal JSON at index %d", i)
 
-		assert.DeepEqual(t, expectedRow.([]interface{})[1], actualJSON)
+		assert.Equal(t, expectedRow.([]interface{})[1], actualJSON)
 	}
 }
 

@@ -1,5 +1,11 @@
 package utils
 
+const (
+	HTTPStatusSuccess string = "success"
+	HTTPStatusError   string = "error"
+)
+
 type HTTPResponse struct {
-	Data interface{} `json:"data"`
+	Status string      `json:"status"`
+	Data   interface{} `json:"data"`
 }

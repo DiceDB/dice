@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
-// This file may contain test cases for checking error messages accross all commands
+// This file may contain test cases for checking error messages across all commands
 func TestErrorsForSetData(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
 	setErrorMsg := "WRONGTYPE Operation against a key holding the wrong kind of value"

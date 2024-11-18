@@ -7,22 +7,22 @@ The `PFCOUNT` command in DiceDB is used to return the approximate cardinality (i
 
 ## Syntax
 
-```
+```bash
 PFCOUNT key [key ...]
 ```
 
 ## Parameters
 
-| Parameter | Description | Type | Required |
-|-----------|-------------|------|----------|
-| `key` | The key(s) of the HyperLogLog data structure(s) whose cardinality you want to estimate. You can specify one or more keys. | String | Yes |
+| Parameter | Description                                                                                                               | Type   | Required |
+| --------- | ------------------------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key(s) of the HyperLogLog data structure(s) whose cardinality you want to estimate. You can specify one or more keys. | String | Yes      |
 
 ## Return Values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
+| Condition                                                   | Return Value                                          |
+| ----------------------------------------------------------- | ----------------------------------------------------- |
 | The specified `key` exists and contains a valid HyperLogLog | The estimated number of unique elements as an integer |
-| The `key` does not exist or is not a valid HyperLogLog | `0` |
+| The `key` does not exist or is not a valid HyperLogLog      | `0`                                                   |
 
 ## Behaviour
 
@@ -63,7 +63,7 @@ The `PFCOUNT` command can raise errors in the following scenarios:
    (error) ERR wrong number of arguments for 'pfcount' command
    ```
 
-## Examples
+## Example usage
 
 ### Single Key
 
@@ -91,4 +91,3 @@ The `PFCOUNT` command can raise errors in the following scenarios:
 - HyperLogLog is particularly useful for large datasets where an exact count is not feasible due to memory constraints.
 
 By understanding the `PFCOUNT` command, you can efficiently estimate the cardinality of large sets with minimal memory usage, making it a powerful tool for various applications such as analytics and monitoring.
-

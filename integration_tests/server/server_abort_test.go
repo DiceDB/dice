@@ -15,8 +15,7 @@ import (
 )
 
 var testServerOptions = commands.TestServerOptions{
-	Port:   8740,
-	Logger: slog.Default(),
+	Port: 8740,
 }
 
 func TestAbortCommand(t *testing.T) {
@@ -32,7 +31,7 @@ func TestAbortCommand(t *testing.T) {
 
 	// Test 1: Ensure the server is running
 	t.Run("ServerIsRunning", func(t *testing.T) {
-		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
+		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.AsyncServer.Port))
 		if err != nil {
 			t.Fatalf("Failed to connect to server: %v", err)
 		}
@@ -41,7 +40,7 @@ func TestAbortCommand(t *testing.T) {
 
 	//Test 2: Send ABORT command and check if the server shuts down
 	t.Run("AbortCommandShutdown", func(t *testing.T) {
-		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
+		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.AsyncServer.Port))
 		if err != nil {
 			t.Fatalf("Failed to connect to server: %v", err)
 		}
@@ -57,7 +56,7 @@ func TestAbortCommand(t *testing.T) {
 		time.Sleep(1 * time.Second)
 
 		// Try to connect again, it should fail
-		_, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
+		_, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.AsyncServer.Port))
 		if err == nil {
 			t.Fatal("Server did not shut down as expected")
 		}
@@ -66,7 +65,7 @@ func TestAbortCommand(t *testing.T) {
 	// Test 3: Ensure the server port is released
 	t.Run("PortIsReleased", func(t *testing.T) {
 		// Try to bind to the same port
-		listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
+		listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.AsyncServer.Port))
 		if err != nil {
 			t.Fatalf("Port should be available after server shutdown: %v", err)
 		}
@@ -86,7 +85,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.AsyncServer.Port))
 	if err != nil {
 		t.Fatalf("Server should be running at start: %v", err)
 	}
@@ -100,11 +99,11 @@ func TestServerRestartAfterAbort(t *testing.T) {
 
 	// wait for the server to shut down
 	time.Sleep(2 * time.Second)
-	testServerOptions.Logger.Info("Wait completed for server shutdown")
+	slog.Info("Wait completed for server shutdown")
 
 	wg.Wait()
 
-	testServerOptions.Logger.Info("Restarting server after abort for server_abort_test")
+	slog.Info("Restarting server after abort for server_abort_test")
 	// restart server
 	ctx2, cancel2 := context.WithCancel(context.Background())
 	t.Cleanup(cancel2)
@@ -118,7 +117,7 @@ func TestServerRestartAfterAbort(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// Check if the server is running
-	conn2, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.Server.Port))
+	conn2, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", config.DiceConfig.AsyncServer.Port))
 	if err != nil {
 		t.Fatalf("Server should be running after restart: %v", err)
 	}

@@ -1,11 +1,14 @@
 package async
 
 import (
+	"fmt"
+	"net"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type TestCase struct {
@@ -38,12 +41,11 @@ func TestSet(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"k"}, store)
 			FireCommand(conn, "DEL k")
 
 			for i, cmd := range tc.commands {
 				result := FireCommand(conn, cmd)
-				assert.DeepEqual(t, tc.expected[i], result)
+				assert.Equal(t, tc.expected[i], result)
 			}
 		})
 	}
@@ -76,6 +78,11 @@ func TestSetWithOptions(t *testing.T) {
 			expected: []interface{}{int64(0), "(nil)", "(nil)"},
 		},
 		{
+			name:     "XX on existing key",
+			commands: []string{"SET k v1", "SET k v2 XX", "GET k"},
+			expected: []interface{}{"OK", "OK", "v2"},
+		},
+		{
 			name:     "NX on non-existing key",
 			commands: []string{"DEL k", "SET k v NX", "GET k"},
 			expected: []interface{}{int64(0), "OK", "v"},
@@ -101,19 +108,9 @@ func TestSetWithOptions(t *testing.T) {
 			expected: []interface{}{"OK", "(nil)"},
 		},
 		{
-			name:     "XX on existing key",
-			commands: []string{"SET k v1", "SET k v2 XX", "GET k"},
-			expected: []interface{}{"OK", "OK", "v2"},
-		},
-		{
 			name:     "Multiple XX operations",
 			commands: []string{"SET k v1", "SET k v2 XX", "SET k v3 XX", "GET k"},
 			expected: []interface{}{"OK", "OK", "OK", "v3"},
-		},
-		{
-			name:     "EX option",
-			commands: []string{"SET k v EX 1", "GET k", "SLEEP 2", "GET k"},
-			expected: []interface{}{"OK", "v", "OK", "(nil)"},
 		},
 		{
 			name:     "XX option",
@@ -124,7 +121,6 @@ func TestSetWithOptions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"k", "k1", "k2"}, store)
 			FireCommand(conn, "DEL k")
 			FireCommand(conn, "DEL k1")
 			FireCommand(conn, "DEL k2")
@@ -144,13 +140,12 @@ func TestSetWithExat(t *testing.T) {
 
 	t.Run("SET with EXAT",
 		func(t *testing.T) {
-			// deleteTestKeys([]string{"k"}, store)
 			FireCommand(conn, "DEL k")
 			assert.Equal(t, "OK", FireCommand(conn, "SET k v EXAT "+Etime), "Value mismatch for cmd SET k v EXAT "+Etime)
 			assert.Equal(t, "v", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
-			assert.Assert(t, FireCommand(conn, "TTL k").(int64) <= 5, "Value mismatch for cmd TTL k")
+			assert.True(t, FireCommand(conn, "TTL k").(int64) <= 5, "Value mismatch for cmd TTL k")
 			time.Sleep(3 * time.Second)
-			assert.Assert(t, FireCommand(conn, "TTL k").(int64) <= 3, "Value mismatch for cmd TTL k")
+			assert.True(t, FireCommand(conn, "TTL k").(int64) <= 3, "Value mismatch for cmd TTL k")
 			time.Sleep(3 * time.Second)
 			assert.Equal(t, "(nil)", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
 			assert.Equal(t, int64(-2), FireCommand(conn, "TTL k"), "Value mismatch for cmd TTL k")
@@ -158,7 +153,6 @@ func TestSetWithExat(t *testing.T) {
 
 	t.Run("SET with invalid EXAT expires key immediately",
 		func(t *testing.T) {
-			// deleteTestKeys([]string{"k"}, store)
 			FireCommand(conn, "DEL k")
 			assert.Equal(t, "OK", FireCommand(conn, "SET k v EXAT "+BadTime), "Value mismatch for cmd SET k v EXAT "+BadTime)
 			assert.Equal(t, "(nil)", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
@@ -167,7 +161,6 @@ func TestSetWithExat(t *testing.T) {
 
 	t.Run("SET with EXAT and PXAT returns syntax error",
 		func(t *testing.T) {
-			// deleteTestKeys([]string{"k"}, store)
 			FireCommand(conn, "DEL k")
 			assert.Equal(t, "ERR syntax error", FireCommand(conn, "SET k v PXAT "+Etime+" EXAT "+Etime), "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
 			assert.Equal(t, "(nil)", FireCommand(conn, "GET k"), "Value mismatch for cmd GET k")
@@ -176,12 +169,13 @@ func TestSetWithExat(t *testing.T) {
 
 func TestWithKeepTTLFlag(t *testing.T) {
 	conn := getLocalConnection()
+	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 	defer conn.Close()
 
 	for _, tcase := range []TestCase{
 		{
-			commands: []string{"SET k v EX 2", "SET k vv KEEPTTL", "GET k", "SET kk vv", "SET kk vvv KEEPTTL", "GET kk"},
-			expected: []interface{}{"OK", "OK", "vv", "OK", "OK", "vvv"},
+			commands: []string{"SET k v EX 2", "SET k vv KEEPTTL", "GET k", "SET kk vv", "SET kk vvv KEEPTTL", "GET kk", "SET K V EX 2 KEEPTTL", "SET K1 vv PX 2000 KEEPTTL", "SET K2 vv EXAT " + expiryTime + " KEEPTTL"},
+			expected: []interface{}{"OK", "OK", "vv", "OK", "OK", "vvv", "ERR syntax error", "ERR syntax error", "ERR syntax error"},
 		},
 	} {
 		for i := 0; i < len(tcase.commands); i++ {
@@ -197,4 +191,66 @@ func TestWithKeepTTLFlag(t *testing.T) {
 	out := "(nil)"
 
 	assert.Equal(t, out, FireCommand(conn, cmd), "Value mismatch for cmd %s\n.", cmd)
+}
+
+type reqSet struct {
+	key   string
+	value int64
+}
+type respSet struct {
+	client   net.Conn
+	response int64
+}
+
+func TestConcurrentSetCommands(t *testing.T) {
+	numOfClients := 10 // parallel connections
+
+	requests := make(map[net.Conn]reqSet, numOfClients)
+	// create requests from different clients
+	for i := 0; i < numOfClients; i++ {
+		client := getLocalConnection()
+		req := reqSet{
+			key:   fmt.Sprintf("k%v", i),
+			value: int64(i),
+		}
+		requests[client] = req
+	}
+
+	// set and get value
+	var wg sync.WaitGroup
+	respChan := make(chan respSet, numOfClients)
+	for client, req := range requests {
+		wg.Add(1)
+		go executeSetAndGet(t, client, req, respChan, &wg)
+	}
+	wg.Wait()
+	close(respChan)
+
+	// verify responses
+	assert.Equal(t, numOfClients, len(respChan))
+	for resp := range respChan {
+		got := resp.response
+		want := requests[resp.client].value
+		assert.Equal(t, want, got, "LocalAdds: %v, got: %v, want: %v", resp.client.LocalAddr(), want, got)
+	}
+}
+
+func executeSetAndGet(t *testing.T, client net.Conn, req reqSet, respChan chan respSet, wg *sync.WaitGroup) {
+	defer wg.Done()
+	defer client.Close()
+
+	resp := FireCommand(client, fmt.Sprintf("SET %v %v", req.key, req.value))
+	assert.Equal(t, "OK", resp, "setting value failed")
+
+	resp = FireCommand(client, fmt.Sprintf("GET %v", req.key))
+	assert.NotNil(t, resp, "received nil value in GET") // value should not be nil i.e. not set
+
+	response, ok := resp.(int64)
+	assert.True(t, ok, "typecasting failed. LocalAddr: %v, response: %v, ok: %v", client.LocalAddr(), response, ok)
+
+	rs := respSet{
+		client:   client,
+		response: response,
+	}
+	respChan <- rs
 }

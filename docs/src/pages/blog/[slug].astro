@@ -15,6 +15,6 @@ const { blog } = Astro.props;
 const { Content } = await blog.render();
 ---
 
-<BlogLayout blog={blog}>
+<BlogLayout blog={blog} type="blog">
   <Content />
 </BlogLayout>

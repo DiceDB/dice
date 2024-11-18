@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 
 	commands "github.com/dicedb/dice/integration_tests/commands/async"
 )
@@ -27,7 +27,6 @@ func TestMaxConnection(t *testing.T) {
 	var maxConnTestOptions = commands.TestServerOptions{
 		Port:       8741,
 		MaxClients: 50,
-		Logger:     slog.Default(),
 	}
 	commands.RunTestServer(context.Background(), &wg, maxConnTestOptions)
 

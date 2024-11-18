@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGet(t *testing.T) {
@@ -19,9 +19,9 @@ func TestGet(t *testing.T) {
 	}{
 		{
 			name:   "Get with expiration",
-			cmds:   []string{"SET k v EX 4", "GET k", "GET k"},
-			expect: []interface{}{"OK", "v", "(nil)"},
-			delays: []time.Duration{0, 0, 5 * time.Second},
+			cmds:   []string{"SET k v EX 1", "GET k", "GET k"},
+			expect: []interface{}{"OK", "v", nil},
+			delays: []time.Duration{0, 0, 2 * time.Second},
 		},
 	}
 
@@ -31,7 +31,8 @@ func TestGet(t *testing.T) {
 				if tc.delays[i] > 0 {
 					time.Sleep(tc.delays[i])
 				}
-				result := exec.FireCommand(conn, cmd)
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err)
 				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
 			}
 		})

@@ -3,23 +3,31 @@ title: JSON.TYPE
 description: Documentation for the DiceDB command JSON.TYPE
 ---
 
-The `JSON.TYPE` command is part of the DiceDBJSON module, which allows you to work with JSON data structures in DiceDB. This command is used to determine the type of value stored at a specified path within a JSON document.
+The `JSON.TYPE` command allows you to work with JSON data structures in DiceDB. This command is used to determine the type of value stored at a specified path within a JSON document.
+
+## Syntax
+
+```bash
+JSON.TYPE <key> <path>
+```
 
 ## Parameters
 
-### Key
-
-- `Type:` String
-- `Description:` The key under which the JSON document is stored.
-- `Example:` `user:1001`
-
-### Path
-
-- `Type:` String
-- `Description:` The JSONPath expression that specifies the location within the JSON document. The default path is the root (`$`).
-- `Example:` `$.address.city`
+| Key  | Description                                                                                          | Example          | Required |
+| ---- | ---------------------------------------------------------------------------------------------------- | ---------------- | -------- |
+| key  | The key under which the JSON document is stored.                                                     | `user:1001`      | yes      |
+| path | The JSONPath expression that specifies the location within the JSON. The default path is the root($) | `$.address.city` | yes      |
 
 ## Return Value
+
+| Condition                    | Value     |
+| ---------------------------- | --------- |
+| Value is null                | `null`    |
+| Value is a boolean           | `boolean` |
+| Value is an integer or float | `number`  |
+| Value is a string            | `string`  |
+| Value is an array            | `array`   |
+| Value is an object           | `object`  |
 
 ### Type
 
@@ -63,47 +71,47 @@ If the path does not exist within the JSON document, the command will return `nu
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
-```shell
-127.0.0.1:6379> JSON.SET user:1001 $ '{"name": "John", "age": 30, "address": {"city": "New York", "zip": "10001"}}'
+```bash
+127.0.0.1:7379> JSON.SET user:1001 $ '{"name": "John", "age": 30, "address": {"city": "New York", "zip": "10001"}}'
 OK
-127.0.0.1:6379> JSON.TYPE user:1001 $.name
+127.0.0.1:7379> JSON.TYPE user:1001 $.name
 "string"
-127.0.0.1:6379> JSON.TYPE user:1001 $.age
+127.0.0.1:7379> JSON.TYPE user:1001 $.age
 "number"
-127.0.0.1:6379> JSON.TYPE user:1001 $.address
+127.0.0.1:7379> JSON.TYPE user:1001 $.address
 "object"
-127.0.0.1:6379> JSON.TYPE user:1001 $.address.city
+127.0.0.1:7379> JSON.TYPE user:1001 $.address.city
 "string"
 ```
 
-### Example 2: Non-Existent Path
+### Non-Existent Path
 
-```shell
-127.0.0.1:6379> JSON.TYPE user:1001 $.nonexistent
-(null)
+```bash
+127.0.0.1:7379> JSON.TYPE user:1001 $.nonexistent
+(empty array)
 ```
 
-### Example 3: Key Does Not Exist
+### Key Does Not Exist
 
-```shell
-127.0.0.1:6379> JSON.TYPE user:9999 $.name
+```bash
+127.0.0.1:7379> JSON.TYPE user:9999 $.name
 (nil)
 ```
 
-### Example 4: Invalid JSONPath
+### Invalid JSONPath
 
-```shell
-127.0.0.1:6379> JSON.TYPE user:1001 $..name
-(error) ERR wrong number of arguments for 'json.type' command
+```bash
+127.0.0.1:7379> JSON.TYPE user:1001 $..name
+"string"
 ```
 
-### Example 5: Non-JSON Data
+### Non-JSON Data
 
-```shell
-127.0.0.1:6379> SET mykey "This is a string"
+```bash
+127.0.0.1:7379> SET mykey "This is a string"
 OK
-127.0.0.1:6379> JSON.TYPE mykey $
-(error) WRONGTYPE Operation against a key holding the wrong kind of value
+127.0.0.1:7379> JSON.TYPE mykey $
+(error) ERROR Existing key has wrong Dice type
 ```

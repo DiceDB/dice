@@ -7,17 +7,22 @@ The `HGETALL` command in DiceDB is used to retrieve all the fields and values of
 
 ## Syntax
 
-```
+```bash
 HGETALL key
 ```
 
 ## Parameters
 
-- `key`: The key of the hash from which you want to retrieve all fields and values. This parameter is mandatory.
+| Parameter | Description                                                                | Type   | Required |
+| --------- | -------------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key of the hash from which you want to retrieve all fields and values. | String | Yes      |
 
-## Return Value
+## Return values
 
-The `HGETALL` command returns an array of strings in the form of field-value pairs. If the key does not exist, an empty array is returned.
+| Condition                      | Return Value     |
+| ------------------------------ | ---------------- |
+| The `key` exists and is a hash | Array of strings |
+| The `key` does not exist       | Empty array      |
 
 ## Behaviour
 
@@ -28,24 +33,28 @@ When the `HGETALL` command is executed:
 3. If the key does not exist, DiceDB returns an empty array.
 4. If the key exists but is not of type hash, an error is returned.
 
-## Error Handling
+## Errors
 
 The `HGETALL` command can raise the following errors:
 
-- `WRONGTYPE Operation against a key holding the wrong kind of value`: This error is raised if the specified key exists but is not a hash. DiceDB expects the key to be associated with a hash data structure, and if it is associated with a different data type (e.g., string, list, set, etc.), this error will be triggered.
+1. `Non-hash type or wrong data type`:
+
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs if the key holds a non-hash data structure.
+
+2. `Incorrect Argument Count`:
+
+   - Error Message: `(error) ERR wrong number of arguments for 'hgetall' command`
+   - Occurs if the command is not provided with the correct number of arguments (i.e., more than one).
 
 ## Example Usage
 
-### Example 1: Retrieving all fields and values from an existing hash
+### Retrieving all fields and values from an existing hash
 
-```DiceDB
-HSET user:1000 name "John Doe" age "30" country "USA"
-HGETALL user:1000
-```
-
-`Output:`
-
-```
+```bash
+127.0.0.1:7379> HSET user:1000 name "John Doe" age "30" country "USA"
+(integer) 3
+127.0.0.1:7379> HGETALL user:1000
 1) "name"
 2) "John Doe"
 3) "age"
@@ -54,40 +63,28 @@ HGETALL user:1000
 6) "USA"
 ```
 
-### Example 2: Retrieving from a non-existing key
+### Retrieving from a non-existing key
 
-```DiceDB
-HGETALL user:2000
-```
-
-`Output:`
-
-```
+```bash
+127.0.0.1:7379> HGETALL user:2000
 (empty array)
 ```
 
-### Example 3: Error when key is not a hash
+### Error Example
 
-```DiceDB
-SET user:3000 "This is a string"
-HGETALL user:3000
+Key is not a hash
+
+```bash
+127.0.0.1:7379> SET user:3000 "This is a string"
+OK
+127.0.0.1:7379> HGETALL user:3000
+(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-`Output:`
 
+Invalid number of arguments are passed
+
+```bash
+127.0.0.1:7379> HGETALL user:3000 helloworld
+(error) ERROR wrong number of arguments for 'hgetall' command
 ```
-(error) WRONGTYPE Operation against a key holding the wrong kind of value
-```
-
-## Notes
-
-- The `HGETALL` command is a blocking command and can be slow if the hash contains a large number of fields.
-- It is recommended to use this command with caution in production environments where performance is critical, especially if the hash is expected to grow large.
-
-## Best Practices
-
-- Ensure that the key you are querying with `HGETALL` is indeed a hash to avoid unnecessary errors.
-- Consider using other hash commands like `HSCAN` for large hashes to iterate over fields and values incrementally.
-
-By understanding the `HGETALL` command and its behavior, you can effectively manage and retrieve data from hash structures in DiceDB.
-

@@ -1,10 +1,9 @@
 package http
 
 import (
-	"fmt"
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCommandList(t *testing.T) {
@@ -16,22 +15,16 @@ func TestCommandList(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "COMMAND/LIST", Body: map[string]interface{}{"key": ""}},
 			},
+			expected: []interface{}{"ERR wrong number of arguments for 'command|list' command"},
 		},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				var commandList []string
-				for _, v := range result.([]interface{}) {
-					commandList = append(commandList, v.(string))
-				}
-
-				assert.Assert(t, len(commandList) > 0,
-					fmt.Sprintf("Unexpected number of CLI commands found. expected greater than 0, %d found", len(commandList)))
+				assert.Equal(t, tc.expected[i], result)
 			}
-
 		})
 	}
 }

@@ -7,37 +7,38 @@ The `KEYS` command in DiceDB is used to find all keys matching a given pattern. 
 
 ## Syntax
 
-```plaintext
+```bash
 KEYS pattern
 ```
 
 ## Parameters
 
-| Parameter       | Description                                      | Type    | Required |
-|-----------------|--------------------------------------------------|---------|----------|
-| `pattern`           | A string representing the pattern to match against the keys in DiceDB databse.| String  | Yes      |
+| Parameter | Description                                                                     | Type   | Required |
+| --------- | ------------------------------------------------------------------------------- | ------ | -------- |
+| `pattern` | A string representing the pattern to match against the keys in DiceDB database. | String | Yes      |
 
 Supported glob-style characters:
-   - `*` matches any number of characters (including zero).
-   - `?` matches exactly one character.
-   - `[abc]` matches any one of the characters inside the brackets.
-   - `[a-z]` matches any character in the specified range.
+
+- `*` matches any number of characters (including zero).
+- `?` matches exactly one character.
+- `[abc]` matches any one of the characters inside the brackets.
+- `[a-z]` matches any character in the specified range.
 
 Use `\` to escape special characters if you want to match them verbatim.
 
 ## Return values
 
-| Condition                                      | Return Value                                      |
-|------------------------------------------------|---------------------------------------------------|
-| Command is successful                          | Array of strings, where each string is key that matches the specified pattern.|
-| Command is successful but key not found        | `(empty list or set)`  |
-| Syntax or specified constraints are invalid    | error   |
+| Condition                                   | Return Value                                                                   |
+| ------------------------------------------- | ------------------------------------------------------------------------------ |
+| Command is successful                       | Array of strings, where each string is key that matches the specified pattern. |
+| Command is successful but key not found     | `(empty list or set)`                                                          |
+| Syntax or specified constraints are invalid | error                                                                          |
 
 ## Example usage
 
 ### Basic example
 
-```plaintext
+```bash
 127.0.0.1:7379> SET key1 "value1"
 OK
 127.0.0.1:7379> SET key2 "value2"
@@ -51,7 +52,7 @@ OK
 
 ### Using wildcards
 
-```plaintext
+```bash
 127.0.0.1:7379> SET key1 "value1"
 OK
 127.0.0.1:7379> SET key2 "value2"
@@ -66,7 +67,7 @@ OK
 
 ### Using character ranges
 
-```plaintext
+```bash
 127.0.0.1:7379> SET key1 "value1"
 OK
 127.0.0.1:7379> SET key2 "value2"
@@ -80,7 +81,7 @@ OK
 
 ### Using \ to escape special characters
 
-```plaintext
+```bash
 127.0.0.1:7379> SET key1 "value1"
 OK
 127.0.0.1:7379> SET key2 "value2"
@@ -101,7 +102,7 @@ When the `KEYS` command is executed, DiceDB scans the entire keyspace to find al
 
 Additionally, the ordering of the output keys can be different if you run the same command subsequently.
 
-## Error Handling
+## Errors
 
 The `KEYS` command is straightforward and does not have many error conditions. However, there are a few scenarios where errors might occur:
 
@@ -122,7 +123,7 @@ The `KEYS` command is straightforward and does not have many error conditions. H
 
 - `SCAN`: The `SCAN` command is a cursor-based iterator that allows you to incrementally iterate over the keyspace without blocking the server. It is a more efficient alternative to `KEYS` for large datasets.
 
-```plaintext
+```bash
 127.0.0.1:7379> SCAN 0 MATCH key*
 1) "0"
 2) 1) "key1"

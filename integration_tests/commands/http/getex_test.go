@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetEx(t *testing.T) {
@@ -38,7 +38,7 @@ func TestGetEx(t *testing.T) {
 				{Command: "GETEX", Body: map[string]interface{}{"key": "nonexistent"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "nonexistent"}},
 			},
-			expected:   []interface{}{"(nil)", float64(-2)},
+			expected:   []interface{}{nil, float64(-2)},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
 		},
@@ -53,7 +53,7 @@ func TestGetEx(t *testing.T) {
 				{Command: "GETEX", Body: map[string]interface{}{"key": "foo"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
 			},
-			expected:   []interface{}{"OK", "bar", float64(-1), "bar", float64(2), "(nil)", float64(-2)},
+			expected:   []interface{}{"OK", "bar", float64(-1), "bar", float64(2), nil, float64(-2)},
 			assertType: []string{"equal", "equal", "equal", "equal", "assert", "equal", "equal"},
 			delay:      []time.Duration{0, 0, 0, 0, 0, 2 * time.Second, 0},
 		},
@@ -68,7 +68,7 @@ func TestGetEx(t *testing.T) {
 				{Command: "GETEX", Body: map[string]interface{}{"key": "foo"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
 			},
-			expected:   []interface{}{"OK", "bar", float64(-1), "bar", float64(2), "(nil)", float64(-2)},
+			expected:   []interface{}{"OK", "bar", float64(-1), "bar", float64(2), nil, float64(-2)},
 			assertType: []string{"equal", "equal", "equal", "equal", "assert", "equal", "equal"},
 			delay:      []time.Duration{0, 0, 0, 0, 0, 2 * time.Second, 0},
 		},
@@ -114,7 +114,7 @@ func TestGetEx(t *testing.T) {
 				{Command: "GETEX", Body: map[string]interface{}{"key": "foo"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
 			},
-			expected:   []interface{}{"OK", "bar", float64(-1), "bar", float64(5), "(nil)", float64(-2)},
+			expected:   []interface{}{"OK", "bar", float64(-1), "bar", float64(5), nil, float64(-2)},
 			assertType: []string{"equal", "equal", "equal", "equal", "assert", "equal", "equal"},
 			delay:      []time.Duration{0, 0, 0, 0, 0, 5 * time.Second, 0},
 		},
@@ -129,7 +129,7 @@ func TestGetEx(t *testing.T) {
 				{Command: "GETEX", Body: map[string]interface{}{"key": "foo"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
 			},
-			expected:   []interface{}{"OK", "bar", float64(-1), "bar", float64(10), "(nil)", float64(-2)},
+			expected:   []interface{}{"OK", "bar", float64(-1), "bar", float64(10), nil, float64(-2)},
 			assertType: []string{"equal", "equal", "equal", "equal", "assert", "equal", "equal"},
 			delay:      []time.Duration{0, 0, 0, 0, 0, 10 * time.Second, 0},
 		},
@@ -143,7 +143,7 @@ func TestGetEx(t *testing.T) {
 				{Command: "GETEX", Body: map[string]interface{}{"key": "foo"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
 			},
-			expected:   []interface{}{"OK", "bar", float64(-1), "bar", "(nil)", float64(-2)},
+			expected:   []interface{}{"OK", "bar", float64(-1), "bar", nil, float64(-2)},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal"},
 			delay:      []time.Duration{0, 0, 0, 0, 0, 0},
 		},
@@ -157,7 +157,7 @@ func TestGetEx(t *testing.T) {
 				{Command: "GETEX", Body: map[string]interface{}{"key": "foo"}},
 				{Command: "TTL", Body: map[string]interface{}{"key": "foo"}},
 			},
-			expected:   []interface{}{"OK", "bar", float64(-1), "bar", "(nil)", float64(-2)},
+			expected:   []interface{}{"OK", "bar", float64(-1), "bar", nil, float64(-2)},
 			assertType: []string{"equal", "equal", "equal", "equal", "equal", "equal"},
 			delay:      []time.Duration{0, 0, 0, 0, 0, 0},
 		},
@@ -259,11 +259,11 @@ func TestGetEx(t *testing.T) {
 					time.Sleep(tc.delay[i])
 				}
 				result, err := exec.FireCommand(cmd)
-				assert.NilError(t, err)
+				assert.Nil(t, err)
 				if tc.assertType[i] == "equal" {
-					assert.DeepEqual(t, tc.expected[i], result)
+					assert.Equal(t, tc.expected[i], result)
 				} else if tc.assertType[i] == "assert" {
-					assert.Assert(t, result.(float64) <= tc.expected[i].(float64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
+					assert.True(t, result.(float64) <= tc.expected[i].(float64), "Expected %v to be less than or equal to %v", result, tc.expected[i])
 				}
 			}
 		})

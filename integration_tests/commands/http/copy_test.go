@@ -1,10 +1,11 @@
 package http
 
 import (
-	"github.com/dicedb/dice/testutils"
 	"testing"
 
-	testifyAssert "github.com/stretchr/testify/assert"
+	"github.com/dicedb/dice/testutils"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCopy(t *testing.T) {
@@ -97,7 +98,7 @@ func TestCopy(t *testing.T) {
 				{Command: "GET", Body: map[string]interface{}{"key": "k1"}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k2"}},
 			},
-			expected: []interface{}{"OK", float64(1), "v1", "v1", "OK", "(nil)", "(nil)"},
+			expected: []interface{}{"OK", float64(1), "v1", "v1", "OK", nil, nil},
 		},
 	}
 
@@ -107,18 +108,28 @@ func TestCopy(t *testing.T) {
 			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": []interface{}{"k2"}}})
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
-				_, ok := result.(float64)
-				if ok {
-					testifyAssert.Equal(t, tc.expected[i], result)
+
+				if result == nil {
+					assert.Equal(t, tc.expected[i], result, "Expected result to be nil for command %v", cmd)
 					continue
 				}
 
-				if testutils.IsJSONResponse(result.(string)) {
-					testifyAssert.JSONEq(t, tc.expected[i].(string), result.(string))
+				if floatResult, ok := result.(float64); ok {
+					assert.Equal(t, tc.expected[i], floatResult, "Mismatch for command %v", cmd)
+					continue
+				}
+
+				if resultStr, ok := result.(string); ok {
+					if testutils.IsJSONResponse(resultStr) {
+						assert.JSONEq(t, tc.expected[i].(string), resultStr, "Mismatch in JSON response for command %v", cmd)
+					} else {
+						assert.Equal(t, tc.expected[i], resultStr, "Mismatch for command %v", cmd)
+					}
 				} else {
-					testifyAssert.Equal(t, tc.expected[i], result)
+					t.Fatalf("command %v returned unexpected type: %T", cmd, result)
 				}
 			}
+
 		})
 	}
 

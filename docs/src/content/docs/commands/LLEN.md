@@ -7,29 +7,29 @@ The `LLEN` command in DiceDB is used to obtain the length of a list stored at a 
 
 ## Syntax
 
-```
+```bash
 LLEN key
 ```
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The key associated with the list whose length you want to retrieve.       | String  | Yes      |
+| Parameter | Description                                                         | Type   | Required |
+| --------- | ------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key associated with the list whose length you want to retrieve. | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                                    |
-|------------------------------------------------|-----------------------------------------------------------------|
-| Command is successful                          | `Integer` denoting the length of the list at the specified key. |
-| If the key does not exist                      | `0` (the key is interpreted as an empty list)                   |
-| Syntax or specified constraints are invalid    | error                                                           |
+| Condition                                   | Return Value                                                    |
+| ------------------------------------------- | --------------------------------------------------------------- |
+| Command is successful                       | `Integer` denoting the length of the list at the specified key. |
+| If the key does not exist                   | `0` (the key is interpreted as an empty list)                   |
+| Syntax or specified constraints are invalid | error                                                           |
 
 ## Behaviour
 
- - If the key exists and is associated with a list, the `LLEN` command returns the number of elements in the list.
- - If the key does not exist, the `LLEN` command returns `0`, indicating that the list is empty.
- - If the key exists but is not associated with a list, an error is returned.
+- If the key exists and is associated with a list, the `LLEN` command returns the number of elements in the list.
+- If the key does not exist, the `LLEN` command returns `0`, indicating that the list is empty.
+- If the key exists but is not associated with a list, an error is returned.
 
 ## Errors
 
@@ -37,6 +37,11 @@ LLEN key
 
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs if the key exists but is not associated with a list.
+
+2. `Wrong number of arguments`
+
+   - Error Message: `(error) ERR wrong number of arguments for 'llen' command`
+   - Occurs if command is executed without any arguments or with 2 or more arguments
 
 ## Example Usage
 
@@ -64,7 +69,7 @@ Getting the `LLEN` of a list `nonExistentList` which does not exist.
 (integer) 0
 ```
 
-### Invalid usage
+### Invalid Usage: Key is Not a List
 
 Trying to get the `LLEN` of a key `mystring` which is holding wrong data type `string`.
 
@@ -77,6 +82,6 @@ OK
 
 ## Best Practices
 
-- `Check Key Type`: Before using `LLEN`, ensure that the key is associated with a list to avoid errors.
-- `Handle Non-Existent Keys`: Be prepared to handle the case where the key does not exist, as `LLEN` will return `0` in such scenarios.
-- `Use in Conjunction with Other List Commands`: The `LLEN` command is often used alongside other list commands like `RPUSH`, `LPUSH`, `LPOP`, and `RPOP` to manage and process lists effectively.
+- Check Key Type: Before using `LLEN`, ensure that the key is associated with a list to avoid errors.
+- Handle Non-Existent Keys: Be prepared to handle the case where the key does not exist, as `LLEN` will return `0` in such scenarios.
+- Use in Conjunction with Other List Commands: The `LLEN` command is often used alongside other list commands like `RPUSH`, `LPUSH`, `LPOP`, and `RPOP` to manage and process lists effectively.

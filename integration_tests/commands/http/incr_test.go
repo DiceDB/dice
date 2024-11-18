@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestINCR(t *testing.T) {
@@ -134,7 +134,7 @@ func TestINCRBY(t *testing.T) {
 		delays   []time.Duration
 	}{
 		{
-			name: "INCRBY with postive increment",
+			name: "INCRBY with positive increment",
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "key", "value": 3}},
 				{Command: "INCRBY", Body: map[string]interface{}{"key": "key", "value": 2}},

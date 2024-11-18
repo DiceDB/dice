@@ -7,29 +7,27 @@ The `SDIFF` command in DiceDB is used to compute the difference between multiple
 
 ## Syntax
 
-```
+```bash
 SDIFF key1 [key2 ... keyN]
 ```
 
 ## Parameters
 
-| Parameter             | Description                                                           | Type    | Required |
-|-----------------------|-----------------------------------------------------------------------|---------|----------|
-|`key1`                 | The key of the first set.                                             | String  | Yes      |
-|`key2..keyN`           | The keys of the subsequent sets to be compared with the first set.    | String  | No       |
+| Parameter    | Description                                                        | Type   | Required |
+| ------------ | ------------------------------------------------------------------ | ------ | -------- |
+| `key1`       | The key of the first set.                                          | String | Yes      |
+| `key2..keyN` | The keys of the subsequent sets to be compared with the first set. | String | No       |
 
 ## Return Values
 
 The `SDIFF` command returns an array of elements that are present in the first set but not in any of the subsequent sets. If the first set does not exist, it is considered an empty set. If none of the sets exist, an empty array is returned.
 
-| Condition                                                                                | Return Value                                                       |
-|------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
-| Elements present in the first set but not in any subsequent sets                         | `Array of elements`                                                |
-| First set does not exist                                                                 | `Empty array`                                                      |
-| None of the sets exist                                                                   | `Empty array`                                                      |
-| Syntax or specified constraints are invalid                                              | error                                                              |
-
-
+| Condition                                                        | Return Value        |
+| ---------------------------------------------------------------- | ------------------- |
+| Elements present in the first set but not in any subsequent sets | `Array of elements` |
+| First set does not exist                                         | `Empty array`       |
+| None of the sets exist                                           | `Empty array`       |
+| Syntax or specified constraints are invalid                      | error               |
 
 ## Behaviour
 
@@ -41,19 +39,20 @@ The `SDIFF` command returns an array of elements that are present in the first s
 ## Errors
 
 - `Wrong Type Error`:
-    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-    - If any of the keys provided do not hold a set, DiceDB will return an error of type `WRONGTYPE`. This error indicates that the operation against a key holding the wrong kind of value was attempted.
+
+  - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+  - If any of the keys provided do not hold a set, DiceDB will return an error of type `WRONGTYPE`. This error indicates that the operation against a key holding the wrong kind of value was attempted.
 
 - `Wrong number of arguments`:
-    - Error Message: `(error) ERR wrong number of arguments for 'sdiff' command`
-    - If no keys are provided, DiceDB will return a syntax error indicating that at least one key must be specified.
+
+  - Error Message: `(error) ERR wrong number of arguments for 'sdiff' command`
+  - If no keys are provided, DiceDB will return a syntax error indicating that at least one key must be specified.
 
 - `Syntax Error`: If no keys are provided, DiceDB will return a syntax error indicating that at least one key must be specified.
 
 ## Example Usage
 
-### Example 1: Basic Usage
-
+### Basic Usage
 
 In this example, the difference between set1 and the union of set2 and set3 is computed. The element “b” is unique to set1.
 
@@ -66,8 +65,7 @@ In this example, the difference between set1 and the union of set2 and set3 is c
 "b"
 ```
 
-
-### Example 2: Single Set
+### Single Set
 
 In this example, since only one set is provided, the command returns all elements of `set1`.
 
@@ -79,7 +77,7 @@ In this example, since only one set is provided, the command returns all element
 3) "c"
 ```
 
-### Example 3: Non-Existent Sets
+### Non-Existent Sets
 
 In this example, since neither `set1` nor `set2` exist, the command returns an empty array.
 
@@ -88,9 +86,7 @@ In this example, since neither `set1` nor `set2` exist, the command returns an e
 (empty array)
 ```
 
-## Error Handling Examples
-
-### Example 1: Wrong Type Error
+### Wrong Type Error
 
 In this example, `not_a_set` is not a set, so DiceDB returns a `WRONGTYPE` error.
 
@@ -100,7 +96,7 @@ In this example, `not_a_set` is not a set, so DiceDB returns a `WRONGTYPE` error
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-### Example 2: Syntax Error
+### Syntax Error
 
 In this example, no keys are provided, so DiceDB returns a syntax error.
 

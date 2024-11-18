@@ -7,20 +7,24 @@ The `COPY` command in DiceDB is used to create a copy of a key. This command all
 
 ## Syntax
 
-```plaintext
-COPY source destination [DB destination-db] [REPLACE]
+```bash
+COPY <source> <destination> [DB destination-db] [REPLACE]
 ```
 
 ## Parameters
 
-- `source`: The key of the value you want to copy. This key must exist.
-- `destination`: The key where the value will be copied to. This key must not exist unless the `REPLACE` option is specified.
-- `DB destination-db`: (Optional) The database number where the destination key will be created. If not specified, the destination key will be created in the same database as the source key.
-- `REPLACE`: (Optional) If specified, the command will overwrite the destination key if it already exists.
+| Parameter         | Description                                                                                                                                                  | Type    | Required |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | :------: |
+| source            | The key of the value you want to copy. This key must exist.                                                                                                  | String  |   Yes    |
+| destination       | The key where the value will be copied to. This key must not exist unless the `REPLACE` option is specified.                                                 | String  |   Yes    |
+| REPLACE           | If specified, the command will overwrite the destination key if it already exists.                                                                           | String  | Optional |
 
 ## Return Value
 
-- `Integer`: Returns `1` if the key was copied successfully, and `0` if the key was not copied.
+| Condition                   | Return Value |
+| --------------------------- | :----------: |
+| key was copied successfully |     `1`      |
+| key was not copied          |     `0`      |
 
 ## Behaviour
 
@@ -32,13 +36,17 @@ When the `COPY` command is executed, DiceDB will:
 4. Copy the value from the source key to the destination key.
 5. Return `1` if the copy operation was successful.
 
-## Error Handling
+## Errors
 
 The `COPY` command can raise the following errors:
 
-- `WRONGTYPE Operation against a key holding the wrong kind of value`: This error occurs if the source key holds a value that is not compatible with the `COPY` operation.
-- `ERR no such key`: This error occurs if the source key does not exist.
-- `ERR target key name is busy`: This error occurs if the destination key already exists and the `REPLACE` option is not specified.
+1. `Wrong type of value or key`:
+   - Error message `(error) WRONGTYPE Operation against a key holding the wrong kind of value`:
+   - This error occurs if the source key holds a value that is not compatible with the `COPY` operation.
+2. `Not existent key`:
+   - Error message: `(error) ERR no such key`
+   - This error occurs if the source key does not exist.
+   - This error occurs if the destination key already exists and the `REPLACE` option is not specified.
 
 ## Example Usage
 
@@ -46,32 +54,35 @@ The `COPY` command can raise the following errors:
 
 Copy the value from `key1` to `key2` in the same database.
 
-```plaintext
-COPY key1 key2
+```bash
+127.0.0.1:7379> COPY key1 key2
+(integer) 1
 ```
 
 ### Copy with REPLACE
 
 Copy the value from `key1` to `key2`, replacing `key2` if it already exists.
 
-```plaintext
-COPY key1 key2 REPLACE
+```bash
+127.0.0.1:7379> COPY key1 key2 REPLACE
+(integer) 1
 ```
 
-### Copy to a Different Database
+### Not-Existent Source Key
 
-Copy the value from `key1` in the current database to `key2` in database 2.
-
-```plaintext
-COPY key1 key2 DB 2
+```bash
+127.0.0.1:7379> COPY nonexistent key2
+(integer) 0
 ```
 
-### Copy to a Different Database with REPLACE
+### Destination key already exist
 
-Copy the value from `key1` in the current database to `key2` in database 2, replacing `key2` if it already exists.
+```bash
+127.0.0.1:7379> COPY key1 key2
+(integer) 1
+127.0.0.1:7379> COPY key1 key2
+(integer) 0
 
-```plaintext
-COPY key1 key2 DB 2 REPLACE
 ```
 
 ## Notes
@@ -79,6 +90,5 @@ COPY key1 key2 DB 2 REPLACE
 - The `COPY` command is available starting from DiceDB version 6.2.
 - The `COPY` command is atomic, meaning that the copy operation is performed as a single, indivisible operation.
 - The `COPY` command does not modify the source key; it only duplicates its value to the destination key.
-
-By understanding the `COPY` command and its parameters, you can effectively duplicate keys within your DiceDB databases, ensuring data consistency and reducing the need for manual data manipulation.
-
+- The `DB destinationDB` is not yet supported with the current versions of DiceDB. It acts as a placeholder for now. It will still return `0`
+  By understanding the `COPY` command and its parameters, you can effectively duplicate keys within your DiceDB databases, ensuring data consistency and reducing the need for manual data manipulation.

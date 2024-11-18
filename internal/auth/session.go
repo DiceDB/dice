@@ -81,7 +81,8 @@ func (user *User) SetPassword(password string) (err error) {
 		hashedPassword []byte
 	)
 	if password == utils.EmptyStr {
-		slog.Warn("DiceDB is running without authentication. Consider setting a password.")
+		// TODO: add link to documentation on how to do it.
+		slog.Warn("running without authentication, consider setting a password")
 	}
 
 	if hashedPassword, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost); err != nil {

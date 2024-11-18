@@ -1,17 +1,16 @@
 package sql_test
 
 import (
-	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/sql"
 	"sort"
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/dicedb/dice/internal/sql"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/stretchr/testify/assert"
 	"github.com/xwb1989/sqlparser"
-	"gotest.tools/v3/assert"
-	"gotest.tools/v3/assert/cmp"
 )
 
 type keyValue struct {
@@ -42,16 +41,16 @@ func setup(store *dstore.Store, dataset []keyValue) {
 }
 
 func TestExecuteQueryOrderBykey(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setup(store, simpleKVDataset)
 
 	queryString := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $key ASC"
 	query, err := sql.ParseQuery(queryString)
-	assert.NilError(t, err)
+	assert.Nil(t, err)
 
 	result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-	assert.NilError(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, len(result), len(simpleKVDataset))
 
 	sortedDataset := make([]keyValue, len(simpleKVDataset))
@@ -64,21 +63,21 @@ func TestExecuteQueryOrderBykey(t *testing.T) {
 
 	for i, data := range sortedDataset {
 		assert.Equal(t, result[i].Key, data.key)
-		assert.DeepEqual(t, result[i].Value.Value, data.value)
+		assert.Equal(t, result[i].Value.Value, data.value)
 	}
 }
 
 func TestExecuteQueryBasicOrderByValue(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setup(store, simpleKVDataset)
 
 	queryStr := "SELECT $key, $value WHERE $key like 'k*' ORDER BY $value ASC"
 	query, err := sql.ParseQuery(queryStr)
-	assert.NilError(t, err)
+	assert.Nil(t, err)
 
 	result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-	assert.NilError(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, len(result), len(simpleKVDataset))
 
 	sortedDataset := make([]keyValue, len(simpleKVDataset))
@@ -91,22 +90,22 @@ func TestExecuteQueryBasicOrderByValue(t *testing.T) {
 
 	for i, data := range sortedDataset {
 		assert.Equal(t, result[i].Key, data.key)
-		assert.DeepEqual(t, result[i].Value.Value, data.value)
+		assert.Equal(t, result[i].Value.Value, data.value)
 	}
 }
 
 func TestExecuteQueryLimit(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setup(store, simpleKVDataset)
 
 	queryStr := "SELECT $value WHERE $key like 'k*' ORDER BY $key ASC LIMIT 3"
 	query, err := sql.ParseQuery(queryStr)
-	assert.NilError(t, err)
+	assert.Nil(t, err)
 
 	result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-	assert.NilError(t, err)
-	assert.Assert(t, cmp.Len(result, 3)) // Checks if limit is respected
+	assert.Nil(t, err)
+	assert.Equal(t, len(result), 3) // Checks if limit is respected
 
 	sortedDataset := make([]keyValue, len(simpleKVDataset))
 	copy(sortedDataset, simpleKVDataset)
@@ -118,85 +117,85 @@ func TestExecuteQueryLimit(t *testing.T) {
 
 	for i, data := range sortedDataset[:3] {
 		assert.Equal(t, result[i].Key, utils.EmptyStr)
-		assert.DeepEqual(t, result[i].Value.Value, data.value)
+		assert.Equal(t, result[i].Value.Value, data.value)
 	}
 }
 
 func TestExecuteQueryNoMatch(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setup(store, simpleKVDataset)
 
 	queryStr := "SELECT $key, $value WHERE $key like 'x*'"
 	query, err := sql.ParseQuery(queryStr)
-	assert.NilError(t, err)
+	assert.Nil(t, err)
 
 	result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-	assert.NilError(t, err)
-	assert.Assert(t, cmp.Len(result, 0)) // No keys match "x*"
+	assert.Nil(t, err)
+	assert.Equal(t, len(result), 0) // No keys match "x*"
 }
 
 func TestExecuteQueryWithWhere(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setup(store, simpleKVDataset)
 	t.Run("BasicWhereClause", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $value = 'v3' AND $key like 'k*'"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause")
 		assert.Equal(t, result[0].Key, "k3")
-		assert.DeepEqual(t, result[0].Value.Value, "v3")
+		assert.Equal(t, result[0].Value.Value, "v3")
 	})
 
 	t.Run("EmptyResult", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $value = 'nonexistent' AND $key like 'k*'"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 0, "Expected empty result for non-matching WHERE clause")
 	})
 
 	t.Run("ComplexWhereClause", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $value > 'v2' AND $value < 'v5' AND $key like 'k*' ORDER BY $key ASC"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 2, "Expected 2 results for complex WHERE clause")
-		assert.DeepEqual(t, []string{result[0].Key, result[1].Key}, []string{"k2", "k3"})
+		assert.Equal(t, []string{result[0].Key, result[1].Key}, []string{"k2", "k3"})
 	})
 
 	t.Run("ComparingKeyWithValue", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $key = $value"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for comparison between key and value")
 		assert.Equal(t, result[0].Key, "k")
-		assert.DeepEqual(t, result[0].Value.Value, "k")
+		assert.Equal(t, result[0].Value.Value, "k")
 	})
 }
 
 func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setup(store, simpleKVDataset)
 
 	t.Run("ComparingStrWithInt", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $value = 42 AND $key like 'k*'"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		_, err = sql.ExecuteQuery(&query, store.GetStore())
 
@@ -205,7 +204,7 @@ func TestExecuteQueryWithIncompatibleTypes(t *testing.T) {
 }
 
 func TestExecuteQueryWithEdgeCases(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setup(store, simpleKVDataset)
 
 	t.Run("CaseSensitivity", func(t *testing.T) {
@@ -223,7 +222,7 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 0, "Expected 0 results due to case sensitivity")
 	})
 
@@ -233,15 +232,15 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 2, "Expected 2 results for WHERE clause on key")
-		assert.DeepEqual(t, []string{result[0].Key, result[1].Key}, []string{"k4", "k5"})
+		assert.Equal(t, []string{result[0].Key, result[1].Key}, []string{"k4", "k5"})
 	})
 
 	t.Run("UnsupportedOperator", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $value regexp '%3' AND $key like 'k*'"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		_, err = sql.ExecuteQuery(&query, store.GetStore())
 
@@ -251,11 +250,11 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 	t.Run("EmptyKeyRegex", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $key like ''"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 0, "Expected no keys to be returned for empty regex")
 	})
 }
@@ -285,103 +284,103 @@ func setupJSON(t *testing.T, store *dstore.Store, dataset []keyValue) {
 }
 
 func TestExecuteQueryWithJsonExpressionInWhere(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setupJSON(t, store, jsonWhereClauseDataset)
 
 	t.Run("BasicWhereClauseWithJSON", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE '$value.name' = 'Tom' AND $key like 'json*'"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 results for WHERE clause")
 		assert.Equal(t, result[0].Key, "json1")
 
 		var expected, actual interface{}
-		assert.NilError(t, sonic.UnmarshalString(`{"name":"Tom"}`, &expected))
-		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
-		assert.DeepEqual(t, actual, expected)
+		assert.Nil(t, sonic.UnmarshalString(`{"name":"Tom"}`, &expected))
+		assert.Nil(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.Equal(t, actual, expected)
 	})
 
 	t.Run("EmptyResult", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE '$value.name' = 'Bill' AND $key like 'json*'"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 0, "Expected empty result for non-matching WHERE clause")
 	})
 
 	t.Run("WhereClauseWithFloats", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE '$value.score' > 13.15 AND $key like 'json*'"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with floating point values")
 		assert.Equal(t, result[0].Key, "json2")
 
 		var expected, actual interface{}
-		assert.NilError(t, sonic.UnmarshalString(`{"name":"Bob","score":18.1}`, &expected))
-		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
-		assert.DeepEqual(t, actual, expected)
+		assert.Nil(t, sonic.UnmarshalString(`{"name":"Bob","score":18.1}`, &expected))
+		assert.Nil(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.Equal(t, actual, expected)
 	})
 
 	t.Run("WhereClauseWithInteger", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE '$value.scoreInt' > 13 AND $key like 'json*'"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with integer values")
 		assert.Equal(t, result[0].Key, "json3")
 
 		var expected, actual interface{}
-		assert.NilError(t, sonic.UnmarshalString(`{"scoreInt":20}`, &expected))
-		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
-		assert.DeepEqual(t, actual, expected)
+		assert.Nil(t, sonic.UnmarshalString(`{"scoreInt":20}`, &expected))
+		assert.Nil(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.Equal(t, actual, expected)
 	})
 
 	t.Run("NestedWhereClause", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE '$value.field1.field2.field3.score' < 13 AND $key like 'json*'"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for WHERE clause with nested json")
 		assert.Equal(t, result[0].Key, "json4")
 
 		var expected, actual interface{}
-		assert.NilError(t, sonic.UnmarshalString(`{"field1":{"field2":{"field3":{"score":2}}}}`, &expected))
-		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
-		assert.DeepEqual(t, actual, expected)
+		assert.Nil(t, sonic.UnmarshalString(`{"field1":{"field2":{"field3":{"score":2}}}}`, &expected))
+		assert.Nil(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.Equal(t, actual, expected)
 	})
 
 	t.Run("ComplexWhereClause", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE '$value.field1.field2.field3.score' > '$value.field1.score2' AND $key like 'json*'"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, len(result), 1, "Expected 1 result for Complex WHERE clause expression")
 		assert.Equal(t, result[0].Key, "json5")
 
 		var expected, actual interface{}
-		assert.NilError(t, sonic.UnmarshalString(`{"field1":{"field2":{"field3":{"score":18}},"score2":5}}`, &expected))
-		assert.NilError(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
-		assert.DeepEqual(t, actual, expected)
+		assert.Nil(t, sonic.UnmarshalString(`{"field1":{"field2":{"field3":{"score":18}},"score2":5}}`, &expected))
+		assert.Nil(t, sonic.UnmarshalString(result[0].Value.Value.(string), &actual))
+		assert.Equal(t, actual, expected)
 	})
 }
 
@@ -394,17 +393,17 @@ var jsonOrderDataset = []keyValue{
 }
 
 func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setupJSON(t, store, jsonOrderDataset)
 
 	t.Run("OrderBySimpleJSONField", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $key like 'json*' ORDER BY $value.name ASC"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, 5, len(result), "Expected 5 results")
 
 		assert.Equal(t, "json3", result[0].Key) // Alice
@@ -426,11 +425,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	t.Run("OrderByNumericJSONField", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $key like 'json*' ORDER BY $value.age DESC"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, 5, len(result))
 
 		assert.Equal(t, "json5", result[0].Key) // Charlie, age 50
@@ -452,11 +451,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	t.Run("OrderByNestedJSONField", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $key like 'json*' ORDER BY '$value.nested.field.value' ASC"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, 5, len(result))
 		assert.Equal(t, "json3", result[0].Key) // Alice, nested.field.value: 15
 		validateJSONStringRepresentationsAreEqual(t, jsonOrderDataset[0].value, result[0].Value.Value.(string))
@@ -477,11 +476,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	t.Run("OrderByMixedTypes", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $key like 'json*' ORDER BY $value.score DESC"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		// No ordering guarantees for mixed types.
 		assert.Equal(t, 5, len(result))
 	})
@@ -489,11 +488,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	t.Run("OrderByWithWhereClause", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $key like 'json*' AND '$value.age' > 30 ORDER BY $value.name DESC"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, 3, len(result), "Expected 3 results (age > 30, ordered by name)")
 		assert.Equal(t, "json4", result[0].Key) // Eve, age 32
 		validateJSONStringRepresentationsAreEqual(t, jsonOrderDataset[4].value, result[0].Value.Value.(string))
@@ -508,11 +507,11 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 	t.Run("OrderByNonExistentField", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $key like 'json*' ORDER BY $value.nonexistent ASC"
 		query, err := sql.ParseQuery(queryStr)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		// No ordering guarantees for non-existent field references.
 		assert.Equal(t, 5, len(result), "Expected 5 results")
 	})
@@ -522,9 +521,9 @@ func TestExecuteQueryWithJsonOrderBy(t *testing.T) {
 func validateJSONStringRepresentationsAreEqual(t *testing.T, expectedJSONString, actualJSONString string) {
 	t.Helper()
 	var expectedValue, actualValue interface{}
-	assert.NilError(t, sonic.UnmarshalString(expectedJSONString, &expectedValue))
-	assert.NilError(t, sonic.UnmarshalString(actualJSONString, &actualValue))
-	assert.DeepEqual(t, actualValue, expectedValue)
+	assert.Nil(t, sonic.UnmarshalString(expectedJSONString, &expectedValue))
+	assert.Nil(t, sonic.UnmarshalString(actualJSONString, &actualValue))
+	assert.Equal(t, actualValue, expectedValue)
 }
 
 // Dataset will be used for LIKE comparisons
@@ -557,7 +556,7 @@ var stringComparisonDataset = []keyValue{
 }
 
 func TestExecuteQueryWithLikeStringComparisons(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setup(store, stringComparisonDataset)
 
 	testCases := []struct {
@@ -625,10 +624,10 @@ func TestExecuteQueryWithLikeStringComparisons(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			query, err := sql.ParseQuery(tc.query)
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 			result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 			assert.Equal(t, len(result), tc.expectLen, "Expected %d results, got %d", tc.expectLen, len(result))
 
 			resultKeys := make([]string, len(result))
@@ -636,13 +635,13 @@ func TestExecuteQueryWithLikeStringComparisons(t *testing.T) {
 				resultKeys[i] = r.Key
 			}
 
-			assert.DeepEqual(t, resultKeys, tc.expectKeys)
+			assert.Equal(t, resultKeys, tc.expectKeys)
 		})
 	}
 }
 
 func TestExecuteQueryWithStringNotLikeComparisons(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	setup(store, stringComparisonDataset)
 
 	testCases := []struct {
@@ -704,10 +703,10 @@ func TestExecuteQueryWithStringNotLikeComparisons(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			query, err := sql.ParseQuery(tc.query)
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 			result, err := sql.ExecuteQuery(&query, store.GetStore())
 
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 			assert.Equal(t, len(result), tc.expectLen, "Expected %d results, got %d", tc.expectLen, len(result))
 
 			resultKeys := make([]string, len(result))
@@ -715,7 +714,7 @@ func TestExecuteQueryWithStringNotLikeComparisons(t *testing.T) {
 				resultKeys[i] = r.Key
 			}
 
-			assert.DeepEqual(t, resultKeys, tc.expectKeys)
+			assert.Equal(t, resultKeys, tc.expectKeys)
 		})
 	}
 }

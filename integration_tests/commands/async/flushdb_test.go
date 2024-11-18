@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFLUSHDB(t *testing.T) {
@@ -34,7 +34,7 @@ func TestFLUSHDB(t *testing.T) {
 
 			for _, cmd := range tc.setup {
 				result := FireCommand(conn, cmd)
-				assert.Equal(t, "OK", result, "Setup Faild")
+				assert.Equal(t, "OK", result, "Setup Failed")
 			}
 
 			for i, cmd := range tc.commands {

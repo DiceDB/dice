@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGet(t *testing.T) {
@@ -24,7 +24,7 @@ func TestGet(t *testing.T) {
 				{Command: "SLEEP", Body: map[string]interface{}{"key": 5}},
 				{Command: "GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "v", "OK", "(nil)"},
+			expected: []interface{}{"OK", "v", "OK", nil},
 			delays:   []time.Duration{0, 0, 5 * time.Second, 0},
 		},
 	}

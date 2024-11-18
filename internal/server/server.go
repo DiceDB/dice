@@ -13,6 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/internal/server/abstractserver"
+	"github.com/dicedb/dice/internal/wal"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
@@ -29,6 +32,7 @@ import (
 )
 
 type AsyncServer struct {
+	abstractserver.AbstractServer
 	serverFD               int
 	maxClients             int32
 	multiplexer            iomultiplexer.IOMultiplexer
@@ -38,20 +42,18 @@ type AsyncServer struct {
 	shardManager           *shard.ShardManager
 	ioChan                 chan *ops.StoreResponse     // The server acts like a worker today, this behavior will change once IOThreads are introduced and each client gets its own worker.
 	queryWatchChan         chan dstore.QueryWatchEvent // This is needed to co-ordinate between the store and the query watcher.
-	logger                 *slog.Logger                // logger is the logger for the server
 }
 
 // NewAsyncServer initializes a new AsyncServer
-func NewAsyncServer(shardManager *shard.ShardManager, queryWatchChan chan dstore.QueryWatchEvent, logger *slog.Logger) *AsyncServer {
+func NewAsyncServer(shardManager *shard.ShardManager, queryWatchChan chan dstore.QueryWatchEvent, wl wal.AbstractWAL) *AsyncServer {
 	return &AsyncServer{
-		maxClients:             config.DiceConfig.Server.MaxClients,
+		maxClients:             config.DiceConfig.Performance.MaxClients,
 		connectedClients:       make(map[int]*comm.Client),
 		shardManager:           shardManager,
-		queryWatcher:           querymanager.NewQueryManager(logger),
-		multiplexerPollTimeout: config.DiceConfig.Server.MultiplexerPollTimeout,
+		queryWatcher:           querymanager.NewQueryManager(),
+		multiplexerPollTimeout: config.DiceConfig.Performance.MultiplexerPollTimeout,
 		ioChan:                 make(chan *ops.StoreResponse, 1000),
 		queryWatchChan:         queryWatchChan,
-		logger:                 logger,
 	}
 }
 
@@ -76,7 +78,7 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 	defer func() {
 		if socketErr != nil {
 			if err := syscall.Close(serverFD); err != nil {
-				s.logger.Warn("failed to close server socket", slog.Any("error", err))
+				slog.Warn("failed to close server socket", slog.Any("error", err))
 			}
 		}
 	}()
@@ -91,32 +93,22 @@ func (s *AsyncServer) FindPortAndBind() (socketErr error) {
 		return err
 	}
 
-	ip4 := net.ParseIP(config.DiceConfig.Server.Addr)
+	ip4 := net.ParseIP(config.DiceConfig.AsyncServer.Addr)
 	if ip4 == nil {
 		return diceerrors.ErrInvalidIPAddress
 	}
 
-	if err := syscall.Bind(serverFD, &syscall.SockaddrInet4{
-		Port: config.DiceConfig.Server.Port,
+	return syscall.Bind(serverFD, &syscall.SockaddrInet4{
+		Port: config.DiceConfig.AsyncServer.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
-	}); err != nil {
-		return err
-	}
-	s.logger.Info(
-		"DiceDB server is running in a single-threaded mode",
-		slog.String("version", "0.0.4"),
-		slog.Int("port", config.DiceConfig.Server.Port),
-	)
-	return nil
+	})
 }
 
 // ClosePort ensures the server socket is closed properly.
 func (s *AsyncServer) ClosePort() {
 	if s.serverFD != 0 {
 		if err := syscall.Close(s.serverFD); err != nil {
-			s.logger.Warn("failed to close server socket", slog.Any("error", err))
-		} else {
-			s.logger.Debug("Server socket closed successfully")
+			slog.Warn("failed to close server socket", slog.Any("error", err))
 		}
 		s.serverFD = 0
 	}
@@ -132,7 +124,7 @@ func (s *AsyncServer) InitiateShutdown() {
 	// Close all client connections
 	for fd := range s.connectedClients {
 		if err := syscall.Close(fd); err != nil {
-			s.logger.Warn("failed to close client connection", slog.Any("error", err))
+			slog.Warn("failed to close client connection", slog.Any("error", err))
 		}
 		delete(s.connectedClients, fd)
 	}
@@ -154,7 +146,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 		s.queryWatcher.Run(watchCtx, s.queryWatchChan)
 	}()
 
-	s.shardManager.RegisterWorker("server", s.ioChan)
+	s.shardManager.RegisterWorker("server", s.ioChan, nil)
 
 	if err := syscall.Listen(s.serverFD, int(s.maxClients)); err != nil {
 		return err
@@ -168,7 +160,7 @@ func (s *AsyncServer) Run(ctx context.Context) error {
 
 	defer func() {
 		if err := s.multiplexer.Close(); err != nil {
-			s.logger.Warn("failed to close multiplexer", slog.Any("error", err))
+			slog.Warn("failed to close multiplexer", slog.Any("error", err))
 		}
 	}()
 
@@ -216,15 +208,15 @@ func (s *AsyncServer) eventLoop(ctx context.Context) error {
 			for _, event := range events {
 				if event.Fd == s.serverFD {
 					if err := s.acceptConnection(); err != nil {
-						s.logger.Warn(err.Error())
+						slog.Warn(err.Error())
 					}
 				} else {
 					if err := s.handleClientEvent(event); err != nil {
 						if errors.Is(err, diceerrors.ErrAborted) {
-							s.logger.Debug("Received abort command, initiating graceful shutdown")
+							slog.Debug("Received abort command, initiating graceful shutdown")
 							return err
 						} else if !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, net.ErrClosed) {
-							s.logger.Warn(err.Error())
+							slog.Warn(err.Error())
 						}
 					}
 				}
@@ -261,12 +253,13 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 	commands, hasAbort, err := readCommands(client)
 	if err != nil {
 		if err := syscall.Close(event.Fd); err != nil {
-			s.logger.Error("error closing client connection", slog.Any("error", err))
+			slog.Error("error closing client connection", slog.Any("error", err))
 		}
 		delete(s.connectedClients, event.Fd)
 		return err
 	}
 
+	// function used within package, limit the scope
 	s.EvalAndRespond(commands, client)
 	if hasAbort {
 		return diceerrors.ErrAborted
@@ -320,6 +313,7 @@ func (s *AsyncServer) executeCommandToBuffer(diceDBCmd *cmd.DiceDBCmd, buf *byte
 		// Handle error case independently
 		if resp.EvalResponse.Error != nil {
 			handleMigratedResp(resp.EvalResponse.Error, buf)
+			return
 		}
 		handleMigratedResp(resp.EvalResponse.Result, buf)
 		return
@@ -414,7 +408,7 @@ func (s *AsyncServer) handleTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm
 		case eval.DiscardCmdMeta.Name:
 			s.discardTransaction(c, buf)
 		default:
-			s.logger.Error(
+			slog.Error(
 				"Unhandled transaction command",
 				slog.String("command", diceDBCmd.Cmd),
 			)
@@ -427,9 +421,6 @@ func (s *AsyncServer) handleTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm
 
 func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
 	switch diceDBCmd.Cmd {
-	case eval.MultiCmdMeta.Name:
-		c.TxnBegin()
-		buf.Write(clientio.RespOK)
 	case eval.ExecCmdMeta.Name:
 		buf.Write(diceerrors.NewErrWithMessage("EXEC without MULTI"))
 	case eval.DiscardCmdMeta.Name:
@@ -443,7 +434,7 @@ func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
 	cmds := c.Cqueue.Cmds
 	_, err := fmt.Fprintf(buf, "*%d\r\n", len(cmds))
 	if err != nil {
-		s.logger.Error("Error writing to buffer", slog.Any("error", err))
+		slog.Error("Error writing to buffer", slog.Any("error", err))
 		return
 	}
 
@@ -462,6 +453,6 @@ func (s *AsyncServer) discardTransaction(c *comm.Client, buf *bytes.Buffer) {
 
 func (s *AsyncServer) writeResponse(c *comm.Client, buf *bytes.Buffer) {
 	if _, err := c.Write(buf.Bytes()); err != nil {
-		s.logger.Error(err.Error())
+		slog.Error(err.Error())
 	}
 }

@@ -2,14 +2,19 @@ package worker
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net"
+	"strconv"
+	"sync/atomic"
 	"syscall"
 	"time"
 
 	"github.com/dicedb/dice/internal/querymanager"
+	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
@@ -19,9 +24,12 @@ import (
 	"github.com/dicedb/dice/internal/clientio/requestparser"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/shard"
+)
+
+var (
+	requestCounter uint32
 )
 
 // Worker interface
@@ -32,31 +40,35 @@ type Worker interface {
 }
 
 type BaseWorker struct {
-	id              string
-	ioHandler       iohandler.IOHandler
-	parser          requestparser.Parser
-	shardManager    *shard.ShardManager
-	respChan        chan *ops.StoreResponse
-	adhocReqChan    chan *cmd.DiceDBCmd
-	Session         *auth.Session
-	globalErrorChan chan error
-	logger          *slog.Logger
+	id                       string
+	ioHandler                iohandler.IOHandler
+	parser                   requestparser.Parser
+	shardManager             *shard.ShardManager
+	adhocReqChan             chan *cmd.DiceDBCmd
+	Session                  *auth.Session
+	globalErrorChan          chan error
+	responseChan             chan *ops.StoreResponse
+	preprocessingChan        chan *ops.StoreResponse
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
+	wl                       wal.AbstractWAL
 }
 
-func NewWorker(wid string, respChan chan *ops.StoreResponse,
+func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription,
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
-	shardManager *shard.ShardManager, gec chan error,
-	logger *slog.Logger) *BaseWorker {
+	shardManager *shard.ShardManager, gec chan error, wl wal.AbstractWAL) *BaseWorker {
 	return &BaseWorker{
-		id:              wid,
-		ioHandler:       ioHandler,
-		parser:          parser,
-		shardManager:    shardManager,
-		globalErrorChan: gec,
-		respChan:        respChan,
-		logger:          logger,
-		Session:         auth.NewSession(),
-		adhocReqChan:    make(chan *cmd.DiceDBCmd, config.DiceConfig.Server.AdhocReqChanBufSize),
+		id:                       wid,
+		ioHandler:                ioHandler,
+		parser:                   parser,
+		shardManager:             shardManager,
+		globalErrorChan:          gec,
+		responseChan:             responseChan,
+		preprocessingChan:        preprocessingChan,
+		Session:                  auth.NewSession(),
+		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
+		wl:                       wl,
 	}
 }
 
@@ -86,13 +98,13 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			err := w.Stop()
 			if err != nil {
-				w.logger.Warn("Error stopping worker:", slog.String("workerID", w.id), slog.Any("error", err))
+				slog.Warn("Error stopping worker:", slog.String("workerID", w.id), slog.Any("error", err))
 			}
 			return ctx.Err()
 		case err := <-errChan:
 			if err != nil {
 				if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
-					w.logger.Error("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Debug("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
 				}
 			}
@@ -111,14 +123,14 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			if err != nil {
 				err = w.ioHandler.Write(ctx, err)
 				if err != nil {
-					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
 				}
 			}
 			if len(cmds) == 0 {
 				err = w.ioHandler.Write(ctx, fmt.Errorf("ERR: Invalid request"))
 				if err != nil {
-					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
 				}
 				continue
@@ -129,7 +141,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			if len(cmds) > 1 {
 				err = w.ioHandler.Write(ctx, fmt.Errorf("ERR: Multiple commands not supported"))
 				if err != nil {
-					w.logger.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Debug("Write error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 					return err
 				}
 			}
@@ -138,7 +150,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 			if err != nil {
 				werr := w.ioHandler.Write(ctx, err)
 				if werr != nil {
-					w.logger.Debug("Write error, connection closed possibly", slog.Any("error", errors.Join(err, werr)))
+					slog.Debug("Write error, connection closed possibly", slog.Any("error", errors.Join(err, werr)))
 					return errors.Join(err, werr)
 				}
 			}
@@ -149,18 +161,29 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 				w.executeCommandHandler(execCtx, errChan, cmds, false)
 			}(errChan)
 		case err := <-readErrChan:
-			w.logger.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
+			slog.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 		}
 	}
 }
 
 func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
+	// Retrieve metadata for the command to determine if multisharding is supported.
+	meta, ok := CommandsMeta[cmds[0].Cmd]
+	if ok && meta.preProcessing {
+		if err := meta.preProcessResponse(w, cmds[0]); err != nil {
+			e := w.ioHandler.Write(execCtx, err)
+			if e != nil {
+				slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
+			}
+		}
+	}
+
 	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
 	if err != nil {
-		w.logger.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
+		slog.Error("Error executing command", slog.String("workerID", w.id), slog.Any("error", err))
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ETIMEDOUT) {
-			w.logger.Debug("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
+			slog.Debug("Connection closed for worker", slog.String("workerID", w.id), slog.Any("error", err))
 			errChan <- err
 		}
 	}
@@ -182,7 +205,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 		case Global:
 			// If it's a global command, process it immediately without involving any shards.
 			err := w.ioHandler.Write(ctx, meta.WorkerCommandHandler(diceDBCmd.Args))
-			w.logger.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
+			slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
 
 		case SingleShard:
@@ -190,8 +213,23 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			cmdList = append(cmdList, diceDBCmd)
 
 		case MultiShard:
+			var err error
 			// If the command supports multisharding, break it down into multiple commands.
-			cmdList = meta.decomposeCommand(diceDBCmd)
+			cmdList, err = meta.decomposeCommand(ctx, w, diceDBCmd)
+			if err != nil {
+				var workerErr error
+				// Check if it's a CustomError
+				var customErr *diceerrors.PreProcessError
+				if errors.As(err, &customErr) {
+					workerErr = w.ioHandler.Write(ctx, customErr.Result)
+				} else {
+					workerErr = w.ioHandler.Write(ctx, err)
+				}
+				if workerErr != nil {
+					slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", workerErr))
+				}
+				return workerErr
+			}
 
 		case Custom:
 			// if command is of type Custom, write a custom logic around it
@@ -199,15 +237,15 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			case CmdAuth:
 				err := w.ioHandler.Write(ctx, w.RespAuth(diceDBCmd.Args))
 				if err != nil {
-					w.logger.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
 				}
 				return err
 			case CmdAbort:
 				err := w.ioHandler.Write(ctx, clientio.OK)
 				if err != nil {
-					w.logger.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+					slog.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
 				}
-				w.logger.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
+				slog.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
 				w.globalErrorChan <- diceerrors.ErrAborted
 				return err
 			default:
@@ -217,13 +255,34 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 		case Watch:
 			// Generate the Cmd being watched. All we need to do is remove the .WATCH suffix from the command and pass
 			// it along as is.
+			// Modify the command name to remove the .WATCH suffix, this will allow us to generate a consistent
+			// fingerprint (which uses the command name without the suffix)
+			diceDBCmd.Cmd = diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-6]
 			watchCmd := &cmd.DiceDBCmd{
-				Cmd:  diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-6], // Remove the .WATCH suffix
+				Cmd:  diceDBCmd.Cmd,
 				Args: diceDBCmd.Args,
 			}
 			cmdList = append(cmdList, watchCmd)
 			isWatchNotification = true
+
+		case Unwatch:
+			// Generate the Cmd being unwatched. All we need to do is remove the .UNWATCH suffix from the command and pass
+			// it along as is.
+			// Modify the command name to remove the .UNWATCH suffix, this will allow us to generate a consistent
+			// fingerprint (which uses the command name without the suffix)
+			diceDBCmd.Cmd = diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-8]
+			watchCmd := &cmd.DiceDBCmd{
+				Cmd:  diceDBCmd.Cmd,
+				Args: diceDBCmd.Args,
+			}
+			cmdList = append(cmdList, watchCmd)
+			isWatchNotification = false
 		}
+	}
+
+	// Unsubscribe Unwatch command type
+	if meta.CmdType == Unwatch {
+		return w.handleCommandUnwatch(ctx, cmdList)
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
@@ -238,13 +297,46 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 
 	if meta.CmdType == Watch {
 		// Proceed to subscribe after successful execution
-		watchmanager.CmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
-			Subscribe:    true,
-			WatchCmd:     cmdList[len(cmdList)-1],
-			AdhocReqChan: w.adhocReqChan,
-		}
+		w.handleCommandWatch(cmdList)
 	}
 
+	return nil
+}
+
+// handleCommandWatch sends a watch subscription request to the watch manager.
+func (w *BaseWorker) handleCommandWatch(cmdList []*cmd.DiceDBCmd) {
+	w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+		Subscribe:    true,
+		WatchCmd:     cmdList[len(cmdList)-1],
+		AdhocReqChan: w.adhocReqChan,
+	}
+}
+
+// handleCommandUnwatch sends an unwatch subscription request to the watch manager. It also sends a response to the client.
+// The response is sent before the unwatch request is processed by the watch manager.
+func (w *BaseWorker) handleCommandUnwatch(ctx context.Context, cmdList []*cmd.DiceDBCmd) error {
+	// extract the fingerprint
+	command := cmdList[len(cmdList)-1]
+	fp, parseErr := strconv.ParseUint(command.Args[0], 10, 32)
+	if parseErr != nil {
+		err := w.ioHandler.Write(ctx, diceerrors.ErrInvalidFingerprint)
+		if err != nil {
+			return fmt.Errorf("error sending push response to client: %v", err)
+		}
+		return parseErr
+	}
+
+	// send the unsubscribe request
+	w.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
+		Subscribe:    false,
+		AdhocReqChan: w.adhocReqChan,
+		Fingerprint:  uint32(fp),
+	}
+
+	err := w.ioHandler.Write(ctx, clientio.RespOK)
+	if err != nil {
+		return fmt.Errorf("error sending push response to client: %v", err)
+	}
 	return nil
 }
 
@@ -258,124 +350,148 @@ func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
 		return ctx.Err()
 	default:
 		for i := uint8(0); i < uint8(len(cmds)); i++ {
-			var rc chan *ops.StoreOp
-			var sid shard.ShardID
-			var key string
-			if len(cmds[i].Args) > 0 {
-				key = cmds[i].Args[0]
-			} else {
-				key = cmds[i].Cmd
-			}
+			shardID, responseChan := w.shardManager.GetShardInfo(getRoutingKeyFromCommand(cmds[i]))
 
-			sid, rc = w.shardManager.GetShardInfo(key)
-
-			rc <- &ops.StoreOp{
+			responseChan <- &ops.StoreOp{
 				SeqID:     i,
-				RequestID: cmds[i].RequestID,
+				RequestID: GenerateUniqueRequestID(),
 				Cmd:       cmds[i],
 				WorkerID:  w.id,
-				ShardID:   sid,
+				ShardID:   shardID,
 				Client:    nil,
 			}
 		}
 	}
-
 	return nil
+}
+
+// getRoutingKeyFromCommand determines the key used for shard routing
+func getRoutingKeyFromCommand(diceDBCmd *cmd.DiceDBCmd) string {
+	if len(diceDBCmd.Args) > 0 {
+		return diceDBCmd.Args[0]
+	}
+	return diceDBCmd.Cmd
 }
 
 // gather collects the responses from multiple shards and writes the results into the provided buffer.
 // It first waits for responses from all the shards and then processes the result based on the command type (SingleShard, Custom, or Multishard).
 func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchNotification bool) error {
-	// Loop to wait for messages from number of shards
-	var evalResp []eval.EvalResponse
-	for numCmds != 0 {
-		select {
-		case <-ctx.Done():
-			w.logger.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
-		case resp, ok := <-w.respChan:
-			if ok {
-				evalResp = append(evalResp, *resp.EvalResponse)
-			}
-			numCmds--
-			continue
-		case sError, ok := <-w.shardManager.ShardErrorChan:
-			if ok {
-				w.logger.Error("Error from shard", slog.String("workerID", w.id), slog.Any("error", sError))
-			}
-		}
+	// Collect responses from all shards
+	storeOp, err := w.gatherResponses(ctx, numCmds)
+	if err != nil {
+		return err
 	}
 
-	val, ok := CommandsMeta[diceDBCmd.Cmd]
+	if len(storeOp) == 0 {
+		slog.Error("No response from shards",
+			slog.String("workerID", w.id),
+			slog.String("command", diceDBCmd.Cmd))
+		return fmt.Errorf("no response from shards for command: %s", diceDBCmd.Cmd)
+	}
 
 	if isWatchNotification {
-		if evalResp[0].Error != nil {
-			err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Error))
-			if err != nil {
-				w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
-			}
-			return err
-		}
-
-		err := w.ioHandler.Write(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fmt.Sprintf("%d", diceDBCmd.GetFingerprint()), evalResp[0].Result))
-		if err != nil {
-			w.logger.Debug("Error sending push response to client", slog.String("workerID", w.id), slog.Any("error", err))
-			return err
-		}
-		return nil // Exit after handling watch case
+		return w.handleWatchNotification(ctx, diceDBCmd, storeOp[0])
 	}
 
-	// TODO: Remove it once we have migrated all the commands
+	// Process command based on its type
+	cmdMeta, ok := CommandsMeta[diceDBCmd.Cmd]
 	if !ok {
-		if evalResp[0].Error != nil {
-			err := w.ioHandler.Write(ctx, evalResp[0].Error)
-			if err != nil {
-				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
-			}
-			return err
-		}
+		return w.handleLegacyCommand(ctx, storeOp[0])
+	}
 
-		err := w.ioHandler.Write(ctx, evalResp[0].Result)
-		if err != nil {
-			w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
-			return err
-		}
-	} else {
-		switch val.CmdType {
-		case SingleShard, Custom:
-			// Handle single-shard or custom commands
-			if evalResp[0].Error != nil {
-				err := w.ioHandler.Write(ctx, evalResp[0].Error)
-				if err != nil {
-					w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
-				}
-				return err
-			}
+	return w.handleCommand(ctx, cmdMeta, diceDBCmd, storeOp)
+}
 
-			err := w.ioHandler.Write(ctx, evalResp[0].Result)
-			if err != nil {
-				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
-				return err
-			}
+// gatherResponses collects responses from all shards
+func (w *BaseWorker) gatherResponses(ctx context.Context, numCmds int) ([]ops.StoreResponse, error) {
+	var storeOp []ops.StoreResponse
 
-		case MultiShard:
-			// Handle multi-shard commands
-			err := w.ioHandler.Write(ctx, val.composeResponse(evalResp...))
-			if err != nil {
-				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
-				return err
-			}
+	for numCmds > 0 {
+		select {
+		case <-ctx.Done():
+			slog.Error("Timed out waiting for response from shards",
+				slog.String("workerID", w.id),
+				slog.Any("error", ctx.Err()))
+			return nil, ctx.Err()
 
-		default:
-			w.logger.Error("Unknown command type", slog.String("workerID", w.id), slog.String("command", diceDBCmd.Cmd), slog.Any("evalResp", evalResp))
-			err := w.ioHandler.Write(ctx, diceerrors.ErrInternalServer)
-			if err != nil {
-				w.logger.Debug("Error sending response to client", slog.String("workerID", w.id), slog.Any("error", err))
-				return err
+		case resp, ok := <-w.responseChan:
+			if ok {
+				storeOp = append(storeOp, *resp)
+			}
+			numCmds--
+
+		case sError, ok := <-w.shardManager.ShardErrorChan:
+			if ok {
+				slog.Error("Error from shard",
+					slog.String("workerID", w.id),
+					slog.Any("error", sError))
+				return nil, sError.Error
 			}
 		}
 	}
 
-	return nil
+	return storeOp, nil
+}
+
+// handleWatchNotification processes watch notification responses
+func (w *BaseWorker) handleWatchNotification(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, resp ops.StoreResponse) error {
+	fingerprint := fmt.Sprintf("%d", diceDBCmd.GetFingerprint())
+
+	if resp.EvalResponse.Error != nil {
+		return w.writeResponse(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fingerprint, resp.EvalResponse.Error))
+	}
+
+	return w.writeResponse(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fingerprint, resp.EvalResponse.Result))
+}
+
+// handleLegacyCommand processes commands not in CommandsMeta
+func (w *BaseWorker) handleLegacyCommand(ctx context.Context, resp ops.StoreResponse) error {
+	if resp.EvalResponse.Error != nil {
+		return w.writeResponse(ctx, resp.EvalResponse.Error)
+	}
+	return w.writeResponse(ctx, resp.EvalResponse.Result)
+}
+
+// handleCommand processes commands based on their type
+func (w *BaseWorker) handleCommand(ctx context.Context, cmdMeta CmdMeta, diceDBCmd *cmd.DiceDBCmd, storeOp []ops.StoreResponse) error {
+	var err error
+
+	switch cmdMeta.CmdType {
+	case SingleShard, Custom:
+		if storeOp[0].EvalResponse.Error != nil {
+			err = w.writeResponse(ctx, storeOp[0].EvalResponse.Error)
+		} else {
+			err = w.writeResponse(ctx, storeOp[0].EvalResponse.Result)
+		}
+
+		if err == nil && w.wl != nil {
+			w.wl.LogCommand(diceDBCmd)
+		}
+	case MultiShard:
+		err = w.writeResponse(ctx, cmdMeta.composeResponse(storeOp...))
+
+		if err == nil && w.wl != nil {
+			w.wl.LogCommand(diceDBCmd)
+		}
+	default:
+		slog.Error("Unknown command type",
+			slog.String("workerID", w.id),
+			slog.String("command", diceDBCmd.Cmd),
+			slog.Any("evalResp", storeOp))
+		err = w.writeResponse(ctx, diceerrors.ErrInternalServer)
+	}
+	return err
+}
+
+// writeResponse handles writing responses and logging errors
+func (w *BaseWorker) writeResponse(ctx context.Context, response interface{}) error {
+	err := w.ioHandler.Write(ctx, response)
+	if err != nil {
+		slog.Debug("Error sending response to client",
+			slog.String("workerID", w.id),
+			slog.Any("error", err))
+	}
+	return err
 }
 
 func (w *BaseWorker) isAuthenticated(diceDBCmd *cmd.DiceDBCmd) error {
@@ -415,7 +531,20 @@ func (w *BaseWorker) RespAuth(args []string) interface{} {
 }
 
 func (w *BaseWorker) Stop() error {
-	w.logger.Info("Stopping worker", slog.String("workerID", w.id))
+	slog.Info("Stopping worker", slog.String("workerID", w.id))
 	w.Session.Expire()
 	return nil
+}
+
+func GenerateRandomUint32() (uint32, error) {
+	var b [4]byte             // Create a byte array to hold the random bytes
+	_, err := rand.Read(b[:]) // Fill the byte array with secure random bytes
+	if err != nil {
+		return 0, err // Return an error if reading failed
+	}
+	return binary.BigEndian.Uint32(b[:]), nil // Convert bytes to uint32
+}
+
+func GenerateUniqueRequestID() uint32 {
+	return atomic.AddUint32(&requestCounter, 1)
 }
