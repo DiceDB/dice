@@ -85,9 +85,13 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 	go func() {
 		for {
 			data, err := w.ioHandler.Read(ctx)
-			if err != nil {
-				readErrChan <- err
-				return
+			if err != nil || string(data) == "" {
+				select {
+				case readErrChan <- err:
+					return
+				case <-time.After(time.Second):
+					return // following case will happen when worker exited before the read goroutine could send the error
+				}
 			}
 			dataChan <- data
 		}
