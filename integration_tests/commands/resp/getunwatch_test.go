@@ -109,10 +109,11 @@ func TestGETUNWATCH(t *testing.T) {
 
 			go func() {
 				v, err := rp.DecodeOne()
-				if err != nil {
-					errChan <- err
-				} else {
-					responseChan <- v
+				select {
+				case errChan <- err:
+				case responseChan <- v:
+				case <-time.After(200 * time.Millisecond):
+					// if test goroutine returns, this one must exit too
 				}
 			}()
 
@@ -168,13 +169,11 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	err = publisher.Set(context.Background(), getUnwatchKey, "final", 0).Err()
 	assert.Nil(t, err)
 	for _, channel := range channels {
-		go func(ch <-chan *dicedb.WatchResult) {
-			select {
-			case v := <-ch:
-				assert.Fail(t, fmt.Sprintf("%v", v))
-			case <-time.After(100 * time.Millisecond):
-				// This is the expected behavior - no response within the timeout
-			}
-		}(channel)
+		select {
+		case v := <-channel:
+			assert.Fail(t, fmt.Sprintf("%v", v))
+		case <-time.After(100 * time.Millisecond):
+			// This is the expected behavior - no response within the timeout
+		}
 	}
 }
