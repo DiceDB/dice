@@ -85,16 +85,16 @@ The client will receive a message similar to the following:
 ```bash
 Command: ZRANGE
 Fingerprint: 4016579015
-Data: player1
+Data: [{1 player1}]
 Command: ZRANGE
 Fingerprint: 4016579015
-Data: player2
+Data: [{2 player2}]
 Command: ZRANGE
 Fingerprint: 4016579015
-Data: player2
+Data: [{2 player2}]
 Command: ZRANGE
 Fingerprint: 4016579015
-Data: player4
+Data: [{4 player4}]
 ```
 
 ## Notes
