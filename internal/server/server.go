@@ -382,11 +382,7 @@ func (s *AsyncServer) EvalAndRespond(cmds *cmd.RedisCmds, c *comm.Client) {
 			continue
 		}
 
-		if c.IsTxn {
-			s.handleTransactionCommand(diceDBCmd, c, buf)
-		} else {
-			s.handleNonTransactionCommand(diceDBCmd, c, buf)
-		}
+		s.handleNonTransactionCommand(diceDBCmd, c, buf)
 	}
 
 	s.writeResponse(c, buf)
@@ -398,23 +394,6 @@ func (s *AsyncServer) isAuthenticated(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, 
 		return false
 	}
 	return true
-}
-
-func (s *AsyncServer) handleTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
-	if eval.TxnCommands[diceDBCmd.Cmd] {
-		switch diceDBCmd.Cmd {
-		case eval.ExecCmdMeta.Name:
-			s.executeTransaction(c, buf)
-		default:
-			slog.Error(
-				"Unhandled transaction command",
-				slog.String("command", diceDBCmd.Cmd),
-			)
-		}
-	} else {
-		c.TxnQueue(diceDBCmd)
-		buf.Write(clientio.RespQueued)
-	}
 }
 
 func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {

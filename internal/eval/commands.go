@@ -1455,7 +1455,6 @@ func init() {
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["DUMP"] = dumpkeyCMmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
-	DiceCmds["EXEC"] = ExecCmdMeta
 	DiceCmds["EXISTS"] = existsCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
 	DiceCmds["EXPIREAT"] = expireatCmdMeta
