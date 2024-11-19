@@ -34,6 +34,7 @@ type TestServerOptions struct {
 	MaxClients int32
 }
 
+//nolint:unused
 func getLocalConnection() net.Conn {
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", config.DiceConfig.AsyncServer.Addr, config.DiceConfig.AsyncServer.Port))
 	if err != nil {
