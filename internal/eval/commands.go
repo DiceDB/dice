@@ -446,7 +446,7 @@ var (
 	clientCmdMeta = DiceCmdMeta{
 		Name:  "CLIENT",
 		Info:  `This is a container command for client connection commands.`,
-		Eval:  evalCLIENT,
+		Eval:  nil,
 		Arity: -2,
 	}
 	latencyCmdMeta = DiceCmdMeta{

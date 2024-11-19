@@ -127,6 +127,7 @@ func (s *AsyncServer) InitiateShutdown() {
 			slog.Warn("failed to close client connection", slog.Any("error", err))
 		}
 		delete(s.connectedClients, fd)
+		abstractserver.RemoveClientByFd(fd)
 	}
 }
 
@@ -232,7 +233,10 @@ func (s *AsyncServer) acceptConnection() error {
 		return err
 	}
 
-	s.connectedClients[fd] = comm.NewClient(fd)
+	client := comm.NewClient(fd)
+	s.connectedClients[fd] = client
+	abstractserver.AddClient(client)
+
 	if err := syscall.SetNonblock(fd, true); err != nil {
 		return err
 	}
@@ -256,11 +260,24 @@ func (s *AsyncServer) handleClientEvent(event iomultiplexer.Event) error {
 			slog.Error("error closing client connection", slog.Any("error", err))
 		}
 		delete(s.connectedClients, event.Fd)
+		abstractserver.RemoveClientByFd(event.Fd)
 		return err
 	}
 
+	// pre execution
+	client.LastCmd = commands.Cmds[len(commands.Cmds)-1]
+	argLenSum := len(client.LastCmd.Cmd)
+	for _, arg := range client.LastCmd.Args {
+		argLenSum += len(arg)
+	}
+	client.ArgLenSum = argLenSum
+
 	// function used within package, limit the scope
 	s.EvalAndRespond(commands, client)
+
+	// post execution
+	client.ArgLenSum = 0
+
 	if hasAbort {
 		return diceerrors.ErrAborted
 	}
