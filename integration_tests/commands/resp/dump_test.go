@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -39,7 +40,7 @@ func TestDumpRestore(t *testing.T) {
 					}
 					return len(decoded) > 11 &&
 						decoded[0] == 0x09 &&
-						decoded[1] == 0x00 &&
+						decoded[1] == object.ObjTypeString &&
 						string(decoded[6:11]) == "hello" &&
 						decoded[11] == 0xFF
 				},
@@ -54,7 +55,7 @@ func TestDumpRestore(t *testing.T) {
 				"SET intkey 42",
 				"DUMP intkey",
 				"DEL intkey",
-				"RESTORE intkey 2 CcAAAAAAAAAAKv9S/ymRDY3rXg==",
+				"RESTORE intkey 2 CVAAAAAAAAAAKv8wYpRExe3vXw==",
 			},
 			expected: []interface{}{
 				"OK",
@@ -69,7 +70,7 @@ func TestDumpRestore(t *testing.T) {
 					}
 					return len(decoded) > 2 &&
 						decoded[0] == 0x09 &&
-						decoded[1] == 0xC0
+						decoded[1] == object.ObjTypeInt
 				},
 				int64(1),
 				"OK",
