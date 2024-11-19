@@ -345,38 +345,49 @@ func (w *BaseWorker) handleCommandUnwatch(ctx context.Context, cmdList []*cmd.Di
 func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd, cmdType CmdType) error {
 	// Otherwise check for the shard based on the key using hash
 	// and send it to the particular shard
+	// Check if the context has been canceled or expired.
 	select {
 	case <-ctx.Done():
+		// If the context is canceled, return the error associated with it.
 		return ctx.Err()
 	default:
+		// Proceed with the default case when the context is not canceled.
+
 		if cmdType == AllShard {
+			// If the command type is for all shards, iterate over all available shards.
 			for i := uint8(0); i < uint8(w.shardManager.GetShardCount()); i++ {
+				// Get the shard ID (i) and its associated request channel.
 				shardID, responseChan := i, w.shardManager.GetShard(i).ReqChan
 
+				// Send a StoreOp operation to the shard's request channel.
 				responseChan <- &ops.StoreOp{
-					SeqID:     i,
-					RequestID: GenerateUniqueRequestID(),
-					Cmd:       cmds[0],
-					WorkerID:  w.id,
-					ShardID:   shardID,
-					Client:    nil,
+					SeqID:     i,                         // Sequence ID for this operation.
+					RequestID: GenerateUniqueRequestID(), // Unique identifier for the request.
+					Cmd:       cmds[0],                   // Command to be executed, using the first command in cmds.
+					WorkerID:  w.id,                      // ID of the current worker.
+					ShardID:   shardID,                   // ID of the shard handling this operation.
+					Client:    nil,                       // Client information (if applicable).
 				}
 			}
 		} else {
+			// If the command type is specific to certain commands, process them individually.
 			for i := uint8(0); i < uint8(len(cmds)); i++ {
+				// Determine the appropriate shard for the current command using a routing key.
 				shardID, responseChan := w.shardManager.GetShardInfo(getRoutingKeyFromCommand(cmds[i]))
 
+				// Send a StoreOp operation to the shard's request channel.
 				responseChan <- &ops.StoreOp{
-					SeqID:     i,
-					RequestID: GenerateUniqueRequestID(),
-					Cmd:       cmds[i],
-					WorkerID:  w.id,
-					ShardID:   shardID,
-					Client:    nil,
+					SeqID:     i,                         // Sequence ID for this operation.
+					RequestID: GenerateUniqueRequestID(), // Unique identifier for the request.
+					Cmd:       cmds[i],                   // Command to be executed, using the current command in cmds.
+					WorkerID:  w.id,                      // ID of the current worker.
+					ShardID:   shardID,                   // ID of the shard handling this operation.
+					Client:    nil,                       // Client information (if applicable).
 				}
 			}
 		}
 	}
+
 	return nil
 }
 
