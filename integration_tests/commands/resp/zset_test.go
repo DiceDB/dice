@@ -597,8 +597,6 @@ func TestZRANGE(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	print("In zrange")
-
 	testCases := []TestCase{
 		{
 			name:     "ZRANGE with mixed indices",
