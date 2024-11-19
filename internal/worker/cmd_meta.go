@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
 )
 
@@ -47,6 +46,7 @@ const (
 	CmdPing  = "PING"
 	CmdAbort = "ABORT"
 	CmdAuth  = "AUTH"
+	CmdEcho  = "ECHO"
 )
 
 // Single-shard commands.
@@ -164,6 +164,8 @@ const (
 	CmdRestore       = "RESTORE"
 	CmdGeoAdd        = "GEOADD"
 	CmdGeoDist       = "GEODIST"
+	CmdClient        = "CLIENT"
+	CmdLatency       = "LATENCY"
 )
 
 // Watch commands
@@ -202,12 +204,6 @@ type CmdMeta struct {
 }
 
 var CommandsMeta = map[string]CmdMeta{
-	// Global commands.
-	CmdPing: {
-		CmdType:              Global,
-		WorkerCommandHandler: eval.RespPING,
-	},
-
 	// Single-shard commands.
 	CmdSet: {
 		CmdType: SingleShard,
@@ -479,6 +475,12 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGeoDist: {
 		CmdType: SingleShard,
 	},
+	CmdClient: {
+		CmdType: SingleShard,
+	},
+	CmdLatency: {
+		CmdType: SingleShard,
+	},
 
 	// Multi-shard commands.
 	CmdRename: {
@@ -547,6 +549,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: Custom,
 	},
 	CmdAuth: {
+		CmdType: Custom,
+	},
+	CmdEcho: {
+		CmdType: Custom,
+	},
+	CmdPing: {
 		CmdType: Custom,
 	},
 

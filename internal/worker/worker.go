@@ -232,25 +232,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			}
 
 		case Custom:
-			// if command is of type Custom, write a custom logic around it
-			switch diceDBCmd.Cmd {
-			case CmdAuth:
-				err := w.ioHandler.Write(ctx, w.RespAuth(diceDBCmd.Args))
-				if err != nil {
-					slog.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
-				}
-				return err
-			case CmdAbort:
-				err := w.ioHandler.Write(ctx, clientio.OK)
-				if err != nil {
-					slog.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
-				}
-				slog.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
-				w.globalErrorChan <- diceerrors.ErrAborted
-				return err
-			default:
-				cmdList = append(cmdList, diceDBCmd)
-			}
+			return w.handleCustomCommands(ctx, diceDBCmd)
 
 		case Watch:
 			// Generate the Cmd being watched. All we need to do is remove the .WATCH suffix from the command and pass
@@ -301,6 +283,34 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	return nil
+}
+
+func (w *BaseWorker) handleCustomCommands(ctx context.Context, diceDBCmd *cmd.DiceDBCmd) error {
+	// if command is of type Custom, write a custom logic around it
+	switch diceDBCmd.Cmd {
+	case CmdAuth:
+		err := w.ioHandler.Write(ctx, w.RespAuth(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		return err
+	case CmdEcho:
+		err := w.ioHandler.Write(ctx, RespEcho(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending echo response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		return err
+	case CmdAbort:
+		err := w.ioHandler.Write(ctx, clientio.OK)
+		if err != nil {
+			slog.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		slog.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
+		w.globalErrorChan <- diceerrors.ErrAborted
+		return err
+	default:
+		return diceerrors.ErrUnknownCmd(diceDBCmd.Cmd)
+	}
 }
 
 // handleCommandWatch sends a watch subscription request to the watch manager.
@@ -526,34 +536,6 @@ func (w *BaseWorker) isAuthenticated(diceDBCmd *cmd.DiceDBCmd) error {
 	}
 
 	return nil
-}
-
-// RespAuth returns with an encoded "OK" if the user is authenticated
-// If the user is not authenticated, it returns with an encoded error message
-func (w *BaseWorker) RespAuth(args []string) interface{} {
-	// Check for incorrect number of arguments (arity error).
-	if len(args) < 1 || len(args) > 2 {
-		return diceerrors.ErrWrongArgumentCount("AUTH")
-	}
-
-	if config.DiceConfig.Auth.Password == "" {
-		return diceerrors.ErrAuth
-	}
-
-	username := config.DiceConfig.Auth.UserName
-	var password string
-
-	if len(args) == 1 {
-		password = args[0]
-	} else {
-		username, password = args[0], args[1]
-	}
-
-	if err := w.Session.Validate(username, password); err != nil {
-		return err
-	}
-
-	return clientio.OK
 }
 
 func (w *BaseWorker) Stop() error {

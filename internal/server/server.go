@@ -405,8 +405,6 @@ func (s *AsyncServer) handleTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm
 		switch diceDBCmd.Cmd {
 		case eval.ExecCmdMeta.Name:
 			s.executeTransaction(c, buf)
-		case eval.DiscardCmdMeta.Name:
-			s.discardTransaction(c, buf)
 		default:
 			slog.Error(
 				"Unhandled transaction command",
@@ -423,8 +421,6 @@ func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *c
 	switch diceDBCmd.Cmd {
 	case eval.ExecCmdMeta.Name:
 		buf.Write(diceerrors.NewErrWithMessage("EXEC without MULTI"))
-	case eval.DiscardCmdMeta.Name:
-		buf.Write(diceerrors.NewErrWithMessage("DISCARD without MULTI"))
 	default:
 		s.executeCommandToBuffer(diceDBCmd, buf, c)
 	}
@@ -444,11 +440,6 @@ func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
 
 	c.Cqueue.Cmds = make([]*cmd.DiceDBCmd, 0)
 	c.IsTxn = false
-}
-
-func (s *AsyncServer) discardTransaction(c *comm.Client, buf *bytes.Buffer) {
-	c.TxnDiscard()
-	buf.Write(clientio.RespOK)
 }
 
 func (s *AsyncServer) writeResponse(c *comm.Client, buf *bytes.Buffer) {

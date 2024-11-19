@@ -444,16 +444,18 @@ var (
 		Arity: -1,
 	}
 	clientCmdMeta = DiceCmdMeta{
-		Name:  "CLIENT",
-		Info:  `This is a container command for client connection commands.`,
-		Eval:  evalCLIENT,
-		Arity: -2,
+		Name:       "CLIENT",
+		Info:       `This is a container command for client connection commands.`,
+		NewEval:    evalCLIENT,
+		IsMigrated: true,
+		Arity:      -2,
 	}
 	latencyCmdMeta = DiceCmdMeta{
-		Name:  "LATENCY",
-		Info:  `This is a container command for latency diagnostics commands.`,
-		Eval:  evalLATENCY,
-		Arity: -2,
+		Name:       "LATENCY",
+		Info:       `This is a container command for latency diagnostics commands.`,
+		NewEval:    evalLATENCY,
+		IsMigrated: true,
+		Arity:      -2,
 	}
 	sleepCmdMeta = DiceCmdMeta{
 		Name: "SLEEP",
@@ -527,12 +529,6 @@ var (
 	ExecCmdMeta = DiceCmdMeta{
 		Name:  "EXEC",
 		Info:  `EXEC executes commands in a transaction, which is initiated by MULTI`,
-		Eval:  nil,
-		Arity: 1,
-	}
-	DiscardCmdMeta = DiceCmdMeta{
-		Name:  "DISCARD",
-		Info:  `DISCARD discards all the commands in a transaction, which is initiated by MULTI`,
 		Eval:  nil,
 		Arity: 1,
 	}
@@ -1457,7 +1453,6 @@ func init() {
 	DiceCmds["DECR"] = decrCmdMeta
 	DiceCmds["DECRBY"] = decrByCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
-	DiceCmds["DISCARD"] = DiscardCmdMeta
 	DiceCmds["DUMP"] = dumpkeyCMmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
 	DiceCmds["EXEC"] = ExecCmdMeta

@@ -410,16 +410,6 @@ func evalINFO(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(buf.String(), false)
 }
 
-// TODO: Placeholder to support monitoring
-func evalCLIENT(args []string, store *dstore.Store) []byte {
-	return clientio.RespOK
-}
-
-// TODO: Placeholder to support monitoring
-func evalLATENCY(args []string, store *dstore.Store) []byte {
-	return clientio.Encode([]string{}, false)
-}
-
 // evalSLEEP sets db to sleep for the specified number of seconds.
 // The sleep time should be the only param in args.
 // Returns error response if the time param in args is not of integer format.

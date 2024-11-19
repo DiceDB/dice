@@ -6383,3 +6383,13 @@ func evalKEYS(args []string, store *dstore.Store) *EvalResponse {
 
 	return makeEvalResult(keys)
 }
+
+// TODO: Placeholder to support monitoring
+func evalCLIENT(args []string, store *dstore.Store) *EvalResponse {
+	return makeEvalResult(clientio.OK)
+}
+
+// TODO: Placeholder to support monitoring
+func evalLATENCY(args []string, store *dstore.Store) *EvalResponse {
+	return makeEvalResult([]string{})
+}
