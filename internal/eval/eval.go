@@ -91,7 +91,6 @@ const (
 func init() {
 	diceCommandsCount = len(DiceCmds)
 	TxnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
-	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.AsyncServer.Addr, config.DiceConfig.AsyncServer.Port)
 }
 
 // evalPING returns with an encoded "PONG"
@@ -387,6 +386,7 @@ func evalHELLO(args []string, store *dstore.Store) []byte {
 	}
 
 	var resp []interface{}
+	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.AsyncServer.Addr, config.DiceConfig.AsyncServer.Port)
 	resp = append(resp,
 		"proto", 2,
 		"id", serverID,
