@@ -38,12 +38,16 @@ var (
 	's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 	}
 
-	ErrInvalidInput = func (lat, long float64) error {
-		return fmt.Errorf("invalid positions provided (lat: %.4f, long: %.4f)", lat, long)
+	ErrPosOutOfRange = func (lat, long float64) error {
+		return fmt.Errorf("positions out of range (lat: %.4f, long: %.4f)", lat, long)
 	}
 
 	ErrInvalidHash = func (hash string) error {
 		return fmt.Errorf("invalid positions provided (hash: %s)", hash)
+	}
+
+	ErrPrecisionOutOfRange = func (precision int) error {
+		return fmt.Errorf("precision must be between 1 & 32, (%d) provided", precision)
 	}
 )
 
@@ -51,10 +55,13 @@ var (
 func EncodeGeoHash(long, lat float64, precision int) (string, error) {
 	// validate coordinates provided
 	if long < MIN_LONGITUDE || long > MAX_LONGITUDE || lat < MIN_LATITUDE || lat > MAX_LATITUDE {
-		return "", fmt.Errorf("latitude or longitude out of valid range")
+		return "", ErrPosOutOfRange(lat, long);
 	}
 
-	// Local copies of ranges to prevent global modification
+	if precision < 1 || precision > 32 {
+		return "", ErrPrecisionOutOfRange(precision)
+	}
+
 	latRange := []float64{-90.0, 90.0}
 	longRange := []float64{-180.0, 180.0}
 
@@ -79,7 +86,7 @@ func EncodeGeoHash(long, lat float64, precision int) (string, error) {
 		}
 	}
 
-	// Interleave xbits and ybits, but ensure not to go out of bounds
+	// Interleave xbits and ybits.
 	zbits := make([]bool, 0, 64)
 	for i := 0; i < len(xbits) && i < len(ybits); i++ {
 		zbits = append(zbits, xbits[i])
@@ -91,7 +98,7 @@ func EncodeGeoHash(long, lat float64, precision int) (string, error) {
 		zbits = append(zbits, false)
 	}
 
-	// Convert 5-bit chunks to BASE32_CODES characters
+	// Convert 5-bit chunks to base32 characters
 	var geohash []byte
 	for i := 0; i < len(zbits); i += 5 {
 		var bitChunk uint8
@@ -106,7 +113,12 @@ func EncodeGeoHash(long, lat float64, precision int) (string, error) {
 	return string(geohash), nil
 }
 
-func DecodeGeoHash(geohash string) Coordinates {
+func DecodeGeoHash(geohash string) (Coordinates, error) {
+
+	if geohash == "" {
+		return Coordinates{}, ErrInvalidHash(geohash)
+	}
+
 	xs := []float64{-180.0, 180.0}
 	ys := []float64{-90.0, 90.0}
 	isEven := true
@@ -137,15 +149,18 @@ func DecodeGeoHash(geohash string) Coordinates {
 	return Coordinates{
 		Long: (xs[0] + xs[1]) / 2,
 		Lat: (ys[0] + ys[1]) / 2,
-	}
+	}, nil
 }
 
 func GetNeighbours(geohash string) (Neighbours, error) {
-	coord := DecodeGeoHash(geohash)
+	coord, err := DecodeGeoHash(geohash)
+	if err != nil {
+		return Neighbours{}, err
+	}
 
 	lat, lng := coord.Lat, coord.Long
 
-	// Define latitude and longitude offsets for each direction
+	// Define latitude and longitude offsets for each direction in neighbours
 	latOffset := []float64{1, -1, 1, 0, 0, -1, 1, -1}
 	lngOffset := []float64{0, 0, 1, -1, 1, 0, 1, -1}
 
