@@ -133,7 +133,7 @@ func Execute() {
 	flag.BoolVar(&flagsConfig.Performance.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
 
 	flag.StringVar(&flagsConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
-	flag.StringVar(&config.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
+	flag.StringVar(&config.DiceConfig.Logging.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
 
 	flag.BoolVar(&flagsConfig.Persistence.EnableWAL, "enable-wal", false, "enable write-ahead logging")
 	flag.BoolVar(&flagsConfig.Persistence.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
@@ -141,7 +141,7 @@ func Execute() {
 
 	flag.StringVar(&flagsConfig.Auth.Password, "requirepass", utils.EmptyStr, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the flagsConfig file")
-	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
+	flag.StringVar(&config.CustomConfigDirPath, "c", config.CustomConfigDirPath, "file path of the config file")
 
 	flag.IntVar(&flagsConfig.Memory.KeysLimit, "keys-limit", config.DefaultKeysLimit, "keys limit for the DiceDB server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+

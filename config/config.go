@@ -89,34 +89,8 @@ network.io_buffer_length_max = 51200`
 )
 
 var (
-	Host string = "0.0.0.0"
-	Port int    = 7379
-
-	EnableMultiThreading bool = false
-	EnableHTTP           bool = true
-	HTTPPort             int  = 8082
-
-	EnableWebsocket bool = true
-	WebsocketPort   int  = 8379
-	NumShards       int  = -1
-
-	// if RequirePass is set to an empty string, no authentication is required
-	RequirePass = utils.EmptyStr
-
 	CustomConfigFilePath = utils.EmptyStr
-	FileLocation         = utils.EmptyStr
-
-	KeysLimit     = DefaultKeysLimit
-	EvictionRatio = DefaultEvictionRatio
-
-	EnableProfiling = false
-
-	EnableWatch = true
-	LogDir      = ""
-
-	EnableWAL      = true
-	RestoreFromWAL = false
-	WALEngine      = "sqlite"
+	CustomConfigDirPath  = utils.EmptyStr
 )
 
 type Config struct {
