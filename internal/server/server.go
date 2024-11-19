@@ -405,22 +405,6 @@ func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *c
 	}
 }
 
-func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
-	cmds := c.Cqueue.Cmds
-	_, err := fmt.Fprintf(buf, "*%d\r\n", len(cmds))
-	if err != nil {
-		slog.Error("Error writing to buffer", slog.Any("error", err))
-		return
-	}
-
-	for _, cmd := range cmds {
-		s.executeCommandToBuffer(cmd, buf, c)
-	}
-
-	c.Cqueue.Cmds = make([]*cmd.DiceDBCmd, 0)
-	c.IsTxn = false
-}
-
 func (s *AsyncServer) writeResponse(c *comm.Client, buf *bytes.Buffer) {
 	if _, err := c.Write(buf.Bytes()); err != nil {
 		slog.Error(err.Error())
