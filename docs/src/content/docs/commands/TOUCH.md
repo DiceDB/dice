@@ -1,6 +1,6 @@
 ---
 title: TOUCH
-description: The TOUCH command in DiceDB is used to update the last access time of one or more keys without modifying their values. This can be particularly useful for cache management, where you want to keep certain keys from expiring by marking them as recently used.
+description: The `TOUCH` command in DiceDB is used to update the last access time of one or more keys without modifying their values. This can be particularly useful for cache management, where you want to keep certain keys from expiring by marking them as recently used.
 ---
 
 The `TOUCH` command in DiceDB is used to update the last access time of one or more keys without modifying their values. This can be particularly useful for cache management, where you want to keep certain keys from expiring by marking them as recently used.
@@ -66,3 +66,16 @@ Trying to touch key `mylist` will result in a `WRONGTYPE` error because `mylist`
 LPUSH mylist "element"
 TOUCH mylist
 ```
+
+## Best Practices
+
+- Avoid using the `TOUCH` command on a large number of keys simultaneously, as it may slow down the server.
+- Consider using the `SCAN` command as an alternative, which is more efficient for large keyspaces.
+
+## Alternatives
+
+- `SCAN`: The `SCAN` command is a cursor-based iterator that allows you to incrementally iterate over the keyspace without blocking the server. It is a more efficient alternative to `TOUCH` for large datasets.
+
+## Notes
+
+- The `TOUCH` command only updates the last access time of a key, without modifying its value or other attributes.
