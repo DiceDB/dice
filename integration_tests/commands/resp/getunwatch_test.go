@@ -33,14 +33,8 @@ func TestGETUNWATCH(t *testing.T) {
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
 	defer func() {
-		if err := publisher.Close(); err != nil {
-			t.Errorf("Error closing publisher connection: %v", err)
-		}
-		for _, sub := range subscribers {
-			if err := sub.Close(); err != nil {
-				t.Errorf("Error closing subscriber connection: %v", err)
-			}
-		}
+		err := closePublisherSubscribers(publisher, subscribers)
+		assert.Nil(t, err)
 	}()
 
 	FireCommand(publisher, fmt.Sprintf("DEL %s", getUnwatchKey))
@@ -86,18 +80,8 @@ func TestGETUNWATCH(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	for _, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", "426696421"))
-		assert.NotNil(t, rp)
+	unsubscribeFromUpdates(t, subscribers)
 
-		v, err := rp.DecodeOne()
-		assert.NoError(t, err)
-		castedValue, ok := v.(string)
-		if !ok {
-			t.Errorf("Type assertion to string failed for value: %v", v)
-		}
-		assert.Equal(t, castedValue, "OK")
-	}
 	// Test updates are not sent after unsubscribing
 	for _, tc := range getUnwatchTestCases[2:] {
 		res := FireCommand(publisher, fmt.Sprintf("SET %s %s", tc.key, tc.val))
@@ -129,9 +113,29 @@ func TestGETUNWATCH(t *testing.T) {
 	}
 }
 
+func unsubscribeFromUpdates(t *testing.T, subscribers []net.Conn) {
+	for _, subscriber := range subscribers {
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", "426696421"))
+		assert.NotNil(t, rp)
+
+		v, err := rp.DecodeOne()
+		assert.NoError(t, err)
+		castedValue, ok := v.(string)
+		if !ok {
+			t.Errorf("Type assertion to string failed for value: %v", v)
+		}
+		assert.Equal(t, castedValue, "OK")
+	}
+}
+
 func TestGETUNWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
-	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	subscribers := []watchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	defer func() {
+		err := closePublisherSubscribersSDK(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
 
 	publisher.Del(context.Background(), getUnwatchKey)
 
@@ -160,10 +164,7 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	for _, subscriber := range subscribers {
-		err := subscriber.watch.Unwatch(context.Background(), "GET", "426696421")
-		assert.Nil(t, err)
-	}
+	unsubscribeFromUpdatesSDK(t, subscribers)
 
 	// fire updates and validate that they are not received
 	err = publisher.Set(context.Background(), getUnwatchKey, "final", 0).Err()
@@ -175,5 +176,12 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 		case <-time.After(100 * time.Millisecond):
 			// This is the expected behavior - no response within the timeout
 		}
+	}
+}
+
+func unsubscribeFromUpdatesSDK(t *testing.T, subscribers []watchSubscriber) {
+	for _, subscriber := range subscribers {
+		err := subscriber.watch.Unwatch(context.Background(), "GET", "426696421")
+		assert.Nil(t, err)
 	}
 }

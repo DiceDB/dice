@@ -40,6 +40,19 @@ func getLocalConnection() net.Conn {
 	return conn
 }
 
+func closePublisherSubscribers(publisher net.Conn, subscribers []net.Conn) error {
+	if err := publisher.Close(); err != nil {
+		return fmt.Errorf("error closing publisher connection: %v", err)
+	}
+	for _, sub := range subscribers {
+		time.Sleep(100 * time.Millisecond) // [TODO] why is this needed?
+		if err := sub.Close(); err != nil {
+			return fmt.Errorf("error closing subscriber connection: %v", err)
+		}
+	}
+	return nil
+}
+
 // deleteTestKeys is a utility to delete a list of keys before running a test
 //
 //nolint:unused
@@ -65,6 +78,26 @@ func getLocalSdk() *dicedb.Client {
 		PoolTimeout:     30 * time.Second,
 		ConnMaxIdleTime: time.Minute,
 	})
+}
+
+type watchSubscriber struct {
+	client *dicedb.Client
+	watch  *dicedb.WatchConn
+}
+
+func closePublisherSubscribersSDK(publisher *dicedb.Client, subscribers []watchSubscriber) error {
+	if err := publisher.Close(); err != nil {
+		return fmt.Errorf("error closing publisher connection: %v", err)
+	}
+	for _, sub := range subscribers {
+		if err := sub.watch.Close(); err != nil {
+			return fmt.Errorf("error closing subscriber watch connection: %v", err)
+		}
+		if err := sub.client.Close(); err != nil {
+			return fmt.Errorf("error closing subscriber connection: %v", err)
+		}
+	}
+	return nil
 }
 
 func FireCommand(conn net.Conn, cmd string) interface{} {
