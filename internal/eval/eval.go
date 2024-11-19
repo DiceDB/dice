@@ -124,6 +124,7 @@ func evalECHO(args []string, store *dstore.Store) []byte {
 
 // EvalAUTH returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
+// TODO: Needs to be removed after http and websocket migrated to the multithreading
 func EvalAUTH(args []string, c *comm.Client) []byte {
 	var err error
 
@@ -155,6 +156,7 @@ func EvalAUTH(args []string, c *comm.Client) []byte {
 // Returns encoded error response if at least a <key, value> pair is not part of args
 // Returns encoded OK RESP once new entries are added
 // If the key already exists then the value will be overwritten and expiry will be discarded
+// TODO: Needs to be removed after http and websocket migrated to the multithreading
 func evalMSET(args []string, store *dstore.Store) []byte {
 	if len(args) <= 1 || len(args)%2 != 0 {
 		return diceerrors.NewErrArity("MSET")
@@ -184,6 +186,7 @@ func evalMSET(args []string, store *dstore.Store) []byte {
 }
 
 // evalDBSIZE returns the number of keys in the database.
+// TODO: Needs to be removed after http and websocket migrated to the multithreading
 func evalDBSIZE(args []string, store *dstore.Store) []byte {
 	if len(args) > 0 {
 		return diceerrors.NewErrArity("DBSIZE")
@@ -1092,6 +1095,7 @@ func evalOBJECT(args []string, store *dstore.Store) []byte {
 	}
 }
 
+// TODO: Needs to be removed after http and websocket migrated to the multithreading
 func evalTOUCH(args []string, store *dstore.Store) []byte {
 	if len(args) == 0 {
 		return diceerrors.NewErrArity("TOUCH")

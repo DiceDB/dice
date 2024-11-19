@@ -212,7 +212,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			// For single-shard or custom commands, process them without breaking up.
 			cmdList = append(cmdList, diceDBCmd)
 
-		case MultiShard:
+		case MultiShard, AllShard:
 			var err error
 			// If the command supports multisharding, break it down into multiple commands.
 			cmdList, err = meta.decomposeCommand(ctx, w, diceDBCmd)
@@ -286,7 +286,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
-	if err := w.scatter(ctx, cmdList); err != nil {
+	if err := w.scatter(ctx, cmdList, meta.CmdType); err != nil {
 		return err
 	}
 
@@ -342,23 +342,38 @@ func (w *BaseWorker) handleCommandUnwatch(ctx context.Context, cmdList []*cmd.Di
 
 // scatter distributes the DiceDB commands to the respective shards based on the key.
 // For each command, it calculates the shard ID and sends the command to the shard's request channel for processing.
-func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
+func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd, cmdType CmdType) error {
 	// Otherwise check for the shard based on the key using hash
 	// and send it to the particular shard
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-		for i := uint8(0); i < uint8(len(cmds)); i++ {
-			shardID, responseChan := w.shardManager.GetShardInfo(getRoutingKeyFromCommand(cmds[i]))
+		if cmdType == AllShard {
+			for i := uint8(0); i < uint8(w.shardManager.GetShardCount()); i++ {
+				shardID, responseChan := i, w.shardManager.GetShard(i).ReqChan
 
-			responseChan <- &ops.StoreOp{
-				SeqID:     i,
-				RequestID: GenerateUniqueRequestID(),
-				Cmd:       cmds[i],
-				WorkerID:  w.id,
-				ShardID:   shardID,
-				Client:    nil,
+				responseChan <- &ops.StoreOp{
+					SeqID:     i,
+					RequestID: GenerateUniqueRequestID(),
+					Cmd:       cmds[0],
+					WorkerID:  w.id,
+					ShardID:   shardID,
+					Client:    nil,
+				}
+			}
+		} else {
+			for i := uint8(0); i < uint8(len(cmds)); i++ {
+				shardID, responseChan := w.shardManager.GetShardInfo(getRoutingKeyFromCommand(cmds[i]))
+
+				responseChan <- &ops.StoreOp{
+					SeqID:     i,
+					RequestID: GenerateUniqueRequestID(),
+					Cmd:       cmds[i],
+					WorkerID:  w.id,
+					ShardID:   shardID,
+					Client:    nil,
+				}
 			}
 		}
 	}
@@ -404,7 +419,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 
 // gatherResponses collects responses from all shards
 func (w *BaseWorker) gatherResponses(ctx context.Context, numCmds int) ([]ops.StoreResponse, error) {
-	var storeOp []ops.StoreResponse
+	storeOp := make([]ops.StoreResponse, 0, numCmds)
 
 	for numCmds > 0 {
 		select {
@@ -467,7 +482,7 @@ func (w *BaseWorker) handleCommand(ctx context.Context, cmdMeta CmdMeta, diceDBC
 		if err == nil && w.wl != nil {
 			w.wl.LogCommand(diceDBCmd)
 		}
-	case MultiShard:
+	case MultiShard, AllShard:
 		err = w.writeResponse(ctx, cmdMeta.composeResponse(storeOp...))
 
 		if err == nil && w.wl != nil {

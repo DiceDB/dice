@@ -25,6 +25,10 @@ const (
 	// This type of command spans more than one shard and may involve coordination between shards.
 	MultiShard
 
+	// AllShard represents a command that operates across all available shards.
+	// This type of command spans more than one shard and may involve coordination between shards.
+	AllShard
+
 	// Custom represents a command that is user-defined or has custom logic.
 	// This command type allows for flexibility in executing specific, non-standard operations.
 	Custom
@@ -88,6 +92,8 @@ const (
 	CmdSDiff    = "SDIFF"
 	CmdJSONMget = "JSON.MGET"
 	CmdKeys     = "KEYS"
+	CmdTouch    = "TOUCH"
+	CmdDBSize   = "DBSIZE"
 )
 
 // Multi-Step-Multi-Shard commands
@@ -519,6 +525,21 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:          MultiShard,
 		decomposeCommand: decomposeJSONMget,
 		composeResponse:  composeJSONMget,
+	},
+	CmdTouch: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeTouch,
+		composeResponse:  composeTouch,
+	},
+	CmdDBSize: {
+		CmdType:          AllShard,
+		decomposeCommand: decomposeDBSize,
+		composeResponse:  composeDBSize,
+	},
+	CmdKeys: {
+		CmdType:          AllShard,
+		decomposeCommand: decomposeKeys,
+		composeResponse:  composeKeys,
 	},
 
 	// Custom commands.
