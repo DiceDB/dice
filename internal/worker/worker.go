@@ -85,7 +85,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 	go func() {
 		for {
 			data, err := w.ioHandler.Read(ctx)
-			if err != nil || string(data) == "" {
+			if err != nil || len(data) == 0 {
 				select {
 				case readErrChan <- err:
 					return

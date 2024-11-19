@@ -34,7 +34,7 @@ func TestZRANGEWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 	defer func() {
-		err := closePublisherSubscribers(publisher, subscribers)
+		err := ClosePublisherSubscribers(publisher, subscribers)
 		assert.Nil(t, err)
 	}()
 
@@ -106,9 +106,9 @@ var zrangeWatchSDKTestCases = []zrangeWatchSDKTestCase{
 
 func TestZRANGEWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
-	subscribers := []watchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 	defer func() {
-		err := closePublisherSubscribersSDK(publisher, subscribers)
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
 		assert.Nil(t, err)
 	}()
 
@@ -147,9 +147,9 @@ func TestZRANGEWATCHWithSDK(t *testing.T) {
 
 func TestZRANGEWATCHWithSDK2(t *testing.T) {
 	publisher := getLocalSdk()
-	subscribers := []watchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 	defer func() {
-		err := closePublisherSubscribersSDK(publisher, subscribers)
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
 		assert.Nil(t, err)
 	}()
 

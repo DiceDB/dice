@@ -33,7 +33,7 @@ func TestGETUNWATCH(t *testing.T) {
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
 	defer func() {
-		err := closePublisherSubscribers(publisher, subscribers)
+		err := ClosePublisherSubscribers(publisher, subscribers)
 		assert.Nil(t, err)
 	}()
 
@@ -130,10 +130,10 @@ func unsubscribeFromUpdates(t *testing.T, subscribers []net.Conn) {
 
 func TestGETUNWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
-	subscribers := []watchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 
 	defer func() {
-		err := closePublisherSubscribersSDK(publisher, subscribers)
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
 		assert.Nil(t, err)
 	}()
 
@@ -179,7 +179,7 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	}
 }
 
-func unsubscribeFromUpdatesSDK(t *testing.T, subscribers []watchSubscriber) {
+func unsubscribeFromUpdatesSDK(t *testing.T, subscribers []WatchSubscriber) {
 	for _, subscriber := range subscribers {
 		err := subscriber.watch.Unwatch(context.Background(), "GET", "426696421")
 		assert.Nil(t, err)

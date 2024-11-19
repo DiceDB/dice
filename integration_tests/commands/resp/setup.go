@@ -40,7 +40,7 @@ func getLocalConnection() net.Conn {
 	return conn
 }
 
-func closePublisherSubscribers(publisher net.Conn, subscribers []net.Conn) error {
+func ClosePublisherSubscribers(publisher net.Conn, subscribers []net.Conn) error {
 	if err := publisher.Close(); err != nil {
 		return fmt.Errorf("error closing publisher connection: %v", err)
 	}
@@ -80,12 +80,12 @@ func getLocalSdk() *dicedb.Client {
 	})
 }
 
-type watchSubscriber struct {
+type WatchSubscriber struct {
 	client *dicedb.Client
 	watch  *dicedb.WatchConn
 }
 
-func closePublisherSubscribersSDK(publisher *dicedb.Client, subscribers []watchSubscriber) error {
+func ClosePublisherSubscribersSDK(publisher *dicedb.Client, subscribers []WatchSubscriber) error {
 	if err := publisher.Close(); err != nil {
 		return fmt.Errorf("error closing publisher connection: %v", err)
 	}

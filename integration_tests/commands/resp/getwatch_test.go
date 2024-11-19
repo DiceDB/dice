@@ -32,7 +32,7 @@ func TestGETWATCH(t *testing.T) {
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
 	defer func() {
-		err := closePublisherSubscribers(publisher, subscribers)
+		err := ClosePublisherSubscribers(publisher, subscribers)
 		assert.Nil(t, err)
 	}()
 
@@ -82,10 +82,10 @@ func TestGETWATCH(t *testing.T) {
 
 func TestGETWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
-	subscribers := []watchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 
 	defer func() {
-		err := closePublisherSubscribersSDK(publisher, subscribers)
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
 		assert.Nil(t, err)
 	}()
 
@@ -121,10 +121,10 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 func TestGETWATCHWithSDK2(t *testing.T) {
 	publisher := getLocalSdk()
-	subscribers := []watchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 
 	defer func() {
-		err := closePublisherSubscribersSDK(publisher, subscribers)
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
 		assert.Nil(t, err)
 	}()
 

@@ -50,7 +50,7 @@ func TestPFCOUNTWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 	subscribers := setupSubscribers(3)
 	defer func() {
-		err := closePublisherSubscribers(publisher, subscribers)
+		err := ClosePublisherSubscribers(publisher, subscribers)
 		assert.Nil(t, err)
 	}()
 
@@ -178,7 +178,7 @@ func TestPFCountWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
 	subscribers := setupSubscribersSDK(3)
 	defer func() {
-		err := closePublisherSubscribersSDK(publisher, subscribers)
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
 		assert.Nil(t, err)
 	}()
 
@@ -199,15 +199,15 @@ func TestPFCountWATCHWithSDK(t *testing.T) {
 	// TODO - unsubscribe from updates once PFCOUNT.UNWATCH is implemented
 }
 
-func setupSubscribersSDK(count int) []watchSubscriber {
-	subscribers := make([]watchSubscriber, count)
+func setupSubscribersSDK(count int) []WatchSubscriber {
+	subscribers := make([]WatchSubscriber, count)
 	for i := range subscribers {
 		subscribers[i].client = getLocalSdk()
 	}
 	return subscribers
 }
 
-func setUpWatchChannelsSDK(t *testing.T, ctx context.Context, subscribers []watchSubscriber) []<-chan *dicedb.WatchResult {
+func setUpWatchChannelsSDK(t *testing.T, ctx context.Context, subscribers []WatchSubscriber) []<-chan *dicedb.WatchResult {
 	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
 	for i, subscriber := range subscribers {
 		watch := subscriber.client.WatchConn(ctx)
