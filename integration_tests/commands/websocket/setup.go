@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -38,6 +39,13 @@ type WebsocketCommandExecutor struct {
 	baseURL         string
 	websocketClient *http.Client
 	upgrader        websocket.Upgrader
+}
+
+func init() {
+	parser := config.NewConfigParser()
+	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
+		log.Fatalf("failed to load configuration: %v", err)
+	}
 }
 
 func NewWebsocketCommandExecutor() *WebsocketCommandExecutor {

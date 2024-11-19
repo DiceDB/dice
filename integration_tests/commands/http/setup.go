@@ -36,6 +36,13 @@ type HTTPCommandExecutor struct {
 	baseURL    string
 }
 
+func init() {
+	parser := config.NewConfigParser()
+	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
+		log.Fatalf("failed to load configuration: %v", err)
+	}
+}
+
 func NewHTTPCommandExecutor() *HTTPCommandExecutor {
 	return &HTTPCommandExecutor{
 		baseURL: "http://localhost:8083",

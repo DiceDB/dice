@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/fatih/color"
 )
 
@@ -114,38 +115,38 @@ func renderConfigTable() {
 }
 
 func Execute() {
-	flag.StringVar(&config.Host, "host", "0.0.0.0", "host for the DiceDB server")
+	flagsConfig := config.Config{}
+	flag.StringVar(&flagsConfig.AsyncServer.Addr, "host", "0.0.0.0", "host for the DiceDB server")
 
-	flag.IntVar(&config.Port, "port", 7379, "port for the DiceDB server")
+	flag.IntVar(&flagsConfig.AsyncServer.Port, "port", 7379, "port for the DiceDB server")
 
-	flag.IntVar(&config.HTTPPort, "http-port", 7380, "port for accepting requets over HTTP")
-	flag.BoolVar(&config.EnableHTTP, "enable-http", false, "enable DiceDB to listen, accept, and process HTTP")
+	flag.IntVar(&flagsConfig.HTTP.Port, "http-port", 7380, "port for accepting requets over HTTP")
+	flag.BoolVar(&flagsConfig.HTTP.Enabled, "enable-http", false, "enable DiceDB to listen, accept, and process HTTP")
 
-	flag.IntVar(&config.WebsocketPort, "websocket-port", 7381, "port for accepting requets over WebSocket")
-	flag.BoolVar(&config.EnableWebsocket, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
+	flag.IntVar(&flagsConfig.WebSocket.Port, "websocket-port", 7381, "port for accepting requets over WebSocket")
+	flag.BoolVar(&flagsConfig.WebSocket.Enabled, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
 
-	flag.BoolVar(&config.EnableMultiThreading, "enable-multithreading", false, "enable multithreading execution and leverage multiple CPU cores")
-	flag.IntVar(&config.NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
+	flag.BoolVar(&flagsConfig.Performance.EnableMultiThreading, "enable-multithreading", false, "enable multithreading execution and leverage multiple CPU cores")
+	flag.IntVar(&flagsConfig.Performance.NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
 
-	flag.BoolVar(&config.EnableWatch, "enable-watch", false, "enable support for .WATCH commands and real-time reactivity")
-	flag.BoolVar(&config.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
+	flag.BoolVar(&flagsConfig.Performance.EnableWatch, "enable-watch", false, "enable support for .WATCH commands and real-time reactivity")
+	flag.BoolVar(&flagsConfig.Performance.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
 
-	flag.StringVar(&config.DiceConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
+	flag.StringVar(&flagsConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
 	flag.StringVar(&config.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
 
-	flag.BoolVar(&config.EnableWAL, "enable-wal", false, "enable write-ahead logging")
-	flag.BoolVar(&config.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
-	flag.StringVar(&config.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
+	flag.BoolVar(&flagsConfig.Persistence.EnableWAL, "enable-wal", false, "enable write-ahead logging")
+	flag.BoolVar(&flagsConfig.Persistence.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
+	flag.StringVar(&flagsConfig.Persistence.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
 
-	flag.StringVar(&config.RequirePass, "requirepass", config.RequirePass, "enable authentication for the default user")
-	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the config file")
+	flag.StringVar(&flagsConfig.Auth.Password, "requirepass", utils.EmptyStr, "enable authentication for the default user")
+	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the flagsConfig file")
 	flag.StringVar(&config.FileLocation, "c", config.FileLocation, "file path of the config file")
-	flag.BoolVar(&config.InitConfigCmd, "init-config", false, "initialize a new config file")
 
-	flag.IntVar(&config.KeysLimit, "keys-limit", config.KeysLimit, "keys limit for the DiceDB server. "+
+	flag.IntVar(&flagsConfig.Memory.KeysLimit, "keys-limit", config.DefaultKeysLimit, "keys limit for the DiceDB server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
-	flag.Float64Var(&config.EvictionRatio, "eviction-ratio", 0.1, "ratio of keys to evict when the "+
+	flag.Float64Var(&flagsConfig.Memory.EvictionRatio, "eviction-ratio", 0.1, "ratio of keys to evict when the "+
 		"keys limit is reached")
 
 	flag.Usage = func() {
@@ -178,7 +179,6 @@ func Execute() {
 		fmt.Println("  -requirepass           Enable authentication for the default user (default: \"\")")
 		fmt.Println("  -o                     Directory path to create the config file (default: \"\")")
 		fmt.Println("  -c                     File path of the config file (default: \"\")")
-		fmt.Println("  -init-config           Initialize a new config file (default: false)")
 		fmt.Println("  -keys-limit            Keys limit for the DiceDB server (default: 0)")
 		fmt.Println("  -eviction-ratio        Ratio of keys to evict when the keys limit is reached (default: 0.1)")
 		color.Unset()
@@ -186,7 +186,7 @@ func Execute() {
 	}
 
 	flag.Parse()
-
+	config.MergeFlags(&flagsConfig)
 	if len(os.Args) < 2 {
 		if err := config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, "dicedb.conf")); err != nil {
 			log.Fatal(err)
