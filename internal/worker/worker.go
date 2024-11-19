@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	"sync"
 
 	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/wal"
@@ -40,17 +41,22 @@ type Worker interface {
 }
 
 type BaseWorker struct {
-	id                       string
-	ioHandler                iohandler.IOHandler
-	parser                   requestparser.Parser
-	shardManager             *shard.ShardManager
-	adhocReqChan             chan *cmd.DiceDBCmd
-	Session                  *auth.Session
-	globalErrorChan          chan error
-	responseChan             chan *ops.StoreResponse
-	preprocessingChan        chan *ops.StoreResponse
-	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
-	wl                       wal.AbstractWAL
+	id              	        string
+	ioHandler       	        iohandler.IOHandler
+	parser          	        requestparser.Parser
+	shardManager    	        *shard.ShardManager
+	adhocReqChan    	        chan *cmd.DiceDBCmd
+	lastActivity      	      time.Time
+	lastActivityMux   	      sync.RWMutex
+	keepAliveInterval 	      int32
+	clientTimeout     	      int32
+	clientTimeoutTimer	      *time.Timer
+	Session         	        *auth.Session
+	globalErrorChan 	        chan error
+	responseChan              chan *ops.StoreResponse
+	preprocessingChan         chan *ops.StoreResponse
+	cmdWatchSubscriptionChan  chan watchmanager.WatchSubscription
+	wl                        wal.AbstractWAL
 }
 
 func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,
@@ -64,9 +70,11 @@ func NewWorker(wid string, responseChan, preprocessingChan chan *ops.StoreRespon
 		shardManager:             shardManager,
 		globalErrorChan:          gec,
 		responseChan:             responseChan,
-		preprocessingChan:        preprocessingChan,
+    preprocessingChan:        preprocessingChan,
 		Session:                  auth.NewSession(),
 		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		keepAliveInterval:        config.DiceConfig.AsyncServer.KeepAlive,
+		clientTimeout:            config.DiceConfig.AsyncServer.Timeout,
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
 		wl:                       wl,
 	}
@@ -93,6 +101,12 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		}
 	}()
 
+	keepAliveTicker := time.NewTicker(time.Duration(w.keepAliveInterval)*time.Second)
+	defer keepAliveTicker.Stop()
+
+	w.clientTimeoutTimer = time.NewTimer(time.Duration(w.clientTimeout) * time.Second)
+	defer w.clientTimeoutTimer.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -112,6 +126,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		case cmdReq := <-w.adhocReqChan:
 			// Handle adhoc requests of DiceDBCmd
 			func() {
+				w.updateLastActivity()
 				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
 				defer cancel()
 
@@ -119,6 +134,7 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 				w.executeCommandHandler(execCtx, errChan, []*cmd.DiceDBCmd{cmdReq}, true)
 			}()
 		case data := <-dataChan:
+			w.updateLastActivity()
 			cmds, err := w.parser.Parse(data)
 			if err != nil {
 				err = w.ioHandler.Write(ctx, err)
@@ -163,7 +179,18 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 		case err := <-readErrChan:
 			slog.Debug("Read error, connection closed possibly", slog.String("workerID", w.id), slog.Any("error", err))
 			return err
+		case <-keepAliveTicker.C:
+			if err := w.sendKeepAlive(ctx); err!=nil{
+				return err
+			}
+		case <-w.clientTimeoutTimer.C:
+			return w.handleClientTimeout()
 		}
+
+		if !w.clientTimeoutTimer.Stop() {
+			<-w.clientTimeoutTimer.C
+		}
+		w.clientTimeoutTimer.Reset(time.Duration(w.clientTimeout) * time.Second)
 	}
 }
 
@@ -534,6 +561,26 @@ func (w *BaseWorker) Stop() error {
 	slog.Info("Stopping worker", slog.String("workerID", w.id))
 	w.Session.Expire()
 	return nil
+}
+
+func (w *BaseWorker) updateLastActivity() {
+	w.lastActivityMux.Lock()
+	w.lastActivity = time.Now()
+	w.lastActivityMux.Unlock()
+
+	if !w.clientTimeoutTimer.Stop() {
+		<-w.clientTimeoutTimer.C
+	}
+	w.clientTimeoutTimer.Reset(time.Duration(w.clientTimeout) * time.Second)
+}
+
+func (w *BaseWorker) sendKeepAlive(ctx context.Context) error {
+	return w.ioHandler.Write(ctx, "PING")
+}
+
+func (w *BaseWorker) handleClientTimeout() error {
+	slog.Info("Client timeout reached", slog.String("workerID", w.id))
+	return fmt.Errorf("client timeout reached")
 }
 
 func GenerateRandomUint32() (uint32, error) {
