@@ -3,6 +3,7 @@ package eval
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/crc64"
@@ -42,6 +43,29 @@ func rdbDeserialize(data []byte) (*object.Obj, error) {
 			return nil, err
 		}
 		return &object.Obj{Type: objType, Value: value}, nil
+	case object.ObjTypeJSON: // JSON type
+		value, err := readString(buf)
+		if err != nil {
+			return nil, err
+		}
+		var jsonValue interface{}
+		if err := json.Unmarshal([]byte(value.(string)), &jsonValue); err != nil {
+			return nil, err
+		}
+		return &object.Obj{Type: objType, Value: jsonValue}, nil
+	case object.ObjTypeByteArray: // Byte array type
+		value, err := readInt(buf)
+		if err != nil {
+			return nil, err
+		}
+		byteArray := &ByteArray{
+			Length: value.(int64),
+			data:   make([]byte, value.(int64)),
+		}
+		if _, err := buf.Read(byteArray.data); err != nil {
+			return nil, err
+		}
+		return &object.Obj{Type: objType, Value: byteArray}, nil
 	default:
 		return nil, errors.New("unsupported object type")
 	}
@@ -117,6 +141,23 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 		}
 		buf.WriteByte(obj.Type)
 		writeSet(&buf, setItems)
+	case object.ObjTypeJSON:
+		jsonValue, err := json.Marshal(obj.Value)
+		if err != nil {
+			return nil, err
+		}
+		buf.WriteByte(obj.Type)
+		if err := writeString(&buf, string(jsonValue)); err != nil {
+			return nil, err
+		}
+	case object.ObjTypeByteArray:
+		byteArray, ok := obj.Value.(*ByteArray)
+		if !ok {
+			return nil, errors.New("invalid byte array value")
+		}
+		buf.WriteByte(obj.Type)
+		writeInt(&buf, byteArray.Length)
+		buf.Write(byteArray.data)
 	default:
 		return nil, errors.New("unsupported object type")
 	}
