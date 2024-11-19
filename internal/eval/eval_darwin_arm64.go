@@ -25,7 +25,7 @@ func EvalBGREWRITEAOF(args []string, store *dstore.Store) []byte {
 	// TODO: Problem at hand: In multi-threaded environment, each shard instance would fork a child process.
 	// TODO: Each child process would now have a copy of the network file descriptor thus resulting in resource leaks.
 	// TODO: We need to find an alternative approach for the multi-threaded environment.
-	if config.EnableMultiThreading {
+	if config.DiceConfig.Performance.EnableMultiThreading {
 		return nil
 	}
 

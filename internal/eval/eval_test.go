@@ -14,6 +14,7 @@ import (
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
@@ -169,6 +170,7 @@ func testEvalECHO(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalHELLO(t *testing.T, store *dstore.Store) {
+	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.AsyncServer.Addr, config.DiceConfig.AsyncServer.Port)
 	resp := []interface{}{
 		"proto", 2,
 		"id", serverID,
