@@ -162,9 +162,10 @@ const (
 
 // Watch commands
 const (
-	CmdGetWatch    = "GET.WATCH"
-	CmdGetUnWatch  = "GET.UNWATCH"
-	CmdZRangeWatch = "ZRANGE.WATCH"
+	CmdGetWatch      = "GET.WATCH"
+	CmdGetUnWatch    = "GET.UNWATCH"
+	CmdZRangeWatch   = "ZRANGE.WATCH"
+	CmdZRangeUnWatch = "ZRANGE.UNWATCH"
 )
 
 type CmdMeta struct {
@@ -542,6 +543,9 @@ var CommandsMeta = map[string]CmdMeta{
 
 	// Unwatch commands
 	CmdGetUnWatch: {
+		CmdType: Unwatch,
+	},
+	CmdZRangeUnWatch: {
 		CmdType: Unwatch,
 	},
 }
