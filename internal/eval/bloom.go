@@ -391,7 +391,6 @@ func DeserializeBloom(buf *bytes.Reader) (*Bloom, error) {
 	if err := binary.Read(buf, binary.BigEndian, &numSeeds); err != nil {
 		return nil, err
 	}
-	fmt.Println("Numseeeds", numSeeds)
 	bloom.opts.hashFnsSeeds = make([]uint64, numSeeds)
 	if err := binary.Read(buf, binary.BigEndian, &bloom.opts.hashFnsSeeds); err != nil {
 		return nil, err
