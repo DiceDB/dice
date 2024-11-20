@@ -134,7 +134,9 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 		if !ok {
 			return nil, errors.New("invalid set value")
 		}
-		writeSet(&buf, setItems)
+		if err := writeSet(&buf, setItems); err != nil {
+			return nil, err
+		}
 	case object.ObjTypeJSON:
 		jsonValue, err := json.Marshal(obj.Value)
 		if err != nil {
@@ -211,7 +213,9 @@ func writeSet(buf *bytes.Buffer, setItems map[string]struct{}) error {
 		return err
 	}
 	for item := range setItems {
-		writeString(buf, item)
+		if err := writeString(buf, item); err != nil {
+			return err
+		}
 	}
 	return nil
 }

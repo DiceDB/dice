@@ -109,8 +109,8 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 	opts.hashFnsSeeds = make([]uint64, int(k))
 	// Initialize hash functions with random seeds
 	for i := 0; i < int(k); i++ {
-		opts.hashFnsSeeds[i] = rand.Uint64()                      //nolint:gosec
-		opts.hashFns[i] = murmur3.SeedNew64(opts.hashFnsSeeds[i]) //nolint:gosec
+		opts.hashFnsSeeds[i] = rand.Uint64() //nolint:gosec
+		opts.hashFns[i] = murmur3.SeedNew64(opts.hashFnsSeeds[i])
 	}
 
 	// initialize the common slice for storing indexes of bits to be set
@@ -120,15 +120,15 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 	// 		bits = k * entries / ln(2)
 	//		bytes = bits * 8
 	bits := uint64(math.Ceil((k * float64(opts.capacity)) / ln2))
-	var bytes uint64
+	var bytesNeeded uint64
 	if bits%8 == 0 {
-		bytes = bits / 8
+		bytesNeeded = bits / 8
 	} else {
-		bytes = (bits / 8) + 1
+		bytesNeeded = (bits / 8) + 1
 	}
-	opts.bits = bytes * 8
+	opts.bits = bytesNeeded * 8
 
-	bitset := make([]byte, bytes)
+	bitset := make([]byte, bytesNeeded)
 
 	return &Bloom{opts, bitset, 0}
 }

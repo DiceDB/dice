@@ -841,22 +841,22 @@ func DecodeDeqEntry(xb []byte) (x string, entryLen int) {
 	return strconv.FormatInt(val, 10), entryLen
 }
 
-func (d *Deque) Serialize(buf *bytes.Buffer) error {
-	if d == nil {
+func (q *Deque) Serialize(buf *bytes.Buffer) error {
+	if q == nil {
 		return errors.New("deque is nil")
 	}
 
-	err := binary.Write(buf, binary.BigEndian, d.Length)
+	err := binary.Write(buf, binary.BigEndian, q.Length)
 	if err != nil {
 		return err
 	}
-	err = binary.Write(buf, binary.BigEndian, int32(d.leftIdx))
+	err = binary.Write(buf, binary.BigEndian, int32(q.leftIdx))
 	if err != nil {
 		return err
 	}
 
 	// Serialize byteList
-	err = serializeByteList(buf, d.list)
+	err = serializeByteList(buf, q.list)
 	if err != nil {
 		return err
 	}
