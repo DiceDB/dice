@@ -66,6 +66,30 @@ func rdbDeserialize(data []byte) (*object.Obj, error) {
 			return nil, err
 		}
 		return &object.Obj{Type: objType, Value: byteArray}, nil
+	case object.ObjTypeDequeue:
+		value, err := readInt(buf)
+		if err != nil {
+			return nil, err
+		}
+		byteList := newByteList(value.(int))
+		for {
+			node := byteList.newNode()
+			n, err := buf.Read(node.buf)
+			if err != nil {
+				return nil, err
+			}
+			if n == 0 {
+				break
+			}
+			byteList.append(node)
+		}
+		return &object.Obj{Type: objType, Value: byteList}, nil
+	case object.ObjTypeBF: // Bloom filter type
+		bloom, err := DeserializeBloom(buf)
+		if err != nil {
+			return nil, err
+		}
+		return &object.Obj{Type: objType, Value: bloom}, nil
 	default:
 		return nil, errors.New("unsupported object type")
 	}
@@ -158,6 +182,25 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 		buf.WriteByte(obj.Type)
 		writeInt(&buf, byteArray.Length)
 		buf.Write(byteArray.data)
+	case object.ObjTypeDequeue:
+		byteList, ok := obj.Value.(*byteList)
+		if !ok {
+			return nil, errors.New("invalid byte list value")
+		}
+		buf.WriteByte(obj.Type)
+		writeInt(&buf, byteList.size)
+		for node := byteList.head; node != nil; node = node.next {
+			buf.Write(node.buf)
+		}
+	case object.ObjTypeBF:
+		bitSet, ok := obj.Value.(*Bloom)
+		if !ok {
+			return nil, errors.New("invalid bloom filter value")
+		}
+		buf.WriteByte(obj.Type)
+		if err := bitSet.Serialize(&buf); err != nil {
+			return nil, err
+		}
 	default:
 		return nil, errors.New("unsupported object type")
 	}
