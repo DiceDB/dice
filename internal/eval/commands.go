@@ -1392,6 +1392,167 @@ var (
 		Arity:      4,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	cfreserveCmdMeta = DiceCmdMeta{
+		Name: "CF.RESERVE",
+		Info: `CF.RESERVE key capacity [options]
+		The CF.RESERVE command creates a new Cuckoo Filter with the specified capacity.
+		This filter will reserve space for approximately the given number of items and will scale automatically as needed.
+
+		Parameters:
+		- key: The name of the Cuckoo Filter.
+		- capacity: An integer representing the initial capacity of the filter (i.e., how many items it can store).
+		- options: (Optional) Additional options, such as:
+		  - bucket_size: Number of items in each bucket.
+		  - max_iterations: Maximum number of attempts to insert an item.
+		  - expansion: Controls how the filter size expands when full.
+
+		Returns:
+		- OK: If the filter was successfully created.
+		- Error: If the filter with the given name already exists or invalid parameters are provided.`,
+		Eval:     evalCFRESERVE,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
+	cfAddCmdMeta = DiceCmdMeta{
+		Name: "CF.ADD",
+		Info: `CF.ADD key item
+		The CF.ADD command adds an item to an existing Cuckoo Filter.
+
+		Parameters:
+		- key: The name of the Cuckoo Filter.
+		- item: The item to add to the filter.
+
+		Returns:
+		- 1: If the item was successfully added to the filter.
+		- 0: If the item already exists in the filter.
+		- Error: If the filter does not exist or if invalid parameters are provided.
+			`,
+		Eval:     evalCFADD,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
+	cfExistsCmdMeta = DiceCmdMeta{
+		Name: "CF.EXISTS",
+		Info: `CF.EXISTS key item
+		The CF.EXISTS command checks if an item exists in an existing Cuckoo Filter.
+
+		Parameters:
+		- key: The name of the Cuckoo Filter.
+		- item: The item to check for existence in the filter.
+
+		Returns:
+		- 1: If the item may exist in the filter (probabilistically).
+		- 0: If the item does not exist in the filter.
+		- Error: If the filter does not exist or if invalid parameters are provided.
+			`,
+		Eval:     evalCFEXISTS,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
+	cfDelCmdMeta = DiceCmdMeta{
+		Name: "CF.DEL",
+		Info: `CF.DEL key item
+		The CF.DEL command deletes an item from an existing Cuckoo Filter.
+
+		Parameters:
+		- key: The name of the Cuckoo Filter.
+		- item: The item to delete from the filter.
+
+		Returns:
+		- 1: If the item was successfully deleted.
+		- 0: If the item was not found in the filter.
+		- Error: If the filter does not exist or if invalid parameters are provided.
+		`,
+		Eval:     evalCFDEL,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
+	cfMeExistsCmdMeta = DiceCmdMeta{
+		Name: "CF.MEXISTS",
+		Info: `CF.MEXISTS key item [item ...]
+				The CF.MEXISTS command determines whether one or more items were added to a cuckoo filter.
+
+				Parameters:
+				- key: The name of the Cuckoo Filter.
+				- item: One or more items to check.
+
+				Returns:
+				- Array reply of Integer reply:
+				- "1" means that, with high probability, the item was already added to the filter.
+				- "0" means that the key does not exist or that the item was not added to the filter.
+				- [] (empty array) on error (e.g., invalid arguments, wrong key type, etc.).
+
+		`,
+		Eval:     evalCFMEXISTS,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+	cfAddNXCmdMeta = DiceCmdMeta{
+		Name: "CF.ADDNX",
+		Info: `CF.ADDNX key item
+	The CF.ADDNX command adds an item to a Cuckoo Filter if it does not already exist.
+
+	Parameters:
+	- key: The name of the Cuckoo Filter. If the filter does not exist, it will be created.
+	- item: The item to add to the filter.
+
+	Returns:
+	- 1: If the item was successfully added to the filter.
+	- 0: If the item's fingerprint already exists in the filter.
+	- [] (empty array) on error (e.g., invalid arguments, wrong key type, etc.).
+	`,
+		Eval:     evalCFADDNX,
+		Arity:    3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
+	cfInsertCmdMeta = DiceCmdMeta{
+		Name: "CF.INSERT",
+		Info: `CF.INSERT key [CAPACITY capacity] [NOCREATE] ITEMS item [item ...]
+			The CF.INSERT command adds one or more items to a Cuckoo Filter, allowing the filter to be created with a custom capacity if it does not exist.
+
+			Parameters:
+			- key: The name of the Cuckoo Filter.
+			- CAPACITY capacity (optional): Specifies the desired capacity for the new filter if it does not exist. Ignored if the filter already exists.
+			- NOCREATE (optional): Prevents automatic filter creation if the filter does not exist.
+			- ITEMS item [item ...]: One or more items to add to the filter.
+
+			Returns:
+			- Array reply:
+				- 1: If the item was successfully added to the filter.
+				- -1: If the item was not added because the filter is full.
+			- Error: If invalid arguments are provided, the key does not exist when NOCREATE is specified, or another failure occurs.
+		`,
+		Eval:     evalCFINSERT,
+		Arity:    -3, // Arity is variable because of optional parameters and multiple items.
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
+
+	cfInsertNXCmdMeta = DiceCmdMeta{
+		Name: "CF.INSERTNX",
+		Info: `CF.INSERTNX key [CAPACITY capacity] [NOCREATE] ITEMS item [item ...]
+			The CF.INSERTNX command adds one or more items to a Cuckoo Filter if it already does not exist, allowing the filter to be created with a custom capacity if it does not exist.
+
+			Parameters:
+			- key: The name of the Cuckoo Filter.
+			- CAPACITY capacity (optional): Specifies the desired capacity for the new filter if it does not exist. Ignored if the filter already exists.
+			- NOCREATE (optional): Prevents automatic filter creation if the filter does not exist.
+			- ITEMS item [item ...]: One or more items to add to the filter.
+
+			Returns:
+			- Array reply:
+				- 1: If the item was successfully added to the filter.
+				- -1: If the item was not added because the filter is full.
+			- Error: If invalid arguments are provided, the key does not exist when NOCREATE is specified, or another failure occurs.
+		`,
+		Eval:     evalCFINSERTNX,
+		Arity:    -3, // Arity is variable because of optional parameters and multiple items.
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1537,6 +1698,14 @@ func init() {
 	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
 	DiceCmds["LINSERT"] = linsertCmdMeta
 	DiceCmds["LRANGE"] = lrangeCmdMeta
+	DiceCmds["CF.RESERVE"] = cfreserveCmdMeta
+	DiceCmds["CF.ADD"] = cfAddCmdMeta
+	DiceCmds["CF.EXISTS"] = cfExistsCmdMeta
+	DiceCmds["CF.DEL"] = cfDelCmdMeta
+	DiceCmds["CF.MEXISTS"] = cfMeExistsCmdMeta
+	DiceCmds["CF.ADDNX"] = cfAddNXCmdMeta
+	DiceCmds["CF.INSERT"] = cfInsertCmdMeta
+	DiceCmds["CF.INSERTNX"] = cfInsertNXCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
