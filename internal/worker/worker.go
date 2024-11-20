@@ -227,7 +227,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			// For single-shard or custom commands, process them without breaking up.
 			cmdList = append(cmdList, diceDBCmd)
 
-		case MultiShard:
+		case MultiShard, AllShard:
 			var err error
 			// If the command supports multisharding, break it down into multiple commands.
 			cmdList, err = meta.decomposeCommand(ctx, w, diceDBCmd)
@@ -247,25 +247,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			}
 
 		case Custom:
-			// if command is of type Custom, write a custom logic around it
-			switch diceDBCmd.Cmd {
-			case CmdAuth:
-				err := w.ioHandler.Write(ctx, w.RespAuth(diceDBCmd.Args))
-				if err != nil {
-					slog.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
-				}
-				return err
-			case CmdAbort:
-				err := w.ioHandler.Write(ctx, clientio.OK)
-				if err != nil {
-					slog.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
-				}
-				slog.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
-				w.globalErrorChan <- diceerrors.ErrAborted
-				return err
-			default:
-				cmdList = append(cmdList, diceDBCmd)
-			}
+			return w.handleCustomCommands(ctx, diceDBCmd)
 
 		case Watch:
 			// Generate the Cmd being watched. All we need to do is remove the .WATCH suffix from the command and pass
@@ -311,7 +293,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
-	if err := w.scatter(ctx, cmdList); err != nil {
+	if err := w.scatter(ctx, cmdList, meta.CmdType); err != nil {
 		return err
 	}
 
@@ -326,6 +308,34 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	return nil
+}
+
+func (w *BaseWorker) handleCustomCommands(ctx context.Context, diceDBCmd *cmd.DiceDBCmd) error {
+	// if command is of type Custom, write a custom logic around it
+	switch diceDBCmd.Cmd {
+	case CmdAuth:
+		err := w.ioHandler.Write(ctx, w.RespAuth(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		return err
+	case CmdEcho:
+		err := w.ioHandler.Write(ctx, RespEcho(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending echo response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		return err
+	case CmdAbort:
+		err := w.ioHandler.Write(ctx, clientio.OK)
+		if err != nil {
+			slog.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		slog.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
+		w.globalErrorChan <- diceerrors.ErrAborted
+		return err
+	default:
+		return diceerrors.ErrUnknownCmd(diceDBCmd.Cmd)
+	}
 }
 
 // handleCommandWatch sends a watch subscription request to the watch manager.
@@ -367,26 +377,52 @@ func (w *BaseWorker) handleCommandUnwatch(ctx context.Context, cmdList []*cmd.Di
 
 // scatter distributes the DiceDB commands to the respective shards based on the key.
 // For each command, it calculates the shard ID and sends the command to the shard's request channel for processing.
-func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
+func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd, cmdType CmdType) error {
 	// Otherwise check for the shard based on the key using hash
 	// and send it to the particular shard
+	// Check if the context has been canceled or expired.
 	select {
 	case <-ctx.Done():
+		// If the context is canceled, return the error associated with it.
 		return ctx.Err()
 	default:
-		for i := uint8(0); i < uint8(len(cmds)); i++ {
-			shardID, responseChan := w.shardManager.GetShardInfo(getRoutingKeyFromCommand(cmds[i]))
+		// Proceed with the default case when the context is not canceled.
 
-			responseChan <- &ops.StoreOp{
-				SeqID:     i,
-				RequestID: GenerateUniqueRequestID(),
-				Cmd:       cmds[i],
-				WorkerID:  w.id,
-				ShardID:   shardID,
-				Client:    nil,
+		if cmdType == AllShard {
+			// If the command type is for all shards, iterate over all available shards.
+			for i := uint8(0); i < uint8(w.shardManager.GetShardCount()); i++ {
+				// Get the shard ID (i) and its associated request channel.
+				shardID, responseChan := i, w.shardManager.GetShard(i).ReqChan
+
+				// Send a StoreOp operation to the shard's request channel.
+				responseChan <- &ops.StoreOp{
+					SeqID:     i,                         // Sequence ID for this operation.
+					RequestID: GenerateUniqueRequestID(), // Unique identifier for the request.
+					Cmd:       cmds[0],                   // Command to be executed, using the first command in cmds.
+					WorkerID:  w.id,                      // ID of the current worker.
+					ShardID:   shardID,                   // ID of the shard handling this operation.
+					Client:    nil,                       // Client information (if applicable).
+				}
+			}
+		} else {
+			// If the command type is specific to certain commands, process them individually.
+			for i := uint8(0); i < uint8(len(cmds)); i++ {
+				// Determine the appropriate shard for the current command using a routing key.
+				shardID, responseChan := w.shardManager.GetShardInfo(getRoutingKeyFromCommand(cmds[i]))
+
+				// Send a StoreOp operation to the shard's request channel.
+				responseChan <- &ops.StoreOp{
+					SeqID:     i,                         // Sequence ID for this operation.
+					RequestID: GenerateUniqueRequestID(), // Unique identifier for the request.
+					Cmd:       cmds[i],                   // Command to be executed, using the current command in cmds.
+					WorkerID:  w.id,                      // ID of the current worker.
+					ShardID:   shardID,                   // ID of the shard handling this operation.
+					Client:    nil,                       // Client information (if applicable).
+				}
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -429,7 +465,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 
 // gatherResponses collects responses from all shards
 func (w *BaseWorker) gatherResponses(ctx context.Context, numCmds int) ([]ops.StoreResponse, error) {
-	var storeOp []ops.StoreResponse
+	storeOp := make([]ops.StoreResponse, 0, numCmds)
 
 	for numCmds > 0 {
 		select {
@@ -499,7 +535,7 @@ func (w *BaseWorker) handleCommand(ctx context.Context, cmdMeta CmdMeta, diceDBC
 		if err == nil && w.wl != nil {
 			w.wl.LogCommand(diceDBCmd)
 		}
-	case MultiShard:
+	case MultiShard, AllShard:
 		err = w.writeResponse(ctx, cmdMeta.composeResponse(storeOp...))
 
 		if err == nil && w.wl != nil {
@@ -532,34 +568,6 @@ func (w *BaseWorker) isAuthenticated(diceDBCmd *cmd.DiceDBCmd) error {
 	}
 
 	return nil
-}
-
-// RespAuth returns with an encoded "OK" if the user is authenticated
-// If the user is not authenticated, it returns with an encoded error message
-func (w *BaseWorker) RespAuth(args []string) interface{} {
-	// Check for incorrect number of arguments (arity error).
-	if len(args) < 1 || len(args) > 2 {
-		return diceerrors.ErrWrongArgumentCount("AUTH")
-	}
-
-	if config.DiceConfig.Auth.Password == "" {
-		return diceerrors.ErrAuth
-	}
-
-	username := config.DiceConfig.Auth.UserName
-	var password string
-
-	if len(args) == 1 {
-		password = args[0]
-	} else {
-		username, password = args[0], args[1]
-	}
-
-	if err := w.Session.Validate(username, password); err != nil {
-		return err
-	}
-
-	return clientio.OK
 }
 
 func (w *BaseWorker) Stop() error {

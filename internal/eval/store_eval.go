@@ -6345,3 +6345,51 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+func evalTouch(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("TOUCH"))
+	}
+
+	if store.Get(args[0]) != nil {
+		return makeEvalResult(1)
+	}
+
+	return makeEvalResult(0)
+}
+
+func evalDBSize(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) > 0 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("DBSIZE"))
+	}
+
+	// Expired keys must be explicitly deleted since the cronFrequency for cleanup is configurable.
+	// A longer delay may prevent timely cleanup, leading to incorrect DBSIZE results.
+	dstore.DeleteExpiredKeys(store)
+
+	return makeEvalResult(store.GetDBSize())
+}
+
+func evalKEYS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("KEYS"))
+	}
+
+	pattern := args[0]
+	keys, err := store.Keys(pattern)
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("bad pattern"))
+	}
+
+	return makeEvalResult(keys)
+}
+
+// TODO: Placeholder to support monitoring
+func evalCLIENT(args []string, store *dstore.Store) *EvalResponse {
+	return makeEvalResult(clientio.OK)
+}
+
+// TODO: Placeholder to support monitoring
+func evalLATENCY(args []string, store *dstore.Store) *EvalResponse {
+	return makeEvalResult([]string{})
+}

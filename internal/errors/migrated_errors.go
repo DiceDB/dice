@@ -72,6 +72,10 @@ var (
 	ErrUnexpectedJSONPathType = func(expectedType string, actualType interface{}) error {
 		return fmt.Errorf("ERR wrong type of path value - expected %s but found %s", expectedType, actualType) // Signals an unexpected type received when an integer was expected.
 	}
+
+	ErrUnknownCmd = func(cmd string) error {
+		return fmt.Errorf("ERROR unknown command '%v'", cmd) // Indicates that an unsupported encoding type was provided.
+	}
 )
 
 type PreProcessError struct {

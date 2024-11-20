@@ -444,16 +444,18 @@ var (
 		Arity: -1,
 	}
 	clientCmdMeta = DiceCmdMeta{
-		Name:  "CLIENT",
-		Info:  `This is a container command for client connection commands.`,
-		Eval:  evalCLIENT,
-		Arity: -2,
+		Name:       "CLIENT",
+		Info:       `This is a container command for client connection commands.`,
+		NewEval:    evalCLIENT,
+		IsMigrated: true,
+		Arity:      -2,
 	}
 	latencyCmdMeta = DiceCmdMeta{
-		Name:  "LATENCY",
-		Info:  `This is a container command for latency diagnostics commands.`,
-		Eval:  evalLATENCY,
-		Arity: -2,
+		Name:       "LATENCY",
+		Info:       `This is a container command for latency diagnostics commands.`,
+		NewEval:    evalLATENCY,
+		IsMigrated: true,
+		Arity:      -2,
 	}
 	sleepCmdMeta = DiceCmdMeta{
 		Name: "SLEEP",
@@ -527,12 +529,6 @@ var (
 	ExecCmdMeta = DiceCmdMeta{
 		Name:  "EXEC",
 		Info:  `EXEC executes commands in a transaction, which is initiated by MULTI`,
-		Eval:  nil,
-		Arity: 1,
-	}
-	DiscardCmdMeta = DiceCmdMeta{
-		Name:  "DISCARD",
-		Info:  `DISCARD discards all the commands in a transaction, which is initiated by MULTI`,
 		Eval:  nil,
 		Arity: 1,
 	}
@@ -621,6 +617,15 @@ var (
 		Info:  "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
 		Eval:  evalKeys,
 		Arity: 1,
+	}
+
+	// Internal command used to spawn request across all shards (works internally with the KEYS command)
+	singleKeysCmdMeta = DiceCmdMeta{
+		Name:       "SINGLEKEYS",
+		Info:       "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
+		NewEval:    evalKEYS,
+		Arity:      1,
+		IsMigrated: true,
 	}
 
 	MGetCmdMeta = DiceCmdMeta{
@@ -866,6 +871,19 @@ var (
 		Arity:    -2,
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
+	// Internal command used to spawn request across all shards (works internally with Touch command)
+	singleTouchCmdMeta = DiceCmdMeta{
+		Name: "SINGLETOUCH",
+		Info: `TOUCH key1
+		Alters the last access time of a key(s).
+		A key is ignored if it does not exist.
+		This is for one by one counting and for multisharding`,
+		NewEval:    evalTouch,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+
 	lpushCmdMeta = DiceCmdMeta{
 		Name:       "LPUSH",
 		Info:       "LPUSH pushes values into the left side of the deque",
@@ -909,6 +927,15 @@ var (
 		Info:  `DBSIZE Return the number of keys in the database`,
 		Eval:  evalDBSIZE,
 		Arity: 1,
+	}
+	// Internal command used to spawn request across all shards (works internally with DBSIZE command)
+	singleDBSizeCmdMeta = DiceCmdMeta{
+		Name:       "SINGLEDBSIZE",
+		Info:       `DBSIZE Return the number of keys in the database`,
+		NewEval:    evalDBSize,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	flushdbCmdMeta = DiceCmdMeta{
 		Name:  "FLUSHDB",
@@ -1426,10 +1453,8 @@ func init() {
 	DiceCmds["DECR"] = decrCmdMeta
 	DiceCmds["DECRBY"] = decrByCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
-	DiceCmds["DISCARD"] = DiscardCmdMeta
 	DiceCmds["DUMP"] = dumpkeyCMmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
-	DiceCmds["EXEC"] = ExecCmdMeta
 	DiceCmds["EXISTS"] = existsCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
 	DiceCmds["EXPIREAT"] = expireatCmdMeta
@@ -1537,6 +1562,10 @@ func init() {
 	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
 	DiceCmds["LINSERT"] = linsertCmdMeta
 	DiceCmds["LRANGE"] = lrangeCmdMeta
+
+	DiceCmds["SINGLETOUCH"] = singleTouchCmdMeta
+	DiceCmds["SINGLEDBSIZE"] = singleDBSizeCmdMeta
+	DiceCmds["SINGLEKEYS"] = singleKeysCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
