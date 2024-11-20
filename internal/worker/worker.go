@@ -82,18 +82,28 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 	dataChan := make(chan []byte)
 	readErrChan := make(chan error)
 
+	runCtx, runCancel := context.WithCancel(ctx)
+	defer runCancel()
+
 	go func() {
+		defer close(dataChan)
+		defer close(readErrChan)
+
 		for {
-			data, err := w.ioHandler.Read(ctx)
+			data, err := w.ioHandler.Read(runCtx)
 			if err != nil {
 				select {
 				case readErrChan <- err:
-					return
-				case <-time.After(time.Second):
-					return // following case will happen when worker exited before the read goroutine could send the error
+				case <-runCtx.Done(): // exit if worker exits
 				}
+				return
 			}
-			dataChan <- data
+
+			select {
+			case dataChan <- data:
+			case <-runCtx.Done(): // exit if worker exits
+				return
+			}
 		}
 	}()
 
