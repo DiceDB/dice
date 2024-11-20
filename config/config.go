@@ -67,10 +67,10 @@ memory.keys_limit = 200000000
 memory.lfu_log_factor = 10
 
 # Persistence Configuration
+persistence.enabled = true
 persistence.aof_file = "./dice-master.aof"
 persistence.persistence_enabled = true
 persistence.write_aof_on_cleanup = false
-persistence.enable-wal = true
 persistence.wal-dir = "./"
 persistence.restore-wal = false
 persistence.wal-engine = "aof"
@@ -154,13 +154,12 @@ type memory struct {
 }
 
 type persistence struct {
-	AOFFile            string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
-	PersistenceEnabled bool   `config:"persistence_enabled" default:"true"`
-	WriteAOFOnCleanup  bool   `config:"write_aof_on_cleanup" default:"false"`
-	EnableWAL          bool   `config:"enable-wal" default:"true"`
-	WALDir             string `config:"wal-dir" default:"./" validate:"dirpath"`
-	RestoreFromWAL     bool   `config:"restore-wal" default:"false"`
-	WALEngine          string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`
+	Enabled           bool   `config:"enabled" default:"true"`
+	AOFFile           string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
+	WriteAOFOnCleanup bool   `config:"write_aof_on_cleanup" default:"false"`
+	WALDir            string `config:"wal-dir" default:"./" validate:"dirpath"`
+	RestoreFromWAL    bool   `config:"restore-wal" default:"false"`
+	WALEngine         string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`
 }
 
 type logging struct {
@@ -263,8 +262,8 @@ func MergeFlags(flags *Config) {
 			DiceConfig.Performance.EnableWatch = flags.Performance.EnableWatch
 		case "log-dir":
 			DiceConfig.Logging.LogDir = flags.Logging.LogDir
-		case "enable-wal":
-			DiceConfig.Persistence.EnableWAL = flags.Persistence.EnableWAL
+		case "persistence-enable":
+			DiceConfig.Persistence.Enabled = flags.Persistence.Enabled
 		case "restore-from-wal":
 			DiceConfig.Persistence.RestoreFromWAL = flags.Persistence.RestoreFromWAL
 		case "wal-engine":
@@ -272,19 +271,3 @@ func MergeFlags(flags *Config) {
 		}
 	})
 }
-
-// This function returns the config file path based on the OS
-// func getConfigPath() string {
-// 	switch runtime.GOOS {
-// 	case "windows":
-// 		FileLocation = filepath.Join("C:", "ProgramData", "dice", DefaultConfigName)
-// 	case "darwin", "linux":
-// 		FileLocation = filepath.Join(string(filepath.Separator), "etc", "dice", DefaultConfigName)
-// 	default:
-// 		// Default to current directory if OS is unknown
-// 		FileLocation = filepath.Join(".", DefaultConfigName)
-// 	}
-// 	return FileLocation
-// }
-
-// ResetConfig resets the DiceConfig to default configurations. This function is only used for testing purposes

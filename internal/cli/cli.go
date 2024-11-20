@@ -135,7 +135,7 @@ func Execute() {
 	flag.StringVar(&flagsConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
 	flag.StringVar(&config.DiceConfig.Logging.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
 
-	flag.BoolVar(&flagsConfig.Persistence.EnableWAL, "enable-wal", false, "enable write-ahead logging")
+	flag.BoolVar(&flagsConfig.Persistence.Enabled, "persistence-enable", false, "enable write-ahead logging")
 	flag.BoolVar(&flagsConfig.Persistence.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
 	flag.StringVar(&flagsConfig.Persistence.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
 
