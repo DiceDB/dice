@@ -13,10 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dicedb/dice/internal/querymanager"
-	"github.com/dicedb/dice/internal/wal"
-	"github.com/dicedb/dice/internal/watchmanager"
-
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
@@ -25,7 +21,10 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/shard"
+	"github.com/dicedb/dice/internal/wal"
+	"github.com/dicedb/dice/internal/watchmanager"
 )
 
 var (
