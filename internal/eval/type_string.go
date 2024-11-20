@@ -5,7 +5,6 @@ import (
 
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
-	dstore "github.com/dicedb/dice/internal/object"
 )
 
 // Similar to
@@ -17,12 +16,12 @@ func deduceTypeEncoding(v string) (o, e uint8) {
 		return object.ObjTypeString, object.ObjEncodingRaw
 	}
 	if _, err := strconv.ParseInt(v, 10, 64); err == nil {
-		return dstore.ObjTypeInt, dstore.ObjEncodingInt
+		return object.ObjTypeInt, object.ObjEncodingInt
 	}
 	if len(v) <= 44 {
-		return dstore.ObjTypeString, dstore.ObjEncodingEmbStr
+		return object.ObjTypeString, object.ObjEncodingEmbStr
 	}
-	return dstore.ObjTypeString, dstore.ObjEncodingRaw
+	return object.ObjTypeString, object.ObjEncodingRaw
 }
 
 // Function to handle converting the value based on the encoding type
