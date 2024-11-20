@@ -2652,7 +2652,6 @@ func evalRestore(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return makeEvalError(diceerrors.ErrGeneral("failed to decode base64 value"))
 	}
-	fmt.Println("Serialized Data", serializedData)
 	obj, err := rdbDeserialize(serializedData)
 	if err != nil {
 		return makeEvalError(diceerrors.ErrGeneral("deserialization failed"))

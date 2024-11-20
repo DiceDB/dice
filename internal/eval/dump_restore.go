@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"hash/crc64"
 
 	"github.com/dicedb/dice/internal/eval/sortedset"
@@ -16,8 +15,12 @@ func rdbDeserialize(data []byte) (*object.Obj, error) {
 	if len(data) < 3 {
 		return nil, errors.New("insufficient data for deserialization")
 	}
+	var value interface{}
+	var err error
+	var valueRaw interface{}
+
 	buf := bytes.NewReader(data)
-	_, err := buf.ReadByte()
+	_, err = buf.ReadByte()
 	if err != nil {
 		return nil, err
 	}
@@ -27,85 +30,44 @@ func rdbDeserialize(data []byte) (*object.Obj, error) {
 	}
 	switch objType {
 	case object.ObjTypeString:
-		value, err := readString(buf)
-		if err != nil {
-			return nil, err
-		}
-		return &object.Obj{Type: objType, Value: value}, nil
+		value, err = readString(buf)
 	case object.ObjTypeInt: // Integer type
-		value, err := readInt(buf)
-		if err != nil {
-			return nil, err
-		}
-		return &object.Obj{Type: objType, Value: value}, nil
+		value, err = readInt(buf)
 	case object.ObjTypeSet: // Set type
-		value, err := readSet(buf)
-		if err != nil {
-			return nil, err
-		}
-		return &object.Obj{Type: objType, Value: value}, nil
+		value, err = readSet(buf)
 	case object.ObjTypeJSON: // JSON type
-		value, err := readString(buf)
-		if err != nil {
+		valueRaw, err = readString(buf)
+		if err := json.Unmarshal([]byte(valueRaw.(string)), &value); err != nil {
 			return nil, err
 		}
-		var jsonValue interface{}
-		if err := json.Unmarshal([]byte(value.(string)), &jsonValue); err != nil {
-			return nil, err
-		}
-		return &object.Obj{Type: objType, Value: jsonValue}, nil
 	case object.ObjTypeByteArray: // Byte array type
-		value, err := readInt(buf)
+		valueRaw, err = readInt(buf)
 		if err != nil {
 			return nil, err
 		}
 		byteArray := &ByteArray{
-			Length: value.(int64),
-			data:   make([]byte, value.(int64)),
+			Length: valueRaw.(int64),
+			data:   make([]byte, valueRaw.(int64)),
 		}
 		if _, err := buf.Read(byteArray.data); err != nil {
 			return nil, err
 		}
-		return &object.Obj{Type: objType, Value: byteArray}, nil
-	case object.ObjTypeDequeue:
-		value, err := readInt(buf)
-		if err != nil {
-			return nil, err
-		}
-		byteList := newByteList(value.(int))
-		for {
-			node := byteList.newNode()
-			n, err := buf.Read(node.buf)
-			if err != nil {
-				return nil, err
-			}
-			if n == 0 {
-				break
-			}
-			byteList.append(node)
-		}
-		return &object.Obj{Type: objType, Value: byteList}, nil
-	case object.ObjTypeBF: // Bloom filter type
-		bloom, err := DeserializeBloom(buf)
-		if err != nil {
-			return nil, err
-		}
-		return &object.Obj{Type: objType, Value: bloom}, nil
+		value = byteArray
+	case object.ObjTypeByteList: // Byte list type (Deque)
+		value, err = DeserializeDeque(buf)
+	case object.ObjTypeBitSet: // Bloom filter type
+		value, err = DeserializeBloom(buf)
 	case object.ObjTypeSortedSet:
-		ss, err := sortedset.DeserializeSortedSet(buf)
-		if err != nil {
-			return nil, err
-		}
-		return &object.Obj{Type: objType, Value: ss}, nil
+		value, err = sortedset.DeserializeSortedSet(buf)
 	case object.ObjTypeCountMinSketch:
-		cms, err := DeserializeCMS(buf)
-		if err != nil {
-			return nil, err
-		}
-		return &object.Obj{Type: objType, Value: cms}, nil
+		value, err = DeserializeCMS(buf)
 	default:
 		return nil, errors.New("unsupported object type")
 	}
+	if err != nil {
+		return nil, err
+	}
+	return &object.Obj{TypeEncoding: objType, Value: value}, nil
 }
 
 func readString(buf *bytes.Reader) (interface{}, error) {
@@ -113,7 +75,6 @@ func readString(buf *bytes.Reader) (interface{}, error) {
 	if err := binary.Read(buf, binary.BigEndian, &strLen); err != nil {
 		return nil, err
 	}
-	fmt.Println("strLen", strLen)
 
 	strBytes := make([]byte, strLen)
 	if _, err := buf.Read(strBytes); err != nil {
@@ -143,7 +104,6 @@ func readSet(buf *bytes.Reader) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("value", value)
 		setItems[value.(string)] = struct{}{}
 	}
 	return setItems, nil
@@ -152,14 +112,13 @@ func readSet(buf *bytes.Reader) (interface{}, error) {
 func rdbSerialize(obj *object.Obj) ([]byte, error) {
 	var buf bytes.Buffer
 	buf.WriteByte(0x09)
-
+	buf.WriteByte(obj.Type)
 	switch obj.Type {
 	case object.ObjTypeString:
 		str, ok := obj.Value.(string)
 		if !ok {
 			return nil, errors.New("invalid string value")
 		}
-		buf.WriteByte(obj.Type)
 		if err := writeString(&buf, str); err != nil {
 			return nil, err
 		}
@@ -169,21 +128,18 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 		if !ok {
 			return nil, errors.New("invalid integer value")
 		}
-		buf.WriteByte(obj.Type)
 		writeInt(&buf, intVal)
 	case object.ObjTypeSet:
 		setItems, ok := obj.Value.(map[string]struct{})
 		if !ok {
 			return nil, errors.New("invalid set value")
 		}
-		buf.WriteByte(obj.Type)
 		writeSet(&buf, setItems)
 	case object.ObjTypeJSON:
 		jsonValue, err := json.Marshal(obj.Value)
 		if err != nil {
 			return nil, err
 		}
-		buf.WriteByte(obj.Type)
 		if err := writeString(&buf, string(jsonValue)); err != nil {
 			return nil, err
 		}
@@ -192,25 +148,21 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 		if !ok {
 			return nil, errors.New("invalid byte array value")
 		}
-		buf.WriteByte(obj.Type)
 		writeInt(&buf, byteArray.Length)
 		buf.Write(byteArray.data)
-	case object.ObjTypeDequeue:
-		byteList, ok := obj.Value.(*byteList)
+	case object.ObjTypeByteList:
+		deque, ok := obj.Value.(*Deque)
 		if !ok {
 			return nil, errors.New("invalid byte list value")
 		}
-		buf.WriteByte(obj.Type)
-		writeInt(&buf, byteList.size)
-		for node := byteList.head; node != nil; node = node.next {
-			buf.Write(node.buf)
+		if err := deque.Serialize(&buf); err != nil {
+			return nil, err
 		}
 	case object.ObjTypeBF:
 		bitSet, ok := obj.Value.(*Bloom)
 		if !ok {
 			return nil, errors.New("invalid bloom filter value")
 		}
-		buf.WriteByte(obj.Type)
 		if err := bitSet.Serialize(&buf); err != nil {
 			return nil, err
 		}
@@ -219,7 +171,6 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 		if !ok {
 			return nil, errors.New("invalid sorted set value")
 		}
-		buf.WriteByte(obj.Type)
 		if err := sortedSet.Serialize(&buf); err != nil {
 			return nil, err
 		}
@@ -228,7 +179,6 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 		if !ok {
 			return nil, errors.New("invalid countminsketch value")
 		}
-		buf.WriteByte(obj.Type)
 		if err := cms.serialize(&buf); err != nil {
 			return nil, err
 		}
