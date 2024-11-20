@@ -97,6 +97,12 @@ func rdbDeserialize(data []byte) (*object.Obj, error) {
 			return nil, err
 		}
 		return &object.Obj{Type: objType, Value: ss}, nil
+	case object.ObjTypeCountMinSketch:
+		cms, err := DeserializeCMS(buf)
+		if err != nil {
+			return nil, err
+		}
+		return &object.Obj{Type: objType, Value: cms}, nil
 	default:
 		return nil, errors.New("unsupported object type")
 	}
@@ -215,6 +221,15 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 		}
 		buf.WriteByte(obj.Type)
 		if err := sortedSet.Serialize(&buf); err != nil {
+			return nil, err
+		}
+	case object.ObjTypeCountMinSketch:
+		cms, ok := obj.Value.(*CountMinSketch)
+		if !ok {
+			return nil, errors.New("invalid countminsketch value")
+		}
+		buf.WriteByte(obj.Type)
+		if err := cms.serialize(&buf); err != nil {
 			return nil, err
 		}
 	default:
