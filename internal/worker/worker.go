@@ -321,6 +321,12 @@ func (w *BaseWorker) handleCustomCommands(ctx context.Context, diceDBCmd *cmd.Di
 		slog.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
 		w.globalErrorChan <- diceerrors.ErrAborted
 		return err
+	case CmdPing:
+		err := w.ioHandler.Write(ctx, RespPING(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending ping response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		return err
 	default:
 		return diceerrors.ErrUnknownCmd(diceDBCmd.Cmd)
 	}
