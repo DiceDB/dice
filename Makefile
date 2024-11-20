@@ -43,13 +43,6 @@ unittest: ## run the unit tests
 unittest-one: ## run a single unit test function by name (e.g. make unittest-one TEST_FUNC=TestSetGet)
 	go test -v -race -count=1 --run $(TEST_FUNC) ./internal/...
 
-release: ## build and push the Docker image to Docker Hub with the latest tag and the version tag
-	git tag $(VERSION)
-	git push origin --tags
-	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:$(VERSION) .
-	docker push dicedb/dicedb:$(VERSION)
-	docker push dicedb/dicedb:latest
-
 ##@ Benchmarking
 
 run_benchmark: ## run the memtier benchmark with the specified parameters
@@ -97,3 +90,12 @@ clean: ## clean the dicedb binary
 	@echo "Cleaning build artifacts..."
 	rm -f dicedb
 	@echo "Clean complete."
+
+##@ Deployment
+
+release: ## build and push the Docker image to Docker Hub with the latest tag and the version tag
+	git tag $(VERSION)
+	git push origin --tags
+	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:$(VERSION) .
+	docker push dicedb/dicedb:$(VERSION)
+	docker push dicedb/dicedb:latest
