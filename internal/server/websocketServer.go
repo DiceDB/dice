@@ -219,9 +219,10 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 				}
 				s.subscriptionChan <- event
 			} else {
-				if err := s.writeResponseWithRetries(conn, []byte("info: watch is not enabled"), maxRetries); err != nil {
+				if err := s.writeResponseWithRetries(conn, []byte("error: watch is not enabled"), maxRetries); err != nil {
 					slog.Debug(fmt.Sprintf("Error writing message: %v", err))
 				}
+				return
 			}
 		}
 
