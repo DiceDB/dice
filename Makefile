@@ -1,3 +1,5 @@
+# Adapted from https://www.thapaliya.com/en/writings/well-documented-makefiles/
+
 THREADS ?= 4 #number of threads
 CLIENTS ?= 50 #number of clients per thread
 REQUESTS ?= 10000 #number of requests per client
