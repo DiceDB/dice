@@ -210,13 +210,15 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 
 			// subscribe client for updates
-			event := QuerySubscription{
-				Subscribe:          true,
-				Cmd:                diceDBCmd,
-				ClientIdentifierID: clientIdentifierID,
-				Client:             conn,
+			if config.EnableWatch {
+				event := QuerySubscription{
+					Subscribe:          true,
+					Cmd:                diceDBCmd,
+					ClientIdentifierID: clientIdentifierID,
+					Client:             conn,
+				}
+				s.subscriptionChan <- event
 			}
-			s.subscriptionChan <- event
 		}
 
 		s.shardManager.GetShard(0).ReqChan <- sp
