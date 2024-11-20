@@ -9,7 +9,7 @@ import (
 
 	"github.com/dicedb/dice/internal/clientio"
 	dicedb "github.com/dicedb/dicedb-go"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type pfcountWatchTestCase struct {
@@ -19,11 +19,11 @@ type pfcountWatchTestCase struct {
 }
 
 type pfcountWatchWithPFMergeTestCase struct {
-	destKey1    string
-	destValue1  []string
-	destKey2 	string
-	destValue2  []string
-	result 		int64
+	destKey1   string
+	destValue1 []string
+	destKey2   string
+	destValue2 []string
+	result     int64
 }
 
 const (
@@ -49,55 +49,49 @@ var pfcountWatchhWithPFMergeTestCases = []pfcountWatchWithPFMergeTestCase{
 func TestPFCOUNTWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 	subscribers := setupSubscribers(3)
+	defer func() {
+		err := ClosePublisherSubscribers(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
 
 	FireCommand(publisher, fmt.Sprintf("DEL %s", pfcountWatchKey))
-
-	defer func() {
-		if err := publisher.Close(); err != nil {
-			t.Errorf("Error closing publisher connection: %v", err)
-		}
-		for _, sub := range subscribers {
-			time.Sleep(100 * time.Millisecond)
-			if err := sub.Close(); err != nil {
-				t.Errorf("Error closing subscriber connection: %v", err)
-			}
-		}
-	}()
 
 	res := FireCommand(publisher, fmt.Sprintf("PFADD %s %s", pfcountWatchKey, "randomvalue"))
 	assert.Equal(t, int64(1), res)
 
 	respParsers := setUpRespParsers(t, subscribers)
 
-	t.Run("Basic PFCount Operations", func(t *testing.T) { 
-			testPFCountAdd(t, publisher, respParsers)
-		},
+	t.Run("Basic PFCount Operations", func(t *testing.T) {
+		testPFCountAdd(t, publisher, respParsers)
+	},
 	)
 
-	t.Run("PFCount Operations including PFMerge", func(t *testing.T) { 
-			testPFCountMerge(t, publisher, respParsers)
-		},
+	t.Run("PFCount Operations including PFMerge", func(t *testing.T) {
+		testPFCountMerge(t, publisher, respParsers)
+	},
 	)
+
+	// TODO - unsubscribe from updates once PFCOUNT.UNWATCH is implemented
 }
 
 func setupSubscribers(count int) []net.Conn {
-    subscribers := make([]net.Conn, 0, count)
-    for i := 0; i < count; i++ {
-        conn := getLocalConnection()
-        subscribers = append(subscribers, conn)
-    }
-    return subscribers
+	subscribers := make([]net.Conn, 0, count)
+	for i := 0; i < count; i++ {
+		conn := getLocalConnection()
+		subscribers = append(subscribers, conn)
+	}
+	return subscribers
 }
 
 func setUpRespParsers(t *testing.T, subscribers []net.Conn) []*clientio.RESPParser {
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf(pfcountWatchQuery, pfcountWatchKey))
-		assert.Assert(t, rp != nil)
+		assert.NotNil(t, rp)
 		respParsers[i] = rp
 
 		v, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		castedValue, ok := v.([]interface{})
 		if !ok {
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
@@ -111,7 +105,7 @@ func testPFCountAdd(t *testing.T, publisher net.Conn, respParsers []*clientio.RE
 	for _, tc := range pfcountWatchTestCases {
 		res := FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.key, tc.val))
 		assert.Equal(t, int64(1), res)
-		
+
 		verifyWatchResults(t, respParsers, tc.result)
 	}
 }
@@ -122,7 +116,7 @@ func testPFCountMerge(t *testing.T, publisher net.Conn, respParsers []*clientio.
 		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.destKey1, tc.destValue1))
 		FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.destKey2, tc.destValue2))
 		FireCommand(publisher, fmt.Sprintf("PFMERGE %s %s %s", pfcountWatchKey, tc.destKey1, tc.destKey2))
-		
+
 		verifyWatchResults(t, respParsers, tc.result)
 	}
 }
@@ -130,7 +124,7 @@ func testPFCountMerge(t *testing.T, publisher net.Conn, respParsers []*clientio.
 func verifyWatchResults(t *testing.T, respParsers []*clientio.RESPParser, expected int64) {
 	for _, rp := range respParsers {
 		v, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		castedValue, ok := v.([]interface{})
 		if !ok {
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
@@ -138,7 +132,7 @@ func verifyWatchResults(t *testing.T, respParsers []*clientio.RESPParser, expect
 		assert.Equal(t, 3, len(castedValue))
 		assert.Equal(t, pfcountCommand, castedValue[0])
 		assert.Equal(t, pfcountWatchFingerPrint, castedValue[1])
-		assert.DeepEqual(t, expected, castedValue[2])
+		assert.Equal(t, int64(expected), castedValue[2])
 	}
 }
 
@@ -157,11 +151,11 @@ type pfcountWatchSDKTestCase struct {
 }
 
 type pfcountWatchSDKWithPFMergeTestCase struct {
-	destKey1    string
-	destValue1  []string
-	destKey2 	string
-	destValue2  []string
-	result 		int64
+	destKey1   string
+	destValue1 []string
+	destKey2   string
+	destValue2 []string
+	result     int64
 }
 
 var PFCountWatchSDKTestCases = []pfcountWatchSDKTestCase{
@@ -178,42 +172,39 @@ var pfcountWatchSDKhWithPFMergeTestCases = []pfcountWatchSDKWithPFMergeTestCase{
 }
 
 func TestPFCountWATCHWithSDK(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout) 
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
 	publisher := getLocalSdk()
 	subscribers := setupSubscribersSDK(3)
-	defer cleanupSubscribersSDK(subscribers)
+	defer func() {
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
 
 	publisher.Del(ctx, pfcountWatchKey)
 
 	channels := setUpWatchChannelsSDK(t, ctx, subscribers)
 
-	t.Run("Basic PFCount Operations", func(t *testing.T) { 
-			testPFCountAddSDK(t, ctx, channels, publisher) 
-		},
+	t.Run("Basic PFCount Operations", func(t *testing.T) {
+		testPFCountAddSDK(t, ctx, channels, publisher)
+	},
 	)
 
-	t.Run("PFCount Operations including PFMerge", func(t *testing.T) { 
-			testPFCountMergeSDK(t, ctx, channels, publisher) 
-		},
+	t.Run("PFCount Operations including PFMerge", func(t *testing.T) {
+		testPFCountMergeSDK(t, ctx, channels, publisher)
+	},
 	)
+
+	// TODO - unsubscribe from updates once PFCOUNT.UNWATCH is implemented
 }
 
-func setupSubscribersSDK(count int) []WatchSubscriber { 
-	subscribers := make([]WatchSubscriber, count) 
-	for i := range subscribers { 
+func setupSubscribersSDK(count int) []WatchSubscriber {
+	subscribers := make([]WatchSubscriber, count)
+	for i := range subscribers {
 		subscribers[i].client = getLocalSdk()
-	} 
-	return subscribers 
-}
-
-func cleanupSubscribersSDK(subscribers []WatchSubscriber) { 
-	for _, sub := range subscribers { 
-		if sub.watch != nil { 
-			sub.watch.Close() 
-		} 
-	} 
+	}
+	return subscribers
 }
 
 func setUpWatchChannelsSDK(t *testing.T, ctx context.Context, subscribers []WatchSubscriber) []<-chan *dicedb.WatchResult {
@@ -221,9 +212,9 @@ func setUpWatchChannelsSDK(t *testing.T, ctx context.Context, subscribers []Watc
 	for i, subscriber := range subscribers {
 		watch := subscriber.client.WatchConn(ctx)
 		subscribers[i].watch = watch
-		assert.Assert(t, watch != nil)
+		assert.NotNil(t, watch)
 		firstMsg, err := watch.Watch(ctx, pfcountCommandSDK, pfcountWatchKey)
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, pfcountCommandSDK)
 		channels[i] = watch.Channel()
 	}
@@ -233,7 +224,7 @@ func setUpWatchChannelsSDK(t *testing.T, ctx context.Context, subscribers []Watc
 func testPFCountAddSDK(t *testing.T, ctx context.Context, channels []<-chan *dicedb.WatchResult, publisher *dicedb.Client) {
 	for _, tc := range PFCountWatchSDKTestCases {
 		err := publisher.PFAdd(ctx, tc.key, tc.val).Err()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		verifyWatchResultsSDK(t, channels, tc.result)
 	}
@@ -253,12 +244,12 @@ func testPFCountMergeSDK(t *testing.T, ctx context.Context, channels []<-chan *d
 func verifyWatchResultsSDK(t *testing.T, channels []<-chan *dicedb.WatchResult, expected int64) {
 	for _, channel := range channels {
 		select {
-			case v := <-channel:
-				assert.Equal(t, pfcountCommandSDK, v.Command)         // command
-				assert.Equal(t, pfcountWatchFingerPrint, v.Fingerprint) // Fingerprint
-				assert.DeepEqual(t, expected, v.Data)       // data
-			case <-time.After(defaultTimeout):
-				t.Fatal("timeout waiting for watch result")
+		case v := <-channel:
+			assert.Equal(t, pfcountCommandSDK, v.Command)           // command
+			assert.Equal(t, pfcountWatchFingerPrint, v.Fingerprint) // Fingerprint
+			assert.Equal(t, int64(expected), v.Data)                // data
+		case <-time.After(defaultTimeout):
+			t.Fatal("timeout waiting for watch result")
 		}
 	}
 }
