@@ -47,6 +47,7 @@ func TestGETWATCH(t *testing.T) {
 
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
+		// subscribe to updates
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.WATCH %s", getWatchKey))
 		assert.True(t, rp != nil)
 		respParsers[i] = rp
@@ -80,7 +81,7 @@ func TestGETWATCH(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdates(t, subscribers)
+	unsubscribeFromUpdates(t, subscribers, "2714318480")
 }
 
 func TestGETWATCHWithSDK(t *testing.T) {
@@ -96,6 +97,7 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
 	for i, subscriber := range subscribers {
+		// subscribe to updates
 		watch := subscriber.client.WatchConn(context.Background())
 		subscribers[i].watch = watch
 		assert.True(t, watch != nil)
@@ -120,7 +122,7 @@ func TestGETWATCHWithSDK(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdatesSDK(t, subscribers)
+	unsubscribeFromUpdatesSDK(t, subscribers, "2714318480")
 }
 
 func TestGETWATCHWithSDK2(t *testing.T) {
@@ -139,6 +141,8 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 		watch := subscriber.client.WatchConn(context.Background())
 		subscribers[i].watch = watch
 		assert.True(t, watch != nil)
+
+		// subscribe to updates
 		firstMsg, err := watch.GetWatch(context.Background(), getWatchKey)
 		assert.Nil(t, err)
 		assert.Equal(t, "2714318480", firstMsg.Fingerprint)
@@ -158,7 +162,7 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdatesSDK(t, subscribers)
+	unsubscribeFromUpdatesSDK(t, subscribers, "2714318480")
 }
 
 var getWatchWithLabelTestCases = []getWatchTestCase{
@@ -204,6 +208,7 @@ func TestGETWATCHWithLabelWithSDK(t *testing.T) {
 		assert.True(t, watch != nil)
 		subscribers[i].watch = watch
 
+		// subscribe to updates
 		firstMsg, err := watch.GetWatch(ctx, getWatchWithLabelTestCases[0].key)
 
 		assert.Nil(t, err)
@@ -273,5 +278,6 @@ func TestGETWATCHWithLabelWithSDK(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdatesSDK(t, subscribers)
+	unsubscribeFromUpdatesSDK(t, subscribers, getWatchWithLabelTestCases[0].fingerprint)
+	unsubscribeFromUpdatesSDK(t, subscribers, getWatchWithLabelTestCases[1].fingerprint)
 }

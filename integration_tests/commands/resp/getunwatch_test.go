@@ -80,7 +80,7 @@ func TestGETUNWATCH(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdates(t, subscribers)
+	unsubscribeFromUpdates(t, subscribers, "426696421")
 
 	// Test updates are not sent after unsubscribing
 	for _, tc := range getUnwatchTestCases[2:] {
@@ -113,9 +113,9 @@ func TestGETUNWATCH(t *testing.T) {
 	}
 }
 
-func unsubscribeFromUpdates(t *testing.T, subscribers []net.Conn) {
+func unsubscribeFromUpdates(t *testing.T, subscribers []net.Conn, fingerprint string) {
 	for _, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", "426696421"))
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", fingerprint))
 		assert.NotNil(t, rp)
 
 		v, err := rp.DecodeOne()
@@ -167,7 +167,7 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdatesSDK(t, subscribers)
+	unsubscribeFromUpdatesSDK(t, subscribers, "426696421")
 
 	// fire updates and validate that they are not received
 	err = publisher.Set(ctx, getUnwatchKey, "final", 0).Err()
@@ -182,9 +182,9 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	}
 }
 
-func unsubscribeFromUpdatesSDK(t *testing.T, subscribers []WatchSubscriber) {
+func unsubscribeFromUpdatesSDK(t *testing.T, subscribers []WatchSubscriber, fingerprint string) {
 	for _, subscriber := range subscribers {
-		err := subscriber.watch.Unwatch(context.Background(), "GET", "426696421")
+		err := subscriber.watch.Unwatch(context.Background(), "GET", fingerprint)
 		assert.Nil(t, err)
 	}
 }
