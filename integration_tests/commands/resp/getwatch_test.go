@@ -6,17 +6,11 @@ import (
 	"net"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dicedb-go"
 	"github.com/stretchr/testify/assert"
 )
-
-type WatchSubscriber struct {
-	client *dicedb.Client
-	watch  *dicedb.WatchConn
-}
 
 const (
 	getWatchKey = "getwatchkey"
@@ -38,20 +32,13 @@ var getWatchTestCases = []getWatchTestCase{
 func TestGETWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
-	FireCommand(publisher, fmt.Sprintf("DEL %s", getWatchKey))
 
 	defer func() {
-		if err := publisher.Close(); err != nil {
-			t.Errorf("Error closing publisher connection: %v", err)
-		}
-		for _, sub := range subscribers {
-			//FireCommand(sub, fmt.Sprintf("GET.UNWATCH %s", fingerprint))
-			time.Sleep(100 * time.Millisecond)
-			if err := sub.Close(); err != nil {
-				t.Errorf("Error closing subscriber connection: %v", err)
-			}
-		}
+		err := ClosePublisherSubscribers(publisher, subscribers)
+		assert.Nil(t, err)
 	}()
+
+	FireCommand(publisher, fmt.Sprintf("DEL %s", getWatchKey))
 
 	// Fire a SET command to set a key
 	res := FireCommand(publisher, fmt.Sprintf("SET %s %s", getWatchKey, "value"))
@@ -90,11 +77,19 @@ func TestGETWATCH(t *testing.T) {
 			assert.Equal(t, tc.val, castedValue[2])
 		}
 	}
+
+	// unsubscribe from updates
+	unsubscribeFromUpdates(t, subscribers)
 }
 
 func TestGETWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
 	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	defer func() {
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
 
 	publisher.Del(context.Background(), getWatchKey)
 
@@ -122,11 +117,19 @@ func TestGETWATCHWithSDK(t *testing.T) {
 			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
 	}
+
+	// unsubscribe from updates
+	unsubscribeFromUpdatesSDK(t, subscribers)
 }
 
 func TestGETWATCHWithSDK2(t *testing.T) {
 	publisher := getLocalSdk()
 	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	defer func() {
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
 
 	publisher.Del(context.Background(), getWatchKey)
 
@@ -152,6 +155,9 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 			assert.Equal(t, tc.val, v.Data.(string))     // data
 		}
 	}
+
+	// unsubscribe from updates
+	unsubscribeFromUpdatesSDK(t, subscribers)
 }
 
 var getWatchWithLabelTestCases = []getWatchTestCase{

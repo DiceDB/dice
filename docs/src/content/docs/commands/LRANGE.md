@@ -15,7 +15,7 @@ If stop is larger than the actual end of the list it will be treated like the la
 
 ## Syntax
 
-```
+```bash
 LRANGE key start stop
 ```
 
