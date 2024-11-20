@@ -28,6 +28,16 @@ import (
 	"github.com/rs/xid"
 )
 
+// ReplyFormatOptions holds formatting options for the JSON reply.
+type ReplyFormatOptions struct {
+	format  string
+	indent  string
+	newline string
+	space   string
+}
+
+const legacyDefaultRootPath = "."
+
 // evalEXPIRE sets an expiry time(in secs) on the specified key in args
 // args should contain 2 values, key and the expiry time to be set for the key
 // The expiry time should be in integer format; if not, it returns encoded error response
@@ -1377,17 +1387,87 @@ func evalJSONGET(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	key := args[0]
-	// Default path is root if not specified
-	path := defaultRootPath
-	if len(args) > 1 {
-		path = args[1]
+	var paths []string
+	formatOptions := ReplyFormatOptions{
+		format:  "STRING", // Default
+		indent:  "",
+		newline: "",
+		space:   "",
 	}
-	return jsonGETHelper(store, path, key)
+
+	// Process optional arguments
+	for _, arg := range args[1:] {
+		switch {
+		case strings.EqualFold(arg, "FORMAT"):
+			if len(paths) == 0 {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrFormatted("ERR FORMAT argument is not supported in this mode"),
+				}
+			}
+			nextArg := getNextArg(args)
+			if strings.EqualFold(nextArg, "STRINGS") {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrFormatted("ERR wrong reply format"),
+				}
+			}
+			formatOptions.format = nextArg
+
+		case strings.EqualFold(arg, "INDENT"):
+			formatOptions.indent = getNextArg(args)
+
+		case strings.EqualFold(arg, "NEWLINE"):
+			formatOptions.newline = getNextArg(args)
+
+		case strings.EqualFold(arg, "SPACE"):
+			formatOptions.space = getNextArg(args)
+
+		default:
+			paths = append(paths, arg)
+		}
+	}
+
+	// If no paths are specified, use the default root path
+
+	if len(paths) == 0 {
+		paths = append(paths, legacyDefaultRootPath)
+	}
+
+	// Determine if any of the paths are legacy
+	isLegacy := containsNonLegacyPath(paths)
+
+	// Determine which function to call based on the number of paths
+	if len(paths) > 1 {
+		return jsonGETMulti(store, paths, key, isLegacy)
+	}
+
+	return jsonGETSingle(store, paths[0], key, isLegacy)
 }
 
-// helper function used by evalJSONGET and evalJSONMGET to prepare the results
-func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
-	// Retrieve the object from the database
+// Helper function to check if there are any non-legacy paths
+func containsNonLegacyPath(paths []string) bool {
+	for _, path := range paths {
+		if isPathLegacy(path) {
+			return false
+		}
+	}
+	return true
+}
+
+func isPathLegacy(path string) bool {
+	return strings.HasPrefix(path, "$")
+}
+
+func jsonGETSingle(store *dstore.Store, path, key string, isLegacy bool) *EvalResponse {
+	if isLegacy {
+		return jsonGETSingleLegacy(store, path, key)
+	}
+	return jsonGETSingleNormal(store, path, key)
+}
+
+func jsonGETSingleNormal(store *dstore.Store, path, key string) *EvalResponse {
+	// Retrieve the object from the store
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
@@ -1396,9 +1476,9 @@ func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
 		}
 	}
 
-	// Check if the object is of JSON type
-	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
-	if errWithMessage != nil {
+	// Ensure the object type is JSON
+	err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -1407,8 +1487,63 @@ func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
 
 	jsonData := obj.Value
 
-	// If path is root, return the entire JSON
-	if path == defaultRootPath {
+	// Parse the path using jp.ParseString
+	expr, parseErr := jp.ParseString(path)
+	if parseErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrJSONPathNotFound(`$.` + path),
+		}
+	}
+
+	// Execute the JSONPath query
+	pathResults := expr.Get(jsonData)
+	const emptyJSONArray = "[]"
+	if len(pathResults) == 0 {
+		return &EvalResponse{
+			Result: emptyJSONArray,
+			Error:  nil,
+		}
+	}
+
+	// Serialize the result
+	resultBytes, marshalErr := sonic.Marshal(pathResults)
+	if marshalErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("could not serialize result"),
+		}
+	}
+	return &EvalResponse{
+		Result: string(resultBytes),
+		Error:  nil,
+	}
+}
+
+func jsonGETSingleLegacy(store *dstore.Store, path, key string) *EvalResponse {
+	// Retrieve the object from the store
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	// Ensure the object type is JSON
+	err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+
+	// Handle legacy paths
+	if path == "" || path == "." {
+		// For no path or dot path, return entire data
 		resultBytes, err := sonic.Marshal(jsonData)
 		if err != nil {
 			return &EvalResponse{
@@ -1423,32 +1558,32 @@ func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
 		}
 	}
 
-	// Parse the JSONPath expression
-	expr, err := jp.ParseString(path)
-	if err != nil {
+	// Checking for legacy paths that begin with a dot (e.g., ".a")
+	if path[0] == '.' {
+		path = path[1:]
+	}
+
+	expr, parseErr := jp.ParseString(path)
+	if parseErr != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrGeneral("invalid JSONPath"),
+			Error:  diceerrors.ErrJSONPathNotFound(path),
 		}
 	}
 
-	// Execute the JSONPath query
-	results := expr.Get(jsonData)
-	if len(results) == 0 {
+	// Execute the JSONPath query for filtering
+	pathResults := expr.Get(jsonData)
+
+	if len(pathResults) == 0 {
 		return &EvalResponse{
-			Result: clientio.NIL,
-			Error:  nil,
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("Path \"$.%s\" does not exist", path)),
 		}
 	}
 
 	// Serialize the result
-	var resultBytes []byte
-	if len(results) == 1 {
-		resultBytes, err = sonic.Marshal(results[0])
-	} else {
-		resultBytes, err = sonic.Marshal(results)
-	}
-	if err != nil {
+	resultBytes, marshalErr := sonic.Marshal(pathResults[0])
+	if marshalErr != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrGeneral("could not serialize result"),
@@ -1459,6 +1594,117 @@ func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
 		Error:  nil,
 	}
 }
+
+func jsonGETMulti(store *dstore.Store, paths []string, key string, isLegacy bool) *EvalResponse {
+	// Retrieve the object by key
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	// Ensure the object is a valid JSON object
+	err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	jsonData := obj.Value
+	results := make(map[string]interface{})
+	var missingPath string
+
+	// Process each path
+	for _, path := range paths {
+		expr, parseErr := jp.ParseString(path)
+		if parseErr != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrJSONPathNotFound(`$.` + path),
+			}
+		}
+
+		pathResults := expr.Get(jsonData)
+		if len(pathResults) == 0 {
+			// For non-legacy mode, add an empty array if no result found
+			if !isLegacy {
+				results[path] = []interface{}{}
+			} else {
+				missingPath = path
+				break
+			}
+		} else {
+			// Add results based on legacy mode
+			if isLegacy {
+				results[path] = pathResults[0] // Only the first result
+			} else {
+				results[path] = pathResults // All results
+			}
+		}
+	}
+
+	// In legacy mode, throw an error if a missing path was found
+	if isLegacy && missingPath != "" {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral(fmt.Sprintf("Path \"$.%s\" does not exist", missingPath)),
+		}
+	}
+
+	// Marshal the results to JSON
+	resultBytes, marshalErr := sonic.Marshal(results)
+	if marshalErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("could not serialize result"),
+		}
+	}
+
+	return &EvalResponse{
+		Result: string(resultBytes),
+		Error:  nil,
+	}
+}
+
+// Helper function to get the next argument safely.
+func getNextArg(args []string) string {
+	if len(args) > 0 {
+		return args[0]
+	}
+	return ""
+}
+
+func maxStrLen(arr []string) int {
+	maxLen := 0
+	for _, str := range arr {
+		if len(str) > maxLen {
+			maxLen = len(str)
+		}
+	}
+	return maxLen
+}
+
+// Define the constants
+const (
+	CmdArgNoEscape = "NOESCAPE"
+	CmdArgIndent   = "INDENT"
+	CmdArgNewLine  = "NEWLINE"
+	CmdArgSpace    = "SPACE"
+	CmdArgFormat   = "FORMAT"
+)
+
+// Calculate the max length of JSON.GET subcommands.
+var JSONGetSubCommandsMaxStrLen = maxStrLen([]string{
+	CmdArgNoEscape,
+	CmdArgIndent,
+	CmdArgNewLine,
+	CmdArgSpace,
+	CmdArgFormat,
+})
 
 // evalJSONSET stores a JSON value at the specified key
 // args must contain at least the key, path (unused in this implementation), and JSON string

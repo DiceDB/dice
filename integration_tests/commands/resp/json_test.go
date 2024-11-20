@@ -190,19 +190,19 @@ func TestJSONOperations(t *testing.T) {
 			name:     "Get Nested Object",
 			setCmd:   `JSON.SET inventory $ ` + complexJSON,
 			getCmd:   `JSON.GET inventory $.inventory.mountain_bikes[0].specs`,
-			expected: `{"material":"carbon","weight":13.1}`,
+			expected: `[{"material":"carbon","weight":13.1}]`,
 		},
 		{
 			name:     "Set Nested Value",
 			setCmd:   `JSON.SET inventory $.inventory.mountain_bikes[0].price 2000`,
 			getCmd:   `JSON.GET inventory $.inventory.mountain_bikes[0].price`,
-			expected: `2000`,
+			expected: `[2000]`,
 		},
 		{
 			name:     "Get JSON with non-existent path",
 			setCmd:   `JSON.SET user $ ` + simpleJSON,
 			getCmd:   `JSON.GET user $.nonExistent`,
-			expected: `(nil)`,
+			expected: `[]`,
 		},
 	}
 
@@ -814,7 +814,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			name:       "Invalid value of increment",
 			setupData:  "JSON.SET foo $ 1",
 			commands:   []string{"JSON.GET foo $", "JSON.NUMINCRBY foo $ @", "JSON.NUMINCRBY foo $ 122@"},
-			expected:   []interface{}{"1", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
+			expected:   []interface{}{"[1]", "ERR expected value at line 1 column 1", "ERR trailing characters at line 1 column 4"},
 			assertType: []string{"equal", "equal", "equal"},
 			cleanUp:    []string{"DEL foo"},
 		},
@@ -830,7 +830,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			name:       "incrby at root path",
 			setupData:  "JSON.SET foo $ 1",
 			commands:   []string{"JSON.NUMINCRBY foo $ 1", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
-			expected:   []interface{}{"[2]", "2", "[1]", "1"},
+			expected:   []interface{}{"[2]", "[2]", "[1]", "[1]"},
 			assertType: []string{"equal", "equal", "equal", "equal"},
 			cleanUp:    []string{"DEL foo"},
 		},
@@ -838,7 +838,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			name:       "incrby at root path",
 			setupData:  "JSON.SET foo $ 1",
 			commands:   []string{"expire foo 10", "JSON.NUMINCRBY foo $ 1", "ttl foo", "JSON.GET foo $", "JSON.NUMINCRBY foo $ -1", "JSON.GET foo $"},
-			expected:   []interface{}{int64(1), "[2]", int64(10), "2", "[1]", "1"},
+			expected:   []interface{}{int64(1), "[2]", int64(10), "[2]", "[1]", "[1]"},
 			assertType: []string{"equal", "equal", "range", "equal", "equal", "equal"},
 			cleanUp:    []string{"DEL foo"},
 		},
@@ -1069,7 +1069,7 @@ func TestJSONClearOperations(t *testing.T) {
 				"JSON.CLEAR user $",
 				"JSON.GET user $",
 			},
-			expected: []interface{}{"OK", int64(1), "{}"},
+			expected: []interface{}{"OK", int64(1), "[{}]"},
 		},
 		{
 			name: "jsonclear string type",
@@ -1078,7 +1078,7 @@ func TestJSONClearOperations(t *testing.T) {
 				"JSON.CLEAR user $.name",
 				"JSON.GET user $.name",
 			},
-			expected: []interface{}{"OK", int64(0), `"Tom"`},
+			expected: []interface{}{"OK", int64(0), `["Tom"]`},
 		},
 		{
 			name: "jsonclear array type",
@@ -1087,7 +1087,7 @@ func TestJSONClearOperations(t *testing.T) {
 				"JSON.CLEAR user $.names",
 				"JSON.GET user $.names",
 			},
-			expected: []interface{}{"OK", int64(1), "[]"},
+			expected: []interface{}{"OK", int64(1), "[[]]"},
 		},
 		{
 			name: "jsonclear bool type",
@@ -1095,7 +1095,7 @@ func TestJSONClearOperations(t *testing.T) {
 				`JSON.SET user $  {"flag":true,"name":"Tom"}`,
 				"JSON.CLEAR user $.flag",
 				"JSON.GET user $.flag"},
-			expected: []interface{}{"OK", int64(0), "true"},
+			expected: []interface{}{"OK", int64(0), "[true]"},
 		},
 		{
 			name: "jsonclear null type",
@@ -1103,7 +1103,7 @@ func TestJSONClearOperations(t *testing.T) {
 				`JSON.SET user $ {"name":null,"age":28}`,
 				"JSON.CLEAR user $.pet",
 				"JSON.GET user $.name"},
-			expected: []interface{}{"OK", int64(0), "null"},
+			expected: []interface{}{"OK", int64(0), "[null]"},
 		},
 		{
 			name: "jsonclear integer type",
@@ -1111,7 +1111,7 @@ func TestJSONClearOperations(t *testing.T) {
 				`JSON.SET user $ {"age":28,"name":"Tom"}`,
 				"JSON.CLEAR user $.age",
 				"JSON.GET user $.age"},
-			expected: []interface{}{"OK", int64(1), "0"},
+			expected: []interface{}{"OK", int64(1), "[0]"},
 		},
 		{
 			name: "jsonclear float type",
@@ -1119,7 +1119,7 @@ func TestJSONClearOperations(t *testing.T) {
 				`JSON.SET user $ {"price":3.14,"name":"sugar"}`,
 				"JSON.CLEAR user $.price",
 				"JSON.GET user $.price"},
-			expected: []interface{}{"OK", int64(1), "0"},
+			expected: []interface{}{"OK", int64(1), "[0]"},
 		},
 	}
 

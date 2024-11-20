@@ -62,8 +62,8 @@ func runIntegrationTests(t *testing.T, exec *HTTPCommandExecutor, testCases []In
 				case "range":
 					assert.True(t, result.(float64) <= out.(float64) && result.(float64) > 0, "Expected %v to be within 0 to %v", result, out)
 				case "json_equal":
-					// fmt.Println("hi expected : ", out)
-					// fmt.Println("hi actual :", result)
+					fmt.Println("hi expected : ", out)
+					fmt.Println("hi actual :", result)
 					assert.JSONEq(t, out.(string), result.(string))
 				}
 			}
@@ -213,7 +213,7 @@ func TestJSONOperations(t *testing.T) {
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$", "json": complexJson}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$.inventory.mountain_bikes[0].specs"}},
 			},
-			expected: []interface{}{"OK", `{"material":"carbon","weight":13.1}`},
+			expected: []interface{}{"OK", `[{"material":"carbon","weight":13.1}]`},
 		},
 		{
 			name: "Set Nested Value",
@@ -221,7 +221,7 @@ func TestJSONOperations(t *testing.T) {
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k", "path": "$.inventory.mountain_bikes[0].price", "value": 2000}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$.inventory.mountain_bikes[0].price"}},
 			},
-			expected: []interface{}{"OK", "2000"},
+			expected: []interface{}{"OK", "[2000]"},
 		},
 	}
 
@@ -412,7 +412,7 @@ func TestJSONClearOperations(t *testing.T) {
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.name"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$.name"}},
 			},
-			expected: []interface{}{"OK", float64(0), `"Tom"`},
+			expected: []interface{}{"OK", float64(0), `["Tom"]`},
 		},
 		{
 			name: "jsonclear clear array type",
@@ -421,7 +421,7 @@ func TestJSONClearOperations(t *testing.T) {
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.names"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$.names"}},
 			},
-			expected: []interface{}{"OK", float64(1), "[]"},
+			expected: []interface{}{"OK", float64(1), "[[]]"},
 		},
 		{
 			name: "jsonclear clear bool type",
@@ -430,7 +430,7 @@ func TestJSONClearOperations(t *testing.T) {
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.flag"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$.flag"}},
 			},
-			expected: []interface{}{"OK", float64(0), "true"},
+			expected: []interface{}{"OK", float64(0), "[true]"},
 		},
 		{
 			name: "jsonclear clear null type",
@@ -439,7 +439,7 @@ func TestJSONClearOperations(t *testing.T) {
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.name"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$.name"}},
 			},
-			expected: []interface{}{"OK", float64(0), "null"},
+			expected: []interface{}{"OK", float64(0), "[null]"},
 		},
 		{
 			name: "jsonclear clear integer type",
@@ -448,7 +448,7 @@ func TestJSONClearOperations(t *testing.T) {
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.age"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$.age"}},
 			},
-			expected: []interface{}{"OK", float64(1), "0"},
+			expected: []interface{}{"OK", float64(1), "[0]"},
 		},
 		{
 			name: "jsonclear clear float type",
@@ -457,7 +457,7 @@ func TestJSONClearOperations(t *testing.T) {
 				{Command: "JSON.CLEAR", Body: map[string]interface{}{"key": "k", "path": "$.price"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$.price"}},
 			},
-			expected: []interface{}{"OK", float64(1), "0"},
+			expected: []interface{}{"OK", float64(1), "[0]"},
 		},
 	}
 
@@ -1134,7 +1134,7 @@ func TestJsonNumMultBy(t *testing.T) {
 				{Command: "JSON.NUMMULTBY", Body: map[string]interface{}{"key": "k", "path": "$..a", "value": 2}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$"}},
 			},
-			expected:   []interface{}{"[4,null,10,null]", `{"a":"b","b":[{"a":4},{"a":10},{"a":"c"}]}`},
+			expected:   []interface{}{"[4,null,10,null]", `[{"a":"b","b":[{"a":4},{"a":10},{"a":"c"}]}]`},
 			assertType: []string{"perm_equal", "json_equal"},
 			cleanUp: []HTTPCommand{
 				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
@@ -1147,7 +1147,7 @@ func TestJsonNumMultBy(t *testing.T) {
 				{Command: "JSON.NUMMULTBY", Body: map[string]interface{}{"key": "k", "path": "$.a", "value": 2}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$"}},
 			},
-			expected:   []interface{}{"[null]", `{"a":"b","b":[{"a":2},{"a":5},{"a":"c"}]}`},
+			expected:   []interface{}{"[null]", `[{"a":"b","b":[{"a":2},{"a":5},{"a":"c"}]}]`},
 			assertType: []string{"perm_equal", "json_equal"},
 			cleanUp: []HTTPCommand{
 				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
@@ -1381,7 +1381,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 				{Command: "JSON.NUMINCRBY", Body: map[string]interface{}{"key": "k", "path": "$..a", "value": -1}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$"}},
 			},
-			expected:   []interface{}{"[4.2,7,null,null]", "[null]", "[3.2,6,null,null]", `{"a":"b","b":[{"a":3.2},{"a":6},{"a":"c"}]}`},
+			expected:   []interface{}{"[4.2,7,null,null]", "[null]", "[3.2,6,null,null]", `[{"a":"b","b":[{"a":3.2},{"a":6},{"a":"c"}]}]`},
 			assertType: []string{"perm_equal", "perm_equal", "perm_equal", "json_equal"},
 			cleanUp: []HTTPCommand{
 				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
@@ -1395,7 +1395,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 				{Command: "JSON.NUMINCRBY", Body: map[string]interface{}{"key": "k", "path": "$", "value": -1}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$"}},
 			},
-			expected:   []interface{}{"[3]", "[2]", "2"},
+			expected:   []interface{}{"[3]", "[2]", "[2]"},
 			assertType: []string{"perm_equal", "perm_equal", "json_equal"},
 			cleanUp: []HTTPCommand{
 				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
@@ -1409,7 +1409,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 				{Command: "JSON.NUMINCRBY", Body: map[string]interface{}{"key": "k", "path": "$", "value": -1.5}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k", "path": "$"}},
 			},
-			expected:   []interface{}{"[3.5]", "[2.0]", "2.0"},
+			expected:   []interface{}{"[3.5]", "[2.0]", "[2]"},
 			assertType: []string{"perm_equal", "perm_equal", "json_equal"},
 			cleanUp: []HTTPCommand{
 				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
