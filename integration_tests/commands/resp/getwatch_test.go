@@ -6,6 +6,7 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dicedb-go"
@@ -179,6 +180,11 @@ func TestGETWATCHWithLabelWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
 	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 
+	defer func() {
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -266,11 +272,6 @@ func TestGETWATCHWithLabelWithSDK(t *testing.T) {
 		}
 	}
 
-	// Cleanup
-	for _, sub := range subscribers {
-		if sub.watch != nil {
-			sub.watch.Close()
-		}
-	}
-	publisher.Close()
+	// unsubscribe from updates
+	unsubscribeFromUpdatesSDK(t, subscribers)
 }
