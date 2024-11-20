@@ -186,14 +186,6 @@ func Execute() {
 	}
 
 	flag.Parse()
-	config.MergeFlags(&flagsConfig)
-	if len(os.Args) < 2 {
-		if err := config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, "dicedb.conf")); err != nil {
-			log.Fatal(err)
-		}
-		render()
-		return
-	}
 
 	switch os.Args[1] {
 	case "-v", "--version":
@@ -228,7 +220,7 @@ func Execute() {
 				log.Fatal("Output file path is not a directory")
 			}
 
-			filePath := filepath.Join(dirPath, "dicedb.conf")
+			filePath := filepath.Join(dirPath, config.DefaultConfigName)
 			if _, err := os.Stat(filePath); err == nil {
 				slog.Warn("Config file already exists at the specified path", slog.String("path", filePath), slog.String("action", "skipping file creation"))
 				return
@@ -236,6 +228,8 @@ func Execute() {
 			if err := config.CreateConfigFile(filePath); err != nil {
 				log.Fatal(err)
 			}
+
+			config.MergeFlags(&flagsConfig)
 			render()
 		}
 	case "-c", "--config":
@@ -268,11 +262,18 @@ func Execute() {
 			if err := parser.Loadconfig(config.DiceConfig); err != nil {
 				log.Fatal(err)
 			}
+
+			config.MergeFlags(&flagsConfig)
 			render()
 		} else {
 			log.Fatal("Config file path not provided")
 		}
 	default:
+		if err := config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, config.DefaultConfigName)); err != nil {
+			log.Fatal(err)
+		}
+
+		config.MergeFlags(&flagsConfig)
 		render()
 	}
 }

@@ -170,7 +170,7 @@ func setField(field reflect.Value, value string) error {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if field.Type() == reflect.TypeOf(time.Duration(0)) {
 			// Handle time.Duration type
-			duration, err := time.ParseDuration(value)
+			duration, err := parseDuration(value)
 			if err != nil {
 				return fmt.Errorf("failed to parse duration: %w", err)
 			}
@@ -187,26 +187,26 @@ func setField(field reflect.Value, value string) error {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		val, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse unsigned integer: %w", err)
 		}
 		field.SetUint(val)
 
 	case reflect.Float32, reflect.Float64:
 		val, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse float: %w", err)
 		}
 		field.SetFloat(val)
 
 	case reflect.Bool:
 		val, err := strconv.ParseBool(value)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse boolean: %w", err)
 		}
 		field.SetBool(val)
 
 	case reflect.Slice:
-		// Get the type of the elements in the slice
+		// Handle slices of basic types
 		elemType := field.Type().Elem()
 		values := strings.Split(value, ",")
 		slice := reflect.MakeSlice(field.Type(), len(values), len(values))
@@ -214,7 +214,7 @@ func setField(field reflect.Value, value string) error {
 			elem := slice.Index(i)
 			elemVal := reflect.New(elemType).Elem()
 			if err := setField(elemVal, strings.TrimSpace(v)); err != nil {
-				return err
+				return fmt.Errorf("failed to parse slice element at index %d: %w", i, err)
 			}
 			elem.Set(elemVal)
 		}
@@ -225,4 +225,19 @@ func setField(field reflect.Value, value string) error {
 	}
 
 	return nil
+}
+
+// parseDuration handles parsing of time.Duration with proper validation.
+func parseDuration(value string) (time.Duration, error) {
+	if value == "" {
+		return 0, fmt.Errorf("duration string is empty")
+	}
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("invalid duration format: %s", value)
+	}
+	if duration <= 0 {
+		return 0, fmt.Errorf("duration must be positive, got: %s", value)
+	}
+	return duration, nil
 }
