@@ -51,6 +51,12 @@ func TestAppend(t *testing.T) {
 			expected:   []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
 			cleanupKey: "key",
 		},
+		{
+			name:       "APPEND to key created using SETBIT",
+			commands:   []string{"SETBIT bitkey 2 1", "SETBIT bitkey 3 1", "SETBIT bitkey 5 1", "SETBIT bitkey 10 1", "SETBIT bitkey 11 1", "SETBIT bitkey 14 1", "APPEND bitkey 1", "GET bitkey"},
+			expected:   []interface{}{float64(0), float64(0), float64(0), float64(0), float64(0), float64(0), float64(3), "421"},
+			cleanupKey: "bitkey",
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

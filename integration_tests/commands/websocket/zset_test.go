@@ -206,7 +206,7 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD NX and XX not compatible",
 			commands: []string{"ZADD myzset NX XX 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD XX and CH compatible",
@@ -221,18 +221,18 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD INCR and XX not compatible because of more than one member",
 			commands: []string{"ZADD myzset XX INCR 20 member1 25 member2"},
-			expected: []interface{}{"ERR incr option supports a single increment-element pair"},
+			expected: []interface{}{"ERR INCR option supports a single increment-element pair"},
 		},
 
 		{
 			name:     "ZADD XX, LT and GT are not compatible",
 			commands: []string{"ZADD key XX LT GT 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD XX, LT, GT, CH, INCR are not compatible",
 			commands: []string{"ZADD key XX LT GT INCR CH 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 
 		{
@@ -308,139 +308,139 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD NX and XX not compatible",
 			commands: []string{"ZADD key NX XX 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX CH not compatible",
 			commands: []string{"ZADD key NX XX CH 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX CH INCR not compatible",
 			commands: []string{"ZADD key NX XX CH INCR 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX LT not compatible",
 			commands: []string{"ZADD key NX XX LT 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX GT not compatible",
 			commands: []string{"ZADD key NX XX GT 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX LT CH not compatible",
 			commands: []string{"ZADD key NX XX LT CH 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX LT CH INCR compatible",
 			commands: []string{"ZADD key NX XX LT CH INCR 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX GT CH not compatible",
 			commands: []string{"ZADD key NX XX GT CH 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX GT CH INCR not compatible",
 			commands: []string{"ZADD key NX XX GT CH INCR 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX INCR not compatible",
 			commands: []string{"ZADD key NX XX INCR 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX INCR LT not compatible",
 			commands: []string{"ZADD key NX XX INCR LT 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX INCR GT not compatible",
 			commands: []string{"ZADD key NX XX INCR GT 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX LT GT not compatible",
 			commands: []string{"ZADD key NX XX LT GT 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX LT GT CH not compatible",
 			commands: []string{"ZADD key NX XX LT GT CH 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX XX LT GT CH INCR not compatible",
 			commands: []string{"ZADD key NX XX LT GT CH INCR 20 member1"},
-			expected: []interface{}{"ERR xx and nx options at the same time are not compatible"},
+			expected: []interface{}{"ERR XX and NX options at the same time are not compatible"},
 		},
 
 		// NX without XX and all LT GT CH and INCR // all are error
 		{
 			name:     "ZADD NX and GT incompatible",
 			commands: []string{"ZADD key NX GT 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX and LT incompatible",
 			commands: []string{"ZADD key NX LT 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX, LT and GT incompatible",
 			commands: []string{"ZADD key NX LT GT 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX, LT, GT and INCR incompatible",
 			commands: []string{"ZADD key NX LT GT INCR 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX, LT, GT and CH incompatible",
 			commands: []string{"ZADD key NX LT GT CH 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX, LT, GT, CH and INCR incompatible",
 			commands: []string{"ZADD key NX LT GT CH INCR 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX, LT, CH not compatible",
 			commands: []string{"ZADD key NX LT CH 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX, LT, INCR not compatible",
 			commands: []string{"ZADD key NX LT INCR 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX, LT, CH, INCR not compatible",
 			commands: []string{"ZADD key NX LT CH INCR 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX, GT, CH not compatible",
 			commands: []string{"ZADD key NX GT CH 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX, GT, INCR not compatible",
 			commands: []string{"ZADD key NX GT INCR 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD NX, GT, CH, INCR not compatible",
 			commands: []string{"ZADD key NX GT CH INCR 20 member1"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 
 		{
@@ -469,22 +469,22 @@ func TestZADD(t *testing.T) {
 		{
 			name:     "ZADD GT and LT",
 			commands: []string{"ZADD key GT LT 15 member15"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD GT LT CH",
 			commands: []string{"ZADD key GT LT CH 15 member15"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD GT LT CH INCR",
 			commands: []string{"ZADD key GT LT CH INCR 15 member15"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD GT LT INCR",
 			commands: []string{"ZADD key GT LT INCR 15 member15"},
-			expected: []interface{}{"ERR gt and LT and NX options at the same time are not compatible"},
+			expected: []interface{}{"ERR GT, LT, and/or NX options at the same time are not compatible"},
 		},
 		{
 			name:     "ZADD GT CH with existing member score less no change hence 0",

@@ -5,14 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/dicedb/dice/internal/eval/geo"
-	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
 
 	"github.com/dicedb/dice/internal/sql"
@@ -1656,6 +1653,8 @@ func evalTYPE(args []string, store *dstore.Store) []byte {
 		typeStr = "set"
 	case object.ObjTypeHashMap:
 		typeStr = "hash"
+	case object.ObjTypeSortedSet:
+		typeStr = "zset"
 	default:
 		typeStr = "non-supported type"
 	}
@@ -1688,134 +1687,4 @@ func executeBitfieldOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} 
 		}
 	}
 	return result
-}
-func evalGEOADD(args []string, store *dstore.Store) []byte {
-	if len(args) < 4 {
-		return diceerrors.NewErrArity("GEOADD")
-	}
-
-	key := args[0]
-	var nx, xx bool
-	startIdx := 1
-
-	// Parse options
-	for startIdx < len(args) {
-		option := strings.ToUpper(args[startIdx])
-		if option == NX {
-			nx = true
-			startIdx++
-		} else if option == XX {
-			xx = true
-			startIdx++
-		} else {
-			break
-		}
-	}
-
-	// Check if we have the correct number of arguments after parsing options
-	if (len(args)-startIdx)%3 != 0 {
-		return diceerrors.NewErrArity("GEOADD")
-	}
-
-	if xx && nx {
-		return diceerrors.NewErrWithMessage("ERR XX and NX options at the same time are not compatible")
-	}
-
-	// Get or create sorted set
-	obj := store.Get(key)
-	var ss *sortedset.Set
-	if obj != nil {
-		var err []byte
-		ss, err = sortedset.FromObject(obj)
-		if err != nil {
-			return err
-		}
-	} else {
-		ss = sortedset.New()
-	}
-
-	added := 0
-	for i := startIdx; i < len(args); i += 3 {
-		longitude, err := strconv.ParseFloat(args[i], 64)
-		if err != nil || math.IsNaN(longitude) || longitude < -180 || longitude > 180 {
-			return diceerrors.NewErrWithMessage("ERR invalid longitude")
-		}
-
-		latitude, err := strconv.ParseFloat(args[i+1], 64)
-		if err != nil || math.IsNaN(latitude) || latitude < -85.05112878 || latitude > 85.05112878 {
-			return diceerrors.NewErrWithMessage("ERR invalid latitude")
-		}
-
-		member := args[i+2]
-		_, exists := ss.Get(member)
-
-		// Handle XX option: Only update existing elements
-		if xx && !exists {
-			continue
-		}
-
-		// Handle NX option: Only add new elements
-		if nx && exists {
-			continue
-		}
-
-		hash := geo.EncodeHash(latitude, longitude)
-
-		wasInserted := ss.Upsert(hash, member)
-		if wasInserted {
-			added++
-		}
-	}
-
-	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
-	store.Put(key, obj)
-
-	return clientio.Encode(added, false)
-}
-
-func evalGEODIST(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 || len(args) > 4 {
-		return diceerrors.NewErrArity("GEODIST")
-	}
-
-	key := args[0]
-	member1 := args[1]
-	member2 := args[2]
-	unit := "m"
-	if len(args) == 4 {
-		unit = strings.ToLower(args[3])
-	}
-
-	// Get the sorted set
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.RespNIL
-	}
-
-	ss, err := sortedset.FromObject(obj)
-	if err != nil {
-		return err
-	}
-
-	// Get the scores (geohashes) for both members
-	score1, ok := ss.Get(member1)
-	if !ok {
-		return clientio.RespNIL
-	}
-	score2, ok := ss.Get(member2)
-	if !ok {
-		return clientio.RespNIL
-	}
-
-	lat1, lon1 := geo.DecodeHash(score1)
-	lat2, lon2 := geo.DecodeHash(score2)
-
-	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
-
-	result, err := geo.ConvertDistance(distance, unit)
-	if err != nil {
-		return err
-	}
-
-	return clientio.Encode(utils.RoundToDecimals(result, 4), false)
 }

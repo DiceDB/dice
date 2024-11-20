@@ -1275,18 +1275,20 @@ var (
 		NewEval:    evalHINCRBYFLOAT,
 	}
 	geoAddCmdMeta = DiceCmdMeta{
-		Name:     "GEOADD",
-		Info:     `Adds one or more members to a geospatial index. The key is created if it doesn't exist.`,
-		Arity:    -5,
-		Eval:     evalGEOADD,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "GEOADD",
+		Info:       `Adds one or more members to a geospatial index. The key is created if it doesn't exist.`,
+		Arity:      -5,
+		IsMigrated: true,
+		NewEval:    evalGEOADD,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	geoDistCmdMeta = DiceCmdMeta{
-		Name:     "GEODIST",
-		Info:     `Returns the distance between two members in the geospatial index.`,
-		Arity:    -4,
-		Eval:     evalGEODIST,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		Name:       "GEODIST",
+		Info:       `Returns the distance between two members in the geospatial index.`,
+		Arity:      -4,
+		IsMigrated: true,
+		NewEval:    evalGEODIST,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	jsonstrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRAPPEND",

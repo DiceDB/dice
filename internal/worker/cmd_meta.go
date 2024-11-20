@@ -156,6 +156,8 @@ const (
 	CmdSmembers      = "SMEMBERS"
 	CmdDump          = "DUMP"
 	CmdRestore       = "RESTORE"
+	CmdGeoAdd        = "GEOADD"
+	CmdGeoDist       = "GEODIST"
 )
 
 // Watch commands
@@ -462,6 +464,13 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdRestore: {
+		CmdType: SingleShard,
+	},
+	// geoCommands
+	CmdGeoAdd: {
+		CmdType: SingleShard,
+	},
+	CmdGeoDist: {
 		CmdType: SingleShard,
 	},
 
