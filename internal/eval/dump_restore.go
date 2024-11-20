@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"hash/crc64"
 
+	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
 )
 
@@ -90,6 +91,12 @@ func rdbDeserialize(data []byte) (*object.Obj, error) {
 			return nil, err
 		}
 		return &object.Obj{Type: objType, Value: bloom}, nil
+	case object.ObjTypeSortedSet:
+		ss, err := sortedset.DeserializeSortedSet(buf)
+		if err != nil {
+			return nil, err
+		}
+		return &object.Obj{Type: objType, Value: ss}, nil
 	default:
 		return nil, errors.New("unsupported object type")
 	}
@@ -199,6 +206,15 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 		}
 		buf.WriteByte(obj.Type)
 		if err := bitSet.Serialize(&buf); err != nil {
+			return nil, err
+		}
+	case object.ObjTypeSortedSet:
+		sortedSet, ok := obj.Value.(*sortedset.Set)
+		if !ok {
+			return nil, errors.New("invalid sorted set value")
+		}
+		buf.WriteByte(obj.Type)
+		if err := sortedSet.Serialize(&buf); err != nil {
 			return nil, err
 		}
 	default:
