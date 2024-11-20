@@ -1,5 +1,7 @@
 bin/dice
 *.aof
+*.out
+*.prof
 .vscode/
 dice-server
 dicedb
