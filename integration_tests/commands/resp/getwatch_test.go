@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dicedb-go"
@@ -16,15 +18,16 @@ const (
 )
 
 type getWatchTestCase struct {
-	key string
-	val string
+	key         string
+	fingerprint string
+	val         string
 }
 
 var getWatchTestCases = []getWatchTestCase{
-	{getWatchKey, "value1"},
-	{getWatchKey, "value2"},
-	{getWatchKey, "value3"},
-	{getWatchKey, "value4"},
+	{getWatchKey, "2714318480", "value1"},
+	{getWatchKey, "2714318480", "value2"},
+	{getWatchKey, "2714318480", "value3"},
+	{getWatchKey, "2714318480", "value4"},
 }
 
 func TestGETWATCH(t *testing.T) {
@@ -44,6 +47,7 @@ func TestGETWATCH(t *testing.T) {
 
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
+		// subscribe to updates
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.WATCH %s", getWatchKey))
 		assert.True(t, rp != nil)
 		respParsers[i] = rp
@@ -77,7 +81,7 @@ func TestGETWATCH(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdates(t, subscribers)
+	unsubscribeFromUpdates(t, subscribers, "2714318480")
 }
 
 func TestGETWATCHWithSDK(t *testing.T) {
@@ -93,13 +97,15 @@ func TestGETWATCHWithSDK(t *testing.T) {
 
 	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
 	for i, subscriber := range subscribers {
+		// subscribe to updates
 		watch := subscriber.client.WatchConn(context.Background())
 		subscribers[i].watch = watch
 		assert.True(t, watch != nil)
+
 		firstMsg, err := watch.Watch(context.Background(), "GET", getWatchKey)
 		assert.Nil(t, err)
-		assert.Equal(t, firstMsg.Command, "GET")
 		assert.Equal(t, "2714318480", firstMsg.Fingerprint)
+
 		channels[i] = watch.Channel()
 	}
 
@@ -116,7 +122,7 @@ func TestGETWATCHWithSDK(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdatesSDK(t, subscribers)
+	unsubscribeFromUpdatesSDK(t, subscribers, "2714318480")
 }
 
 func TestGETWATCHWithSDK2(t *testing.T) {
@@ -135,9 +141,10 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 		watch := subscriber.client.WatchConn(context.Background())
 		subscribers[i].watch = watch
 		assert.True(t, watch != nil)
+
+		// subscribe to updates
 		firstMsg, err := watch.GetWatch(context.Background(), getWatchKey)
 		assert.Nil(t, err)
-		assert.Equal(t, firstMsg.Command, "GET")
 		assert.Equal(t, "2714318480", firstMsg.Fingerprint)
 		channels[i] = watch.Channel()
 	}
@@ -155,5 +162,122 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdatesSDK(t, subscribers)
+	unsubscribeFromUpdatesSDK(t, subscribers, "2714318480")
+}
+
+var getWatchWithLabelTestCases = []getWatchTestCase{
+	{"k1", "1207366008", "k1-initial"},
+	{"k2", "605425024", "k2-initial"},
+}
+
+type getWatchUpdates struct {
+	key string
+	val string
+}
+
+var getWatchWithLabelUpdates = []getWatchUpdates{
+	{"k1", "k1-firstupdate"},
+	{"k1", "k1-secondupdate"},
+}
+
+func TestGETWATCHWithLabelWithSDK(t *testing.T) {
+	publisher := getLocalSdk()
+	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+
+	defer func() {
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// delete keys if they already exist
+	publisher.Del(ctx, getWatchWithLabelTestCases[0].key)
+	publisher.Del(ctx, getWatchWithLabelTestCases[1].key)
+
+	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
+
+	// set initial values
+	publisher.Set(ctx, getWatchWithLabelTestCases[0].key, getWatchWithLabelTestCases[0].val, 0)
+	publisher.Set(ctx, getWatchWithLabelTestCases[1].key, getWatchWithLabelTestCases[1].val, 0)
+
+	// subscribe first key
+	for i, subscriber := range subscribers {
+		watch := subscriber.client.WatchConn(ctx)
+		assert.True(t, watch != nil)
+		subscribers[i].watch = watch
+
+		// subscribe to updates
+		firstMsg, err := watch.GetWatch(ctx, getWatchWithLabelTestCases[0].key)
+
+		assert.Nil(t, err)
+		assert.NotNil(t, firstMsg)
+
+		assert.Equal(t, getWatchWithLabelTestCases[0].fingerprint, firstMsg.Fingerprint)
+
+		val, ok := firstMsg.Data.(string)
+		assert.True(t, ok)
+		assert.Equal(t, getWatchWithLabelTestCases[0].val, val)
+
+		// Get the channel after calling GetWatch
+		channels[i] = watch.Channel()
+	}
+
+	// Cocurrently do the following:
+	// 1. Update already subscribed key
+	// 2. Subscribe new key
+
+	wg := sync.WaitGroup{}
+
+	// 1. update already subscribed key
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		publisher.Set(context.Background(), getWatchWithLabelTestCases[0].key, "k1-firstupdate", 0)
+		time.Sleep(100 * time.Millisecond)
+		publisher.Set(context.Background(), getWatchWithLabelTestCases[0].key, "k1-secondupdate", 0)
+	}()
+
+	// 2. subscribe new key
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		watch := subscribers[0].watch
+
+		firstMsg, err := watch.GetWatch(ctx, getWatchWithLabelTestCases[1].key)
+
+		assert.Nil(t, err)
+		assert.NotNil(t, firstMsg)
+		assert.Equal(t, getWatchWithLabelTestCases[1].fingerprint, firstMsg.Fingerprint)
+
+		val, ok := firstMsg.Data.(string)
+		assert.True(t, ok)
+		assert.Equal(t, getWatchWithLabelTestCases[1].val, val)
+	}()
+
+	wg.Wait()
+
+	// check if the subscribers received the updates
+	for _, channel := range channels {
+		for i := 0; i < 2; i++ {
+			select {
+			case v := <-channel:
+				assert.NotNil(t, v)
+
+				assert.Equal(t, "GET", v.Command)
+				assert.Equal(t, getWatchWithLabelTestCases[0].fingerprint, v.Fingerprint)
+
+				val, ok := v.Data.(string)
+				assert.True(t, ok)
+				assert.Equal(t, getWatchWithLabelUpdates[i].val, val)
+			case <-ctx.Done():
+				t.Errorf("Timeout waiting for update %d", i)
+			}
+		}
+	}
+
+	// unsubscribe from updates
+	unsubscribeFromUpdatesSDK(t, subscribers, getWatchWithLabelTestCases[0].fingerprint)
+	unsubscribeFromUpdatesSDK(t, subscribers, getWatchWithLabelTestCases[1].fingerprint)
 }

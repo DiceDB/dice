@@ -31,8 +31,8 @@ github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140 h1:y7y0Oa6UawqTFP
 github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140/go.mod h1:c9O8+fpSOX1DM8cPNSkX/qsBWdkD4yd2dpciOWQjpBw=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
-github.com/dicedb/dicedb-go v0.0.0-20241026093718-570de4575be3 h1:JvnAibMNGA0vQH+T47Y/d5/POURIvfJl3fFk0GIEBkQ=
-github.com/dicedb/dicedb-go v0.0.0-20241026093718-570de4575be3/go.mod h1:p7x5/3S6wBEmiRMwxavj1I1P1xsSVQS6fcSbeai5ic4=
+github.com/dicedb/dicedb-go v0.0.0-20241120175955-5eaa6c7e79bb h1:HVdPhxbTT7wLINY193mC9mKbBzJ3pVyHDDYNLjOeGWQ=
+github.com/dicedb/dicedb-go v0.0.0-20241120175955-5eaa6c7e79bb/go.mod h1:DuggsMhSh810UH6hH4MXWLflPz+/ZgoFAhhsi53S9e0=
 github.com/fatih/color v1.18.0 h1:S8gINlzdQ840/4pfAwic/ZE0djQEH3wM94VfqLTZcOM=
 github.com/fatih/color v1.18.0/go.mod h1:4FelSpRwEGDpQ12mAdzqdOukCy4u8WUtOY6lkT/6HfU=
 github.com/gabriel-vasile/mimetype v1.4.3 h1:in2uUcidCuFcDKtdcBxlR0rJ1+fsokWf+uqxgUFjbI0=
