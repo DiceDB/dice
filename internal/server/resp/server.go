@@ -96,7 +96,7 @@ func (s *Server) Run(ctx context.Context) (err error) {
 		}
 	}(wg)
 
-	slog.Info("ready to accept and serve requests on", slog.Int("port", config.Port))
+	slog.Info("ready to accept and serve requests on", slog.Int("port", config.DiceConfig.AsyncServer.Port))
 
 	select {
 	case <-ctx.Done():

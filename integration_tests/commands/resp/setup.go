@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net"
 	"os"
@@ -27,6 +28,13 @@ import (
 
 type TestServerOptions struct {
 	Port int
+}
+
+func init() {
+	parser := config.NewConfigParser()
+	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
+		log.Fatalf("failed to load configuration: %v", err)
+	}
 }
 
 // getLocalConnection returns a local TCP connection to the database

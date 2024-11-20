@@ -90,8 +90,7 @@ func TestDumpRestore(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			FireCommand(conn, "FLUSHALL")
 			for i, cmd := range tc.commands {
-				var result interface{}
-				result = FireCommand(conn, cmd)
+				result := FireCommand(conn, cmd)
 				expected := tc.expected[i]
 
 				switch exp := expected.(type) {
