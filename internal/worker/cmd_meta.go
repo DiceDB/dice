@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
 )
 
@@ -24,6 +23,10 @@ const (
 	// MultiShard represents a command that operates across multiple shards.
 	// This type of command spans more than one shard and may involve coordination between shards.
 	MultiShard
+
+	// AllShard represents a command that operates across all available shards.
+	// This type of command spans more than one shard and may involve coordination between shards.
+	AllShard
 
 	// Custom represents a command that is user-defined or has custom logic.
 	// This command type allows for flexibility in executing specific, non-standard operations.
@@ -43,6 +46,7 @@ const (
 	CmdPing  = "PING"
 	CmdAbort = "ABORT"
 	CmdAuth  = "AUTH"
+	CmdEcho  = "ECHO"
 )
 
 // Single-shard commands.
@@ -88,6 +92,8 @@ const (
 	CmdSDiff    = "SDIFF"
 	CmdJSONMget = "JSON.MGET"
 	CmdKeys     = "KEYS"
+	CmdTouch    = "TOUCH"
+	CmdDBSize   = "DBSIZE"
 )
 
 // Multi-Step-Multi-Shard commands
@@ -158,6 +164,8 @@ const (
 	CmdRestore       = "RESTORE"
 	CmdGeoAdd        = "GEOADD"
 	CmdGeoDist       = "GEODIST"
+	CmdClient        = "CLIENT"
+	CmdLatency       = "LATENCY"
 )
 
 // Watch commands
@@ -197,12 +205,6 @@ type CmdMeta struct {
 }
 
 var CommandsMeta = map[string]CmdMeta{
-	// Global commands.
-	CmdPing: {
-		CmdType:              Global,
-		WorkerCommandHandler: eval.RespPING,
-	},
-
 	// Single-shard commands.
 	CmdSet: {
 		CmdType: SingleShard,
@@ -474,6 +476,12 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGeoDist: {
 		CmdType: SingleShard,
 	},
+	CmdClient: {
+		CmdType: SingleShard,
+	},
+	CmdLatency: {
+		CmdType: SingleShard,
+	},
 
 	// Multi-shard commands.
 	CmdRename: {
@@ -521,12 +529,33 @@ var CommandsMeta = map[string]CmdMeta{
 		decomposeCommand: decomposeJSONMget,
 		composeResponse:  composeJSONMget,
 	},
+	CmdTouch: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeTouch,
+		composeResponse:  composeTouch,
+	},
+	CmdDBSize: {
+		CmdType:          AllShard,
+		decomposeCommand: decomposeDBSize,
+		composeResponse:  composeDBSize,
+	},
+	CmdKeys: {
+		CmdType:          AllShard,
+		decomposeCommand: decomposeKeys,
+		composeResponse:  composeKeys,
+	},
 
 	// Custom commands.
 	CmdAbort: {
 		CmdType: Custom,
 	},
 	CmdAuth: {
+		CmdType: Custom,
+	},
+	CmdEcho: {
+		CmdType: Custom,
+	},
+	CmdPing: {
 		CmdType: Custom,
 	},
 
