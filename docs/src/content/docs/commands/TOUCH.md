@@ -70,11 +70,6 @@ TOUCH mylist
 ## Best Practices
 
 - Avoid using the `TOUCH` command on a large number of keys simultaneously, as it may slow down the server.
-- Consider using the `SCAN` command as an alternative, which is more efficient for large keyspaces.
-
-## Alternatives
-
-- `SCAN`: The `SCAN` command is a cursor-based iterator that allows you to incrementally iterate over the keyspace without blocking the server. It is a more efficient alternative to `TOUCH` for large datasets.
 
 ## Notes
 
