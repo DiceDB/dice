@@ -209,7 +209,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			clientIdentifierID := generateUniqueInt32(r)
 			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 
-			// subscribe client for updates
+			// subscribe client for updates if watch is enabled
 			if config.EnableWatch {
 				event := QuerySubscription{
 					Subscribe:          true,
@@ -218,6 +218,10 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 					Client:             conn,
 				}
 				s.subscriptionChan <- event
+			} else {
+				if err := s.writeResponseWithRetries(conn, []byte("info: watch is not enabled"), maxRetries); err != nil {
+					slog.Debug(fmt.Sprintf("Error writing message: %v", err))
+				}
 			}
 		}
 
