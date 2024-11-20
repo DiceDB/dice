@@ -102,6 +102,14 @@ var (
 		Cmd:     "JSON.ARRPOP",
 		CmdType: SingleShard,
 	}
+	jsonDebugCmdMeta = CmdsMeta{
+		Cmd:     "JSON.DEBUG",
+		CmdType: SingleShard,
+	}
+	jsonRespCmdMeta = CmdsMeta{
+		Cmd:     "JSON.RESP",
+		CmdType: SingleShard,
+	}
 
 	getrangeCmdMeta = CmdsMeta{
 		Cmd:     "GETRANGE",
@@ -115,6 +123,7 @@ var (
 		Cmd:     "HKEYS",
 		CmdType: SingleShard,
 	}
+
 	hvalsCmdMeta = CmdsMeta{
 		Cmd:     "HVALS",
 		CmdType: SingleShard,
@@ -290,32 +299,26 @@ var (
 		Cmd:     "BF.INFO",
 		CmdType: SingleShard,
 	}
-
 	cmsInitByDimCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INITBYDIM",
 		CmdType: SingleShard,
 	}
-
 	cmsInitByProbCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INITBYPROB",
 		CmdType: SingleShard,
 	}
-
 	cmsInfoCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INFO",
 		CmdType: SingleShard,
 	}
-
 	cmsIncrByCmdMeta = CmdsMeta{
 		Cmd:     "CMS.INCRBY",
 		CmdType: SingleShard,
 	}
-
 	cmsQueryCmdMeta = CmdsMeta{
 		Cmd:     "CMS.QUERY",
 		CmdType: SingleShard,
 	}
-
 	cmsMergeCmdMeta = CmdsMeta{
 		Cmd:     "CMS.MERGE",
 		CmdType: SingleShard,
@@ -352,7 +355,94 @@ var (
 		Cmd:     "HMGET",
 		CmdType: SingleShard,
 	}
-
+	lrangeCmdMeta = CmdsMeta{
+		Cmd:     "LRANGE",
+		CmdType: SingleShard,
+	}
+	linsertCmdMeta = CmdsMeta{
+		Cmd:     "LINSERT",
+		CmdType: SingleShard,
+	}
+	lpushCmdMeta = CmdsMeta{
+		Cmd:     "LPUSH",
+		CmdType: SingleShard,
+	}
+	rpushCmdMeta = CmdsMeta{
+		Cmd:     "RPUSH",
+		CmdType: SingleShard,
+	}
+	lpopCmdMeta = CmdsMeta{
+		Cmd:     "LPOP",
+		CmdType: SingleShard,
+	}
+	rpopCmdMeta = CmdsMeta{
+		Cmd:     "RPOP",
+		CmdType: SingleShard,
+	}
+	llenCmdMeta = CmdsMeta{
+		Cmd:     "LLEN",
+		CmdType: SingleShard,
+	}
+	jsonForgetCmdMeta = CmdsMeta{
+		Cmd:     "JSON.FORGET",
+		CmdType: SingleShard,
+	}
+	jsonDelCmdMeta = CmdsMeta{
+		Cmd:     "JSON.DEL",
+		CmdType: SingleShard,
+	}
+	jsonToggleCmdMeta = CmdsMeta{
+		Cmd:     "JSON.TOGGLE",
+		CmdType: SingleShard,
+	}
+	jsonNumIncrByCmdMeta = CmdsMeta{
+		Cmd:     "JSON.NUMINCRBY",
+		CmdType: SingleShard,
+	}
+	jsonNumMultByCmdMeta = CmdsMeta{
+		Cmd:     "JSON.NUMMULTBY",
+		CmdType: SingleShard,
+	}
+	jsonSetCmdMeta = CmdsMeta{
+		Cmd:     "JSON.SET",
+		CmdType: SingleShard,
+	}
+	jsonGetCmdMeta = CmdsMeta{
+		Cmd:     "JSON.GET",
+		CmdType: SingleShard,
+	}
+	jsonTypeCmdMeta = CmdsMeta{
+		Cmd:     "JSON.TYPE",
+		CmdType: SingleShard,
+	}
+	jsonIngestCmdMeta = CmdsMeta{
+		Cmd:     "JSON.INGEST",
+		CmdType: SingleShard,
+	}
+	jsonArrStrAppendCmdMeta = CmdsMeta{
+		Cmd:     "JSON.STRAPPEND",
+		CmdType: SingleShard,
+	}
+	hGetAllCmdMeta = CmdsMeta{
+		Cmd:     "HGETALL",
+		CmdType: SingleShard,
+	}
+	dumpCmdMeta = CmdsMeta{
+		Cmd:     "DUMP",
+		CmdType: SingleShard,
+	}
+	restoreCmdMeta = CmdsMeta{
+		Cmd:     "RESTORE",
+		CmdType: SingleShard,
+	}
+	geoaddCmdMeta = CmdsMeta{
+		Cmd:     "GEOADD",
+		CmdType: SingleShard,
+	}
+	geodistCmdMeta = CmdsMeta{
+		Cmd:     "GEODIST",
+		CmdType: SingleShard,
+	}
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -381,6 +471,8 @@ func init() {
 	WorkerCmdsMeta["JSON.ARRAPPEND"] = jsonArrAppendCmdMeta
 	WorkerCmdsMeta["JSON.ARRLEN"] = jsonArrLenCmdMeta
 	WorkerCmdsMeta["JSON.ARRPOP"] = jsonArrPopCmdMeta
+	WorkerCmdsMeta["JSON.DEBUG"] = jsonDebugCmdMeta
+	WorkerCmdsMeta["JSON.RESP"] = jsonRespCmdMeta
 
 	WorkerCmdsMeta["GETRANGE"] = getrangeCmdMeta
 	WorkerCmdsMeta["APPEND"] = appendCmdMeta
@@ -455,6 +547,27 @@ func init() {
 	WorkerCmdsMeta["BITFIELD"] = bitfieldCmdMeta
 	WorkerCmdsMeta["BITPOS"] = bitposCmdMeta
 	WorkerCmdsMeta["BITFIELD_RO"] = bitfieldroCmdMeta
-
+	WorkerCmdsMeta["LRANGE"] = lrangeCmdMeta
+	WorkerCmdsMeta["LINSERT"] = linsertCmdMeta
+	WorkerCmdsMeta["LPUSH"] = lpushCmdMeta
+	WorkerCmdsMeta["RPUSH"] = rpushCmdMeta
+	WorkerCmdsMeta["LPOP"] = lpopCmdMeta
+	WorkerCmdsMeta["RPOP"] = rpopCmdMeta
+	WorkerCmdsMeta["LLEN"] = llenCmdMeta
+	WorkerCmdsMeta["JSON.FORGET"] = jsonForgetCmdMeta
+	WorkerCmdsMeta["JSON.DEL"] = jsonDelCmdMeta
+	WorkerCmdsMeta["JSON.TOGGLE"] = jsonToggleCmdMeta
+	WorkerCmdsMeta["JSON.NUMINCRBY"] = jsonNumIncrByCmdMeta
+	WorkerCmdsMeta["JSON.NUMMULTBY"] = jsonNumMultByCmdMeta
+	WorkerCmdsMeta["JSON.SET"] = jsonSetCmdMeta
+	WorkerCmdsMeta["JSON.GET"] = jsonGetCmdMeta
+	WorkerCmdsMeta["JSON.TYPE"] = jsonTypeCmdMeta
+	WorkerCmdsMeta["JSON.INGEST"] = jsonIngestCmdMeta
+	WorkerCmdsMeta["JSON.STRAPPEND"] = jsonArrStrAppendCmdMeta
+	WorkerCmdsMeta["HGETALL"] = hGetAllCmdMeta
+	WorkerCmdsMeta["DUMP"] = dumpCmdMeta
+	WorkerCmdsMeta["RESTORE"] = restoreCmdMeta
+	WorkerCmdsMeta["GEOADD"] = geoaddCmdMeta
+	WorkerCmdsMeta["GEODIST"] = geodistCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

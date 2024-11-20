@@ -1,15 +1,15 @@
-name: Linter
+name: linter
 
 on:
   push:
     branches: [master]
     paths:
-      - '*.go'
+      - '**/*.go'
 
   pull_request:
     branches: [master]
     paths:
-      - '*.go'
+      - '**/*.go'
 
 permissions:
   contents: read
@@ -21,11 +21,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: stable
+      - uses: actions/cache@v4
+        with: 
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-golint-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-golint-
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.60.1
-          

@@ -59,6 +59,18 @@ func TestAPPEND(t *testing.T) {
 			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
 			cleanup:  []string{"del key"},
 		},
+		{
+			name:     "APPEND to key created using ZADD",
+			commands: []string{"ZADD key 1 one", "APPEND key two"},
+			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			cleanup:  []string{"del key"},
+		},
+		{
+			name:     "APPEND to key created using SETBIT",
+			commands: []string{"SETBIT bitkey 2 1", "SETBIT bitkey 3 1", "SETBIT bitkey 5 1", "SETBIT bitkey 10 1", "SETBIT bitkey 11 1", "SETBIT bitkey 14 1", "APPEND bitkey 1", "GET bitkey"},
+			expected: []interface{}{int64(0), int64(0), int64(0), int64(0), int64(0), int64(0), int64(3), "421"},
+			cleanup:  []string{"del bitkey"},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

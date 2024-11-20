@@ -65,8 +65,6 @@ The `PFCOUNT` command can raise errors in the following scenarios:
 
 ## Example usage
 
-### Basic Usage
-
 ### Single Key
 
 ```bash

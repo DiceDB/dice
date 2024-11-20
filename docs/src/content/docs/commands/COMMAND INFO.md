@@ -15,28 +15,19 @@ COMMAND INFO command-name [command-name ...]
 
 ## Parameters
 
-- **`command-name`**: One or more command names for which the information is requested. You can pass multiple command names to retrieve their details.
+| Parameter      | Description | Type   | Required |
+|----------------|-------------|--------|----------|
+| `command-name` | The name of the command for which information is requested. | String | No       |
 
-## Behavior
-
-The `COMMAND INFO` command retrieves detailed information about one or more specified commands in the DiceDB server. The command operates as follows:
-
-1. **Input Arguments**: The command takes a variable number of arguments, where each argument is expected to be the name of a command for which information is requested.
-2. **Default Behavior**: If no command names are provided, the command will return default information about all available commands.
-3. **Command Metadata Retrieval**: The command iterates over the predefined command metadata (`DiceCmds`) and stores the metadata in a map for quick lookup.
-4. **Command Name Lookup**: For each provided command name, the command checks if it exists in the metadata map:
-   - If the command exists, its metadata is appended to the result list.
-   - If the command name is incorrect or not supported `nil` is appended in its place to indicate the absence of valid information.
-5. **Result Encoding**: Finally, the result list, which contains the metadata for the valid command names and `nil` for any invalid ones, is encoded and returned as the output.
-
-### Note:
-
-1. If a valid command name is specified, its corresponding metadata is returned.
-2. If a command name is incorrect or not supported, `nil` is returned in its place.
 
 ## Return Values
 
-Returns an array of arrays, where each sub-array contains the following information for the specified commands:
+| Condition | Return Value |
+|-----------|--------------|
+| Command is successful | Array containing detailed information about the specified commands. |
+| Error | An error is returned if the command fails. |
+
+The detailed information for each command includes the following fields:
 
 - **Command Name**: The name of the command.
 - **Arity**: An integer representing the number of arguments the command expects.
@@ -67,9 +58,23 @@ The structure of the returned data is as follows:
 ]
 ```
 
+## Behavior
+
+The `COMMAND INFO` command retrieves detailed information about one or more specified commands in the DiceDB server. The command operates as follows:
+
+1. **Input Arguments**: The command takes a variable number of arguments, where each argument is expected to be the name of a command for which information is requested.
+2. **Default Behavior**: If no command names are provided, the command will return default information about all available commands.
+3. **Command Metadata Retrieval**: The command iterates over the predefined command metadata (`DiceCmds`) and stores the metadata in a map for quick lookup.
+4. **Command Name Lookup**: For each provided command name, the command checks if it exists in the metadata map:
+   - If the command exists, its metadata is appended to the result list.
+   - If the command name is incorrect or not supported `nil` is appended in its place to indicate the absence of valid information.
+5. **Result Encoding**: Finally, the result list, which contains the metadata for the valid command names and `nil` for any invalid ones, is encoded and returned as the output.
+
 ## Errors
 
-No error is raised, as this command supports a variable number of arguments.
+1. `Arity Error`
+   - Error Message: `(error) ERR wrong number of arguments for 'command|info' command`
+   - Occurs when an incorrect number of arguments is provided to the `COMMAND INFO` command.
 
 ## Example Usage
 
@@ -111,3 +116,9 @@ An error is thrown when the command name passed to the `COMMAND INFO` command is
 127.0.0.1:7379> COMMAND INFO UNKNOWNCOMMAND
 1) (nil)
 ```
+
+
+### Note:
+
+1. If a valid command name is specified, its corresponding metadata is returned.
+2. If a command name is incorrect or not supported, `nil` is returned in its place.

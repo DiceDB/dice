@@ -166,7 +166,7 @@ func TestJSONARRPOP(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result, _ := exec.FireCommand(cmd)
 
-                jsonResult, isString := result.(string)
+				jsonResult, isString := result.(string)
 				if isString && testutils.IsJSONResponse(jsonResult) {
 					assert.JSONEq(t, tc.expected[i].(string), jsonResult)
 					continue

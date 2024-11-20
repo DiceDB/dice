@@ -17,35 +17,39 @@ RPOP key
 | --------- | ---------------------------------------------------------------- | ------ | -------- |
 | `key`     | The key of the list from which the last element will be removed. | String | Yes      |
 
+
 ## Return values
 
-| Condition                                   | Return Value                                                               |
-| ------------------------------------------- | -------------------------------------------------------------------------- |
-| The command is successful                   | The value of the last element in the list                                  |
-| The list is empty or the key does not exist | `nil`                                                                      |
-| The key is of the wrong type                | Error: `WRONGTYPE Operation against a key holding the wrong kind of value` |
+| Condition                    | Return Value                                       |
+| ---------------------------- | -------------------------------------------------- |
+| The command is successful    | `String` The value of the last element in the list |
+| The key does not exist       | `nil`                                              |
+| The key is of the wrong type | error                                              |
+
 
 ## Behaviour
 
-- The `RPOP` command checks if the key exists and whether it contains a list.
-- If the key does not exist, the command treats it as an empty list and returns `nil`.
-- If the key exists but the list is empty, `nil` is returned.
+- When the `RPOP` command is executed, DiceDB checks if the key exists and is associated with a list. 
 - If the list has elements, the last element is removed and returned.
-- If the key exists but is not of type list, an error is raised.
+- If the key does not exist, the command treats it as an empty list and returns `nil`.
+- If the key exists but is not associated with a list, a `WRONGTYPE` error is returned.
+- If more than one key is passed, an error is returned.
 
 ## Errors
 
-1. **Wrong type of value or key**:
+1. `Wrong type of value or key`:
 
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-   - Occurs when attempting to run `RPOP` on a key that is not a list.
+   - Occurs if the key exists but is not associated with a list.
 
-2. **Non-existent or empty list**:
-   - Returns `nil` when the key does not exist or the list is empty.
+2. `Wrong number of arguments`
+
+   - Error Message: `(error) ERR wrong number of arguments for 'lpop' command`
+   - Occurs if command is executed without any arguments or with 2 or more arguments
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
 ```bash
 127.0.0.1:7379> LPUSH mylist "one" "two" "three"
@@ -54,30 +58,38 @@ RPOP key
 "one"
 ```
 
-### Example 2: Empty List
+### Non-Existent Key
+
+Returns `(nil)` if the provided key is non-existent
 
 ```bash
 127.0.0.1:7379> RPOP emptylist
 (nil)
 ```
 
-### Example 3: Non-List Key
+### Invalid Usage: Key is Not a List
+
+Trying to `LPOP` a key `mystring` which is holding wrong data type `string`.
 
 ```bash
-127.0.0.1:7379> SET mystring "Hello"
+SET mystring "hello"
 OK
-127.0.0.1:7379> RPOP mystring
+LPOP mystring
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-## Notes
+### Invalid Usage: Wrong Number of Arguments
 
-- The `RPOP` command is atomic, meaning it is safe to use in concurrent environments.
-- If you need to remove and return the first element of the list, use the `LPOP` command instead.
+Passing more than one key will result in an error:
 
-## Related Commands
+```bash
+RPOP mylist secondlist
+(error) ERR wrong number of arguments for 'lpop' command
+```
 
-- `LPUSH`: Insert all the specified values at the head of the list stored at key.
-- `LPOP`: Removes and returns the first element of the list stored at key.
+## Best Practices
+- `Check Key Type`: Before using `RPOP`, ensure that the key is associated with a list to avoid errors.
+- `Handle Non-Existent Keys`: Be prepared to handle the case where the key does not exist, as `RPOP` will return `nil` in such scenarios.
+- `Use in Conjunction with Other List Commands`: The `RPOP` command is often used alongside other list commands like `RPUSH`, `LPUSH`, `LLEN`, and `LPOP` to manage and process lists effectively.
 
 By understanding the `RPOP` command, you can effectively manage lists in DiceDB, ensuring that you can retrieve and process elements in a LIFO order.
