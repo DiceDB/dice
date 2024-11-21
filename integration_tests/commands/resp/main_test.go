@@ -21,15 +21,14 @@ func TestMain(m *testing.M) {
 	// Wait for the server to start
 	time.Sleep(2 * time.Second)
 
+	// Run the test suite
+	exitCode := m.Run()
+
 	conn := getLocalConnection()
 	if conn == nil {
 		panic("Failed to connect to the test server")
 	}
 	defer conn.Close()
-
-	// Run the test suite
-	exitCode := m.Run()
-
 	result := FireCommand(conn, "ABORT")
 	if result != "OK" {
 		panic("Failed to abort the server")

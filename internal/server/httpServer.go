@@ -65,7 +65,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, wl wal.AbstractWAL) *HTTPSe
 	mux := http.NewServeMux()
 	caseInsensitiveMux := &CaseInsensitiveMux{mux: mux}
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%d", config.HTTPPort),
+		Addr:              fmt.Sprintf(":%d", config.DiceConfig.HTTP.Port),
 		Handler:           caseInsensitiveMux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}

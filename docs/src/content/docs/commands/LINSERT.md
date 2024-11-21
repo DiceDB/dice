@@ -7,7 +7,7 @@ The `LINSERT` command in DiceDB inserts an element in the list stored at key eit
 
 ## Syntax
 
-```
+```bash
 LINSERT key <BEFORE | AFTER> pivot element
 ```
 

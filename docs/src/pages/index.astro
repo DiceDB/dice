@@ -62,15 +62,20 @@ const description =
       {
         recentBlogs.map((blog) => {
           return (
-            <div class="column is-4">
-              <div class="box content">
-                <div>
+            <div class="column is-4 hero">
+              <div class="box content" style="height: 100%;">
+                <div
+                  class="is-flex is-flex-direction-column"
+                  style="height: inherit;"
+                >
                   <p class="title is-size-5">
                     <a href={`/blog/${blog.slug}`} class="has-text-danger">
                       {blog.data.title}
                     </a>
                   </p>
-                  <p>{blog.data.description.slice(0, 128)}...</p>
+                  <p class="is-flex-grow-1">
+                    {blog.data.description.slice(0, 128)}...
+                  </p>
                   <p class="has-text-right">
                     <a class="button is-small" href={`/blog/${blog.slug}`}>
                       <span>Read post</span>

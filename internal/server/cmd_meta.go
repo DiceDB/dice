@@ -443,6 +443,14 @@ var (
 		Cmd:     "GEODIST",
 		CmdType: SingleShard,
 	}
+	clientCmdMeta = CmdsMeta{
+		Cmd:     "CLIENT",
+		CmdType: SingleShard,
+	}
+	latencyCmdMeta = CmdsMeta{
+		Cmd:     "LATENCY",
+		CmdType: SingleShard,
+	}
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -569,5 +577,7 @@ func init() {
 	WorkerCmdsMeta["RESTORE"] = restoreCmdMeta
 	WorkerCmdsMeta["GEOADD"] = geoaddCmdMeta
 	WorkerCmdsMeta["GEODIST"] = geodistCmdMeta
+	WorkerCmdsMeta["CLIENT"] = clientCmdMeta
+	WorkerCmdsMeta["LATENCY"] = latencyCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

@@ -492,7 +492,7 @@ func TestJSONDel(t *testing.T) {
 			expected:   []interface{}{float64(1), nil},
 			assertType: []string{"equal", "equal"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -505,7 +505,7 @@ func TestJSONDel(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"name":"Tom","address":{"zip":"10001"}}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -518,7 +518,7 @@ func TestJSONDel(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"flag":true}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -531,7 +531,7 @@ func TestJSONDel(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"name":"Tom"}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -544,7 +544,7 @@ func TestJSONDel(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"age":28}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -567,7 +567,7 @@ func TestJSONDel(t *testing.T) {
 			expected:   []interface{}{float64(2), `{"bosses":{"hobby":"swim"}}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -580,7 +580,7 @@ func TestJSONDel(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"name":"Tom"}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -593,7 +593,7 @@ func TestJSONDel(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"name":"sugar"}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 	}
@@ -619,7 +619,7 @@ func TestJSONForget(t *testing.T) {
 			expected:   []interface{}{float64(1), nil},
 			assertType: []string{"equal", "equal"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -632,7 +632,7 @@ func TestJSONForget(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"name":"Tom","address":{"zip":"10001"}}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -645,7 +645,7 @@ func TestJSONForget(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"flag":true}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -658,7 +658,7 @@ func TestJSONForget(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"name":"Tom"}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -671,7 +671,7 @@ func TestJSONForget(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"age":28}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -694,7 +694,7 @@ func TestJSONForget(t *testing.T) {
 			expected:   []interface{}{float64(2), `{"bosses":{"hobby":"swim"}}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -707,7 +707,7 @@ func TestJSONForget(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"name":"Tom"}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -720,7 +720,7 @@ func TestJSONForget(t *testing.T) {
 			expected:   []interface{}{float64(1), `{"name":"sugar"}`},
 			assertType: []string{"equal", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 	}
@@ -748,7 +748,7 @@ func TestJSONTOGGLE(t *testing.T) {
 			expected:   []interface{}{[]any{float64(0)}},
 			assertType: []string{"jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "user"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "user"}},
 			},
 		},
 		{
@@ -792,7 +792,7 @@ func TestJSONTOGGLE(t *testing.T) {
 			},
 			assertType: []string{"jsoneq", "jsoneq", "jsoneq"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "user"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "user"}},
 			},
 		},
 	}
@@ -1112,7 +1112,7 @@ func TestJsonNumMultBy(t *testing.T) {
 			expected:   []interface{}{"[]"},
 			assertType: []string{"equal"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -1124,7 +1124,7 @@ func TestJsonNumMultBy(t *testing.T) {
 			expected:   []interface{}{"ERR expected value at line 1 column 1"},
 			assertType: []string{"equal"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -1137,7 +1137,7 @@ func TestJsonNumMultBy(t *testing.T) {
 			expected:   []interface{}{"[4,null,10,null]", `[{"a":"b","b":[{"a":4},{"a":10},{"a":"c"}]}]`},
 			assertType: []string{"perm_equal", "json_equal"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -1150,7 +1150,7 @@ func TestJsonNumMultBy(t *testing.T) {
 			expected:   []interface{}{"[null]", `[{"a":"b","b":[{"a":2},{"a":5},{"a":"c"}]}]`},
 			assertType: []string{"perm_equal", "json_equal"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 	}
@@ -1355,7 +1355,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			expected:   []interface{}{"ERR expected value at line 1 column 1"},
 			assertType: []string{"equal"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -1384,7 +1384,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			expected:   []interface{}{"[4.2,7,null,null]", "[null]", "[3.2,6,null,null]", `[{"a":"b","b":[{"a":3.2},{"a":6},{"a":"c"}]}]`},
 			assertType: []string{"perm_equal", "perm_equal", "perm_equal", "json_equal"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -1398,7 +1398,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			expected:   []interface{}{"[3]", "[2]", "[2]"},
 			assertType: []string{"perm_equal", "perm_equal", "json_equal"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 		{
@@ -1412,7 +1412,7 @@ func TestJSONNumIncrBy(t *testing.T) {
 			expected:   []interface{}{"[3.5]", "[2.0]", "[2]"},
 			assertType: []string{"perm_equal", "perm_equal", "json_equal"},
 			cleanUp: []HTTPCommand{
-				HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
+				{Command: "DEL", Body: map[string]interface{}{"key": "k"}},
 			},
 		},
 	}
