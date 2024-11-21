@@ -466,10 +466,6 @@ var (
 		Cmd:     "LATENCY",
 		CmdType: SingleShard,
 	}
-	bitOPCmdMeta = CmdsMeta{
-		Cmd:     "BITOP",
-		CmdType: SingleShard,
-	}
 	flushDBCmdMeta = CmdsMeta{
 		Cmd:     "FLUSHDB",
 		CmdType: MultiShard,
@@ -643,7 +639,6 @@ func init() {
 	WorkerCmdsMeta["GEODIST"] = geodistCmdMeta
 	WorkerCmdsMeta["CLIENT"] = clientCmdMeta
 	WorkerCmdsMeta["LATENCY"] = latencyCmdMeta
-	WorkerCmdsMeta["BITOP"] = bitOPCmdMeta
 	WorkerCmdsMeta["FLUSHDB"] = flushDBCmdMeta
 	WorkerCmdsMeta["OBJECT"] = objectCmdMeta
 	WorkerCmdsMeta["COMMAND"] = commandCmdMeta

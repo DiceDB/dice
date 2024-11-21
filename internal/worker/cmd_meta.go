@@ -118,7 +118,6 @@ const (
 	CmdExists              = "EXISTS"
 	CmdPersist             = "PERSIST"
 	CmdTypeOf              = "TYPE"
-	CmdBitOp               = "BITOP"
 	CmdObject              = "OBJECT"
 	CmdExpire              = "EXPIRE"
 	CmdExpireAt            = "EXPIREAT"
@@ -506,9 +505,6 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdLatency: {
-		CmdType: SingleShard,
-	},
-	CmdBitOp: {
 		CmdType: SingleShard,
 	},
 	CmdObject: {

@@ -604,12 +604,6 @@ var (
 		IsMigrated: true,
 		NewEval:    evalBITCOUNT,
 	}
-	bitOpCmdMeta = DiceCmdMeta{
-		Name:       "BITOP",
-		Info:       "BITOP performs bitwise operations between multiple keys",
-		NewEval:    evalBITOP,
-		IsMigrated: true,
-	}
 
 	persistCmdMeta = DiceCmdMeta{
 		Name:       "PERSIST",
@@ -1424,7 +1418,6 @@ func init() {
 	DiceCmds["BF.RESERVE"] = bfreserveCmdMeta
 	DiceCmds["BITCOUNT"] = bitCountCmdMeta
 	DiceCmds["BITFIELD"] = bitfieldCmdMeta
-	DiceCmds["BITOP"] = bitOpCmdMeta
 	DiceCmds["BITFIELD_RO"] = bitfieldroCmdMeta
 	DiceCmds["BITPOS"] = bitposCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta

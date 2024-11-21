@@ -76,10 +76,9 @@ func TestType(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "key1", "value": "foobar"}},
 				{Command: "SET", Body: map[string]interface{}{"key": "key2", "value": "abcdef"}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "dest", "key1", "key2"}}},
 				{Command: "TYPE", Body: map[string]interface{}{"key": "dest"}},
 			},
-			expected:      []interface{}{"OK", "OK", float64(6), "string"},
+			expected:      []interface{}{"OK", "OK", "string"},
 			errorExpected: false,
 		},
 		{
