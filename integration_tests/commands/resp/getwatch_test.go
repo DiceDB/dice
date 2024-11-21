@@ -81,7 +81,7 @@ func TestGETWATCH(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdates(t, subscribers, "2714318480")
+	unsubscribeFromWatchUpdates(t, subscribers, "GET", "2714318480")
 }
 
 func TestGETWATCHWithSDK(t *testing.T) {
@@ -122,7 +122,7 @@ func TestGETWATCHWithSDK(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdatesSDK(t, subscribers, "2714318480")
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, "GET", "2714318480")
 }
 
 func TestGETWATCHWithSDK2(t *testing.T) {
@@ -162,7 +162,7 @@ func TestGETWATCHWithSDK2(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdatesSDK(t, subscribers, "2714318480")
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, "GET", "2714318480")
 }
 
 var getWatchWithLabelTestCases = []getWatchTestCase{
@@ -278,6 +278,6 @@ func TestGETWATCHWithLabelWithSDK(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdatesSDK(t, subscribers, getWatchWithLabelTestCases[0].fingerprint)
-	unsubscribeFromUpdatesSDK(t, subscribers, getWatchWithLabelTestCases[1].fingerprint)
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, "GET", getWatchWithLabelTestCases[0].fingerprint)
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, "GET", getWatchWithLabelTestCases[1].fingerprint)
 }

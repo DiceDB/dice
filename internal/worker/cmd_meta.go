@@ -116,7 +116,6 @@ const (
 	CmdZCard         = "ZCARD"
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
-	CmdPFCountWatch  = "PFCOUNT.WATCH"
 	CmdPFMerge       = "PFMERGE"
 	CmdTTL           = "TTL"
 	CmdPTTL          = "PTTL"
@@ -170,10 +169,12 @@ const (
 
 // Watch commands
 const (
-	CmdGetWatch      = "GET.WATCH"
-	CmdGetUnWatch    = "GET.UNWATCH"
-	CmdZRangeWatch   = "ZRANGE.WATCH"
-	CmdZRangeUnWatch = "ZRANGE.UNWATCH"
+	CmdGetWatch       = "GET.WATCH"
+	CmdGetUnWatch     = "GET.UNWATCH"
+	CmdZRangeWatch    = "ZRANGE.WATCH"
+	CmdZRangeUnWatch  = "ZRANGE.UNWATCH"
+	CmdPFCountWatch   = "PFCOUNT.WATCH"
+	CmdPFCountUnWatch = "PFCOUNT.UNWATCH"
 )
 
 type CmdMeta struct {
@@ -575,6 +576,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: Unwatch,
 	},
 	CmdZRangeUnWatch: {
+		CmdType: Unwatch,
+	},
+	CmdPFCountUnWatch: {
 		CmdType: Unwatch,
 	},
 }
