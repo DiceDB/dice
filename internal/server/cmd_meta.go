@@ -478,6 +478,39 @@ var (
 		Cmd:     "OBJECT",
 		CmdType: SingleShard,
 	}
+	commandCmdMeta = CmdsMeta{
+		Cmd:     "COMMAND",
+		CmdType: SingleShard,
+	}
+	CmdCommandCountMeta = CmdsMeta{
+		Cmd:     "COMMAND|COUNT",
+		CmdType: SingleShard,
+	}
+	CmdCommandHelp = CmdsMeta{
+		Cmd:     "COMMAND|HELP",
+		CmdType: SingleShard,
+	}
+	CmdCommandInfo = CmdsMeta{
+		Cmd:     "COMMAND|INFO",
+		CmdType: SingleShard,
+	}
+	CmdCommandList = CmdsMeta{
+		Cmd:     "COMMAND|LIST",
+		CmdType: SingleShard,
+	}
+	CmdCommandDocs = CmdsMeta{
+		Cmd:     "COMMAND|DOCS",
+		CmdType: SingleShard,
+	}
+	CmdCommandGetKeys = CmdsMeta{
+		Cmd:     "COMMAND|GETKEYS",
+		CmdType: SingleShard,
+	}
+	CmdCommandGetKeysFlags = CmdsMeta{
+		Cmd:     "COMMAND|GETKEYSANDFLAGS",
+		CmdType: SingleShard,
+	}
+
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -613,5 +646,12 @@ func init() {
 	WorkerCmdsMeta["BITOP"] = bitOPCmdMeta
 	WorkerCmdsMeta["FLUSHDB"] = flushDBCmdMeta
 	WorkerCmdsMeta["OBJECT"] = objectCmdMeta
-	// Additional commands (multishard, custom) can be added here as needed.
+	WorkerCmdsMeta["COMMAND"] = commandCmdMeta
+	WorkerCmdsMeta["COMMAND|COUNT"] = CmdCommandCountMeta
+	WorkerCmdsMeta["COMMAND|HELP"] = CmdCommandHelp
+	WorkerCmdsMeta["COMMAND|INFO"] = CmdCommandInfo
+	WorkerCmdsMeta["COMMAND|LIST"] = CmdCommandList
+	WorkerCmdsMeta["COMMAND|DOCS"] = CmdCommandDocs
+	WorkerCmdsMeta["COMMAND|GETKEYS"] = CmdCommandGetKeys
+	WorkerCmdsMeta["COMMAND|GETKEYSANDFLAGS"] = CmdCommandGetKeysFlags
 }
