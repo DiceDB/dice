@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"log"
 	"log/slog"
@@ -18,6 +17,7 @@ import (
 	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dice/internal/watchmanager"
 	"github.com/dicedb/dice/internal/worker"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -63,12 +63,12 @@ func ClosePublisherSubscribers(publisher net.Conn, subscribers []net.Conn) error
 	return nil
 }
 
+//nolint:unused
 func unsubscribeFromWatchUpdates(t *testing.T, subscribers []net.Conn, cmd, fingerprint string) {
 	t.Helper()
 	for _, subscriber := range subscribers {
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("%s.UNWATCH %s", cmd, fingerprint))
 		assert.NotNil(t, rp)
-
 		v, err := rp.DecodeOne()
 		assert.NoError(t, err)
 		castedValue, ok := v.(string)
@@ -79,6 +79,7 @@ func unsubscribeFromWatchUpdates(t *testing.T, subscribers []net.Conn, cmd, fing
 	}
 }
 
+//nolint:unused
 func unsubscribeFromWatchUpdatesSDK(t *testing.T, subscribers []WatchSubscriber, cmd, fingerprint string) {
 	for _, subscriber := range subscribers {
 		err := subscriber.watch.Unwatch(context.Background(), cmd, fingerprint)
