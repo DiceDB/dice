@@ -162,7 +162,6 @@ func Execute() {
 		fmt.Println("  -enable-http           Enable DiceDB to listen, accept, and process HTTP (default: false)")
 		fmt.Println("  -websocket-port        Port for accepting requests over WebSocket (default: 7381)")
 		fmt.Println("  -enable-websocket      Enable DiceDB to listen, accept, and process WebSocket (default: false)")
-		fmt.Println("  -enable-multithreading Enable multithreading execution and leverage multiple CPU cores (default: false)")
 		fmt.Println("  -num-shards            Number of shards to create. Defaults to number of cores (default: -1)")
 		fmt.Println("  -enable-watch          Enable support for .WATCH commands and real-time reactivity (default: false)")
 		fmt.Println("  -enable-profiling      Enable profiling and capture critical metrics and traces in .prof files (default: false)")

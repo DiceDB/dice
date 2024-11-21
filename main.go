@@ -102,7 +102,6 @@ func main() {
 	// This determines the total number of logical processors that can be utilized
 	// for parallel execution. Setting the maximum number of CPUs to the available
 	// core count ensures the application can make full use of all available hardware.
-	// If multithreading is not enabled, server will run on a single core.
 	var numShards int
 	numShards = runtime.NumCPU()
 	if config.DiceConfig.Performance.NumShards > 0 {
