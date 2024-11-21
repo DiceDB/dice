@@ -1614,8 +1614,13 @@ func convertCmdMetaToDocs(cmdMeta *DiceCmdMeta) []interface{} {
 // Function to convert map[string]DiceCmdMeta{} to []interface{}
 func convertDiceCmdsMapToDocs() []interface{} {
 	var result []interface{}
+	// TODO: Add other keys supported as part of COMMAND DOCS, currently only
+	// command name and summary supported. This would required adding more metadata to supported commands
 	for _, cmdMeta := range DiceCmds {
-		result = append(result, convertCmdMetaToDocs(&cmdMeta))
+		result = append(result, strings.ToLower(cmdMeta.Name))
+		subResult := []interface{}{"summary", cmdMeta.Info}
+		result = append(result, subResult)
 	}
+
 	return result
 }
