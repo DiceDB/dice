@@ -246,8 +246,6 @@ func MergeFlags(flags *Config) {
 			DiceConfig.WebSocket.Enabled = flags.WebSocket.Enabled
 		case "websocket-port":
 			DiceConfig.WebSocket.Port = flags.WebSocket.Port
-		case "enable-multithreading":
-			DiceConfig.Performance.EnableMultiThreading = flags.Performance.EnableMultiThreading
 		case "num-shards":
 			DiceConfig.Performance.NumShards = flags.Performance.NumShards
 		case "enable-watch":
