@@ -2856,7 +2856,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 			name:  "PERSIST key does not exist",
 			input: []string{"nonexistent"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: int64(0),
 				Error:  nil,
 			},
 		},
@@ -2867,7 +2867,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"existent_no_expiry", "value"}, store)
 			},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: int64(0),
 				Error:  nil,
 			},
 		},
@@ -2878,7 +2878,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"existent_with_expiry", "value", Ex, "1"}, store)
 			},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: int64(1),
 				Error:  nil,
 			},
 		},
@@ -2890,7 +2890,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"existent_with_expiry_not_expired", "value", Ex, "10000"}, store) // 10000 seconds in the future
 			},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: int64(1),
 				Error:  nil,
 			},
 		},
