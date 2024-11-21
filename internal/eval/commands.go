@@ -1321,6 +1321,14 @@ var (
 		NewEval:    evalGEODIST,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	geoSearchCmdMeta = DiceCmdMeta{
+		Name: "GEOSEARCH",
+		Info: `Return the members of a sorted set populated with geospatial information using GEOADD, which are within the borders of the area specified by a given shape.`,
+		Arity: -6,
+		IsMigrated: true,
+		NewEval: evalGEOSEARCH,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 	jsonstrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRAPPEND",
 		Info: `JSON.STRAPPEND key [path] value
@@ -1466,6 +1474,7 @@ func init() {
 	DiceCmds["FLUSHDB"] = flushdbCmdMeta
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
+	DiceCmds["GEOSEARCH"] = geoSearchCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["GETBIT"] = getBitCmdMeta
 	DiceCmds["GETDEL"] = getDelCmdMeta
