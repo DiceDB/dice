@@ -218,10 +218,11 @@ func TestExecuteQueryWithEdgeCases(t *testing.T) {
 	t.Run("WhereClauseOnKey", func(t *testing.T) {
 		queryStr := "SELECT $key, $value WHERE $key > 'k3' AND $key like 'k*' ORDER BY $key ASC"
 		query, err := sql.ParseQuery(queryStr)
+		assert.Nil(t, err)
 
 		result, err := sql.ExecuteQuery(query, store.GetStore())
-
 		assert.Nil(t, err)
+
 		assert.Equal(t, len(result), 2, "Expected 2 results for WHERE clause on key")
 		assert.Equal(t, []string{result[0].Key, result[1].Key}, []string{"k4", "k5"})
 	})
@@ -609,7 +610,7 @@ func TestExecuteQueryWithLikeStringComparisons(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			query, err := sql.ParseQuery(tc.query)
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 			result, err := sql.ExecuteQuery(query, store.GetStore())
 
 			assert.Nil(t, err)
@@ -688,7 +689,7 @@ func TestExecuteQueryWithStringNotLikeComparisons(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			query, err := sql.ParseQuery(tc.query)
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 			result, err := sql.ExecuteQuery(query, store.GetStore())
 
 			assert.Nil(t, err)

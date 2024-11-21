@@ -181,7 +181,7 @@ func getOrderByValue(orderBy *Value, row QueryResultRow, jsonPathCache map[strin
 		return row.Key, String, nil
 	case FieldVal:
 		return getValueAndType(&row.Value)
-	case FieldJson:
+	case FieldJSON:
 		if isJSON(&row.Value) {
 			return retrieveValueFromJSON(orderBy.Value, &row.Value, jsonPathCache)
 		}
@@ -247,13 +247,13 @@ func EvaluateWhereClause(node ConditionNode, row QueryResultRow, jsonPathCache m
 	}
 
 	switch node := node.(type) {
-	case AndNode:
+	case *AndNode:
 		left, err := EvaluateWhereClause(node.Left, row, jsonPathCache)
 		if err != nil || !left {
 			return false, err
 		}
 		return EvaluateWhereClause(node.Right, row, jsonPathCache)
-	case OrNode:
+	case *OrNode:
 		left, err := EvaluateWhereClause(node.Left, row, jsonPathCache)
 		if err != nil {
 			return false, err
@@ -262,7 +262,7 @@ func EvaluateWhereClause(node ConditionNode, row QueryResultRow, jsonPathCache m
 			return true, nil
 		}
 		return EvaluateWhereClause(node.Right, row, jsonPathCache)
-	case ComparisonNode:
+	case *ComparisonNode:
 		return evaluateComparisonExpr(node, row, jsonPathCache)
 	}
 
@@ -270,7 +270,7 @@ func EvaluateWhereClause(node ConditionNode, row QueryResultRow, jsonPathCache m
 }
 
 // Function to evaluate a ComparisonExpr node
-func evaluateComparisonExpr(expr ComparisonNode, row QueryResultRow, jsonPathCache map[string]jp.Expr) (bool, error) {
+func evaluateComparisonExpr(expr *ComparisonNode, row QueryResultRow, jsonPathCache map[string]jp.Expr) (bool, error) {
 	left, leftType, err := getExprValueAndType(expr.Left, row, jsonPathCache)
 	if err != nil {
 		if errors.Is(err, ErrNoResultsFound) {
@@ -325,7 +325,7 @@ func getExprValueAndType(expr Value, row QueryResultRow, jsonPathCache map[strin
 		return int64(i), Int64, nil
 	case FieldString:
 		return expr.Value, String, nil
-	case FieldJson:
+	case FieldJSON:
 		return retrieveValueFromJSON(expr.Value, &row.Value, jsonPathCache) // FIX: ensure row.Value is json
 	default:
 		return nil, utils.EmptyStr, fmt.Errorf("unsupported expression type: %T", expr)

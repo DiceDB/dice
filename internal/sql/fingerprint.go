@@ -30,15 +30,15 @@ func generateFingerprint(where ConditionNode) string {
 
 func parseAstExpression(expr ConditionNode) expression {
 	switch expr := expr.(type) {
-	case OrNode:
+	case *OrNode:
 		leftExpr := parseAstExpression(expr.Left)
 		rightExpr := parseAstExpression(expr.Right)
 		return combineOr(leftExpr, rightExpr)
-	case AndNode:
+	case *AndNode:
 		leftExpr := parseAstExpression(expr.Left)
 		rightExpr := parseAstExpression(expr.Right)
 		return combineAnd(leftExpr, rightExpr)
-	case ComparisonNode:
+	case *ComparisonNode:
 		return expression([][]string{{string(expr.Operator) + expr.Left.Value + expr.Right.Value}})
 	default:
 		return expression{}

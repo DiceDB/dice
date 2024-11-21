@@ -34,7 +34,7 @@ const (
 type FieldType string
 
 const (
-	FieldJson   FieldType = "json"
+	FieldJSON   FieldType = "json"
 	FieldKey    FieldType = "key"
 	FieldVal    FieldType = "value"
 	FieldInt    FieldType = "int64"
@@ -48,42 +48,42 @@ type Value struct {
 	Value string
 }
 
-func newJsonType(val string) Value {
+func NewJSONType(val string) Value {
 	return Value{
 		Value: val,
-		Type:  FieldJson,
+		Type:  FieldJSON,
 	}
 }
 
-func newIntType(val string) Value {
+func NewIntType(val string) Value {
 	return Value{
 		Value: val,
 		Type:  FieldInt,
 	}
 }
 
-func newStringType(val string) Value {
+func NewStringType(val string) Value {
 	return Value{
 		Value: val,
 		Type:  FieldString,
 	}
 }
 
-func newFloatType(val string) Value {
+func NewFloatType(val string) Value {
 	return Value{
 		Value: val,
 		Type:  FieldFloat,
 	}
 }
 
-func newKeyType() Value {
+func NewKeyType() Value {
 	return Value{
 		Value: TempKey,
 		Type:  FieldKey,
 	}
 }
 
-func newValueType() Value {
+func NewValueType() Value {
 	return Value{
 		Value: TempValue,
 		Type:  FieldVal,
@@ -100,14 +100,14 @@ type AndNode struct {
 	Right ConditionNode
 }
 
-func (a AndNode) isConditionNode() {}
+func (a *AndNode) isConditionNode() {}
 
 type OrNode struct {
 	Left  ConditionNode
 	Right ConditionNode
 }
 
-func (o OrNode) isConditionNode() {}
+func (o *OrNode) isConditionNode() {}
 
 type ComparisonNode struct {
 	Left     Value        // _key or _value
@@ -115,7 +115,7 @@ type ComparisonNode struct {
 	Right    Value        // Resolved value to compare with
 }
 
-func (c ComparisonNode) isConditionNode() {}
+func (c *ComparisonNode) isConditionNode() {}
 
 type QuerySelection struct {
 	KeySelection   bool
@@ -155,12 +155,12 @@ func (l *dsqlErrorListener) SyntaxError(_ antlr.Recognizer, _ interface{}, line,
 	l.Errors = append(l.Errors, fmt.Errorf("syntax error at line %d:%d - %s", line, col, msg))
 }
 
-func (v *dsqlListner) ExitSelectStmt(ctx *parser.SelectStmtContext) {
-	v.dsqlQuery.Selection = parseSelectExpressions(ctx.SelectFields())
+func (l *dsqlListner) ExitSelectStmt(ctx *parser.SelectStmtContext) {
+	l.dsqlQuery.Selection = parseSelectExpressions(ctx.SelectFields())
 }
 
-func (v *dsqlListner) ExitOrderByClause(ctx *parser.OrderByClauseContext) {
-	v.dsqlQuery.OrderBy, _ = parseOrderBy(ctx)
+func (l *dsqlListner) ExitOrderByClause(ctx *parser.OrderByClauseContext) {
+	l.dsqlQuery.OrderBy, _ = parseOrderBy(ctx)
 }
 
 func (l *dsqlListner) ExitLimitClause(ctx *parser.LimitClauseContext) {
@@ -298,7 +298,6 @@ func parseOrderBy(ctx parser.IOrderByClauseContext) (QueryOrder, error) {
 		return QueryOrder{OrderBy: orderBy, Order: Desc}, nil
 	}
 	return QueryOrder{OrderBy: orderBy, Order: Asc}, nil
-
 }
 
 func parseLimit(ctx parser.ILimitClauseContext) int {
@@ -346,9 +345,9 @@ func buildConditionNode(ctx parser.IConditionContext) (ConditionNode, error) {
 		}
 
 		if ctx.AND() != nil {
-			return AndNode{Left: leftNode, Right: rightNode}, nil
+			return &AndNode{Left: leftNode, Right: rightNode}, nil
 		}
-		return OrNode{Left: leftNode, Right: rightNode}, nil
+		return &OrNode{Left: leftNode, Right: rightNode}, nil
 	}
 
 	// Handle leaf nodes with comparison expressions
@@ -358,7 +357,7 @@ func buildConditionNode(ctx parser.IConditionContext) (ConditionNode, error) {
 		operator := ComparisonOp(strings.ToLower(expr.ComparisonOp().GetText()))
 		value := trimQuotesOrBackticks(expr.Value().GetText())
 
-		return ComparisonNode{
+		return &ComparisonNode{
 			Left:     Value{Value: field, Type: getType(field)},
 			Operator: operator,
 			Right:    Value{Value: value, Type: getType(value)},
@@ -369,36 +368,36 @@ func buildConditionNode(ctx parser.IConditionContext) (ConditionNode, error) {
 
 func compact(node ConditionNode) ConditionNode {
 	switch n := node.(type) {
-	case ComparisonNode:
+	case *ComparisonNode:
 		return n // Leaf node, return as-is
-	case AndNode:
+	case *AndNode:
 		left := compact(n.Left)
 		right := compact(n.Right)
 		if isEqualNode(left, right) {
 			return left
 		}
-		return AndNode{Left: left, Right: right}
-	case OrNode:
+		return &AndNode{Left: left, Right: right}
+	case *OrNode:
 		left := compact(n.Left)
 		right := compact(n.Right)
 		if isEqualNode(left, right) {
 			return left
 		}
-		return OrNode{Left: left, Right: right}
+		return &OrNode{Left: left, Right: right}
 	}
 	return node
 }
 
 func isEqualNode(a, b ConditionNode) bool {
 	switch a := a.(type) {
-	case ComparisonNode:
-		b, ok := b.(ComparisonNode)
+	case *ComparisonNode:
+		b, ok := b.(*ComparisonNode)
 		return ok && a == b
-	case AndNode:
-		b, ok := b.(AndNode)
+	case *AndNode:
+		b, ok := b.(*AndNode)
 		return ok && isEqualNode(a.Left, b.Left) && isEqualNode(a.Right, b.Right)
-	case OrNode:
-		b, ok := b.(OrNode)
+	case *OrNode:
+		b, ok := b.(*OrNode)
 		return ok && isEqualNode(a.Left, b.Left) && isEqualNode(a.Right, b.Right)
 	default:
 		return false
@@ -413,7 +412,7 @@ func getType(value string) FieldType {
 		return FieldVal
 	default:
 		if strings.HasPrefix(value, TempPrefix) {
-			return FieldJson
+			return FieldJSON
 		}
 
 		if _, err := strconv.Atoi(value); err == nil {
@@ -445,13 +444,13 @@ func conditionNodeToSQL(node ConditionNode) string {
 
 	// Check if the node is a logical operation
 	switch node := node.(type) {
-	case ComparisonNode:
+	case *ComparisonNode:
 		return comparisonExprToSQL(node)
-	case OrNode:
+	case *OrNode:
 		leftSQL := conditionNodeToSQL(node.Left)
 		rightSQL := conditionNodeToSQL(node.Right)
 		return fmt.Sprintf("%s %s %s", leftSQL, "OR", rightSQL)
-	case AndNode:
+	case *AndNode:
 		leftSQL := conditionNodeToSQL(node.Left)
 		rightSQL := conditionNodeToSQL(node.Right)
 		return fmt.Sprintf("%s %s %s", leftSQL, "AND", rightSQL)
@@ -461,7 +460,7 @@ func conditionNodeToSQL(node ConditionNode) string {
 }
 
 // Helper function to convert ComparisonExpr to SQL
-func comparisonExprToSQL(expr ComparisonNode) string {
+func comparisonExprToSQL(expr *ComparisonNode) string {
 	sqlBuilder := &strings.Builder{}
 	sqlBuilder.WriteString(expr.Left.Value)
 	sqlBuilder.WriteString(" ")

@@ -22,10 +22,10 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key, $value WHERE $key like `match:100:*` ORDER BY $value DESC LIMIT 10",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				Where: ComparisonNode{
+				Where: &ComparisonNode{
 					Operator: "like",
-					Left:     newKeyType(),
-					Right:    newStringType("match:100:*"),
+					Left:     NewKeyType(),
+					Right:    NewStringType("match:100:*"),
 				},
 				OrderBy: QueryOrder{OrderBy: Value{Value: "_value", Type: FieldVal}, Order: "desc"},
 				Limit:   10,
@@ -37,16 +37,16 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key, $value WHERE $key like `match:100:*` AND $value = 'test' ORDER BY $key LIMIT 5",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				Where: AndNode{
-					Left: ComparisonNode{
+				Where: &AndNode{
+					Left: &ComparisonNode{
 						Operator: "like",
-						Left:     newKeyType(),
-						Right:    newStringType("match:100:*"),
+						Left:     NewKeyType(),
+						Right:    NewStringType("match:100:*"),
 					},
-					Right: ComparisonNode{
+					Right: &ComparisonNode{
 						Operator: "=",
-						Left:     newValueType(),
-						Right:    newStringType("test"),
+						Left:     NewValueType(),
+						Right:    NewStringType("test"),
 					},
 				},
 				OrderBy: QueryOrder{OrderBy: Value{Value: "_key", Type: FieldKey}, Order: Asc},
@@ -59,23 +59,23 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key WHERE $key like `user:*` AND $value > 25 AND $key LIKE 'user:1%'",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: false},
-				Where: AndNode{
-					Left: AndNode{
-						Left: ComparisonNode{
+				Where: &AndNode{
+					Left: &AndNode{
+						Left: &ComparisonNode{
 							Operator: "like",
-							Left:     newKeyType(),
-							Right:    newStringType("user:*"),
+							Left:     NewKeyType(),
+							Right:    NewStringType("user:*"),
 						},
-						Right: ComparisonNode{
+						Right: &ComparisonNode{
 							Operator: ">",
-							Left:     newValueType(),
-							Right:    newIntType("25"),
+							Left:     NewValueType(),
+							Right:    NewIntType("25"),
 						},
 					},
-					Right: ComparisonNode{
+					Right: &ComparisonNode{
 						Operator: "like",
-						Left:     newKeyType(),
-						Right:    newStringType("user:1%"),
+						Left:     NewKeyType(),
+						Right:    NewStringType("user:1%"),
 					},
 				},
 			},
@@ -135,10 +135,10 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $value WHERE $key like `test:*`",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: false, ValueSelection: true},
-				Where: ComparisonNode{
+				Where: &ComparisonNode{
 					Operator: "like",
-					Left:     newKeyType(),
-					Right:    newStringType("test:*"),
+					Left:     NewKeyType(),
+					Right:    NewStringType("test:*"),
 				},
 			},
 			wantErr: false,
@@ -148,10 +148,10 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key, $value WHERE $key like `test:*` ORDER BY $key ASC",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				Where: ComparisonNode{
+				Where: &ComparisonNode{
 					Operator: "like",
-					Left:     newKeyType(),
-					Right:    newStringType("test:*"),
+					Left:     NewKeyType(),
+					Right:    NewStringType("test:*"),
 				},
 				OrderBy: QueryOrder{OrderBy: Value{Value: "_key", Type: FieldKey}, Order: "asc"},
 			},
@@ -176,16 +176,16 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key, $value WHERE $key like `test:*` AND $value IS NULL",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				Where: AndNode{
-					Left: ComparisonNode{
+				Where: &AndNode{
+					Left: &ComparisonNode{
 						Operator: "like",
-						Left:     newKeyType(),
-						Right:    newStringType("test:*"),
+						Left:     NewKeyType(),
+						Right:    NewStringType("test:*"),
 					},
-					Right: ComparisonNode{
+					Right: &ComparisonNode{
 						Operator: "is",
-						Left:     newValueType(),
-						Right:    newStringType("NULL"), // FIX: Null type
+						Left:     NewValueType(),
+						Right:    NewStringType("NULL"), // FIX: Null type
 					},
 				},
 			},
@@ -196,22 +196,22 @@ func TestParseQuery(t *testing.T) {
 			sql:  "SELECT $key WHERE ($key LIKE `test:*`) AND ($value > 10 OR $value < 5)",
 			want: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: false},
-				Where: AndNode{
-					Left: ComparisonNode{
+				Where: &AndNode{
+					Left: &ComparisonNode{
 						Operator: "like",
-						Left:     newKeyType(),
-						Right:    newStringType("test:*"),
+						Left:     NewKeyType(),
+						Right:    NewStringType("test:*"),
 					},
-					Right: OrNode{
-						Left: ComparisonNode{
+					Right: &OrNode{
+						Left: &ComparisonNode{
 							Operator: ">",
-							Left:     newValueType(),
-							Right:    newIntType("10"),
+							Left:     NewValueType(),
+							Right:    NewIntType("10"),
 						},
-						Right: ComparisonNode{
+						Right: &ComparisonNode{
 							Operator: "<",
-							Left:     newValueType(),
-							Right:    newIntType("5"),
+							Left:     NewValueType(),
+							Right:    NewIntType("5"),
 						},
 					},
 				},
@@ -320,22 +320,22 @@ func TestParseOrderBy(t *testing.T) {
 		{
 			name: "order by json path asc",
 			sql:  "SELECT $value WHERE $key like `test` ORDER BY $value.name ASC",
-			want: QueryOrder{OrderBy: Value{Value: "_value.name", Type: FieldJson}, Order: "asc"},
+			want: QueryOrder{OrderBy: Value{Value: "_value.name", Type: FieldJSON}, Order: "asc"},
 		},
 		{
 			name: "order by nested json path desc",
 			sql:  "SELECT $value WHERE $key like `test` ORDER BY $value.address.city DESC",
-			want: QueryOrder{OrderBy: Value{Value: "_value.address.city", Type: FieldJson}, Order: "desc"},
+			want: QueryOrder{OrderBy: Value{Value: "_value.address.city", Type: FieldJSON}, Order: "desc"},
 		},
 		{
 			name: "order by json path with array index",
 			sql:  "SELECT $value WHERE $key like `test` ORDER BY `$value.items[0].price`",
-			want: QueryOrder{OrderBy: Value{Value: "_value.items[0].price", Type: FieldJson}, Order: "asc"},
+			want: QueryOrder{OrderBy: Value{Value: "_value.items[0].price", Type: FieldJSON}, Order: "asc"},
 		},
 		{
 			name: "order by complex json path",
 			sql:  "SELECT $value WHERE $key like `test` ORDER BY `$value.users[*].contacts[0].email`",
-			want: QueryOrder{OrderBy: Value{Value: "_value.users[*].contacts[0].email", Type: FieldJson}, Order: "asc"},
+			want: QueryOrder{OrderBy: Value{Value: "_value.users[*].contacts[0].email", Type: FieldJSON}, Order: "asc"},
 		},
 		{
 			name: "no order by clause",
@@ -448,10 +448,10 @@ func TestDSQLQueryString(t *testing.T) {
 			name: "With Where Clause",
 			query: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true},
-				Where: ComparisonNode{
+				Where: &ComparisonNode{
 					Operator: ">",
-					Left:     newValueType(),
-					Right:    newIntType("10"),
+					Left:     NewValueType(),
+					Right:    NewIntType("10"),
 				},
 			},
 			expected: "SELECT $key WHERE $value > 10",
@@ -476,16 +476,16 @@ func TestDSQLQueryString(t *testing.T) {
 			name: "Full Query",
 			query: DSQLQuery{
 				Selection: QuerySelection{KeySelection: true, ValueSelection: true},
-				Where: AndNode{
-					Left: ComparisonNode{
+				Where: &AndNode{
+					Left: &ComparisonNode{
 						Operator: "like",
-						Left:     newKeyType(),
-						Right:    newJsonType("match:100:*"),
+						Left:     NewKeyType(),
+						Right:    NewJSONType("match:100:*"),
 					},
-					Right: ComparisonNode{
+					Right: &ComparisonNode{
 						Operator: "=",
-						Left:     newValueType(),
-						Right:    newStringType("test"),
+						Left:     NewValueType(),
+						Right:    NewStringType("test"),
 					},
 				},
 				OrderBy: QueryOrder{OrderBy: Value{Value: "_key", Type: FieldKey}, Order: "DESC"},
