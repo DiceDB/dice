@@ -246,18 +246,16 @@ func MergeFlags(flags *Config) {
 			DiceConfig.WebSocket.Enabled = flags.WebSocket.Enabled
 		case "websocket-port":
 			DiceConfig.WebSocket.Port = flags.WebSocket.Port
+		case "enable-multithreading":
+			DiceConfig.Performance.EnableMultiThreading = flags.Performance.EnableMultiThreading
 		case "num-shards":
 			DiceConfig.Performance.NumShards = flags.Performance.NumShards
-		case "require-pass":
-			DiceConfig.Auth.Password = flags.Auth.Password
-		case "keys-limit":
-			DiceConfig.Memory.KeysLimit = flags.Memory.KeysLimit
-		case "eviction-ratio":
-			DiceConfig.Memory.EvictionRatio = flags.Memory.EvictionRatio
-		case "enable-profiling":
-			DiceConfig.Performance.EnableProfiling = flags.Performance.EnableProfiling
 		case "enable-watch":
 			DiceConfig.Performance.EnableWatch = flags.Performance.EnableWatch
+		case "enable-profiling":
+			DiceConfig.Performance.EnableProfiling = flags.Performance.EnableProfiling
+		case "log-level":
+			DiceConfig.Logging.LogLevel = flags.Logging.LogLevel
 		case "log-dir":
 			DiceConfig.Logging.LogDir = flags.Logging.LogDir
 		case "persistence-enable":
@@ -266,6 +264,12 @@ func MergeFlags(flags *Config) {
 			DiceConfig.Persistence.RestoreFromWAL = flags.Persistence.RestoreFromWAL
 		case "wal-engine":
 			DiceConfig.Persistence.WALEngine = flags.Persistence.WALEngine
+		case "require-pass":
+			DiceConfig.Auth.Password = flags.Auth.Password
+		case "keys-limit":
+			DiceConfig.Memory.KeysLimit = flags.Memory.KeysLimit
+		case "eviction-ratio":
+			DiceConfig.Memory.EvictionRatio = flags.Memory.EvictionRatio
 		}
 	})
 }
