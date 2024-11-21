@@ -6380,3 +6380,128 @@ func evalCLIENT(args []string, store *dstore.Store) *EvalResponse {
 func evalLATENCY(args []string, store *dstore.Store) *EvalResponse {
 	return makeEvalResult([]string{})
 }
+
+// evalDEL deletes all the specified keys in args list
+// returns the count of total deleted keys
+func evalDEL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("DEL"),
+		}
+	}
+
+	var count int64
+	for _, key := range args {
+		if ok := store.Del(key); ok {
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalEXISTS returns the number of keys existing in the db
+// returns the count of total existing keys
+func evalEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("EXISTS"),
+		}
+	}
+
+	var count int64
+	for _, key := range args {
+		if store.GetNoTouch(key) != nil {
+			count++
+		}
+	}
+
+	return &EvalResponse{
+		Result: count,
+		Error:  nil,
+	}
+}
+
+// evalPERSIST removes the expiry from the key
+func evalPERSIST(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("PERSIST"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	// If the key doesn't exist, return 0
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	// If the key has no expiry, return 0
+	_, isExpirySet := dstore.GetExpiry(obj, store)
+	if !isExpirySet {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	// Remove the expiry from the key
+	dstore.DelExpiry(obj, store)
+
+	return &EvalResponse{
+		Result: clientio.IntegerOne,
+		Error:  nil,
+	}
+}
+
+// evalTYPE returns the type of the value stored at key
+func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("TYPE"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: "none",
+			Error:  nil,
+		}
+	}
+
+	var typeStr string
+	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
+		typeStr = "string"
+	case object.ObjTypeByteList:
+		typeStr = "list"
+	case object.ObjTypeSet:
+		typeStr = "set"
+	case object.ObjTypeHashMap:
+		typeStr = "hash"
+	case object.ObjTypeSortedSet:
+		typeStr = "zset"
+	default:
+		typeStr = "non-supported type"
+	}
+
+	return &EvalResponse{
+		Result: typeStr,
+		Error:  nil,
+	}
+}

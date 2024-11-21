@@ -165,6 +165,10 @@ const (
 	CmdGeoDist       = "GEODIST"
 	CmdClient        = "CLIENT"
 	CmdLatency       = "LATENCY"
+	CmdDel           = "DEL"
+	CmdExists        = "EXISTS"
+	CmdPersist       = "PERSIST"
+	CmdTypeOf        = "TYPE"
 )
 
 // Watch commands
@@ -265,6 +269,18 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONDel: {
+		CmdType: SingleShard,
+	},
+	CmdDel: {
+		CmdType: SingleShard,
+	},
+	CmdExists: {
+		CmdType: SingleShard,
+	},
+	CmdPersist: {
+		CmdType: SingleShard,
+	},
+	CmdTypeOf: {
 		CmdType: SingleShard,
 	},
 	CmdJSONForget: {

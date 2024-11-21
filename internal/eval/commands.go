@@ -359,9 +359,10 @@ var (
 		Name: "DEL",
 		Info: `DEL deletes all the specified keys in args list
 		returns the count of total deleted keys after encoding`,
-		Eval:     evalDEL,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+		IsMigrated: true,
+		NewEval:    evalDEL,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
 	}
 	expireCmdMeta = DiceCmdMeta{
 		Name: "EXPIRE",
@@ -639,9 +640,10 @@ var (
 		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
 	}
 	persistCmdMeta = DiceCmdMeta{
-		Name: "PERSIST",
-		Info: "PERSIST removes the expiration from a key",
-		Eval: evalPersist,
+		Name:       "PERSIST",
+		Info:       "PERSIST removes the expiration from a key",
+		IsMigrated: true,
+		NewEval:    evalPERSIST,
 	}
 
 	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
@@ -695,7 +697,8 @@ var (
 		Name: "EXISTS",
 		Info: `EXISTS key1 key2 ... key_N
 		Return value is the number of keys existing.`,
-		Eval: evalEXISTS,
+		IsMigrated: true,
+		NewEval:    evalEXISTS,
 	}
 	renameCmdMeta = DiceCmdMeta{
 		Name:  "RENAME",
@@ -1109,10 +1112,11 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	typeCmdMeta = DiceCmdMeta{
-		Name:  "TYPE",
-		Info:  `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
-		Eval:  evalTYPE,
-		Arity: 1,
+		Name:       "TYPE",
+		Info:       `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
+		IsMigrated: true,
+		NewEval:    evalTYPE,
+		Arity:      1,
 
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}

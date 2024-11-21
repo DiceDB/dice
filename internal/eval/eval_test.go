@@ -2789,22 +2789,35 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 
 func testEvalDel(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'del' command"), false),
+		"DEL nil value": {
+			name:  "DEL nil value",
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("DEL"),
+			},
 		},
-		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'del' command"), false),
+		"DEL empty array": {
+			name:  "DEL empty array",
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("DEL"),
+			},
 		},
-		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"NONEXISTENT_KEY"},
-			output: []byte(":0\r\n"),
+		"DEL key does not exist": {
+			name:  "DEL key does not exist",
+			setup: func() {},
+			input: []string{"NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: int64(0),
+				Error:  nil,
+			},
 		},
-		"key exists": {
+		"DEL key exists": {
+			name: "DEL key exists",
 			setup: func() {
 				key := "EXISTING_KEY"
 				value := "mock_value"
@@ -2816,51 +2829,74 @@ func testEvalDel(t *testing.T, store *dstore.Store) {
 
 				store.IncrementKeyCount()
 			},
-			input:  []string{"EXISTING_KEY"},
-			output: []byte(":1\r\n"),
+			input: []string{"EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: int64(1),
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalDEL, store)
+	runMigratedEvalTests(t, tests, evalDEL, store)
 }
 
 // TestEvalPersist tests the evalPersist function using table-driven tests.
 func testEvalPersist(t *testing.T, store *dstore.Store) {
 	// Define test cases
 	tests := map[string]evalTestCase{
-		"wrong number of arguments": {
-			input:  []string{"key1", "key2"},
-			output: clientio.Encode(errors.New("ERR wrong number of arguments for 'persist' command"), false),
+		"PERSIST wrong number of arguments": {
+			name:  "PERSIST wrong number of arguments",
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("PERSIST"),
+			},
 		},
-		"key does not exist": {
-			input:  []string{"nonexistent"},
-			output: clientio.RespZero,
+		"PERSIST key does not exist": {
+			name:  "PERSIST key does not exist",
+			input: []string{"nonexistent"},
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			},
 		},
-		"key exists but no expiration set": {
+		"PERSIST key exists but no expiration set": {
+			name:  "PERSIST key exists but no expiration set",
 			input: []string{"existent_no_expiry"},
 			setup: func() {
 				evalSET([]string{"existent_no_expiry", "value"}, store)
 			},
-			output: clientio.RespZero,
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerZero,
+				Error:  nil,
+			},
 		},
-		"key exists and expiration removed": {
+		"PERSIST key exists and expiration removed": {
+			name:  "PERSIST key exists and expiration removed",
 			input: []string{"existent_with_expiry"},
 			setup: func() {
 				evalSET([]string{"existent_with_expiry", "value", Ex, "1"}, store)
 			},
-			output: clientio.RespOne,
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			},
 		},
-		"key exists with expiration set and not expired": {
+		"PERSIST key exists with expiration set and not expired": {
+			name:  "PERSIST key exists with expiration set and not expired",
 			input: []string{"existent_with_expiry_not_expired"},
 			setup: func() {
 				// Simulate setting a key with an expiration time that has not yet passed
 				evalSET([]string{"existent_with_expiry_not_expired", "value", Ex, "10000"}, store) // 10000 seconds in the future
 			},
-			output: clientio.RespOne,
+			migratedOutput: EvalResponse{
+				Result: clientio.IntegerOne,
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalPersist, store)
+	runMigratedEvalTests(t, tests, evalPERSIST, store)
 }
 
 func testEvalDbsize(t *testing.T, store *dstore.Store) {
@@ -5293,46 +5329,70 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 
 func testEvalTYPE(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"TYPE : incorrect number of arguments": {
-			setup:  func() {},
-			input:  []string{},
-			output: diceerrors.NewErrArity("TYPE"),
+		"TYPE incorrect number of arguments": {
+			name:  "TYPE incorrect number of arguments",
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("TYPE"),
+			},
 		},
-		"TYPE : key does not exist": {
-			setup:  func() {},
-			input:  []string{"nonexistent_key"},
-			output: []byte("+none\r\n"),
+		"TYPE key does not exist": {
+			name:  "TYPE key does not exist",
+			setup: func() {},
+			input: []string{"nonexistent_key"},
+			migratedOutput: EvalResponse{
+				Result: "none",
+				Error:  nil,
+			},
 		},
-		"TYPE : key exists and is of type String": {
+		"TYPE key exists and is of type String": {
+			name: "TYPE key exists and is of type String",
 			setup: func() {
 				store.Put("string_key", store.NewObj("value", -1, object.ObjTypeString, object.ObjEncodingRaw))
 			},
-			input:  []string{"string_key"},
-			output: []byte("+string\r\n"),
+			input: []string{"string_key"},
+			migratedOutput: EvalResponse{
+				Result: "string",
+				Error:  nil,
+			},
 		},
-		"TYPE : key exists and is of type List": {
+		"TYPE key exists and is of type List": {
+			name: "TYPE key exists and is of type List",
 			setup: func() {
 				store.Put("list_key", store.NewObj([]byte("value"), -1, object.ObjTypeByteList, object.ObjEncodingRaw))
 			},
-			input:  []string{"list_key"},
-			output: []byte("+list\r\n"),
+			input: []string{"list_key"},
+			migratedOutput: EvalResponse{
+				Result: "list",
+				Error:  nil,
+			},
 		},
-		"TYPE : key exists and is of type Set": {
+		"TYPE key exists and is of type Set": {
+			name: "TYPE key exists and is of type Set",
 			setup: func() {
 				store.Put("set_key", store.NewObj([]byte("value"), -1, object.ObjTypeSet, object.ObjEncodingRaw))
 			},
-			input:  []string{"set_key"},
-			output: []byte("+set\r\n"),
+			input: []string{"set_key"},
+			migratedOutput: EvalResponse{
+				Result: "set",
+				Error:  nil,
+			},
 		},
-		"TYPE : key exists and is of type Hash": {
+		"TYPE key exists and is of type Hash": {
+			name: "TYPE key exists and is of type Hash",
 			setup: func() {
 				store.Put("hash_key", store.NewObj([]byte("value"), -1, object.ObjTypeHashMap, object.ObjEncodingRaw))
 			},
-			input:  []string{"hash_key"},
-			output: []byte("+hash\r\n"),
+			input: []string{"hash_key"},
+			migratedOutput: EvalResponse{
+				Result: "hash",
+				Error:  nil,
+			},
 		},
 	}
-	runEvalTests(t, tests, evalTYPE, store)
+	runMigratedEvalTests(t, tests, evalTYPE, store)
 }
 
 func BenchmarkEvalTYPE(b *testing.B) {

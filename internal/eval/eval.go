@@ -365,24 +365,6 @@ func parseFloatInt(input string) (result interface{}, err error) {
 	return
 }
 
-// evalDEL deletes all the specified keys in args list
-// returns the count of total deleted keys after encoding
-func evalDEL(args []string, store *dstore.Store) []byte {
-	countDeleted := 0
-
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("DEL")
-	}
-
-	for _, key := range args {
-		if ok := store.Del(key); ok {
-			countDeleted++
-		}
-	}
-
-	return clientio.Encode(countDeleted, false)
-}
-
 func evalHELLO(args []string, store *dstore.Store) []byte {
 	if len(args) > 1 {
 		return diceerrors.NewErrArity("HELLO")
@@ -908,47 +890,6 @@ func evalMGET(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(resp, false)
 }
 
-func evalEXISTS(args []string, store *dstore.Store) []byte {
-	if len(args) == 0 {
-		return diceerrors.NewErrArity("EXISTS")
-	}
-
-	var count int
-	for _, key := range args {
-		if store.GetNoTouch(key) != nil {
-			count++
-		}
-	}
-
-	return clientio.Encode(count, false)
-}
-
-func evalPersist(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("PERSIST")
-	}
-
-	key := args[0]
-
-	obj := store.Get(key)
-
-	// If the key does not exist, return RESP encoded 0 to denote the key does not exist
-	if obj == nil {
-		return clientio.RespZero
-	}
-
-	// If the object exists but no expiration is set on it, return 0
-	_, isExpirySet := dstore.GetExpiry(obj, store)
-	if !isExpirySet {
-		return clientio.RespZero
-	}
-
-	// If the object exists, remove the expiration time
-	dstore.DelExpiry(obj, store)
-
-	return clientio.RespOne
-}
-
 // TODO: Needs to be removed after http and websocket migrated to the multithreading
 func evalCOPY(args []string, store *dstore.Store) []byte {
 	if len(args) < 2 {
@@ -1299,35 +1240,6 @@ func formatFloat(f float64, b bool) string {
 		}
 	}
 	return formatted
-}
-
-func evalTYPE(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("TYPE")
-	}
-	key := args[0]
-	obj := store.Get(key)
-	if obj == nil {
-		return clientio.Encode("none", true)
-	}
-
-	var typeStr string
-	switch oType, _ := object.ExtractTypeEncoding(obj); oType {
-	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
-		typeStr = "string"
-	case object.ObjTypeByteList:
-		typeStr = "list"
-	case object.ObjTypeSet:
-		typeStr = "set"
-	case object.ObjTypeHashMap:
-		typeStr = "hash"
-	case object.ObjTypeSortedSet:
-		typeStr = "zset"
-	default:
-		typeStr = "non-supported type"
-	}
-
-	return clientio.Encode(typeStr, true)
 }
 
 // This method executes each operation, contained in ops array, based on commands used.
