@@ -3,6 +3,7 @@ package abort
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 	"testing"
@@ -15,6 +16,11 @@ import (
 
 var testServerOptions = resp.TestServerOptions{
 	Port: 8740,
+}
+
+func init() {
+	config.DiceConfig.AsyncServer.Port = testServerOptions.Port
+	log.Print("Setting port to ", config.DiceConfig.AsyncServer.Port)
 }
 
 func TestAbortCommand(t *testing.T) {

@@ -7,7 +7,7 @@ The `LINSERT` command in DiceDB inserts an element in the list stored at key eit
 
 ## Syntax
 
-```
+```bash
 LINSERT key <BEFORE | AFTER> pivot element
 ```
 
@@ -97,6 +97,6 @@ OK
 
 ## Best Practices
 
-- `Check Key Type`: Before using `LINSERT`, ensure that the key is associated with a list to avoid errors.
-- `Handle Non-Existent Keys`: Be prepared to handle the case where the key does not exist, as `LINSERT` will return `0` in such scenarios.
-- `Use in Conjunction with Other List Commands`: The `LINSERT` command is often used alongside other list commands like `RPUSH`, `LPUSH`, `LPOP`, and `RPOP` to manage and process lists effectively.
+- Check Key Type: Before using `LINSERT`, ensure that the key is associated with a list to avoid errors.
+- Handle Non-Existent Keys: Be prepared to handle the case where the key does not exist, as `LINSERT` will return `0` in such scenarios.
+- Use in Conjunction with Other List Commands: The `LINSERT` command is often used alongside other list commands like `RPUSH`, `LPUSH`, `LPOP`, and `RPOP` to manage and process lists effectively.

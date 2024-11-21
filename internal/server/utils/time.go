@@ -28,6 +28,10 @@ func (mc *MockClock) SetTime(t time.Time) {
 	mc.CurrTime = t
 }
 
+func (mc *MockClock) GetTime() time.Time {
+	return mc.CurrTime
+}
+
 func GetCurrentTime() time.Time {
 	return CurrentTime.Now()
 }

@@ -1,14 +1,40 @@
 package websocket
 
 import (
+	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
+func generateByteArrayForGetrangeTestCase() ([]string, []interface{}) {
+	var cmds []string
+	var exp []interface{}
+
+	str := "helloworld"
+	var binaryStr string
+
+	for _, c := range str {
+		binaryStr += fmt.Sprintf("%08b", c)
+	}
+
+	for idx, bit := range binaryStr {
+		if bit == '1' {
+			cmds = append(cmds, string("SETBIT byteArrayKey "+strconv.Itoa(idx)+" 1"))
+			exp = append(exp, float64(0))
+		}
+	}
+
+	cmds = append(cmds, "GETRANGE byteArrayKey 0 4")
+	exp = append(exp, "hello")
+
+	return cmds, exp
+}
+
 func TestGETRANGE(t *testing.T) {
 	exec := NewWebsocketCommandExecutor()
-
+	byteArrayCmds, byteArrayExp := generateByteArrayForGetrangeTestCase()
 	testCases := []struct {
 		name       string
 		commands   []string
@@ -50,6 +76,12 @@ func TestGETRANGE(t *testing.T) {
 			commands:   []string{"SET test6 apple", "GETRANGE test6 -1 -100"},
 			expected:   []interface{}{"OK", ""},
 			cleanupKey: "test6",
+		},
+		{
+			name:       "GETRANGE against byte array",
+			commands:   byteArrayCmds,
+			expected:   byteArrayExp,
+			cleanupKey: "byteArrayKey",
 		},
 	}
 	for _, tc := range testCases {

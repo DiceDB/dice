@@ -1,8 +1,10 @@
 package async
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/dicedb/dice/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,7 +14,7 @@ func TestHello(t *testing.T) {
 
 	expected := []interface{}{
 		"proto", int64(2),
-		"id", "0.0.0.0:7379",
+		"id", fmt.Sprintf("%s:%d", config.DiceConfig.AsyncServer.Addr, config.DiceConfig.AsyncServer.Port),
 		"mode", "standalone",
 		"role", "master",
 		"modules", []interface{}{},

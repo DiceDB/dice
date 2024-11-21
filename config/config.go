@@ -1,288 +1,207 @@
 package config
 
 import (
-	"errors"
+	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
-	"strings"
 	"time"
 
 	"github.com/dicedb/dice/internal/server/utils"
-	"github.com/pelletier/go-toml/v2"
-	"github.com/spf13/viper"
 )
 
 const (
-	DiceDBVersion string = "0.0.5"
-
-	DefaultHost           string = "0.0.0.0"
-	DefaultPort           int    = 7379
-	DefaultConfigName     string = "dice.toml"
-	DefaultConfigFilePath string = "./"
+	DiceDBVersion     = "0.0.5"
+	DefaultConfigName = "dicedb.conf"
+	DefaultConfigDir  = "."
 
 	EvictSimpleFirst   = "simple-first"
 	EvictAllKeysRandom = "allkeys-random"
 	EvictAllKeysLRU    = "allkeys-lru"
 	EvictAllKeysLFU    = "allkeys-lfu"
+	EvictBatchKeysLRU  = "batch_keys_lru"
 
-	DefaultKeysLimit int = 200000000
+	DefaultKeysLimit     int     = 200000000
+	DefaultEvictionRatio float64 = 0.1
+
+	defaultConfigTemplate = `# Configuration file for Dicedb
+
+# Version
+version = "0.0.5"
+
+# Async Server Configuration
+async_server.addr = "0.0.0.0"
+async_server.port = 7379
+async_server.keepalive = 300
+async_server.timeout = 300
+async_server.max_conn = 0
+
+# HTTP Configuration
+http.enabled = false
+http.port = 8082
+
+# WebSocket Configuration
+websocket.enabled = false
+websocket.port = 8379
+websocket.max_write_response_retries = 3
+websocket.write_response_timeout = 10s
+
+# Performance Configuration
+performance.watch_chan_buf_size = 20000
+performance.shard_cron_frequency = 1s
+performance.multiplexer_poll_timeout = 100ms
+performance.max_clients = 20000
+performance.enable_multithreading = false
+performance.store_map_init_size = 1024000
+performance.adhoc_req_chan_buf_size = 20
+performance.enable_profiling = false
+performance.enable_watch = false
+performance.num_shards = -1
+
+# Memory Configuration
+memory.max_memory = 0
+memory.eviction_policy = "allkeys-lfu"
+memory.eviction_ratio = 0.9
+memory.keys_limit = 200000000
+memory.lfu_log_factor = 10
+
+# Persistence Configuration
+persistence.enabled = true
+persistence.aof_file = "./dice-master.aof"
+persistence.persistence_enabled = true
+persistence.write_aof_on_cleanup = false
+persistence.wal-dir = "./"
+persistence.restore-wal = false
+persistence.wal-engine = "aof"
+
+# Logging Configuration
+logging.log_level = "info"
+logging.log_dir = "/tmp/dicedb"
+
+# Authentication Configuration
+auth.username = "dice"
+auth.password = ""
+
+# Network Configuration
+network.io_buffer_length = 512
+network.io_buffer_length_max = 51200`
 )
 
 var (
-	Host = DefaultHost
-	Port = DefaultPort
-
-	EnableMultiThreading = false
-	EnableHTTP           = true
-	HTTPPort             = 8082
-
-	EnableWebsocket     = true
-	WebsocketPort       = 8379
-	NumShards       int = -1
-
-	// if RequirePass is set to an empty string, no authentication is required
-	RequirePass = utils.EmptyStr
-
 	CustomConfigFilePath = utils.EmptyStr
-	FileLocation         = utils.EmptyStr
-
-	InitConfigCmd = false
-
-	KeysLimit = DefaultKeysLimit
-
-	EnableProfiling = false
-
-	EnableWatch = true
-	LogDir      = ""
-
-	EnableWAL      = true
-	RestoreFromWAL = false
-	WALEngine      = "sqlite"
+	CustomConfigDirPath  = utils.EmptyStr
 )
 
 type Config struct {
-	Version     string `mapstructure:"version"`
-	InstanceID  string `mapstructure:"instance_id"`
-	AsyncServer struct {
-		Addr      string `mapstructure:"addr"`
-		Port      int    `mapstructure:"port"`
-		KeepAlive int32  `mapstructure:"keepalive"`
-		Timeout   int32  `mapstructure:"timeout"`
-		MaxConn   int32  `mapstructure:"max-conn"`
-	} `mapstructure:"asyncserver"`
-
-	HTTP struct {
-		Enabled bool `mapstructure:"enabled"`
-		Port    int  `mapstructure:"port"`
-	} `mapstructure:"http"`
-
-	WebSocket struct {
-		Enabled                 bool          `mapstructure:"enabled"`
-		Port                    int           `mapstructure:"port"`
-		MaxWriteResponseRetries int           `mapstructure:"maxwriteresponseretries"`
-		WriteResponseTimeout    time.Duration `mapstructure:"writeresponsetimeout"`
-	} `mapstructure:"websocket"`
-
-	Performance struct {
-		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
-		ShardCronFrequency     time.Duration `mapstructure:"shardcronfrequency"`
-		MultiplexerPollTimeout time.Duration `mapstructure:"servermultiplexerpolltimeout"`
-		MaxClients             int32         `mapstructure:"maxclients"`
-		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
-		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
-		AdhocReqChanBufSize    int           `mapstructure:"adhocreqchanbufsize"`
-		EnableProfiling        bool          `mapstructure:"profiling"`
-	} `mapstructure:"performance"`
-
-	Memory struct {
-		MaxMemory      int64   `mapstructure:"maxmemory"`
-		EvictionPolicy string  `mapstructure:"evictionpolicy"`
-		EvictionRatio  float64 `mapstructure:"evictionratio"`
-		KeysLimit      int     `mapstructure:"keyslimit"`
-		LFULogFactor   int     `mapstructure:"lfulogfactor"`
-	} `mapstructure:"memory"`
-
-	Persistence struct {
-		AOFFile            string `mapstructure:"aoffile"`
-		PersistenceEnabled bool   `mapstructure:"persistenceenabled"`
-		WriteAOFOnCleanup  bool   `mapstructure:"writeaofoncleanup"`
-	} `mapstructure:"persistence"`
-
-	Logging struct {
-		LogLevel        string `mapstructure:"loglevel"`
-		PrettyPrintLogs bool   `mapstructure:"prettyprintlogs"`
-	} `mapstructure:"logging"`
-
-	Auth struct {
-		UserName string `mapstructure:"username"`
-		Password string `mapstructure:"password"`
-	} `mapstructure:"auth"`
-
-	Network struct {
-		IOBufferLength    int `mapstructure:"iobufferlength"`
-		IOBufferLengthMAX int `mapstructure:"iobufferlengthmax"`
-	} `mapstructure:"network"`
-
-	NumShards int `mapstructure:"num_shards"`
+	Version     string      `config:"version" default:"0.0.5"`
+	InstanceID  string      `config:"instance_id"`
+	Auth        auth        `config:"auth"`
+	AsyncServer asyncServer `config:"async_server"`
+	HTTP        http        `config:"http"`
+	WebSocket   websocket   `config:"websocket"`
+	Performance performance `config:"performance"`
+	Memory      memory      `config:"memory"`
+	Persistence persistence `config:"persistence"`
+	Logging     logging     `config:"logging"`
+	Network     network     `config:"network"`
 }
 
-// Default configurations for internal use
-var baseConfig = Config{
-	Version: DiceDBVersion,
-	AsyncServer: struct {
-		Addr      string `mapstructure:"addr"`
-		Port      int    `mapstructure:"port"`
-		KeepAlive int32  `mapstructure:"keepalive"`
-		Timeout   int32  `mapstructure:"timeout"`
-		MaxConn   int32  `mapstructure:"max-conn"`
-	}{
-		Addr:      DefaultHost,
-		Port:      DefaultPort,
-		KeepAlive: int32(300),
-		Timeout:   int32(300),
-		MaxConn:   int32(0),
-	},
-	HTTP: struct {
-		Enabled bool `mapstructure:"enabled"`
-		Port    int  `mapstructure:"port"`
-	}{
-		Enabled: EnableHTTP,
-		Port:    HTTPPort,
-	},
-	WebSocket: struct {
-		Enabled                 bool          `mapstructure:"enabled"`
-		Port                    int           `mapstructure:"port"`
-		MaxWriteResponseRetries int           `mapstructure:"maxwriteresponseretries"`
-		WriteResponseTimeout    time.Duration `mapstructure:"writeresponsetimeout"`
-	}{
-		Enabled:                 EnableWebsocket,
-		Port:                    WebsocketPort,
-		MaxWriteResponseRetries: 3,
-		WriteResponseTimeout:    10 * time.Second,
-	},
-	Performance: struct {
-		WatchChanBufSize       int           `mapstructure:"watchchanbufsize"`
-		ShardCronFrequency     time.Duration `mapstructure:"shardcronfrequency"`
-		MultiplexerPollTimeout time.Duration `mapstructure:"servermultiplexerpolltimeout"`
-		MaxClients             int32         `mapstructure:"maxclients"`
-		EnableMultiThreading   bool          `mapstructure:"enablemultithreading"`
-		StoreMapInitSize       int           `mapstructure:"storemapinitsize"`
-		AdhocReqChanBufSize    int           `mapstructure:"adhocreqchanbufsize"`
-		EnableProfiling        bool          `mapstructure:"profiling"`
-	}{
-		WatchChanBufSize:       20000,
-		ShardCronFrequency:     1 * time.Second,
-		MultiplexerPollTimeout: 100 * time.Millisecond,
-		MaxClients:             int32(20000),
-		EnableMultiThreading:   false,
-		StoreMapInitSize:       1024000,
-		AdhocReqChanBufSize:    20, // assuming we wouldn't have more than 20 adhoc requests being sent at a time.
-	},
-	Memory: struct {
-		MaxMemory      int64   `mapstructure:"maxmemory"`
-		EvictionPolicy string  `mapstructure:"evictionpolicy"`
-		EvictionRatio  float64 `mapstructure:"evictionratio"`
-		KeysLimit      int     `mapstructure:"keyslimit"`
-		LFULogFactor   int     `mapstructure:"lfulogfactor"`
-	}{
-		MaxMemory:      0,
-		EvictionPolicy: EvictAllKeysLFU,
-		EvictionRatio:  0.9,
-		KeysLimit:      DefaultKeysLimit,
-		LFULogFactor:   10,
-	},
-	Persistence: struct {
-		AOFFile            string `mapstructure:"aoffile"`
-		PersistenceEnabled bool   `mapstructure:"persistenceenabled"`
-		WriteAOFOnCleanup  bool   `mapstructure:"writeaofoncleanup"`
-	}{
-		PersistenceEnabled: true,
-		AOFFile:            "./dice-master.aof",
-		WriteAOFOnCleanup:  false,
-	},
-	Logging: struct {
-		LogLevel        string `mapstructure:"loglevel"`
-		PrettyPrintLogs bool   `mapstructure:"prettyprintlogs"`
-	}{
-		LogLevel:        "info",
-		PrettyPrintLogs: true,
-	},
-	Auth: struct {
-		UserName string `mapstructure:"username"`
-		Password string `mapstructure:"password"`
-	}{
-		UserName: "dice",
-		Password: RequirePass,
-	},
-	Network: struct {
-		IOBufferLength    int `mapstructure:"iobufferlength"`
-		IOBufferLengthMAX int `mapstructure:"iobufferlengthmax"`
-	}{
-		IOBufferLength:    512,
-		IOBufferLengthMAX: 50 * 1024,
-	},
+type auth struct {
+	UserName string `config:"username" default:"dice"`
+	Password string `config:"password"`
 }
 
-var defaultConfig Config
+type asyncServer struct {
+	Addr      string `config:"addr" default:"0.0.0.0" validate:"ipv4"`
+	Port      int    `config:"port" default:"7379" validate:"number,gte=0,lte=65535"`
+	KeepAlive int32  `config:"keepalive" default:"300"`
+	Timeout   int32  `config:"timeout" default:"300"`
+	MaxConn   int32  `config:"max_conn" default:"0"`
+}
 
-func init() {
-	config := baseConfig
-	config.Logging.PrettyPrintLogs = false
-	config.Logging.LogLevel = "info"
-	defaultConfig = config
+type http struct {
+	Enabled bool `config:"enabled" default:"true"`
+	Port    int  `config:"port" default:"8082" validate:"number,gte=0,lte=65535"`
+}
+
+type websocket struct {
+	Enabled                 bool          `config:"enabled" default:"true"`
+	Port                    int           `config:"port" default:"8379" validate:"number,gte=0,lte=65535"`
+	MaxWriteResponseRetries int           `config:"max_write_response_retries" default:"3" validate:"min=0"`
+	WriteResponseTimeout    time.Duration `config:"write_response_timeout" default:"10s"`
+}
+
+type performance struct {
+	WatchChanBufSize       int           `config:"watch_chan_buf_size" default:"20000"`
+	ShardCronFrequency     time.Duration `config:"shard_cron_frequency" default:"1s"`
+	MultiplexerPollTimeout time.Duration `config:"multiplexer_poll_timeout" default:"100ms"`
+	MaxClients             int32         `config:"max_clients" default:"20000" validate:"min=0"`
+	EnableMultiThreading   bool          `config:"enable_multithreading" default:"false"`
+	StoreMapInitSize       int           `config:"store_map_init_size" default:"1024000"`
+	AdhocReqChanBufSize    int           `config:"adhoc_req_chan_buf_size" default:"20"`
+	EnableProfiling        bool          `config:"profiling" default:"false"`
+	EnableWatch            bool          `config:"enable_watch" default:"false"`
+	NumShards              int           `config:"num_shards" default:"-1" validate:"oneof=-1|min=1,lte=128"`
+}
+
+type memory struct {
+	MaxMemory      int64   `config:"max_memory" default:"0" validate:"min=0"`
+	EvictionPolicy string  `config:"eviction_policy" default:"allkeys-lfu" validate:"oneof=simple-first allkeys-random allkeys-lru allkeys-lfu"`
+	EvictionRatio  float64 `config:"eviction_ratio" default:"0.9" validate:"min=0,lte=1"`
+	KeysLimit      int     `config:"keys_limit" default:"200000000" validate:"min=0"`
+	LFULogFactor   int     `config:"lfu_log_factor" default:"10" validate:"min=0"`
+}
+
+type persistence struct {
+	Enabled           bool   `config:"enabled" default:"true"`
+	AOFFile           string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
+	WriteAOFOnCleanup bool   `config:"write_aof_on_cleanup" default:"false"`
+	WALDir            string `config:"wal-dir" default:"./" validate:"dirpath"`
+	RestoreFromWAL    bool   `config:"restore-wal" default:"false"`
+	WALEngine         string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`
+}
+
+type logging struct {
+	LogLevel string `config:"log_level" default:"info" validate:"oneof=debug info warn error"`
+	LogDir   string `config:"log_dir" default:"/tmp/dicedb" validate:"dirpath"`
+}
+
+type network struct {
+	IOBufferLengthMAX int `config:"io_buffer_length_max" default:"51200" validate:"min=0,max=1048576"` // max is 1MB'
+	IOBufferLength    int `config:"io_buffer_length" default:"512" validate:"min=0"`
 }
 
 // DiceConfig is the global configuration object for dice
-var DiceConfig = &defaultConfig
+var DiceConfig = &Config{}
 
-func SetupConfig() {
-	if InitConfigCmd {
-		FileLocation = getConfigPath()
-		createConfigFile(FileLocation)
-		return
-	}
-
-	// Check if both -o and -c flags are set
-	if areBothFlagsSet() {
-		slog.Error("Both -o and -c flags are set. Please use only one flag.")
-		return
-	}
-
-	// Check if -o flag is set
-	if CustomConfigFilePath != utils.EmptyStr && isValidDirPath() {
-		createConfigFile(filepath.Join(CustomConfigFilePath, DefaultConfigName))
-		return
-	}
-
-	// Check if -c flag is set
-	if FileLocation != utils.EmptyStr || isConfigFilePresent() {
-		setUpViperConfig(FileLocation)
-		return
-	}
-
-	// If no flags are set, use default configurations with prioritizing command line flags
-	mergeFlagsWithConfig()
-}
-
-func createConfigFile(configFilePath string) {
+func CreateConfigFile(configFilePath string) error {
+	// Check if the config file already exists
 	if _, err := os.Stat(configFilePath); err == nil {
-		slog.Warn("config file already exists", slog.String("path", configFilePath))
-		setUpViperConfig(configFilePath)
-		return
+		if err := loadDiceConfig(configFilePath); err != nil {
+			return fmt.Errorf("failed to load existing configuration: %w", err)
+		}
+		return nil
 	}
 
+	// Attempt to write a new config file
 	if err := writeConfigFile(configFilePath); err != nil {
-		slog.Warn("starting DiceDB with default configurations.", slog.Any("error", err))
-		return
+		slog.Warn("Failed to create config file, starting with defaults.", slog.Any("error", err))
+		return nil // Continuing with defaults; may reconsider behavior.
 	}
 
-	setUpViperConfig(configFilePath)
-	slog.Info("config file created at", slog.Any("path", configFilePath))
+	// Load the new configuration
+	if err := loadDiceConfig(configFilePath); err != nil {
+		return fmt.Errorf("failed to load newly created configuration: %w", err)
+	}
+
+	slog.Info("Config file successfully created.", slog.String("path", configFilePath))
+	return nil
 }
 
+// writeConfigFile writes the default configuration to the specified file path
 func writeConfigFile(configFilePath string) error {
+	// Check if the directory exists or not
 	dir := filepath.Dir(configFilePath)
 	if _, err := os.Stat(dir); err != nil {
 		return err
@@ -295,108 +214,62 @@ func writeConfigFile(configFilePath string) error {
 	}
 	defer file.Close()
 
-	encoder := toml.NewEncoder(file)
-	err = encoder.Encode(defaultConfig)
-	return err
+	if _, err := file.WriteString(defaultConfigTemplate); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func isValidDirPath() bool {
-	info, err := os.Stat(CustomConfigFilePath)
-	if os.IsNotExist(err) || err != nil {
-		return false
+func loadDiceConfig(configFilePath string) error {
+	parser := NewConfigParser()
+	if err := parser.ParseFromFile(configFilePath); err != nil {
+		slog.Warn("Failed to parse config file", slog.String("error", err.Error()), slog.String("message", "Loading default configurations"))
+		return parser.ParseDefaults(DiceConfig)
 	}
 
-	if !info.IsDir() {
-		return false
-	}
-	return true
+	return parser.Loadconfig(DiceConfig)
 }
 
-// This function checks if both -o and -c flags are set or not
-func areBothFlagsSet() bool {
-	return FileLocation != utils.EmptyStr && CustomConfigFilePath != utils.EmptyStr
-}
-
-func setUpViperConfig(configFilePath string) {
-	if configFilePath != filepath.Join(DefaultConfigFilePath, DefaultConfigName) {
-		viper.SetConfigName(strings.Split(filepath.Base(configFilePath), ".")[0])
-	} else {
-		viper.SetConfigName("dice")
-	}
-
-	if configFilePath == utils.EmptyStr {
-		viper.AddConfigPath(DefaultConfigFilePath)
-	} else {
-		viper.AddConfigPath(filepath.Dir(configFilePath))
-	}
-
-	viper.SetConfigType("toml")
-	if err := viper.ReadInConfig(); err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if errors.As(err, &configFileNotFoundError) {
-			slog.Warn("config file not found. Using default configurations.")
-			return
+func MergeFlags(flags *Config) {
+	flagset := flag.CommandLine
+	flagset.Visit(func(f *flag.Flag) {
+		// updating values for flags that were explicitly set by the user
+		switch f.Name {
+		case "host":
+			DiceConfig.AsyncServer.Addr = flags.AsyncServer.Addr
+		case "port":
+			DiceConfig.AsyncServer.Port = flags.AsyncServer.Port
+		case "enable-http":
+			DiceConfig.HTTP.Enabled = flags.HTTP.Enabled
+		case "http-port":
+			DiceConfig.HTTP.Port = flags.HTTP.Port
+		case "enable-websocket":
+			DiceConfig.WebSocket.Enabled = flags.WebSocket.Enabled
+		case "enable-multithreading":
+			DiceConfig.Performance.EnableMultiThreading = flags.Performance.EnableMultiThreading
+		case "websocket-port":
+			DiceConfig.WebSocket.Port = flags.WebSocket.Port
+		case "num-shards":
+			DiceConfig.Performance.NumShards = flags.Performance.NumShards
+		case "require-pass":
+			DiceConfig.Auth.Password = flags.Auth.Password
+		case "keys-limit":
+			DiceConfig.Memory.KeysLimit = flags.Memory.KeysLimit
+		case "eviction-ratio":
+			DiceConfig.Memory.EvictionRatio = flags.Memory.EvictionRatio
+		case "enable-profiling":
+			DiceConfig.Performance.EnableProfiling = flags.Performance.EnableProfiling
+		case "enable-watch":
+			DiceConfig.Performance.EnableWatch = flags.Performance.EnableWatch
+		case "log-dir":
+			DiceConfig.Logging.LogDir = flags.Logging.LogDir
+		case "persistence-enable":
+			DiceConfig.Persistence.Enabled = flags.Persistence.Enabled
+		case "restore-from-wal":
+			DiceConfig.Persistence.RestoreFromWAL = flags.Persistence.RestoreFromWAL
+		case "wal-engine":
+			DiceConfig.Persistence.WALEngine = flags.Persistence.WALEngine
 		}
-		slog.Error("Error reading config file", slog.Any("error", err))
-	}
-
-	if err := viper.Unmarshal(&DiceConfig); err != nil {
-		slog.Error("Error unmarshalling config file", slog.Any("error", err))
-		slog.Warn("starting DiceDB with default configurations.")
-		return
-	}
-
-	// override default configurations with command line flags
-	mergeFlagsWithConfig()
-}
-
-func mergeFlagsWithConfig() {
-	if RequirePass != utils.EmptyStr {
-		DiceConfig.Auth.Password = RequirePass
-	}
-
-	if Host != DefaultHost {
-		DiceConfig.AsyncServer.Addr = Host
-	}
-
-	if Port != DefaultPort {
-		DiceConfig.AsyncServer.Port = Port
-	}
-
-	if KeysLimit != DefaultKeysLimit {
-		DiceConfig.Memory.KeysLimit = KeysLimit
-	}
-}
-
-// This function checks if the config file is present or not at default location or at -c flag location
-func isConfigFilePresent() bool {
-	// If -c flag is not set then look for config file in current directory use it
-	if _, err := os.Stat(filepath.Join(".", DefaultConfigName)); FileLocation == utils.EmptyStr && err == nil {
-		FileLocation = filepath.Join(".", DefaultConfigName)
-		return true
-	}
-
-	// will be executed if -c flag is used
-	_, err := os.Stat(FileLocation)
-
-	return err == nil
-}
-
-// This function returns the config file path based on the OS
-func getConfigPath() string {
-	switch runtime.GOOS {
-	case "windows":
-		FileLocation = filepath.Join("C:", "ProgramData", "dice", DefaultConfigName)
-	case "darwin", "linux":
-		FileLocation = filepath.Join(string(filepath.Separator), "etc", "dice", DefaultConfigName)
-	default:
-		// Default to current directory if OS is unknown
-		FileLocation = filepath.Join(".", DefaultConfigName)
-	}
-	return FileLocation
-}
-
-// ResetConfig resets the DiceConfig to default configurations. This function is only used for testing purposes
-func ResetConfig() {
-	DiceConfig = &defaultConfig
+	})
 }

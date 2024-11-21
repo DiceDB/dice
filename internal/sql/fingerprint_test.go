@@ -3,8 +3,8 @@ package sql
 import (
 	"testing"
 
-	"github.com/xwb1989/sqlparser"
 	"github.com/stretchr/testify/assert"
+	"github.com/xwb1989/sqlparser"
 )
 
 func TestExpressionString(t *testing.T) {

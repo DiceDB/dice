@@ -41,10 +41,11 @@ type ShardThread struct {
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.
-func NewShardThread(id ShardID, gec chan error, sec chan *ShardError, queryWatchChan chan dstore.QueryWatchEvent, cmdWatchChan chan dstore.CmdWatchEvent) *ShardThread {
+func NewShardThread(id ShardID, gec chan error, sec chan *ShardError, queryWatchChan chan dstore.QueryWatchEvent,
+	cmdWatchChan chan dstore.CmdWatchEvent, evictionStrategy dstore.EvictionStrategy) *ShardThread {
 	return &ShardThread{
 		id:               id,
-		store:            dstore.NewStore(queryWatchChan, cmdWatchChan),
+		store:            dstore.NewStore(queryWatchChan, cmdWatchChan, evictionStrategy),
 		ReqChan:          make(chan *ops.StoreOp, 1000),
 		workerMap:        make(map[string]WorkerChannels),
 		globalErrorChan:  gec,
@@ -96,8 +97,6 @@ func (shard *ShardThread) unregisterWorker(workerID string) {
 
 // processRequest processes a Store operation for the shard.
 func (shard *ShardThread) processRequest(op *ops.StoreOp) {
-	resp := eval.ExecuteCommand(op.Cmd, op.Client, shard.store, op.HTTPOp, op.WebsocketOp)
-
 	shard.workerMutex.RLock()
 	workerChans, ok := shard.workerMap[op.WorkerID]
 	shard.workerMutex.RUnlock()
@@ -110,6 +109,16 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 		SeqID:     op.SeqID,
 	}
 
+	e := eval.NewEval(op.Cmd, op.Client, shard.store, op.HTTPOp, op.WebsocketOp, op.PreProcessing)
+
+	if op.PreProcessing {
+		resp := e.PreProcessCommand()
+		sp.EvalResponse = resp
+		preProcessChan <- sp
+		return
+	}
+
+	resp := e.ExecuteCommand()
 	if ok {
 		sp.EvalResponse = resp
 	} else {
@@ -119,17 +128,13 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 		}
 	}
 
-	if op.PreProcessing {
-		preProcessChan <- sp
-	} else {
-		workerChan <- sp
-	}
+	workerChan <- sp
 }
 
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if !config.DiceConfig.Persistence.WriteAOFOnCleanup {
+	if !config.DiceConfig.Persistence.Enabled || !config.DiceConfig.Persistence.WriteAOFOnCleanup {
 		return
 	}
 

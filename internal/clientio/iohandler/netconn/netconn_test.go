@@ -29,12 +29,15 @@ type mockConn struct {
 func (m *mockConn) Read(b []byte) (n int, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	if m.readErr != nil {
 		return 0, m.readErr
 	}
+
 	if len(m.readData) == 0 {
 		return 0, io.EOF
 	}
+
 	n = copy(b, m.readData)
 	m.readData = m.readData[n:]
 	return n, nil
@@ -103,10 +106,10 @@ func TestNetConnIOHandler(t *testing.T) {
 			expectedWrite: []byte("Response\r\n"),
 		},
 		{
-			name:          "Empty read",
-			readData:      []byte{},
-			expectedRead:  []byte(nil),
-			expectedWrite: []byte("Response\r\n"),
+			name:            "Empty read",
+			readData:        []byte{},
+			expectedReadErr: io.EOF,
+			expectedWrite:   []byte("Response\r\n"),
 		},
 		{
 			name:          "Read with multiple chunks",
@@ -128,6 +131,12 @@ func TestNetConnIOHandler(t *testing.T) {
 				conn:   mock,
 				reader: bufio.NewReaderSize(mock, 512),
 				writer: bufio.NewWriterSize(mock, 1024),
+				readPool: &sync.Pool{
+					New: func() interface{} {
+						b := make([]byte, ioBufferSize)
+						return &b // Return pointer
+					},
+				},
 			}
 
 			ctx := context.Background()

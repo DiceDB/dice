@@ -36,16 +36,21 @@ When the `JSON.STRLEN` command is executed, DiceDB will:
 5. Multiple results are represented as a list in case of wildcards(\*), where each string length is returned in order of appearance and `nil` is returned if it's not a string.
 
 ## Errors
-
 The following errors may be raised when executing the `JSON.STRLEN` command:
 
-- `(error) ERROR wrong number of arguments for 'JSON.STRLEN' command`: This error occurs if the number of arguments provided to the command is incorrect.
-- `(error)  ERROR invalid JSONPath`: This error occurs if the specified path does not exist within the JSON document.
-- `(error) WRONGTYPE wrong type of path value - expected string but found {DataType at root path}`: This error occurs when a valid key is provided but no specific path value is given. By default, DiceDB assumes the root path ($) in such cases. If the data at the root path is not of type string, this error is returned, indicating a type mismatch between the expected string and the actual data type at the root.
+1. `Incorrect Number of Arguments`:
+   - `(error) ERROR wrong number of arguments for 'JSON.STRLEN' command`
+   - This error occurs if the number of arguments provided to the command is incorrect.
+2. `Invalid JSONPath`:
+    - `(error)  ERROR invalid JSONPath`
+    - This error occurs if the specified path does not exist within the JSON document.
+3. `Wrong Type Error`:
+    - `(error) WRONGTYPE wrong type of path value - expected string but found {DataType at root path}`
+    - This error occurs when a valid key is provided but no specific path value is given. By default, DiceDB assumes the root path ($) in such cases. If the data at the root path is not of type string, this error is returned, indicating a type mismatch between the expected string and the actual data type at the root.  
 
 ## Example Usage
 
-### Example 1: Basic Usage
+### Basic Usage
 
 Assume we have a JSON document stored under the key `user:1001`:
 
@@ -67,7 +72,7 @@ JSON.STRLEN user:1001 $.name
 (integer) 8
 ```
 
-### Example 2: Nested JSON String
+### Nested JSON String
 
 To get the length of the `city` string within the `address` object:
 
@@ -76,7 +81,7 @@ JSON.STRLEN user:1001 $.address.city
 (integer) 8
 ```
 
-### Example 3: Non-Existent Path
+### Non-Existent Path
 
 If the path does not exist:
 
@@ -85,9 +90,7 @@ JSON.STRLEN user:1001 $.phone
 (empty array)
 ```
 
-`Return Value`: `(empty list or set)`
-
-### Example 4: Path is Not a String
+### Path is Not a String
 
 If the path points to a non-string value:
 

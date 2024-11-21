@@ -82,9 +82,7 @@ OK
 (integer) -1
 ```
 
-### Error Cases
-
-#### Non-String Key
+### Non-String Key
 
 Attempting to use `BITPOS` on a key that holds a non-string value:
 
@@ -95,7 +93,7 @@ Attempting to use `BITPOS` on a key that holds a non-string value:
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-#### Invalid Bit Value
+### Invalid Bit Value
 
 Using a bit value other than 0 or 1:
 
@@ -106,7 +104,7 @@ OK
 (error) ERR bit is not an integer or out of range
 ```
 
-#### Invalid Range
+### Invalid Range
 
 Using non-integer values for the `start` or `end` parameters:
 

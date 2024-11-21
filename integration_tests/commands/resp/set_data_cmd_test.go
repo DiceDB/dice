@@ -1,10 +1,11 @@
 package resp
 
 import (
-	"gotest.tools/v3/assert"
 	"sort"
 	"testing"
 	"time"
+
+	"gotest.tools/v3/assert"
 )
 
 func CustomDeepEqual(t *testing.T, a, b interface{}) {

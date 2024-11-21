@@ -55,7 +55,7 @@ The `DECRBY` command can raise errors in the following scenarios:
    - Error Message: `(error) ERR increment or decrement would overflow`
    - If the decrement operation causes the value to exceed the maximum integer value that DiceDB can handle, an overflow error will occur.
 
-## Examples
+## Example Usage
 
 ### Example with Decrementing the Value of an Existing Key
 
@@ -65,9 +65,6 @@ OK
 127.0.0.1:7379>DECRBY mycounter 3
 (integer)7
 ```
-
-`Explanation:`
-
 - In this example, the value of `mycounter` is set to 10
 - The `DECRBY` command decremented `mycounter`by 3, resulting in a new value of 7.
 
@@ -77,8 +74,6 @@ OK
 127.0.0.1:7379>DECRBY newcounter 5
 (integer)-5
 ```
-
-`Explanation:`
 
 - In this example, since `newcounter` does not exist, DiceDB treats its value as 0 and decrements it by 5, resulting in a new value of -5.
 
@@ -91,8 +86,6 @@ OK
 (error) ERR value is not an integer or out of range
 ```
 
-`Explanation:`
-
 - In this example, the key `mystring` holds a non-integer value, so the `DECRBY` command returns an error.
 
 ### Example with Error Due to Invalid Decrement Value (Non-Integer Decrement)
@@ -101,7 +94,5 @@ OK
 127.0.0.1:7379>DECRBY mycounter "two"
 (error) ERR value is not an integer or out of range
 ```
-
-`Explanation:`
 
 - In this example, the decrement value "two" is not a valid integer, so the `DECRBY` command returns an error.

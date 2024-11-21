@@ -12,13 +12,20 @@ SREM key member [member ...]
 ```
 
 ## Parameters
-
-- `key`: The key of the set from which the members will be removed. This key must be of the set data type.
-- `member`: One or more members to be removed from the set. Multiple members can be specified, separated by spaces.
+| Parameter       | Description                                                                                    | Type   | Required |
+| --------------- | ---------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key` | The key of the set from which the members will be removed. This key must be of the set data type.| String | Yes      |
+| `member` | One or more members to be removed from the set. Multiple members can be specified, separated by spaces. | String | Yes      |
 
 ## Return Value
 
-- `Integer reply`: The number of members that were removed from the set, not including non-existing members.
+| Condition                           | Return Value                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| `key` does not exist                | 0                                                                         |
+| `key` is not a set                  | error                                                                     |
+| `member` does not exist in the set  | 0                                                                         |
+| Invalid syntax or no specified keys | error                                                                     |
+| Members are successfully removed    | Integer reply: The number of members that were removed from the set, not including non-existing members. |
 
 ## Behaviour
 
@@ -37,79 +44,44 @@ When the `SREM` command is executed, the following steps occur:
 
 ## Example Usage
 
-### Example 1: Removing a single member from a set
+### Removing a single member from a set
 
 ```bash
-SADD myset "one" "two" "three"
-SREM myset "two"
-```
-
-`Expected Output:`
-
-```
+127.0.0.1:7379> SADD myset "one" "two" "three"
+127.0.0.1:7379> SREM myset "two"
 (integer) 1
 ```
+  The member "two" is removed from the set `myset`. The command returns 1 because one member was removed.
 
-`Explanation:` The member "two" is removed from the set `myset`. The command returns 1 because one member was removed.
-
-### Example 2: Removing multiple members from a set
+### Removing multiple members from a set
 
 ```bash
-SADD myset "one" "two" "three"
-SREM myset "two" "three"
-```
-
-`Expected Output:`
-
-```
+127.0.0.1:7379> SADD myset "one" "two" "three"
+127.0.0.1:7379> SREM myset "two" "three"
 (integer) 2
 ```
 
-`Explanation:` The members "two" and "three" are removed from the set `myset`. The command returns 2 because two members were removed.
+  The members "two" and "three" are removed from the set `myset`. The command returns 2 because two members were removed.
 
-### Example 3: Removing a non-existing member from a set
+
+### Removing members from a non-existing set
 
 ```bash
-SADD myset "one" "two" "three"
-SREM myset "four"
-```
-
-`Expected Output:`
-
-```
+127.0.0.1:7379> SREM myset "one"
 (integer) 0
 ```
 
-`Explanation:` The member "four" does not exist in the set `myset`. The command returns 0 because no members were removed.
+  The set `myset` does not exist. The command returns 0 because no members were removed.
 
-### Example 4: Removing members from a non-existing set
-
-```bash
-SREM myset "one"
-```
-
-`Expected Output:`
-
-```
-(integer) 0
-```
-
-`Explanation:` The set `myset` does not exist. The command returns 0 because no members were removed.
-
-### Example 5: Error when key is not a set
+### Error when key is not a set
 
 ```bash
-SET mykey "value"
-SREM mykey "one"
-```
-
-`Expected Output:`
-
-```
+127.0.0.1:7379> SET mykey "value"
+127.0.0.1:7379> SREM mykey "one"
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-`Explanation:` The key `mykey` exists but is not of the set data type. The command returns an error.
+  The key `mykey` exists but is not of the set data type. The command returns an error.
 
 ## Notes
 

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"math"
 	"sort"
 
 	"github.com/dicedb/dice/internal/clientio"
@@ -44,7 +45,7 @@ func composeCopy(responses ...ops.StoreResponse) interface{} {
 		}
 	}
 
-	return clientio.OK
+	return clientio.IntegerOne
 }
 
 // composeMSet processes responses from multiple shards for an "MSet" operation
@@ -79,6 +80,158 @@ func composeMGet(responses ...ops.StoreResponse) interface{} {
 		}
 
 		results = append(results, responses[idx].EvalResponse.Result)
+	}
+
+	return results
+}
+
+func composeSInter(responses ...ops.StoreResponse) interface{} {
+	results := [][]string{}
+	minLen := math.MaxInt
+	minIdx := 0
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+
+		if len(responses[idx].EvalResponse.Result.([]string)) < minLen {
+			minLen = len(responses[idx].EvalResponse.Result.([]string))
+			minIdx = idx
+		}
+
+		results = append(results, responses[idx].EvalResponse.Result.([]string))
+	}
+
+	// Create the initial countMap from the smallest slice
+	countMap := make(map[string]int)
+	for _, str := range results[minIdx] {
+		countMap[str] = 1
+	}
+
+	// Iterate over the remaining slices, skipping the one used as countMap
+	for i, result := range results {
+		if i == minIdx {
+			continue
+		}
+
+		currentCount := make(map[string]bool)
+		for _, str := range result {
+			if _, exists := countMap[str]; exists {
+				currentCount[str] = true
+			}
+		}
+
+		// Remove elements from countMap that are not in currentCount
+		for key := range countMap {
+			if _, exists := currentCount[key]; !exists {
+				delete(countMap, key)
+			}
+		}
+	}
+
+	resp := make([]string, 0, len(countMap))
+	for str := range countMap {
+		resp = append(resp, str)
+	}
+
+	return resp
+}
+
+func composeSDiff(responses ...ops.StoreResponse) interface{} {
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].SeqID < responses[j].SeqID
+	})
+
+	results := [][]string{}
+	minIdx := 0
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+		results = append(results, responses[idx].EvalResponse.Result.([]string))
+	}
+
+	// Create the initial countMap from the smallest slice
+	countMap := make(map[string]int)
+	for _, str := range results[0] {
+		countMap[str] = 1
+	}
+
+	// Iterate over the remaining slices, skipping the one used as countMap
+	for i, result := range results {
+		if i == minIdx {
+			continue
+		}
+		for _, str := range result {
+			if _, exists := countMap[str]; exists {
+				countMap[str]++
+			}
+		}
+	}
+
+	resp := make([]string, 0, len(countMap))
+	for str := range countMap {
+		if countMap[str] == 1 {
+			resp = append(resp, str)
+		}
+	}
+
+	return resp
+}
+
+func composeJSONMget(responses ...ops.StoreResponse) interface{} {
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].SeqID < responses[j].SeqID
+	})
+
+	results := []interface{}{}
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+		results = append(results, responses[idx].EvalResponse.Result)
+	}
+	return results
+}
+
+func composeTouch(responses ...ops.StoreResponse) interface{} {
+	count := 0
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+		count += responses[idx].EvalResponse.Result.(int)
+	}
+
+	return count
+}
+
+func composeDBSize(responses ...ops.StoreResponse) interface{} {
+	count := uint64(0)
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+		count += responses[idx].EvalResponse.Result.(uint64)
+	}
+
+	return count
+}
+
+func composeKeys(responses ...ops.StoreResponse) interface{} {
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].SeqID < responses[j].SeqID
+	})
+
+	results := []string{}
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+		resp := responses[idx].EvalResponse.Result.([]string)
+		if len(resp) > 0 {
+			results = append(results, resp...)
+		}
 	}
 
 	return results

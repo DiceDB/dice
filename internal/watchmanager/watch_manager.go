@@ -28,10 +28,12 @@ type (
 
 var (
 	affectedCmdMap = map[string]map[string]struct{}{
-		dstore.Set:    {dstore.Get: struct{}{}},
-		dstore.Del:    {dstore.Get: struct{}{}},
-		dstore.Rename: {dstore.Get: struct{}{}},
-		dstore.ZAdd:   {dstore.ZRange: struct{}{}},
+		dstore.Set:     {dstore.Get: struct{}{}},
+		dstore.Del:     {dstore.Get: struct{}{}},
+		dstore.Rename:  {dstore.Get: struct{}{}},
+		dstore.ZAdd:    {dstore.ZRange: struct{}{}},
+		dstore.PFADD:   {dstore.PFCOUNT: struct{}{}},
+		dstore.PFMERGE: {dstore.PFCOUNT: struct{}{}},
 	}
 )
 
