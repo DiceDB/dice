@@ -3,7 +3,6 @@ package eval
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"sort"
 	"strconv"
 	"strings"
@@ -485,92 +484,6 @@ func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	return clientio.RespOK
 }
 
-// evalCommand evaluates COMMAND <subcommand> command based on subcommand
-// COUNT: return total count of commands in Dice.
-func evalCommand(args []string, store *dstore.Store) []byte {
-	if len(args) == 0 {
-		return evalCommandDefault()
-	}
-	subcommand := strings.ToUpper(args[0])
-	switch subcommand {
-	case Count:
-		return evalCommandCount(args[1:])
-	case GetKeys:
-		return evalCommandGetKeys(args[1:])
-	case List:
-		return evalCommandList(args[1:])
-	case Help:
-		return evalCommandHelp(args[1:])
-	case Info:
-		return evalCommandInfo(args[1:])
-	case Docs:
-		return evalCommandDocs(args[1:])
-	default:
-		return diceerrors.NewErrWithFormattedMessage("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)
-	}
-}
-
-// evalCommandHelp prints help message
-func evalCommandHelp(args []string) []byte {
-	if len(args) > 0 {
-		return diceerrors.NewErrArity("COMMAND|HELP")
-	}
-
-	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
-	noTitle := "(no subcommand)"
-	noMessage := "     Return details about all DiceDB commands."
-	countTitle := CountConst
-	countMessage := "     Return the total number of commands in this DiceDB server."
-	listTitle := "LIST"
-	listMessage := "     Return a list of all commands in this DiceDB server."
-	infoTitle := "INFO [<command-name> ...]"
-	infoMessage := "     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned."
-	docsTitle := "DOCS [<command-name> ...]"
-	docsMessage := "\tReturn documentation details about multiple diceDB commands.\n\tIf no command names are given, documentation details for all\n\tcommands are returned."
-	getKeysTitle := "GETKEYS <full-command>"
-	getKeysMessage := "     Return the keys from a full DiceDB command."
-	helpTitle := "HELP"
-	helpMessage := "     Print this help."
-	message := []string{
-		format,
-		noTitle,
-		noMessage,
-		countTitle,
-		countMessage,
-		listTitle,
-		listMessage,
-		infoTitle,
-		infoMessage,
-		docsTitle,
-		docsMessage,
-		getKeysTitle,
-		getKeysMessage,
-		helpTitle,
-		helpMessage,
-	}
-	return clientio.Encode(message, false)
-}
-
-func evalCommandDefault() []byte {
-	cmds := convertDiceCmdsMapToSlice()
-	return clientio.Encode(cmds, false)
-}
-
-func evalCommandList(args []string) []byte {
-	if len(args) > 0 {
-		return diceerrors.NewErrArity("COMMAND|LIST")
-	}
-
-	cmds := make([]string, 0, diceCommandsCount)
-	for k := range DiceCmds {
-		cmds = append(cmds, k)
-		for _, sc := range DiceCmds[k].SubCommands {
-			cmds = append(cmds, fmt.Sprint(k, "|", sc))
-		}
-	}
-	return clientio.Encode(cmds, false)
-}
-
 // evalKeys returns the list of keys that match the pattern should be the only param in args
 // TODO: Needs to be removed after http and websocket migrated to the multithreading
 func evalKeys(args []string, store *dstore.Store) []byte {
@@ -585,98 +498,6 @@ func evalKeys(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(keys, false)
-}
-
-// evalCommandCount returns a number of commands supported by DiceDB
-func evalCommandCount(args []string) []byte {
-	if len(args) > 0 {
-		return diceerrors.NewErrArity("COMMAND|COUNT")
-	}
-
-	return clientio.Encode(diceCommandsCount, false)
-}
-
-// evalCommandGetKeys helps identify which arguments in a redis command
-// are interpreted as keys.
-// This is useful in analyzing long commands / scripts
-func evalCommandGetKeys(args []string) []byte {
-	if len(args) == 0 {
-		return diceerrors.NewErrArity("COMMAND|GETKEYS")
-	}
-	diceCmd, ok := DiceCmds[strings.ToUpper(args[0])]
-	if !ok {
-		return diceerrors.NewErrWithMessage("invalid command specified")
-	}
-
-	keySpecs := diceCmd.KeySpecs
-	if keySpecs.BeginIndex == 0 {
-		return diceerrors.NewErrWithMessage("the command has no key arguments")
-	}
-
-	arity := diceCmd.Arity
-	if (arity < 0 && len(args) < -arity) ||
-		(arity >= 0 && len(args) != arity) {
-		return diceerrors.NewErrWithMessage("invalid number of arguments specified for command")
-	}
-	keys := make([]string, 0)
-	step := max(keySpecs.Step, 1)
-	lastIdx := keySpecs.BeginIndex
-	if keySpecs.LastKey != 0 {
-		lastIdx = len(args) + keySpecs.LastKey
-	}
-	for i := keySpecs.BeginIndex; i <= lastIdx; i += step {
-		keys = append(keys, args[i])
-	}
-	return clientio.Encode(keys, false)
-}
-
-func evalCommandDefaultDocs() []byte {
-	cmds := convertDiceCmdsMapToDocs()
-	return clientio.Encode(cmds, false)
-}
-
-func evalCommandInfo(args []string) []byte {
-	if len(args) == 0 {
-		return evalCommandDefault()
-	}
-
-	cmdMetaMap := make(map[string]interface{})
-	for _, cmdMeta := range DiceCmds {
-		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToSlice(&cmdMeta)
-	}
-
-	var result []interface{}
-	for _, arg := range args {
-		arg = strings.ToUpper(arg)
-		if cmdMeta, found := cmdMetaMap[arg]; found {
-			result = append(result, cmdMeta)
-		} else {
-			result = append(result, clientio.RespNIL)
-		}
-	}
-
-	return clientio.Encode(result, false)
-}
-
-func evalCommandDocs(args []string) []byte {
-	if len(args) == 0 {
-		return evalCommandDefaultDocs()
-	}
-
-	cmdMetaMap := make(map[string]interface{})
-	for _, cmdMeta := range DiceCmds {
-		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToDocs(&cmdMeta)
-	}
-
-	var result []interface{}
-	for _, arg := range args {
-		arg = strings.ToUpper(arg)
-		if cmdMeta, found := cmdMetaMap[arg]; found {
-			result = append(result, cmdMeta)
-		}
-	}
-
-	return clientio.Encode(result, false)
 }
 
 // TODO: Needs to be removed after http and websocket migrated to the multithreading
@@ -775,92 +596,6 @@ func evalCOPY(args []string, store *dstore.Store) []byte {
 	return clientio.RespOne
 }
 
-func evalObjectIdleTime(key string, store *dstore.Store) []byte {
-	obj := store.GetNoTouch(key)
-	if obj == nil {
-		return clientio.RespNIL
-	}
-
-	return clientio.Encode(int64(dstore.GetIdleTime(obj.LastAccessedAt)), true)
-}
-
-func evalObjectEncoding(key string, store *dstore.Store) []byte {
-	var encodingTypeStr string
-
-	obj := store.GetNoTouch(key)
-	if obj == nil {
-		return clientio.RespNIL
-	}
-
-	oType, oEnc := object.ExtractTypeEncoding(obj)
-	switch {
-	case oType == object.ObjTypeString && oEnc == object.ObjEncodingRaw:
-		encodingTypeStr = "raw"
-		return clientio.Encode(encodingTypeStr, false)
-
-	case oType == object.ObjTypeString && oEnc == object.ObjEncodingEmbStr:
-		encodingTypeStr = "embstr"
-		return clientio.Encode(encodingTypeStr, false)
-
-	case oType == object.ObjTypeInt && oEnc == object.ObjEncodingInt:
-		encodingTypeStr = "int"
-		return clientio.Encode(encodingTypeStr, false)
-
-	case oType == object.ObjTypeByteList && oEnc == object.ObjEncodingDeque:
-		encodingTypeStr = "deque"
-		return clientio.Encode(encodingTypeStr, false)
-
-	case oType == object.ObjTypeBitSet && oEnc == object.ObjEncodingBF:
-		encodingTypeStr = "bf"
-		return clientio.Encode(encodingTypeStr, false)
-
-	case oType == object.ObjTypeJSON && oEnc == object.ObjEncodingJSON:
-		encodingTypeStr = "json"
-		return clientio.Encode(encodingTypeStr, false)
-
-	case oType == object.ObjTypeByteArray && oEnc == object.ObjEncodingByteArray:
-		encodingTypeStr = "bytearray"
-		return clientio.Encode(encodingTypeStr, false)
-
-	case oType == object.ObjTypeSet && oEnc == object.ObjEncodingSetStr:
-		encodingTypeStr = "setstr"
-		return clientio.Encode(encodingTypeStr, false)
-
-	case oType == object.ObjTypeSet && oEnc == object.ObjEncodingSetInt:
-		encodingTypeStr = "setint"
-		return clientio.Encode(encodingTypeStr, false)
-
-	case oType == object.ObjTypeHashMap && oEnc == object.ObjEncodingHashMap:
-		encodingTypeStr = "hashmap"
-		return clientio.Encode(encodingTypeStr, false)
-
-	case oType == object.ObjTypeSortedSet && oEnc == object.ObjEncodingBTree:
-		encodingTypeStr = "btree"
-		return clientio.Encode(encodingTypeStr, false)
-
-	default:
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-}
-
-func evalOBJECT(args []string, store *dstore.Store) []byte {
-	if len(args) < 2 {
-		return diceerrors.NewErrArity("OBJECT")
-	}
-
-	subcommand := strings.ToUpper(args[0])
-	key := args[1]
-
-	switch subcommand {
-	case "IDLETIME":
-		return evalObjectIdleTime(key, store)
-	case "ENCODING":
-		return evalObjectEncoding(key, store)
-	default:
-		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-	}
-}
-
 // TODO: Needs to be removed after http and websocket migrated to the multithreading
 func evalTOUCH(args []string, store *dstore.Store) []byte {
 	if len(args) == 0 {
@@ -875,28 +610,6 @@ func evalTOUCH(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(count, false)
-}
-
-func evalFLUSHDB(args []string, store *dstore.Store) []byte {
-	slog.Info("FLUSHDB called", slog.Any("args", args))
-	if len(args) > 1 {
-		return diceerrors.NewErrArity("FLUSHDB")
-	}
-
-	flushType := Sync
-	if len(args) == 1 {
-		flushType = strings.ToUpper(args[0])
-	}
-
-	// TODO: Update this method to work with shared-nothing multithreaded implementation
-	switch flushType {
-	case Sync, Async:
-		store.ResetStore()
-	default:
-		return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
-	}
-
-	return clientio.RespOK
 }
 
 func evalSDIFF(args []string, store *dstore.Store) []byte {

@@ -339,6 +339,18 @@ func (w *BaseWorker) handleCustomCommands(ctx context.Context, diceDBCmd *cmd.Di
 			slog.Error("Error sending ping response to worker", slog.String("workerID", w.id), slog.Any("error", err))
 		}
 		return err
+	case CmdHello:
+		err := w.ioHandler.Write(ctx, RespHello(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending ping response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		return err
+	case CmdSleep:
+		err := w.ioHandler.Write(ctx, RespSleep(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending ping response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		return err
 	default:
 		return diceerrors.ErrUnknownCmd(diceDBCmd.Cmd)
 	}

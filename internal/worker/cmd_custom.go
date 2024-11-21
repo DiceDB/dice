@@ -1,6 +1,10 @@
 package worker
 
 import (
+	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -58,4 +62,34 @@ func RespEcho(args []string) interface{} {
 	}
 
 	return args[0]
+}
+
+func RespHello(args []string) interface{} {
+	if len(args) > 1 {
+		return diceerrors.NewErrArity("HELLO")
+	}
+
+	var resp []interface{}
+	serverID := fmt.Sprintf("%s:%d", config.DiceConfig.AsyncServer.Addr, config.DiceConfig.AsyncServer.Port)
+	resp = append(resp,
+		"proto", 2,
+		"id", serverID,
+		"mode", "standalone",
+		"role", "master",
+		"modules", []interface{}{})
+
+	return resp
+}
+
+func RespSleep(args []string) interface{} {
+	if len(args) != 1 {
+		return diceerrors.NewErrArity("SLEEP")
+	}
+
+	durationSec, err := strconv.ParseInt(args[0], 10, 64)
+	if err != nil {
+		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+	}
+	time.Sleep(time.Duration(durationSec) * time.Second)
+	return clientio.OK
 }

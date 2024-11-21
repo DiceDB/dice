@@ -5434,170 +5434,161 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"command help": {
 			input: []string{"HELP"},
-			output: []byte("*15\r\n" +
-				"$64\r\n" +
-				"COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:\r\n" +
-				"$15\r\n" +
-				"(no subcommand)\r\n" +
-				"$46\r\n" +
-				"     Return details about all DiceDB commands.\r\n" +
-				"$5\r\n" +
-				"COUNT\r\n" +
-				"$63\r\n" +
-				"     Return the total number of commands in this DiceDB server.\r\n" +
-				"$4\r\n" +
-				"LIST\r\n" +
-				"$57\r\n" +
-				"     Return a list of all commands in this DiceDB server.\r\n" +
-				"$25\r\n" +
-				"INFO [<command-name> ...]\r\n" +
-				"$140\r\n" +
-				"     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned.\r\n" +
-				"$25\r\n" +
-				"DOCS [<command-name> ...]\r\n" +
-				"$147\r\n" +
-				"\tReturn documentation details about multiple diceDB commands.\n\tIf no command names are given, documentation details for all\n\tcommands are returned.\r\n" +
-				"$22\r\n" +
-				"GETKEYS <full-command>\r\n" +
-				"$48\r\n" +
-				"     Return the keys from a full DiceDB command.\r\n" +
-				"$4\r\n" +
-				"HELP\r\n" +
-				"$21\r\n" +
-				"     Print this help.\r\n"),
+			migratedOutput: EvalResponse{
+				Result: []string([]string{"COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:", "(no subcommand)", "     Return details about all DiceDB commands.", "COUNT", "     Return the total number of commands in this DiceDB server.", "LIST", "     Return a list of all commands in this DiceDB server.", "INFO [<command-name> ...]", "     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned.", "DOCS [<command-name> ...]", "\tReturn documentation details about multiple diceDB commands.\n\tIf no command names are given, documentation details for all\n\tcommands are returned.", "GETKEYS <full-command>", "     Return the keys from a full DiceDB command.", "HELP", "     Print this help."}),
+				Error:  nil,
+			},
 		},
 		"command help with wrong number of arguments": {
-			input:  []string{"HELP", "EXTRA-ARGS"},
-			output: []byte("-ERR wrong number of arguments for 'command|help' command\r\n"),
+			input: []string{"HELP", "EXTRA-ARGS"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("COMMAND|HELP"),
+			},
 		},
 		"command info valid command SET": {
-			input:  []string{"INFO", "SET"},
-			output: []byte("*1\r\n*6\r\n$3\r\nset\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*0\r\n"),
+			input: []string{"INFO", "SET"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]interface{}{"set", -3, 1, 0, 0, []interface{}(nil)}}),
+				Error:  nil,
+			},
 		},
 		"command info valid command GET": {
-			input:  []string{"INFO", "GET"},
-			output: []byte("*1\r\n*6\r\n$3\r\nget\r\n:2\r\n:1\r\n:0\r\n:0\r\n*0\r\n"),
+			input: []string{"INFO", "GET"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]interface{}{"get", 2, 1, 0, 0, []interface{}(nil)}}),
+				Error:  nil,
+			},
 		},
 		"command info valid command PING": {
-			input:  []string{"INFO", "PING"},
-			output: []byte("*1\r\n*6\r\n$4\r\nping\r\n:-1\r\n:0\r\n:0\r\n:0\r\n*0\r\n"),
+			input: []string{"INFO", "PING"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]interface{}{"ping", -1, 0, 0, 0, []interface{}(nil)}}),
+				Error:  nil,
+			},
 		},
 		"command info multiple valid commands": {
-			input:  []string{"INFO", "SET", "GET"},
-			output: []byte("*2\r\n*6\r\n$3\r\nset\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*0\r\n*6\r\n$3\r\nget\r\n:2\r\n:1\r\n:0\r\n:0\r\n*0\r\n"),
+			input: []string{"INFO", "SET", "GET"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]interface{}{"set", -3, 1, 0, 0, []interface{}(nil)}, []interface{}{"get", 2, 1, 0, 0, []interface{}(nil)}}),
+				Error:  nil,
+			},
 		},
 		"command info invalid command": {
-			input:  []string{"INFO", "INVALID_CMD"},
-			output: []byte("*1\r\n$-1\r\n"),
+			input: []string{"INFO", "INVALID_CMD"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]uint8{0x24, 0x2d, 0x31, 0xd, 0xa}}),
+				Error:  nil,
+			},
 		},
 		"command info mixture of valid and invalid commands": {
-			input:  []string{"INFO", "SET", "INVALID_CMD"},
-			output: []byte("*2\r\n*6\r\n$3\r\nset\r\n:-3\r\n:1\r\n:0\r\n:0\r\n*0\r\n$-1\r\n"),
+			input: []string{"INFO", "SET", "INVALID_CMD"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]interface{}{"set", -3, 1, 0, 0, []interface{}(nil)}, []uint8{0x24, 0x2d, 0x31, 0xd, 0xa}}),
+				Error:  nil,
+			},
 		},
 		"command count with wrong number of arguments": {
-			input:  []string{"COUNT", "EXTRA-ARGS"},
-			output: []byte("-ERR wrong number of arguments for 'command|count' command\r\n"),
+			input: []string{"COUNT", "EXTRA-ARGS"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("COMMAND|COUNT"),
+			},
 		},
 		"command list with wrong number of arguments": {
-			input:  []string{"LIST", "EXTRA-ARGS"},
-			output: []byte("-ERR wrong number of arguments for 'command|list' command\r\n"),
+			input: []string{"LIST", "EXTRA-ARGS"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("COMMAND|LIST"),
+			},
 		},
 		"command unknown": {
-			input:  []string{"UNKNOWN"},
-			output: []byte("-ERR unknown subcommand 'UNKNOWN'. Try COMMAND HELP.\r\n"),
+			input: []string{"UNKNOWN"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("unknown subcommand 'UNKNOWN'. Try COMMAND HELP."),
+			},
 		},
 		"command getkeys with incorrect number of arguments": {
-			input:  []string{"GETKEYS"},
-			output: []byte("-ERR wrong number of arguments for 'command|getkeys' command\r\n"),
+			input: []string{"GETKEYS"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("COMMAND|GETKEYS"),
+			},
 		},
 		"command getkeys with unknown command": {
-			input:  []string{"GETKEYS", "UNKNOWN"},
-			output: []byte("-ERR invalid command specified\r\n"),
+			input: []string{"GETKEYS", "UNKNOWN"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid command specified"),
+			},
 		},
 		"command getkeys with a command that accepts no key arguments": {
-			input:  []string{"GETKEYS", "FLUSHDB"},
-			output: []byte("-ERR the command has no key arguments\r\n"),
+			input: []string{"GETKEYS", "FLUSHDB"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("the command has no key arguments"),
+			},
 		},
 		"command getkeys with an invalid number of arguments for a command": {
-			input:  []string{"GETKEYS", "MSET", "key1"},
-			output: []byte("-ERR invalid number of arguments specified for command\r\n"),
+			input: []string{"GETKEYS", "MSET", "key1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid number of arguments specified for command"),
+			},
 		},
 		"command docs valid command SET": {
 			input: []string{"DOCS", "SET"},
-			output: []byte("*1\r\n*2\r\n$3\r\nset\r\n*10\r\n$7\r\nsummary\r\n$489\r\n" +
-				"SET puts a new <key, value> pair in db as in the args\n" +
-				"\t\targs must contain key and value.\n" +
-				"\t\targs can also contain multiple options -\n" +
-				"\t\tEX or ex which will set the expiry time(in secs) for the key\n" +
-				"\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n" +
-				"\t\tReturns encoded error response if expiry tme value in not integer\n" +
-				"\t\tReturns encoded OK RESP once new entry is added\n" +
-				"\t\tIf the key already exists then the value will be overwritten and expiry will be discarded\r\n" +
-				"$5\r\narity\r\n" +
-				":-3\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]interface{}{"set", []interface{}{"summary", "SET puts a new <key, value> pair in db as in the args\n\t\targs must contain key and value.\n\t\targs can also contain multiple options -\n\t\tEX or ex which will set the expiry time(in secs) for the key\n\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n\t\tReturns encoded error response if expiry tme value in not integer\n\t\tReturns encoded OK RESP once new entry is added\n\t\tIf the key already exists then the value will be overwritten and expiry will be discarded", "arity", -3, "beginIndex", 1, "lastIndex", 0, "step", 0}}}),
+				Error:  nil,
+			},
 		},
 		"command docs valid command GET": {
 			input: []string{"DOCS", "GET"},
-			output: []byte(
-				"*1\r\n*2\r\n$3\r\nget\r\n*10\r\n$7\r\nsummary\r\n$210\r\n" +
-					"GET returns the value for the queried key in args\n" +
-					"\t\tThe key should be the only param in args\n" +
-					"\t\tThe RESP value of the key is encoded and then returned\n" +
-					"\t\tGET returns RespNIL if key is expired or it does not exist\r\n" +
-					"$5\r\narity\r\n:2\r\n$10\r\nbeginIndex\r\n" +
-					":1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]interface{}{"get", []interface{}{"summary", "GET returns the value for the queried key in args\n\t\tThe key should be the only param in args\n\t\tThe RESP value of the key is encoded and then returned\n\t\tGET returns RespNIL if key is expired or it does not exist", "arity", 2, "beginIndex", 1, "lastIndex", 0, "step", 0}}}),
+				Error:  nil,
+			},
 		},
 		"command docs valid command PING": {
 			input: []string{"DOCS", "PING"},
-			output: []byte("*1\r\n*2\r\n$4\r\nping\r\n*10\r\n$7\r\nsummary\r\n$111\r\nPING returns with an encoded \"PONG\"" +
-				" If any message is added with the ping command,the message will be returned.\r\n" +
-				"$5\r\narity\r\n:-1\r\n$10\r\nbeginIndex\r\n:0\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]interface{}{"ping", []interface{}{"summary", "PING returns with an encoded \"PONG\" If any message is added with the ping command,the message will be returned.", "arity", -1, "beginIndex", 0, "lastIndex", 0, "step", 0}}}),
+				Error:  nil,
+			},
 		},
 		"command docs multiple valid commands": {
 			input: []string{"DOCS", "SET", "GET"},
-			output: []byte("*2\r\n*2\r\n$3\r\nset\r\n*10\r\n$7\r\n" +
-				"summary\r\n$489\r\n" +
-				"SET puts a new <key, value> pair in db as in the args\n" +
-				"\t\targs must contain key and value.\n" +
-				"\t\targs can also contain multiple options -\n" +
-				"\t\tEX or ex which will set the expiry time(in secs) for the key\n" +
-				"\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n" +
-				"\t\tReturns encoded error response if expiry tme value in not integer\n" +
-				"\t\tReturns encoded OK RESP once new entry is added\n" +
-				"\t\tIf the key already exists then the value will be overwritten and expiry will be discarded\r\n" +
-				"$5\r\narity\r\n" +
-				":-3\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n" +
-				"*2\r\n$3\r\nget\r\n*10\r\n$7\r\nsummary\r\n$210\r\n" +
-				"GET returns the value for the queried key in args\n" +
-				"\t\tThe key should be the only param in args\n" +
-				"\t\tThe RESP value of the key is encoded and then returned\n" +
-				"\t\tGET returns RespNIL if key is expired or it does not exist\r\n$5\r\narity\r\n" +
-				":2\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]interface{}{"set", []interface{}{"summary", "SET puts a new <key, value> pair in db as in the args\n\t\targs must contain key and value.\n\t\targs can also contain multiple options -\n\t\tEX or ex which will set the expiry time(in secs) for the key\n\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n\t\tReturns encoded error response if expiry tme value in not integer\n\t\tReturns encoded OK RESP once new entry is added\n\t\tIf the key already exists then the value will be overwritten and expiry will be discarded", "arity", -3, "beginIndex", 1, "lastIndex", 0, "step", 0}}, []interface{}{"get", []interface{}{"summary", "GET returns the value for the queried key in args\n\t\tThe key should be the only param in args\n\t\tThe RESP value of the key is encoded and then returned\n\t\tGET returns RespNIL if key is expired or it does not exist", "arity", 2, "beginIndex", 1, "lastIndex", 0, "step", 0}}}),
+				Error:  nil,
+			},
 		},
 		"command docs invalid command": {
-			input:  []string{"DOCS", "INVALID_CMD"},
-			output: []byte("*0\r\n"),
+			input: []string{"DOCS", "INVALID_CMD"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}(nil)),
+				Error:  nil,
+			},
 		},
 		"command docs mixture of valid and invalid commands": {
 			input: []string{"DOCS", "SET", "INVALID_CMD"},
-			output: []byte("*1\r\n*2\r\n$3\r\nset\r\n*10\r\n$7\r\n" +
-				"summary\r\n$489\r\nSET puts a new <key, value> pair in db as in the args\n" +
-				"\t\targs must contain key and value.\n" +
-				"\t\targs can also contain multiple options -\n" +
-				"\t\tEX or ex which will set the expiry time(in secs) for the key\n" +
-				"\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n" +
-				"\t\tReturns encoded error response if expiry tme value in not integer\n" +
-				"\t\tReturns encoded OK RESP once new entry is added\n" +
-				"\t\tIf the key already exists then the value will be overwritten and expiry will be discarded\r\n" +
-				"$5\r\narity\r\n:-3\r\n$10\r\nbeginIndex\r\n:1\r\n$9\r\nlastIndex\r\n:0\r\n$4\r\nstep\r\n:0\r\n"),
+			migratedOutput: EvalResponse{
+				Result: []interface{}([]interface{}{[]interface{}{"set", []interface{}{"summary", "SET puts a new <key, value> pair in db as in the args\n\t\targs must contain key and value.\n\t\targs can also contain multiple options -\n\t\tEX or ex which will set the expiry time(in secs) for the key\n\t\tReturns encoded error response if at least a <key, value> pair is not part of args\n\t\tReturns encoded error response if expiry tme value in not integer\n\t\tReturns encoded OK RESP once new entry is added\n\t\tIf the key already exists then the value will be overwritten and expiry will be discarded", "arity", -3, "beginIndex", 1, "lastIndex", 0, "step", 0}}}),
+				Error:  nil,
+			},
 		},
 		"command docs unknown command": {
-			input:  []string{"UNKNOWN"},
-			output: []byte("-ERR unknown subcommand 'UNKNOWN'. Try COMMAND HELP.\r\n"),
+			input: []string{"UNKNOWN"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("unknown subcommand 'UNKNOWN'. Try COMMAND HELP."),
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalCommand, store)
+	runMigratedEvalTests(t, tests, evalCommand, store)
 }
 
 func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
@@ -6404,19 +6395,19 @@ func testEvalFLUSHDB(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				evalSET([]string{"key", "val"}, store)
 			},
-			input:  nil,
-			output: clientio.RespOK,
+			input:          nil,
+			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
 		},
 		"two keys exist in db": {
 			setup: func() {
 				evalSET([]string{"key1", "val1"}, store)
 				evalSET([]string{"key2", "val2"}, store)
 			},
-			input:  nil,
-			output: clientio.RespOK,
+			input:          nil,
+			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
 		},
 	}
-	runEvalTests(t, tests, evalFLUSHDB, store)
+	runMigratedEvalTests(t, tests, evalFLUSHDB, store)
 }
 
 func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
@@ -8566,35 +8557,50 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 func testEvalOBJECTENCODING(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'object' command\r\n"),
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("OBJECT"),
+			},
 		},
 		"empty array": {
-			setup:  func() {},
-			input:  []string{},
-			output: []byte("-ERR wrong number of arguments for 'object' command\r\n"),
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("OBJECT"),
+			},
 		},
 		"object with invalid subcommand": {
-			setup:  func() {},
-			input:  []string{"TESTSUBCOMMAND", "key"},
-			output: []byte("-ERR syntax error\r\n"),
+			setup: func() {},
+			input: []string{"TESTSUBCOMMAND", "key"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrSyntax,
+			},
 		},
 		"key does not exist": {
-			setup:  func() {},
-			input:  []string{"ENCODING", "NONEXISTENT_KEY"},
-			output: clientio.RespNIL,
+			setup: func() {},
+			input: []string{"ENCODING", "NONEXISTENT_KEY"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
 		},
 		"key exists": {
 			setup: func() {
 				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
-			input:  []string{"ENCODING", "EXISTING_KEY"},
-			output: []byte("$5\r\ndeque\r\n"),
+			input: []string{"ENCODING", "EXISTING_KEY"},
+			migratedOutput: EvalResponse{
+				Result: "deque",
+				Error:  nil,
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalOBJECT, store)
+	runMigratedEvalTests(t, tests, evalOBJECT, store)
 }
 
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {

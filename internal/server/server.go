@@ -23,7 +23,6 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/iomultiplexer"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/querymanager"
@@ -397,12 +396,7 @@ func (s *AsyncServer) isAuthenticated(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, 
 }
 
 func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
-	switch diceDBCmd.Cmd {
-	case eval.ExecCmdMeta.Name:
-		buf.Write(diceerrors.NewErrWithMessage("EXEC without MULTI"))
-	default:
-		s.executeCommandToBuffer(diceDBCmd, buf, c)
-	}
+	s.executeCommandToBuffer(diceDBCmd, buf, c)
 }
 
 func (s *AsyncServer) writeResponse(c *comm.Client, buf *bytes.Buffer) {

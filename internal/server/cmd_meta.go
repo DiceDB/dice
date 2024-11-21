@@ -39,9 +39,8 @@ var (
 	// Metadata for global commands that don't interact with shards.
 	// PING is an example of global command.
 	pingCmdMeta = CmdsMeta{
-		Cmd:          "PING",
-		CmdType:      Global,
-		RespNoShards: eval.RespPING,
+		Cmd:     "PING",
+		CmdType: Global,
 	}
 
 	// Metadata for single-shard commands that only interact with one shard.
@@ -471,6 +470,14 @@ var (
 		Cmd:     "BITOP",
 		CmdType: SingleShard,
 	}
+	flushDBCmdMeta = CmdsMeta{
+		Cmd:     "FLUSHDB",
+		CmdType: MultiShard,
+	}
+	objectCmdMeta = CmdsMeta{
+		Cmd:     "OBJECT",
+		CmdType: SingleShard,
+	}
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -604,5 +611,7 @@ func init() {
 	WorkerCmdsMeta["CLIENT"] = clientCmdMeta
 	WorkerCmdsMeta["LATENCY"] = latencyCmdMeta
 	WorkerCmdsMeta["BITOP"] = bitOPCmdMeta
+	WorkerCmdsMeta["FLUSHDB"] = flushDBCmdMeta
+	WorkerCmdsMeta["OBJECT"] = objectCmdMeta
 	// Additional commands (multishard, custom) can be added here as needed.
 }

@@ -47,6 +47,8 @@ const (
 	CmdAbort = "ABORT"
 	CmdAuth  = "AUTH"
 	CmdEcho  = "ECHO"
+	CmdHello = "HELLO"
+	CmdSleep = "SLEEP"
 )
 
 // Single-shard commands.
@@ -94,6 +96,7 @@ const (
 	CmdKeys     = "KEYS"
 	CmdTouch    = "TOUCH"
 	CmdDBSize   = "DBSIZE"
+	CmdFlushDB  = "FLUSHDB"
 )
 
 // Multi-Step-Multi-Shard commands
@@ -170,6 +173,7 @@ const (
 	CmdPersist       = "PERSIST"
 	CmdTypeOf        = "TYPE"
 	CmdBitOp         = "BITOP"
+	CmdObject        = "OBJECT"
 )
 
 // Watch commands
@@ -503,6 +507,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdBitOp: {
 		CmdType: SingleShard,
 	},
+	CmdObject: {
+		CmdType: SingleShard,
+	},
 	// Multi-shard commands.
 	CmdRename: {
 		CmdType:            MultiShard,
@@ -564,6 +571,11 @@ var CommandsMeta = map[string]CmdMeta{
 		decomposeCommand: decomposeKeys,
 		composeResponse:  composeKeys,
 	},
+	CmdFlushDB: {
+		CmdType:          AllShard,
+		decomposeCommand: decomposeFlushDB,
+		composeResponse:  composeFlushDB,
+	},
 
 	// Custom commands.
 	CmdAbort: {
@@ -617,7 +629,7 @@ func validateCmdMeta(c string, meta CmdMeta) error {
 		if meta.WorkerCommandHandler == nil {
 			return fmt.Errorf("global command %s must have WorkerCommandHandler function", c)
 		}
-	case MultiShard:
+	case MultiShard, AllShard:
 		if meta.decomposeCommand == nil || meta.composeResponse == nil {
 			return fmt.Errorf("multi-shard command %s must have both decomposeCommand and composeResponse implemented", c)
 		}

@@ -236,3 +236,13 @@ func composeKeys(responses ...ops.StoreResponse) interface{} {
 
 	return results
 }
+
+func composeFlushDB(responses ...ops.StoreResponse) interface{} {
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+	}
+
+	return clientio.OK
+}
