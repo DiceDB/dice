@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net"
 	"os"
@@ -29,6 +30,13 @@ type TestServerOptions struct {
 	Port int
 }
 
+func init() {
+	parser := config.NewConfigParser()
+	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
+		log.Fatalf("failed to load configuration: %v", err)
+	}
+}
+
 // getLocalConnection returns a local TCP connection to the database
 //
 //nolint:unused
@@ -38,6 +46,19 @@ func getLocalConnection() net.Conn {
 		panic(err)
 	}
 	return conn
+}
+
+func ClosePublisherSubscribers(publisher net.Conn, subscribers []net.Conn) error {
+	if err := publisher.Close(); err != nil {
+		return fmt.Errorf("error closing publisher connection: %v", err)
+	}
+	for _, sub := range subscribers {
+		time.Sleep(100 * time.Millisecond) // [TODO] why is this needed?
+		if err := sub.Close(); err != nil {
+			return fmt.Errorf("error closing subscriber connection: %v", err)
+		}
+	}
+	return nil
 }
 
 // deleteTestKeys is a utility to delete a list of keys before running a test
@@ -65,6 +86,26 @@ func getLocalSdk() *dicedb.Client {
 		PoolTimeout:     30 * time.Second,
 		ConnMaxIdleTime: time.Minute,
 	})
+}
+
+type WatchSubscriber struct {
+	client *dicedb.Client
+	watch  *dicedb.WatchConn
+}
+
+func ClosePublisherSubscribersSDK(publisher *dicedb.Client, subscribers []WatchSubscriber) error {
+	if err := publisher.Close(); err != nil {
+		return fmt.Errorf("error closing publisher connection: %v", err)
+	}
+	for _, sub := range subscribers {
+		if err := sub.watch.Close(); err != nil {
+			return fmt.Errorf("error closing subscriber watch connection: %v", err)
+		}
+		if err := sub.client.Close(); err != nil {
+			return fmt.Errorf("error closing subscriber connection: %v", err)
+		}
+	}
+	return nil
 }
 
 func FireCommand(conn net.Conn, cmd string) interface{} {
@@ -116,6 +157,9 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
+
+	// #1261: Added here to prevent resp integration tests from failing on lower-spec machines
+	config.DiceConfig.Memory.KeysLimit = 2000
 	if opt.Port != 0 {
 		config.DiceConfig.AsyncServer.Port = opt.Port
 	} else {

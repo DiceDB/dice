@@ -7,6 +7,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/dicedb/dice/config"
+
 	"github.com/cespare/xxhash/v2"
 	"github.com/dicedb/dice/internal/ops"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -30,9 +32,11 @@ func NewShardManager(shardCount uint8, queryWatchChan chan dstore.QueryWatchEven
 	shardReqMap := make(map[ShardID]chan *ops.StoreOp)
 	shardErrorChan := make(chan *ShardError)
 
+	maxKeysPerShard := config.DiceConfig.Memory.KeysLimit / int(shardCount)
 	for i := uint8(0); i < shardCount; i++ {
+		evictionStrategy := dstore.NewBatchEvictionLRU(maxKeysPerShard, config.DiceConfig.Memory.EvictionRatio)
 		// Shards are numbered from 0 to shardCount-1
-		shard := NewShardThread(i, globalErrorChan, shardErrorChan, queryWatchChan, cmdWatchChan)
+		shard := NewShardThread(i, globalErrorChan, shardErrorChan, queryWatchChan, cmdWatchChan, evictionStrategy)
 		shards[i] = shard
 		shardReqMap[i] = shard.ReqChan
 	}

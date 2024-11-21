@@ -13,10 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dicedb/dice/internal/querymanager"
-	"github.com/dicedb/dice/internal/wal"
-	"github.com/dicedb/dice/internal/watchmanager"
-
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
@@ -25,7 +21,11 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/shard"
+	"github.com/dicedb/dice/internal/wal"
+	"github.com/dicedb/dice/internal/watchmanager"
+	"github.com/google/uuid"
 )
 
 var (
@@ -82,14 +82,28 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 	dataChan := make(chan []byte)
 	readErrChan := make(chan error)
 
+	runCtx, runCancel := context.WithCancel(ctx)
+	defer runCancel()
+
 	go func() {
+		defer close(dataChan)
+		defer close(readErrChan)
+
 		for {
-			data, err := w.ioHandler.Read(ctx)
+			data, err := w.ioHandler.Read(runCtx)
 			if err != nil {
-				readErrChan <- err
+				select {
+				case readErrChan <- err:
+				case <-runCtx.Done(): // exit if worker exits
+				}
 				return
 			}
-			dataChan <- data
+
+			select {
+			case dataChan <- data:
+			case <-runCtx.Done(): // exit if worker exits
+				return
+			}
 		}
 	}()
 
@@ -170,8 +184,13 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 func (w *BaseWorker) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
 	// Retrieve metadata for the command to determine if multisharding is supported.
 	meta, ok := CommandsMeta[cmds[0].Cmd]
-	if ok && meta.preProcessingReq {
-		meta.preProcessResponse(w, cmds[0])
+	if ok && meta.preProcessing {
+		if err := meta.preProcessResponse(w, cmds[0]); err != nil {
+			e := w.ioHandler.Write(execCtx, err)
+			if e != nil {
+				slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", err))
+			}
+		}
 	}
 
 	err := w.executeCommand(execCtx, cmds[0], isWatchNotification)
@@ -188,6 +207,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
 	cmdList := make([]*cmd.DiceDBCmd, 0)
+	var watchLabel string
 
 	// Retrieve metadata for the command to determine if multisharding is supported.
 	meta, ok := CommandsMeta[diceDBCmd.Cmd]
@@ -207,12 +227,19 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			// For single-shard or custom commands, process them without breaking up.
 			cmdList = append(cmdList, diceDBCmd)
 
-		case MultiShard:
+		case MultiShard, AllShard:
 			var err error
 			// If the command supports multisharding, break it down into multiple commands.
 			cmdList, err = meta.decomposeCommand(ctx, w, diceDBCmd)
 			if err != nil {
-				workerErr := w.ioHandler.Write(ctx, err)
+				var workerErr error
+				// Check if it's a CustomError
+				var customErr *diceerrors.PreProcessError
+				if errors.As(err, &customErr) {
+					workerErr = w.ioHandler.Write(ctx, customErr.Result)
+				} else {
+					workerErr = w.ioHandler.Write(ctx, err)
+				}
 				if workerErr != nil {
 					slog.Debug("Error executing for worker", slog.String("workerID", w.id), slog.Any("error", workerErr))
 				}
@@ -220,25 +247,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			}
 
 		case Custom:
-			// if command is of type Custom, write a custom logic around it
-			switch diceDBCmd.Cmd {
-			case CmdAuth:
-				err := w.ioHandler.Write(ctx, w.RespAuth(diceDBCmd.Args))
-				if err != nil {
-					slog.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
-				}
-				return err
-			case CmdAbort:
-				err := w.ioHandler.Write(ctx, clientio.OK)
-				if err != nil {
-					slog.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
-				}
-				slog.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
-				w.globalErrorChan <- diceerrors.ErrAborted
-				return err
-			default:
-				cmdList = append(cmdList, diceDBCmd)
-			}
+			return w.handleCustomCommands(ctx, diceDBCmd)
 
 		case Watch:
 			// Generate the Cmd being watched. All we need to do is remove the .WATCH suffix from the command and pass
@@ -246,6 +255,16 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			// Modify the command name to remove the .WATCH suffix, this will allow us to generate a consistent
 			// fingerprint (which uses the command name without the suffix)
 			diceDBCmd.Cmd = diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-6]
+
+			// check if the last argument is a watch label
+			label := diceDBCmd.Args[len(diceDBCmd.Args)-1]
+			if _, err := uuid.Parse(label); err == nil {
+				watchLabel = label
+
+				// remove the watch label from the args
+				diceDBCmd.Args = diceDBCmd.Args[:len(diceDBCmd.Args)-1]
+			}
+
 			watchCmd := &cmd.DiceDBCmd{
 				Cmd:  diceDBCmd.Cmd,
 				Args: diceDBCmd.Args,
@@ -274,12 +293,12 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
-	if err := w.scatter(ctx, cmdList); err != nil {
+	if err := w.scatter(ctx, cmdList, meta.CmdType); err != nil {
 		return err
 	}
 
 	// Gather the responses from the shards and write them to the buffer.
-	if err := w.gather(ctx, diceDBCmd, len(cmdList), isWatchNotification); err != nil {
+	if err := w.gather(ctx, diceDBCmd, len(cmdList), isWatchNotification, watchLabel); err != nil {
 		return err
 	}
 
@@ -289,6 +308,40 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	return nil
+}
+
+func (w *BaseWorker) handleCustomCommands(ctx context.Context, diceDBCmd *cmd.DiceDBCmd) error {
+	// if command is of type Custom, write a custom logic around it
+	switch diceDBCmd.Cmd {
+	case CmdAuth:
+		err := w.ioHandler.Write(ctx, w.RespAuth(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending auth response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		return err
+	case CmdEcho:
+		err := w.ioHandler.Write(ctx, RespEcho(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending echo response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		return err
+	case CmdAbort:
+		err := w.ioHandler.Write(ctx, clientio.OK)
+		if err != nil {
+			slog.Error("Error sending abort response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		slog.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
+		w.globalErrorChan <- diceerrors.ErrAborted
+		return err
+	case CmdPing:
+		err := w.ioHandler.Write(ctx, RespPING(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending ping response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
+		return err
+	default:
+		return diceerrors.ErrUnknownCmd(diceDBCmd.Cmd)
+	}
 }
 
 // handleCommandWatch sends a watch subscription request to the watch manager.
@@ -330,26 +383,52 @@ func (w *BaseWorker) handleCommandUnwatch(ctx context.Context, cmdList []*cmd.Di
 
 // scatter distributes the DiceDB commands to the respective shards based on the key.
 // For each command, it calculates the shard ID and sends the command to the shard's request channel for processing.
-func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd) error {
+func (w *BaseWorker) scatter(ctx context.Context, cmds []*cmd.DiceDBCmd, cmdType CmdType) error {
 	// Otherwise check for the shard based on the key using hash
 	// and send it to the particular shard
+	// Check if the context has been canceled or expired.
 	select {
 	case <-ctx.Done():
+		// If the context is canceled, return the error associated with it.
 		return ctx.Err()
 	default:
-		for i := uint8(0); i < uint8(len(cmds)); i++ {
-			shardID, responseChan := w.shardManager.GetShardInfo(getRoutingKeyFromCommand(cmds[i]))
+		// Proceed with the default case when the context is not canceled.
 
-			responseChan <- &ops.StoreOp{
-				SeqID:     i,
-				RequestID: GenerateUniqueRequestID(),
-				Cmd:       cmds[i],
-				WorkerID:  w.id,
-				ShardID:   shardID,
-				Client:    nil,
+		if cmdType == AllShard {
+			// If the command type is for all shards, iterate over all available shards.
+			for i := uint8(0); i < uint8(w.shardManager.GetShardCount()); i++ {
+				// Get the shard ID (i) and its associated request channel.
+				shardID, responseChan := i, w.shardManager.GetShard(i).ReqChan
+
+				// Send a StoreOp operation to the shard's request channel.
+				responseChan <- &ops.StoreOp{
+					SeqID:     i,                         // Sequence ID for this operation.
+					RequestID: GenerateUniqueRequestID(), // Unique identifier for the request.
+					Cmd:       cmds[0],                   // Command to be executed, using the first command in cmds.
+					WorkerID:  w.id,                      // ID of the current worker.
+					ShardID:   shardID,                   // ID of the shard handling this operation.
+					Client:    nil,                       // Client information (if applicable).
+				}
+			}
+		} else {
+			// If the command type is specific to certain commands, process them individually.
+			for i := uint8(0); i < uint8(len(cmds)); i++ {
+				// Determine the appropriate shard for the current command using a routing key.
+				shardID, responseChan := w.shardManager.GetShardInfo(getRoutingKeyFromCommand(cmds[i]))
+
+				// Send a StoreOp operation to the shard's request channel.
+				responseChan <- &ops.StoreOp{
+					SeqID:     i,                         // Sequence ID for this operation.
+					RequestID: GenerateUniqueRequestID(), // Unique identifier for the request.
+					Cmd:       cmds[i],                   // Command to be executed, using the current command in cmds.
+					WorkerID:  w.id,                      // ID of the current worker.
+					ShardID:   shardID,                   // ID of the shard handling this operation.
+					Client:    nil,                       // Client information (if applicable).
+				}
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -363,7 +442,7 @@ func getRoutingKeyFromCommand(diceDBCmd *cmd.DiceDBCmd) string {
 
 // gather collects the responses from multiple shards and writes the results into the provided buffer.
 // It first waits for responses from all the shards and then processes the result based on the command type (SingleShard, Custom, or Multishard).
-func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchNotification bool) error {
+func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchNotification bool, watchLabel string) error {
 	// Collect responses from all shards
 	storeOp, err := w.gatherResponses(ctx, numCmds)
 	if err != nil {
@@ -378,7 +457,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 	}
 
 	if isWatchNotification {
-		return w.handleWatchNotification(ctx, diceDBCmd, storeOp[0])
+		return w.handleWatchNotification(ctx, diceDBCmd, storeOp[0], watchLabel)
 	}
 
 	// Process command based on its type
@@ -392,7 +471,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 
 // gatherResponses collects responses from all shards
 func (w *BaseWorker) gatherResponses(ctx context.Context, numCmds int) ([]ops.StoreResponse, error) {
-	var storeOp []ops.StoreResponse
+	storeOp := make([]ops.StoreResponse, 0, numCmds)
 
 	for numCmds > 0 {
 		select {
@@ -422,14 +501,21 @@ func (w *BaseWorker) gatherResponses(ctx context.Context, numCmds int) ([]ops.St
 }
 
 // handleWatchNotification processes watch notification responses
-func (w *BaseWorker) handleWatchNotification(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, resp ops.StoreResponse) error {
+func (w *BaseWorker) handleWatchNotification(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, resp ops.StoreResponse, watchLabel string) error {
 	fingerprint := fmt.Sprintf("%d", diceDBCmd.GetFingerprint())
 
-	if resp.EvalResponse.Error != nil {
-		return w.writeResponse(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fingerprint, resp.EvalResponse.Error))
+	// if watch label is not empty, then this is the first response for the watch command
+	// hence, we will send the watch label as part of the response
+	firstRespElem := diceDBCmd.Cmd
+	if watchLabel != "" {
+		firstRespElem = watchLabel
 	}
 
-	return w.writeResponse(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fingerprint, resp.EvalResponse.Result))
+	if resp.EvalResponse.Error != nil {
+		return w.writeResponse(ctx, querymanager.GenericWatchResponse(firstRespElem, fingerprint, resp.EvalResponse.Error))
+	}
+
+	return w.writeResponse(ctx, querymanager.GenericWatchResponse(firstRespElem, fingerprint, resp.EvalResponse.Result))
 }
 
 // handleLegacyCommand processes commands not in CommandsMeta
@@ -455,7 +541,7 @@ func (w *BaseWorker) handleCommand(ctx context.Context, cmdMeta CmdMeta, diceDBC
 		if err == nil && w.wl != nil {
 			w.wl.LogCommand(diceDBCmd)
 		}
-	case MultiShard:
+	case MultiShard, AllShard:
 		err = w.writeResponse(ctx, cmdMeta.composeResponse(storeOp...))
 
 		if err == nil && w.wl != nil {
@@ -488,34 +574,6 @@ func (w *BaseWorker) isAuthenticated(diceDBCmd *cmd.DiceDBCmd) error {
 	}
 
 	return nil
-}
-
-// RespAuth returns with an encoded "OK" if the user is authenticated
-// If the user is not authenticated, it returns with an encoded error message
-func (w *BaseWorker) RespAuth(args []string) interface{} {
-	// Check for incorrect number of arguments (arity error).
-	if len(args) < 1 || len(args) > 2 {
-		return diceerrors.ErrWrongArgumentCount("AUTH")
-	}
-
-	if config.DiceConfig.Auth.Password == "" {
-		return diceerrors.ErrAuth
-	}
-
-	username := config.DiceConfig.Auth.UserName
-	var password string
-
-	if len(args) == 1 {
-		password = args[0]
-	} else {
-		username, password = args[0], args[1]
-	}
-
-	if err := w.Session.Validate(username, password); err != nil {
-		return err
-	}
-
-	return clientio.OK
 }
 
 func (w *BaseWorker) Stop() error {

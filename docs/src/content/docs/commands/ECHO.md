@@ -23,11 +23,10 @@ ECHO message
 | Command is successful                       | The message passed as a parameter |
 | Syntax or specified constraints are invalid | error                             |
 
-## ERROR
-
-`Error Message` : `(error) ERROR wrong number of arguments for 'echo' command`
-
-Occurs when message parameter is not passed or more than one message parameter is passed
+## Errors
+1. `Syntax Error`:
+   - Error Message: `(error) ERR wrong number of arguments for 'echo' command`
+   - Occurs if the command is called with additional or fewer parameters than required
 
 ## Example Usage
 
@@ -35,30 +34,22 @@ Occurs when message parameter is not passed or more than one message parameter i
 
 ```bash
 127.0.0.1:7379> ECHO "DiceDB is very efficient"
+"DiceDB is very efficient"
 ```
-
-`Response`:
-
-- `"DiceDB is very efficient"`
 
 ### Invalid Usage
 
 ```bash
 127.0.0.1:7379> ECHO
+`(error) ERROR wrong number of arguments for 'echo' command`
 ```
 
-`Response`:
-
-- `(error) ERROR wrong number of arguments for 'echo' command`
 
 ```bash
 127.0.0.1:7379> ECHO "DiceDB is" "very efficient"
+(error) ERROR wrong number of arguments for 'echo' command`
 ```
-
-`Response`:
-
-- `(error) ERROR wrong number of arguments for 'echo' command`
 
 ## Conclusion
 
-    In DiceDB, the ECHO command accepts only one message string and prints it. If no message or more than one message is provided, it results in an error
+In DiceDB, the ECHO command accepts only one message string and prints it. If no message or more than one message is provided, it results in an error

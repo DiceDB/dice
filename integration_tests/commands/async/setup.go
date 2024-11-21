@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net"
 	"os"
@@ -21,6 +22,13 @@ import (
 	dicedb "github.com/dicedb/dicedb-go"
 )
 
+func init() {
+	parser := config.NewConfigParser()
+	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
+		log.Fatalf("failed to load configuration: %v", err)
+	}
+}
+
 type TestServerOptions struct {
 	Port       int
 	MaxClients int32
@@ -28,7 +36,7 @@ type TestServerOptions struct {
 
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.AsyncServer.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", config.DiceConfig.AsyncServer.Addr, config.DiceConfig.AsyncServer.Port))
 	if err != nil {
 		panic(err)
 	}

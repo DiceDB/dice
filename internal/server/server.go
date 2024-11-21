@@ -382,11 +382,7 @@ func (s *AsyncServer) EvalAndRespond(cmds *cmd.RedisCmds, c *comm.Client) {
 			continue
 		}
 
-		if c.IsTxn {
-			s.handleTransactionCommand(diceDBCmd, c, buf)
-		} else {
-			s.handleNonTransactionCommand(diceDBCmd, c, buf)
-		}
+		s.handleNonTransactionCommand(diceDBCmd, c, buf)
 	}
 
 	s.writeResponse(c, buf)
@@ -400,58 +396,13 @@ func (s *AsyncServer) isAuthenticated(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, 
 	return true
 }
 
-func (s *AsyncServer) handleTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
-	if eval.TxnCommands[diceDBCmd.Cmd] {
-		switch diceDBCmd.Cmd {
-		case eval.ExecCmdMeta.Name:
-			s.executeTransaction(c, buf)
-		case eval.DiscardCmdMeta.Name:
-			s.discardTransaction(c, buf)
-		default:
-			slog.Error(
-				"Unhandled transaction command",
-				slog.String("command", diceDBCmd.Cmd),
-			)
-		}
-	} else {
-		c.TxnQueue(diceDBCmd)
-		buf.Write(clientio.RespQueued)
-	}
-}
-
 func (s *AsyncServer) handleNonTransactionCommand(diceDBCmd *cmd.DiceDBCmd, c *comm.Client, buf *bytes.Buffer) {
 	switch diceDBCmd.Cmd {
-	case eval.MultiCmdMeta.Name:
-		c.TxnBegin()
-		buf.Write(clientio.RespOK)
 	case eval.ExecCmdMeta.Name:
 		buf.Write(diceerrors.NewErrWithMessage("EXEC without MULTI"))
-	case eval.DiscardCmdMeta.Name:
-		buf.Write(diceerrors.NewErrWithMessage("DISCARD without MULTI"))
 	default:
 		s.executeCommandToBuffer(diceDBCmd, buf, c)
 	}
-}
-
-func (s *AsyncServer) executeTransaction(c *comm.Client, buf *bytes.Buffer) {
-	cmds := c.Cqueue.Cmds
-	_, err := fmt.Fprintf(buf, "*%d\r\n", len(cmds))
-	if err != nil {
-		slog.Error("Error writing to buffer", slog.Any("error", err))
-		return
-	}
-
-	for _, cmd := range cmds {
-		s.executeCommandToBuffer(cmd, buf, c)
-	}
-
-	c.Cqueue.Cmds = make([]*cmd.DiceDBCmd, 0)
-	c.IsTxn = false
-}
-
-func (s *AsyncServer) discardTransaction(c *comm.Client, buf *bytes.Buffer) {
-	c.TxnDiscard()
-	buf.Write(clientio.RespOK)
 }
 
 func (s *AsyncServer) writeResponse(c *comm.Client, buf *bytes.Buffer) {

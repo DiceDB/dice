@@ -3,7 +3,7 @@ title: APPEND
 description: The `APPEND` command in DiceDB is used to either set the value of a key or append a value to an existing key. This command allows for both creating and updating key-value pairs.
 ---
 
-The `APPEND` command in DiceDB is used to either set the value of a key or append a value to an existing key. This command allows for both creating and updating key-value pairs.
+The `APPEND` command in DiceDB is used to either set the value of a key or append a value to an existing key and returns the length of the value stored at the specified key after appending. This command allows for both creating and updating key-value pairs.
 
 ## Syntax
 
@@ -56,8 +56,34 @@ Appending to key `foo` that contains `bar` with `baz`
 
 ```bash
 127.0.0.1:7379> SET foo bar
+OK
 127.0.0.1:7379> APPEND foo baz
 (integer) 6
+127.0.0.1:7379> GET foo
+"barbaz"
+```
+
+Appending "1" to key `bmkey` that contains a bitmap equivalent of `42`
+
+```bash
+127.0.0.1:7379> SETBIT bmkey 2 1
+(integer) 0
+127.0.0.1:7379> SETBIT bmkey 3 1
+(integer) 0
+127.0.0.1:7379> SETBIT bmkey 5 1
+(integer) 0
+127.0.0.1:7379> SETBIT bmkey 10 1
+(integer) 0
+127.0.0.1:7379> SETBIT bmkey 11 1
+(integer) 0
+127.0.0.1:7379> SETBIT bmkey 14 1
+(integer) 0
+127.0.0.1:7379> GET bmkey
+"42"
+127.0.0.1:7379> APPEND bmkey 1
+(integer) 3
+127.0.0.1:7379> GET bmkey
+"421"
 ```
 
 ### Invalid usage

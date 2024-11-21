@@ -4,8 +4,11 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/store"
 )
 
@@ -63,32 +66,36 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 // sets the value to the destination key using a SET command.
 func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	// Waiting for GET command response
-	var val string
+	var resp *ops.StoreResponse
 	select {
 	case <-ctx.Done():
 		slog.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
 	case preProcessedResp, ok := <-w.preprocessingChan:
 		if ok {
-			evalResp := preProcessedResp.EvalResponse
-			if evalResp.Error != nil {
-				return nil, evalResp.Error
-			}
-
-			val = evalResp.Result.(string)
+			resp = preProcessedResp
 		}
 	}
 
-	if len(cd.Args) != 2 {
+	if resp.EvalResponse.Error != nil || resp.EvalResponse.Result == clientio.IntegerZero {
+		return nil, &diceerrors.PreProcessError{Result: clientio.IntegerZero}
+	}
+
+	if len(cd.Args) < 2 {
 		return nil, diceerrors.ErrWrongArgumentCount("COPY")
 	}
 
-	decomposedCmds := []*cmd.DiceDBCmd{}
-	decomposedCmds = append(decomposedCmds,
-		&cmd.DiceDBCmd{
-			Cmd:  store.Set,
-			Args: []string{cd.Args[1], val},
+	newObj, ok := resp.EvalResponse.Result.(*object.InternalObj)
+	if !ok {
+		return nil, diceerrors.ErrInternalServer
+	}
+
+	decomposedCmds := []*cmd.DiceDBCmd{
+		{
+			Cmd:         "OBJECTCOPY",
+			Args:        cd.Args[1:],
+			InternalObj: newObj,
 		},
-	)
+	}
 
 	return decomposedCmds, nil
 }
@@ -130,6 +137,108 @@ func decomposeMGet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.
 			&cmd.DiceDBCmd{
 				Cmd:  store.Get,
 				Args: []string{cd.Args[i]},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeSInter(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) < 1 {
+		return nil, diceerrors.ErrWrongArgumentCount("SINTER")
+	}
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := 0; i < len(cd.Args); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.Smembers,
+				Args: []string{cd.Args[i]},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeSDiff(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) < 1 {
+		return nil, diceerrors.ErrWrongArgumentCount("SDIFF")
+	}
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := 0; i < len(cd.Args); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.Smembers,
+				Args: []string{cd.Args[i]},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeJSONMget(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) < 2 {
+		return nil, diceerrors.ErrWrongArgumentCount("JSON.MGET")
+	}
+
+	pattern := cd.Args[len(cd.Args)-1]
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := 0; i < len(cd.Args)-1; i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.JSONGet,
+				Args: []string{cd.Args[i], pattern},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeTouch(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) == 0 {
+		return nil, diceerrors.ErrWrongArgumentCount("TOUCH")
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := 0; i < len(cd.Args); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.SingleShardTouch,
+				Args: []string{cd.Args[i]},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeDBSize(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) > 0 {
+		return nil, diceerrors.ErrWrongArgumentCount("DBSIZE")
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := uint8(0); i < uint8(w.shardManager.GetShardCount()); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.SingleShardSize,
+				Args: []string{},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeKeys(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) != 1 {
+		return nil, diceerrors.ErrWrongArgumentCount("KEYS")
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := uint8(0); i < uint8(w.shardManager.GetShardCount()); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.SingleShardKeys,
+				Args: []string{cd.Args[0]},
 			},
 		)
 	}

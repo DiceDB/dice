@@ -55,27 +55,20 @@ The `HMSET` command can raise errors in the following scenarios:
 
 ## Example Usage
 
-### Basic Usage
-
-#### Creating a New Hash with Multiple Fields
+### Creating a New Hash with Multiple Fields
 
 ```bash
 127.0.0.1:7379> HMSET product:4000 name "Tablet" price 299.99 stock 30
 OK
 ```
 
-- **Behaviour**: A new hash is created with the key `product:4000`. The fields `name`, `price`, and `stock` are set with the respective values.
-- **Return Value**: `OK`
-
-#### Updating an Existing Hash with Multiple Fields
+### Updating an Existing Hash with Multiple Fields
 
 ```bash
 127.0.0.1:7379> HMSET product:4000 price 279.99 stock 25
 OK
 ```
 
-- **Behaviour**: The `price` and `stock` fields in the hash `product:4000` are updated with the new values.
-- **Return Value**: `OK`
 
 ### Invalid Usage
 
@@ -88,9 +81,6 @@ OK
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-- **Behaviour**: The `SET` command sets the key `product:4000` to a string value.
-- **Error**: The `HMSET` command will raise a `WRONGTYPE` error because `product:4000` is not a hash.
-
 Wrong Number of Arguments for HMSET Command
 
 ```bash
@@ -101,9 +91,6 @@ Wrong Number of Arguments for HMSET Command
 (error) ERR wrong number of arguments for 'hmset' command
 ```
 
-- **Behavior**: The `HMSET` command requires atleast three arguments: the key, the field name, and the field value.
-- **Error**: The command fails because it requires at least one field-value pair in addition to the key. If insufficient arguments are provided, DiceDB raises an error indicating that the number of arguments is incorrect.
-
-### Best Practices
+## Best Practices
 
 - **Use HMSET for Batch Updates**: Utilize `HMSET` when you need to set multiple fields at once in a hash to reduce command overhead and improve performance.
