@@ -63,6 +63,7 @@ func ClosePublisherSubscribers(publisher net.Conn, subscribers []net.Conn) error
 	return nil
 }
 
+//nolint:unused
 func unsubscribeFromWatchUpdates(t *testing.T, subscribers []net.Conn, cmd, fingerprint string) {
 	t.Helper()
 	for _, subscriber := range subscribers {
@@ -77,6 +78,8 @@ func unsubscribeFromWatchUpdates(t *testing.T, subscribers []net.Conn, cmd, fing
 		assert.Equal(t, castedValue, "OK")
 	}
 }
+
+//nolint:unused
 func unsubscribeFromWatchUpdatesSDK(t *testing.T, subscribers []WatchSubscriber, cmd, fingerprint string) {
 	for _, subscriber := range subscribers {
 		err := subscriber.watch.Unwatch(context.Background(), cmd, fingerprint)
