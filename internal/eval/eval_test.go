@@ -169,7 +169,7 @@ func testEvalECHO(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalHELLO(t *testing.T, store *dstore.Store) {
-	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.AsyncServer.Addr, config.DiceConfig.AsyncServer.Port)
+	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.RespServer.Addr, config.DiceConfig.RespServer.Port)
 	resp := []interface{}{
 		"proto", 2,
 		"id", serverID,
