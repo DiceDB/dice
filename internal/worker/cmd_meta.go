@@ -156,10 +156,6 @@ const (
 	CmdBitField      = "BITFIELD"
 	CmdBitPos        = "BITPOS"
 	CmdBitFieldRO    = "BITFIELD_RO"
-	CmdDel           = "DEL"
-	CmdExists        = "EXISTS"
-	CmdPersist       = "PERSIST"
-	CmdTypeOf        = "TYPE"
 	CmdSadd          = "SADD"
 	CmdSrem          = "SREM"
 	CmdScard         = "SCARD"
@@ -170,6 +166,10 @@ const (
 	CmdGeoDist       = "GEODIST"
 	CmdClient        = "CLIENT"
 	CmdLatency       = "LATENCY"
+	CmdDel           = "DEL"
+	CmdExists        = "EXISTS"
+	CmdPersist       = "PERSIST"
+	CmdTypeOf        = "TYPE"
 )
 
 // Watch commands
@@ -270,6 +270,18 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdJSONDel: {
 		CmdType: SingleShard,
 	},
+	CmdDel: {
+		CmdType: SingleShard,
+	},
+	CmdExists: {
+		CmdType: SingleShard,
+	},
+	CmdPersist: {
+		CmdType: SingleShard,
+	},
+	CmdTypeOf: {
+		CmdType: SingleShard,
+	},
 	CmdJSONForget: {
 		CmdType: SingleShard,
 	},
@@ -354,27 +366,6 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdBitFieldRO: {
 		CmdType: SingleShard,
 	},
-	CmdDel: {
-		CmdType: SingleShard,
-	},
-	CmdExists: {
-		CmdType: SingleShard,
-	},
-	CmdPersist: {
-		CmdType: SingleShard,
-	},
-	CmdTypeOf: {
-		CmdType: SingleShard,
-	},
-
-	// Multi-shard commands.
-	CmdRename: {
-		CmdType:            MultiShard,
-		preProcessingReq:   true,
-		preProcessResponse: preProcessRename,
-		decomposeCommand:   decomposeRename,
-		composeResponse:    composeRename,
-  },
 	CmdLrange: {
 		CmdType: SingleShard,
 	},
