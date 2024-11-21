@@ -265,6 +265,7 @@ import (
 
 func TestBitCount(t *testing.T) {
 	conn := getLocalConnection()
+	defer conn.Close()
 	testcases := []struct {
 		InCmds []string
 		Out    []interface{}
@@ -342,6 +343,7 @@ func TestBitCount(t *testing.T) {
 
 func TestBitPos(t *testing.T) {
 	conn := getLocalConnection()
+	defer conn.Close()
 	testcases := []struct {
 		name         string
 		val          interface{}

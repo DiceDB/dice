@@ -5,16 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net"
 	"os"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dice/internal/watchmanager"
 	"github.com/dicedb/dice/internal/worker"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -29,6 +32,13 @@ type TestServerOptions struct {
 	Port int
 }
 
+func init() {
+	parser := config.NewConfigParser()
+	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
+		log.Fatalf("failed to load configuration: %v", err)
+	}
+}
+
 // getLocalConnection returns a local TCP connection to the database
 //
 //nolint:unused
@@ -38,6 +48,43 @@ func getLocalConnection() net.Conn {
 		panic(err)
 	}
 	return conn
+}
+
+func ClosePublisherSubscribers(publisher net.Conn, subscribers []net.Conn) error {
+	if err := publisher.Close(); err != nil {
+		return fmt.Errorf("error closing publisher connection: %v", err)
+	}
+	for _, sub := range subscribers {
+		time.Sleep(100 * time.Millisecond) // [TODO] why is this needed?
+		if err := sub.Close(); err != nil {
+			return fmt.Errorf("error closing subscriber connection: %v", err)
+		}
+	}
+	return nil
+}
+
+//nolint:unused
+func unsubscribeFromWatchUpdates(t *testing.T, subscribers []net.Conn, cmd, fingerprint string) {
+	t.Helper()
+	for _, subscriber := range subscribers {
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("%s.UNWATCH %s", cmd, fingerprint))
+		assert.NotNil(t, rp)
+		v, err := rp.DecodeOne()
+		assert.NoError(t, err)
+		castedValue, ok := v.(string)
+		if !ok {
+			t.Errorf("Type assertion to string failed for value: %v", v)
+		}
+		assert.Equal(t, castedValue, "OK")
+	}
+}
+
+//nolint:unused
+func unsubscribeFromWatchUpdatesSDK(t *testing.T, subscribers []WatchSubscriber, cmd, fingerprint string) {
+	for _, subscriber := range subscribers {
+		err := subscriber.watch.Unwatch(context.Background(), cmd, fingerprint)
+		assert.Nil(t, err)
+	}
 }
 
 // deleteTestKeys is a utility to delete a list of keys before running a test
@@ -65,6 +112,26 @@ func getLocalSdk() *dicedb.Client {
 		PoolTimeout:     30 * time.Second,
 		ConnMaxIdleTime: time.Minute,
 	})
+}
+
+type WatchSubscriber struct {
+	client *dicedb.Client
+	watch  *dicedb.WatchConn
+}
+
+func ClosePublisherSubscribersSDK(publisher *dicedb.Client, subscribers []WatchSubscriber) error {
+	if err := publisher.Close(); err != nil {
+		return fmt.Errorf("error closing publisher connection: %v", err)
+	}
+	for _, sub := range subscribers {
+		if err := sub.watch.Close(); err != nil {
+			return fmt.Errorf("error closing subscriber watch connection: %v", err)
+		}
+		if err := sub.client.Close(); err != nil {
+			return fmt.Errorf("error closing subscriber connection: %v", err)
+		}
+	}
+	return nil
 }
 
 func FireCommand(conn net.Conn, cmd string) interface{} {

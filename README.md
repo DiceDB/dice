@@ -101,23 +101,10 @@ air
 
 ### Local Setup with Custom Config
 
-By default, DiceDB will look for the configuration file at `/etc/dice/config.toml`. (Linux, Darwin, and WSL)
+By default, DiceDB will look for the configuration file at `./dicedb.conf`. (Linux, Darwin, and WSL)
 
-```bash
-# set up configuration file # (optional but recommended)
-sudo mkdir -p /etc/dice
-sudo chown root:$USER /etc/dice
-sudo chmod 775 /etc/dice # or 777 if you are the only user
-git clone https://github.com/DiceDB/dice.git
-cd dice
-go run main.go -init-config
-
-```
-
-> [!NOTE]
-> #### For Windows Users:
-> If you're using Windows, it is recommended to use Windows Subsystem for Linux (WSL) or WSL 2 to run the above commands seamlessly in a Linux-like environment.
-
+> [!TIP]
+> If you want to use a custom configuration file, you can specify the path using the `-c` flag. and to output the configuration file to a specific location, you can specify the output dir path using the `-o` flag.
 #### Additional Configuration Options:
 
 If you'd like to use a different location, you can specify a custom configuration file path with the `-c flag`:

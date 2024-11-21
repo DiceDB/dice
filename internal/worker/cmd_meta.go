@@ -116,7 +116,6 @@ const (
 	CmdZCard         = "ZCARD"
 	CmdPFAdd         = "PFADD"
 	CmdPFCount       = "PFCOUNT"
-	CmdPFCountWatch  = "PFCOUNT.WATCH"
 	CmdPFMerge       = "PFMERGE"
 	CmdTTL           = "TTL"
 	CmdPTTL          = "PTTL"
@@ -166,13 +165,20 @@ const (
 	CmdGeoDist       = "GEODIST"
 	CmdClient        = "CLIENT"
 	CmdLatency       = "LATENCY"
+	CmdDel           = "DEL"
+	CmdExists        = "EXISTS"
+	CmdPersist       = "PERSIST"
+	CmdTypeOf        = "TYPE"
 )
 
 // Watch commands
 const (
-	CmdGetWatch    = "GET.WATCH"
-	CmdGetUnWatch  = "GET.UNWATCH"
-	CmdZRangeWatch = "ZRANGE.WATCH"
+	CmdGetWatch       = "GET.WATCH"
+	CmdGetUnWatch     = "GET.UNWATCH"
+	CmdZRangeWatch    = "ZRANGE.WATCH"
+	CmdZRangeUnWatch  = "ZRANGE.UNWATCH"
+	CmdPFCountWatch   = "PFCOUNT.WATCH"
+	CmdPFCountUnWatch = "PFCOUNT.UNWATCH"
 )
 
 type CmdMeta struct {
@@ -263,6 +269,18 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONDel: {
+		CmdType: SingleShard,
+	},
+	CmdDel: {
+		CmdType: SingleShard,
+	},
+	CmdExists: {
+		CmdType: SingleShard,
+	},
+	CmdPersist: {
+		CmdType: SingleShard,
+	},
+	CmdTypeOf: {
 		CmdType: SingleShard,
 	},
 	CmdJSONForget: {
@@ -571,6 +589,12 @@ var CommandsMeta = map[string]CmdMeta{
 
 	// Unwatch commands
 	CmdGetUnWatch: {
+		CmdType: Unwatch,
+	},
+	CmdZRangeUnWatch: {
+		CmdType: Unwatch,
+	},
+	CmdPFCountUnWatch: {
 		CmdType: Unwatch,
 	},
 }

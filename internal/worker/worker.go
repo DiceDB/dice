@@ -13,10 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dicedb/dice/internal/querymanager"
-	"github.com/dicedb/dice/internal/wal"
-	"github.com/dicedb/dice/internal/watchmanager"
-
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
@@ -25,7 +21,11 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
+	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/shard"
+	"github.com/dicedb/dice/internal/wal"
+	"github.com/dicedb/dice/internal/watchmanager"
+	"github.com/google/uuid"
 )
 
 var (
@@ -82,14 +82,28 @@ func (w *BaseWorker) Start(ctx context.Context) error {
 	dataChan := make(chan []byte)
 	readErrChan := make(chan error)
 
+	runCtx, runCancel := context.WithCancel(ctx)
+	defer runCancel()
+
 	go func() {
+		defer close(dataChan)
+		defer close(readErrChan)
+
 		for {
-			data, err := w.ioHandler.Read(ctx)
+			data, err := w.ioHandler.Read(runCtx)
 			if err != nil {
-				readErrChan <- err
+				select {
+				case readErrChan <- err:
+				case <-runCtx.Done(): // exit if worker exits
+				}
 				return
 			}
-			dataChan <- data
+
+			select {
+			case dataChan <- data:
+			case <-runCtx.Done(): // exit if worker exits
+				return
+			}
 		}
 	}()
 
@@ -193,6 +207,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
 	cmdList := make([]*cmd.DiceDBCmd, 0)
+	var watchLabel string
 
 	// Retrieve metadata for the command to determine if multisharding is supported.
 	meta, ok := CommandsMeta[diceDBCmd.Cmd]
@@ -240,6 +255,16 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 			// Modify the command name to remove the .WATCH suffix, this will allow us to generate a consistent
 			// fingerprint (which uses the command name without the suffix)
 			diceDBCmd.Cmd = diceDBCmd.Cmd[:len(diceDBCmd.Cmd)-6]
+
+			// check if the last argument is a watch label
+			label := diceDBCmd.Args[len(diceDBCmd.Args)-1]
+			if _, err := uuid.Parse(label); err == nil {
+				watchLabel = label
+
+				// remove the watch label from the args
+				diceDBCmd.Args = diceDBCmd.Args[:len(diceDBCmd.Args)-1]
+			}
+
 			watchCmd := &cmd.DiceDBCmd{
 				Cmd:  diceDBCmd.Cmd,
 				Args: diceDBCmd.Args,
@@ -273,7 +298,7 @@ func (w *BaseWorker) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCm
 	}
 
 	// Gather the responses from the shards and write them to the buffer.
-	if err := w.gather(ctx, diceDBCmd, len(cmdList), isWatchNotification); err != nil {
+	if err := w.gather(ctx, diceDBCmd, len(cmdList), isWatchNotification, watchLabel); err != nil {
 		return err
 	}
 
@@ -307,6 +332,12 @@ func (w *BaseWorker) handleCustomCommands(ctx context.Context, diceDBCmd *cmd.Di
 		}
 		slog.Info("Received ABORT command, initiating server shutdown", slog.String("workerID", w.id))
 		w.globalErrorChan <- diceerrors.ErrAborted
+		return err
+	case CmdPing:
+		err := w.ioHandler.Write(ctx, RespPING(diceDBCmd.Args))
+		if err != nil {
+			slog.Error("Error sending ping response to worker", slog.String("workerID", w.id), slog.Any("error", err))
+		}
 		return err
 	default:
 		return diceerrors.ErrUnknownCmd(diceDBCmd.Cmd)
@@ -411,7 +442,7 @@ func getRoutingKeyFromCommand(diceDBCmd *cmd.DiceDBCmd) string {
 
 // gather collects the responses from multiple shards and writes the results into the provided buffer.
 // It first waits for responses from all the shards and then processes the result based on the command type (SingleShard, Custom, or Multishard).
-func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchNotification bool) error {
+func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCmds int, isWatchNotification bool, watchLabel string) error {
 	// Collect responses from all shards
 	storeOp, err := w.gatherResponses(ctx, numCmds)
 	if err != nil {
@@ -426,7 +457,7 @@ func (w *BaseWorker) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, numCm
 	}
 
 	if isWatchNotification {
-		return w.handleWatchNotification(ctx, diceDBCmd, storeOp[0])
+		return w.handleWatchNotification(ctx, diceDBCmd, storeOp[0], watchLabel)
 	}
 
 	// Process command based on its type
@@ -470,14 +501,21 @@ func (w *BaseWorker) gatherResponses(ctx context.Context, numCmds int) ([]ops.St
 }
 
 // handleWatchNotification processes watch notification responses
-func (w *BaseWorker) handleWatchNotification(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, resp ops.StoreResponse) error {
+func (w *BaseWorker) handleWatchNotification(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, resp ops.StoreResponse, watchLabel string) error {
 	fingerprint := fmt.Sprintf("%d", diceDBCmd.GetFingerprint())
 
-	if resp.EvalResponse.Error != nil {
-		return w.writeResponse(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fingerprint, resp.EvalResponse.Error))
+	// if watch label is not empty, then this is the first response for the watch command
+	// hence, we will send the watch label as part of the response
+	firstRespElem := diceDBCmd.Cmd
+	if watchLabel != "" {
+		firstRespElem = watchLabel
 	}
 
-	return w.writeResponse(ctx, querymanager.GenericWatchResponse(diceDBCmd.Cmd, fingerprint, resp.EvalResponse.Result))
+	if resp.EvalResponse.Error != nil {
+		return w.writeResponse(ctx, querymanager.GenericWatchResponse(firstRespElem, fingerprint, resp.EvalResponse.Error))
+	}
+
+	return w.writeResponse(ctx, querymanager.GenericWatchResponse(firstRespElem, fingerprint, resp.EvalResponse.Result))
 }
 
 // handleLegacyCommand processes commands not in CommandsMeta
