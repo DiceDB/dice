@@ -403,12 +403,6 @@ var (
 		Eval:  evalHELLO,
 		Arity: -1,
 	}
-	bgrewriteaofCmdMeta = DiceCmdMeta{
-		Name:  "BGREWRITEAOF",
-		Info:  `Instruct Dice to start an Append Only File rewrite process. The rewrite will create a small optimized version of the current Append Only File.`,
-		Eval:  EvalBGREWRITEAOF,
-		Arity: 1,
-	}
 	incrCmdMeta = DiceCmdMeta{
 		Name: "INCR",
 		Info: `INCR increments the value of the specified key in args by 1,
@@ -436,13 +430,6 @@ var (
 		Arity:      2,
 		NewEval:    evalINCRBYFLOAT,
 		IsMigrated: true,
-	}
-	infoCmdMeta = DiceCmdMeta{
-		Name: "INFO",
-		Info: `INFO creates a buffer with the info of total keys per db
-		Returns the encoded buffer as response`,
-		Eval:  evalINFO,
-		Arity: -1,
 	}
 	clientCmdMeta = DiceCmdMeta{
 		Name:       "CLIENT",
@@ -559,9 +546,10 @@ var (
 		NewEval:    evalBITCOUNT,
 	}
 	bitOpCmdMeta = DiceCmdMeta{
-		Name: "BITOP",
-		Info: "BITOP performs bitwise operations between multiple keys",
-		Eval: evalBITOP,
+		Name:       "BITOP",
+		Info:       "BITOP performs bitwise operations between multiple keys",
+		NewEval:    evalBITOP,
+		IsMigrated: true,
 	}
 	commandCmdMeta = DiceCmdMeta{
 		Name:        "COMMAND",
@@ -1436,7 +1424,6 @@ func init() {
 	DiceCmds["BF.EXISTS"] = bfexistsCmdMeta
 	DiceCmds["BF.INFO"] = bfinfoCmdMeta
 	DiceCmds["BF.RESERVE"] = bfreserveCmdMeta
-	DiceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	DiceCmds["BITCOUNT"] = bitCountCmdMeta
 	DiceCmds["BITFIELD"] = bitfieldCmdMeta
 	DiceCmds["BITOP"] = bitOpCmdMeta
@@ -1492,7 +1479,6 @@ func init() {
 	DiceCmds["INCR"] = incrCmdMeta
 	DiceCmds["INCRBYFLOAT"] = incrByFloatCmdMeta
 	DiceCmds["INCRBY"] = incrbyCmdMeta
-	DiceCmds["INFO"] = infoCmdMeta
 	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
 	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta

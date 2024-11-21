@@ -137,6 +137,4 @@ func (shard *ShardThread) cleanup() {
 	if !config.DiceConfig.Persistence.Enabled || !config.DiceConfig.Persistence.WriteAOFOnCleanup {
 		return
 	}
-
-	eval.EvalBGREWRITEAOF([]string{}, shard.store)
 }

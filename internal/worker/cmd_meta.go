@@ -169,6 +169,7 @@ const (
 	CmdExists        = "EXISTS"
 	CmdPersist       = "PERSIST"
 	CmdTypeOf        = "TYPE"
+	CmdBitOp         = "BITOP"
 )
 
 // Watch commands
@@ -499,7 +500,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdLatency: {
 		CmdType: SingleShard,
 	},
-
+	CmdBitOp: {
+		CmdType: SingleShard,
+	},
 	// Multi-shard commands.
 	CmdRename: {
 		CmdType:            MultiShard,
