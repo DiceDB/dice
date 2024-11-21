@@ -91,7 +91,6 @@ func TestEval(t *testing.T) {
 	testEvalJSONSTRLEN(t, store)
 	testEvalJSONOBJLEN(t, store)
 	testEvalHLEN(t, store)
-	testEvalSELECT(t, store)
 	testEvalLPUSH(t, store)
 	testEvalRPUSH(t, store)
 	testEvalLPOP(t, store)
@@ -5079,22 +5078,6 @@ func BenchmarkEvalHLEN(b *testing.B) {
 			}
 		})
 	}
-}
-
-func testEvalSELECT(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value": {
-			setup:  func() {},
-			input:  nil,
-			output: []byte("-ERR wrong number of arguments for 'select' command\r\n"),
-		},
-		"database is specified": {
-			setup:  func() {},
-			input:  []string{"1"},
-			output: clientio.RespOK,
-		},
-	}
-	runEvalTests(t, tests, evalSELECT, store)
 }
 
 func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {

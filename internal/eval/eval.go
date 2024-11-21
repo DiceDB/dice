@@ -768,14 +768,6 @@ func evalSINTER(args []string, store *dstore.Store) []byte {
 	return clientio.Encode(members, false)
 }
 
-func evalSELECT(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("SELECT")
-	}
-
-	return clientio.RespOK
-}
-
 // formatFloat formats float64 as string.
 // Optionally appends a decimal (.0) for whole numbers,
 // if b is true.
