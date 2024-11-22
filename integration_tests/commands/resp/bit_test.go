@@ -281,6 +281,22 @@ func TestBitCount(t *testing.T) {
 			Out:    []interface{}{int64(0)},
 		},
 		{
+			InCmds: []string{"SETBIT mykey -1 1"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -1 0"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -10000 1"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -10000 0"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
 			InCmds: []string{"GETBIT mykey 122"},
 			Out:    []interface{}{int64(1)},
 		},
