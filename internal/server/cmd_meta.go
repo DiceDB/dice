@@ -458,8 +458,12 @@ var (
 		Cmd:  "GEODIST",
 		Type: SingleShard,
 	}
+	geoRadiusByMemberCmdMeta = CmdMeta{
+		Cmd:     "GEORADIUSBYMEMBER",
+		Type: SingleShard,
+	}
 	clientCmdMeta = CmdMeta{
-		Cmd:  "CLIENT",
+		Cmd:     "CLIENT",
 		Type: SingleShard,
 	}
 	latencyCmdMeta = CmdMeta{
@@ -506,7 +510,6 @@ var (
 		Cmd:  "COMMAND|GETKEYSANDFLAGS",
 		Type: SingleShard,
 	}
-
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -637,6 +640,7 @@ func init() {
 	CmdMetaMap["RESTORE"] = restoreCmdMeta
 	CmdMetaMap["GEOADD"] = geoaddCmdMeta
 	CmdMetaMap["GEODIST"] = geodistCmdMeta
+	CmdMetaMap["GEORADIUSBYMEMBER"] = geoRadiusByMemberCmdMeta
 	CmdMetaMap["CLIENT"] = clientCmdMeta
 	CmdMetaMap["LATENCY"] = latencyCmdMeta
 	CmdMetaMap["FLUSHDB"] = flushDBCmdMeta
@@ -649,4 +653,5 @@ func init() {
 	CmdMetaMap["COMMAND|DOCS"] = CmdCommandDocs
 	CmdMetaMap["COMMAND|GETKEYS"] = CmdCommandGetKeys
 	CmdMetaMap["COMMAND|GETKEYSANDFLAGS"] = CmdCommandGetKeysFlags
+	// Additional commands (multishard, custom) can be added here as needed.
 }

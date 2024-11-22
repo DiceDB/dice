@@ -236,6 +236,16 @@ func Encode(value interface{}, isSimple bool) []byte {
 			buf.Write(encodeString(b)) // Encode each string and write to the buffer.
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
+	case [][]interface{}:
+		var b []byte
+		buf := bytes.NewBuffer(b)
+
+		buf.WriteString(fmt.Sprintf("*%d\r\n", len(v)))
+
+		for _, list := range v {
+			buf.Write(Encode(list, false))
+		}
+		return buf.Bytes()
 
 	// Handle slices of custom objects (Obj).
 	case []*object.Obj:
@@ -252,6 +262,15 @@ func Encode(value interface{}, isSimple bool) []byte {
 		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded values.
 		for _, elem := range v {
 			buf.Write(Encode(elem, false)) // Encode each element and write to the buffer.
+		}
+		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
+
+		// Handle slices of int64.
+	case []float64:
+		var b []byte
+		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded values.
+		for _, b := range value.([]float64) {
+			buf.Write(Encode(b, false)) // Encode each int64 and write to the buffer.
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
 
