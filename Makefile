@@ -36,9 +36,7 @@ build: ## generate the dicedb binary for the current OS and architecture
 test: ## run the integration tests
 	go test -v -race -count=1 -p=1 ./integration_tests/...
 
-test-async:
-	go test -v -race -count=1 -p=1 ./integration_tests/commands/async
-	
+# For debugging in local
 test-resp:
 	go test -v -race -count=1 -p=1 ./integration_tests/commands/resp
 
