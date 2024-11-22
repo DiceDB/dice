@@ -17,7 +17,6 @@ DiceDB supports a subset of essential Redis commands, including, but not limited
 
 - `GET` and `SET`: Core commands for retrieving and storing KV data.
 - `TTL`: Command for managing the time-to-live of keys.
-- `LRU`: Commands that help manage cache eviction using Least Recently Used (LRU) algorithms.
 - `QINT`, and `STACK` commands to support queue-based and stack-based operations.
 
 ## Single-Threaded Implementation Using EPOLL

@@ -52,7 +52,6 @@ performance.watch_chan_buf_size = 20000
 performance.shard_cron_frequency = 1s
 performance.multiplexer_poll_timeout = 100ms
 performance.max_clients = 20000
-performance.enable_multithreading = false
 performance.store_map_init_size = 1024000
 performance.adhoc_req_chan_buf_size = 20
 performance.enable_profiling = false
@@ -97,7 +96,7 @@ type Config struct {
 	Version     string      `config:"version" default:"0.0.5"`
 	InstanceID  string      `config:"instance_id"`
 	Auth        auth        `config:"auth"`
-	AsyncServer asyncServer `config:"async_server"`
+	RespServer  respServer  `config:"async_server"`
 	HTTP        http        `config:"http"`
 	WebSocket   websocket   `config:"websocket"`
 	Performance performance `config:"performance"`
@@ -112,7 +111,7 @@ type auth struct {
 	Password string `config:"password"`
 }
 
-type asyncServer struct {
+type respServer struct {
 	Addr      string `config:"addr" default:"0.0.0.0" validate:"ipv4"`
 	Port      int    `config:"port" default:"7379" validate:"number,gte=0,lte=65535"`
 	KeepAlive int32  `config:"keepalive" default:"300"`
@@ -137,7 +136,6 @@ type performance struct {
 	ShardCronFrequency     time.Duration `config:"shard_cron_frequency" default:"1s"`
 	MultiplexerPollTimeout time.Duration `config:"multiplexer_poll_timeout" default:"100ms"`
 	MaxClients             int32         `config:"max_clients" default:"20000" validate:"min=0"`
-	EnableMultiThreading   bool          `config:"enable_multithreading" default:"false"`
 	StoreMapInitSize       int           `config:"store_map_init_size" default:"1024000"`
 	AdhocReqChanBufSize    int           `config:"adhoc_req_chan_buf_size" default:"20"`
 	EnableProfiling        bool          `config:"profiling" default:"false"`
@@ -237,9 +235,9 @@ func MergeFlags(flags *Config) {
 		// updating values for flags that were explicitly set by the user
 		switch f.Name {
 		case "host":
-			DiceConfig.AsyncServer.Addr = flags.AsyncServer.Addr
+			DiceConfig.RespServer.Addr = flags.RespServer.Addr
 		case "port":
-			DiceConfig.AsyncServer.Port = flags.AsyncServer.Port
+			DiceConfig.RespServer.Port = flags.RespServer.Port
 		case "enable-http":
 			DiceConfig.HTTP.Enabled = flags.HTTP.Enabled
 		case "http-port":
@@ -248,8 +246,6 @@ func MergeFlags(flags *Config) {
 			DiceConfig.WebSocket.Enabled = flags.WebSocket.Enabled
 		case "websocket-port":
 			DiceConfig.WebSocket.Port = flags.WebSocket.Port
-		case "enable-multithreading":
-			DiceConfig.Performance.EnableMultiThreading = flags.Performance.EnableMultiThreading
 		case "num-shards":
 			DiceConfig.Performance.NumShards = flags.Performance.NumShards
 		case "enable-watch":

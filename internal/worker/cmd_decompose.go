@@ -38,7 +38,12 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 				return nil, evalResp.Error
 			}
 
-			val = evalResp.Result.(string)
+			switch v := evalResp.Result.(type) {
+			case string:
+				val = v
+			default:
+				return nil, diceerrors.ErrGeneral("no such key")
+			}
 		}
 	}
 
@@ -239,6 +244,23 @@ func decomposeKeys(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.
 			&cmd.DiceDBCmd{
 				Cmd:  store.SingleShardKeys,
 				Args: []string{cd.Args[0]},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeFlushDB(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) > 1 {
+		return nil, diceerrors.ErrWrongArgumentCount("FLUSHDB")
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := uint8(0); i < uint8(w.shardManager.GetShardCount()); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.FlushDB,
+				Args: cd.Args,
 			},
 		)
 	}

@@ -39,9 +39,8 @@ var (
 	// Metadata for global commands that don't interact with shards.
 	// PING is an example of global command.
 	pingCmdMeta = CmdsMeta{
-		Cmd:          "PING",
-		CmdType:      Global,
-		RespNoShards: eval.RespPING,
+		Cmd:     "PING",
+		CmdType: Global,
 	}
 
 	// Metadata for single-shard commands that only interact with one shard.
@@ -467,6 +466,47 @@ var (
 		Cmd:     "LATENCY",
 		CmdType: SingleShard,
 	}
+	flushDBCmdMeta = CmdsMeta{
+		Cmd:     "FLUSHDB",
+		CmdType: MultiShard,
+	}
+	objectCmdMeta = CmdsMeta{
+		Cmd:     "OBJECT",
+		CmdType: SingleShard,
+	}
+	commandCmdMeta = CmdsMeta{
+		Cmd:     "COMMAND",
+		CmdType: SingleShard,
+	}
+	CmdCommandCountMeta = CmdsMeta{
+		Cmd:     "COMMAND|COUNT",
+		CmdType: SingleShard,
+	}
+	CmdCommandHelp = CmdsMeta{
+		Cmd:     "COMMAND|HELP",
+		CmdType: SingleShard,
+	}
+	CmdCommandInfo = CmdsMeta{
+		Cmd:     "COMMAND|INFO",
+		CmdType: SingleShard,
+	}
+	CmdCommandList = CmdsMeta{
+		Cmd:     "COMMAND|LIST",
+		CmdType: SingleShard,
+	}
+	CmdCommandDocs = CmdsMeta{
+		Cmd:     "COMMAND|DOCS",
+		CmdType: SingleShard,
+	}
+	CmdCommandGetKeys = CmdsMeta{
+		Cmd:     "COMMAND|GETKEYS",
+		CmdType: SingleShard,
+	}
+	CmdCommandGetKeysFlags = CmdsMeta{
+		Cmd:     "COMMAND|GETKEYSANDFLAGS",
+		CmdType: SingleShard,
+	}
+
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -599,5 +639,14 @@ func init() {
 	WorkerCmdsMeta["GEODIST"] = geodistCmdMeta
 	WorkerCmdsMeta["CLIENT"] = clientCmdMeta
 	WorkerCmdsMeta["LATENCY"] = latencyCmdMeta
-	// Additional commands (multishard, custom) can be added here as needed.
+	WorkerCmdsMeta["FLUSHDB"] = flushDBCmdMeta
+	WorkerCmdsMeta["OBJECT"] = objectCmdMeta
+	WorkerCmdsMeta["COMMAND"] = commandCmdMeta
+	WorkerCmdsMeta["COMMAND|COUNT"] = CmdCommandCountMeta
+	WorkerCmdsMeta["COMMAND|HELP"] = CmdCommandHelp
+	WorkerCmdsMeta["COMMAND|INFO"] = CmdCommandInfo
+	WorkerCmdsMeta["COMMAND|LIST"] = CmdCommandList
+	WorkerCmdsMeta["COMMAND|DOCS"] = CmdCommandDocs
+	WorkerCmdsMeta["COMMAND|GETKEYS"] = CmdCommandGetKeys
+	WorkerCmdsMeta["COMMAND|GETKEYSANDFLAGS"] = CmdCommandGetKeysFlags
 }

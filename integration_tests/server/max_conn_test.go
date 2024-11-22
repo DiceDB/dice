@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -11,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	commands "github.com/dicedb/dice/integration_tests/commands/async"
+	commands "github.com/dicedb/dice/integration_tests/commands/resp"
 )
 
 func getConnection(port int) (net.Conn, error) {
@@ -28,7 +27,7 @@ func TestMaxConnection(t *testing.T) {
 		Port:       8741,
 		MaxClients: 50,
 	}
-	commands.RunTestServer(context.Background(), &wg, maxConnTestOptions)
+	commands.RunTestServer(&wg, maxConnTestOptions)
 
 	time.Sleep(2 * time.Second)
 

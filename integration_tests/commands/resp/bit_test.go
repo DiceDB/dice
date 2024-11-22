@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO: BITOP has not been migrated yet. Once done, we can uncomment the tests - please check accuracy and validate for expected values.
-
 // func TestBitOp(t *testing.T) {
 // 	conn := getLocalConnection()
 // 	defer conn.Close()

@@ -29,23 +29,19 @@ func configuration() {
 	addEntry("Version", config.DiceDBVersion)
 
 	// Add the port number on which DiceDB is running to the configuration table
-	addEntry("Port", config.DiceConfig.AsyncServer.Port)
+	addEntry("Port", config.DiceConfig.RespServer.Port)
 
 	// Add whether multi-threading is enabled to the configuration table
-	addEntry("Multi Threading Enabled", config.DiceConfig.Performance.EnableMultiThreading)
+	addEntry("Multi Threading Enabled", true)
 
 	// Add the number of CPU cores available on the machine to the configuration table
 	addEntry("Cores", runtime.NumCPU())
 
 	// Conditionally add the number of shards to be used for DiceDB to the configuration table
-	if config.DiceConfig.Performance.EnableMultiThreading {
-		if config.DiceConfig.Performance.NumShards > 0 {
-			configTable = append(configTable, configEntry{"Shards", config.DiceConfig.Performance.NumShards})
-		} else {
-			configTable = append(configTable, configEntry{"Shards", runtime.NumCPU()})
-		}
+	if config.DiceConfig.Performance.NumShards > 0 {
+		configTable = append(configTable, configEntry{"Shards", config.DiceConfig.Performance.NumShards})
 	} else {
-		configTable = append(configTable, configEntry{"Shards", 1})
+		configTable = append(configTable, configEntry{"Shards", runtime.NumCPU()})
 	}
 
 	// Add whether the watch feature is enabled to the configuration table
@@ -116,9 +112,9 @@ func renderConfigTable() {
 
 func Execute() {
 	flagsConfig := config.Config{}
-	flag.StringVar(&flagsConfig.AsyncServer.Addr, "host", "0.0.0.0", "host for the DiceDB server")
+	flag.StringVar(&flagsConfig.RespServer.Addr, "host", "0.0.0.0", "host for the DiceDB server")
 
-	flag.IntVar(&flagsConfig.AsyncServer.Port, "port", 7379, "port for the DiceDB server")
+	flag.IntVar(&flagsConfig.RespServer.Port, "port", 7379, "port for the DiceDB server")
 
 	flag.IntVar(&flagsConfig.HTTP.Port, "http-port", 7380, "port for accepting requets over HTTP")
 	flag.BoolVar(&flagsConfig.HTTP.Enabled, "enable-http", false, "enable DiceDB to listen, accept, and process HTTP")
@@ -126,7 +122,6 @@ func Execute() {
 	flag.IntVar(&flagsConfig.WebSocket.Port, "websocket-port", 7381, "port for accepting requets over WebSocket")
 	flag.BoolVar(&flagsConfig.WebSocket.Enabled, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
 
-	flag.BoolVar(&flagsConfig.Performance.EnableMultiThreading, "enable-multithreading", false, "enable multithreading execution and leverage multiple CPU cores")
 	flag.IntVar(&flagsConfig.Performance.NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
 
 	flag.BoolVar(&flagsConfig.Performance.EnableWatch, "enable-watch", false, "enable support for .WATCH commands and real-time reactivity")
@@ -167,7 +162,6 @@ func Execute() {
 		fmt.Println("  -enable-http           Enable DiceDB to listen, accept, and process HTTP (default: false)")
 		fmt.Println("  -websocket-port        Port for accepting requests over WebSocket (default: 7381)")
 		fmt.Println("  -enable-websocket      Enable DiceDB to listen, accept, and process WebSocket (default: false)")
-		fmt.Println("  -enable-multithreading Enable multithreading execution and leverage multiple CPU cores (default: false)")
 		fmt.Println("  -num-shards            Number of shards to create. Defaults to number of cores (default: -1)")
 		fmt.Println("  -enable-watch          Enable support for .WATCH commands and real-time reactivity (default: false)")
 		fmt.Println("  -enable-profiling      Enable profiling and capture critical metrics and traces in .prof files (default: false)")
@@ -187,93 +181,101 @@ func Execute() {
 
 	flag.Parse()
 
-	switch os.Args[1] {
-	case "-v", "--version":
-		fmt.Println("dicedb version", config.DiceDBVersion)
-		os.Exit(0)
+	if len(os.Args) > 2 {
+		switch os.Args[1] {
+		case "-v", "--version":
+			fmt.Println("dicedb version", config.DiceDBVersion)
+			os.Exit(0)
 
-	case "-":
-		parser := config.NewConfigParser()
-		if err := parser.ParseFromStdin(); err != nil {
-			log.Fatal(err)
-		}
-		if err := parser.Loadconfig(config.DiceConfig); err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(config.DiceConfig.Version)
-	case "-o", "--output":
-		if len(os.Args) < 3 {
-			log.Fatal("Output file path not provided")
-		} else {
-			dirPath := os.Args[2]
-			if dirPath == "" {
-				log.Fatal("Output file path not provided")
-			}
-
-			info, err := os.Stat(dirPath)
-			switch {
-			case os.IsNotExist(err):
-				log.Fatal("Output file path does not exist")
-			case err != nil:
-				log.Fatalf("Error checking output file path: %v", err)
-			case !info.IsDir():
-				log.Fatal("Output file path is not a directory")
-			}
-
-			filePath := filepath.Join(dirPath, config.DefaultConfigName)
-			if _, err := os.Stat(filePath); err == nil {
-				slog.Warn("Config file already exists at the specified path", slog.String("path", filePath), slog.String("action", "skipping file creation"))
-				return
-			}
-			if err := config.CreateConfigFile(filePath); err != nil {
-				log.Fatal(err)
-			}
-
-			config.MergeFlags(&flagsConfig)
-			render()
-		}
-	case "-c", "--config":
-		if len(os.Args) >= 3 {
-			filePath := os.Args[2]
-			if filePath == "" {
-				log.Fatal("Error: Config file path not provided")
-			}
-
-			info, err := os.Stat(filePath)
-			switch {
-			case os.IsNotExist(err):
-				log.Fatalf("Config file does not exist: %s", filePath)
-			case err != nil:
-				log.Fatalf("Unable to check config file: %v", err)
-			}
-
-			if info.IsDir() {
-				log.Fatalf("Config file path points to a directory: %s", filePath)
-			}
-
-			if !strings.HasSuffix(filePath, ".conf") {
-				log.Fatalf("Config file must have a .conf extension: %s", filePath)
-			}
-
+		case "-":
 			parser := config.NewConfigParser()
-			if err := parser.ParseFromFile(filePath); err != nil {
+			if err := parser.ParseFromStdin(); err != nil {
 				log.Fatal(err)
 			}
 			if err := parser.Loadconfig(config.DiceConfig); err != nil {
 				log.Fatal(err)
 			}
+			fmt.Println(config.DiceConfig.Version)
+		case "-o", "--output":
+			if len(os.Args) < 3 {
+				log.Fatal("Output file path not provided")
+			} else {
+				dirPath := os.Args[2]
+				if dirPath == "" {
+					log.Fatal("Output file path not provided")
+				}
 
-			config.MergeFlags(&flagsConfig)
-			render()
-		} else {
-			log.Fatal("Config file path not provided")
-		}
-	default:
-		if err := config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, config.DefaultConfigName)); err != nil {
-			log.Fatal(err)
-		}
+				info, err := os.Stat(dirPath)
+				switch {
+				case os.IsNotExist(err):
+					log.Fatal("Output file path does not exist")
+				case err != nil:
+					log.Fatalf("Error checking output file path: %v", err)
+				case !info.IsDir():
+					log.Fatal("Output file path is not a directory")
+				}
 
-		config.MergeFlags(&flagsConfig)
-		render()
+				filePath := filepath.Join(dirPath, config.DefaultConfigName)
+				if _, err := os.Stat(filePath); err == nil {
+					slog.Warn("Config file already exists at the specified path", slog.String("path", filePath), slog.String("action", "skipping file creation"))
+					return
+				}
+				if err := config.CreateConfigFile(filePath); err != nil {
+					log.Fatal(err)
+				}
+
+				config.MergeFlags(&flagsConfig)
+				render()
+			}
+		case "-c", "--config":
+			if len(os.Args) >= 3 {
+				filePath := os.Args[2]
+				if filePath == "" {
+					log.Fatal("Error: Config file path not provided")
+				}
+
+				info, err := os.Stat(filePath)
+				switch {
+				case os.IsNotExist(err):
+					log.Fatalf("Config file does not exist: %s", filePath)
+				case err != nil:
+					log.Fatalf("Unable to check config file: %v", err)
+				}
+
+				if info.IsDir() {
+					log.Fatalf("Config file path points to a directory: %s", filePath)
+				}
+
+				if !strings.HasSuffix(filePath, ".conf") {
+					log.Fatalf("Config file must have a .conf extension: %s", filePath)
+				}
+
+				parser := config.NewConfigParser()
+				if err := parser.ParseFromFile(filePath); err != nil {
+					log.Fatal(err)
+				}
+				if err := parser.Loadconfig(config.DiceConfig); err != nil {
+					log.Fatal(err)
+				}
+
+				config.MergeFlags(&flagsConfig)
+				render()
+			} else {
+				log.Fatal("Config file path not provided")
+			}
+		default:
+			defaultConfig(&flagsConfig)
+		}
 	}
+
+	defaultConfig(&flagsConfig)
+}
+
+func defaultConfig(flags *config.Config) {
+	if err := config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, config.DefaultConfigName)); err != nil {
+		log.Fatal(err)
+	}
+
+	config.MergeFlags(flags)
+	render()
 }

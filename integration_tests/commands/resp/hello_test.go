@@ -1,4 +1,4 @@
-package async
+package resp
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ func TestHello(t *testing.T) {
 
 	expected := []interface{}{
 		"proto", int64(2),
-		"id", fmt.Sprintf("%s:%d", config.DiceConfig.AsyncServer.Addr, config.DiceConfig.AsyncServer.Port),
+		"id", fmt.Sprintf("%s:%d", config.DiceConfig.RespServer.Addr, config.DiceConfig.RespServer.Port),
 		"mode", "standalone",
 		"role", "master",
 		"modules", []interface{}{},

@@ -54,7 +54,6 @@ type performance struct {
 	ShardCronFrequency     time.Duration `config:"shard_cron_frequency" default:"1s"`
 	MultiplexerPollTimeout time.Duration `config:"multiplexer_poll_timeout" default:"100ms"`
 	MaxClients             int32         `config:"max_clients" default:"20000" validate:"min=0"`
-	EnableMultiThreading   bool          `config:"enable_multithreading" default:"false"`
 	StoreMapInitSize       int           `config:"store_map_init_size" default:"1024000"`
 	AdhocReqChanBufSize    int           `config:"adhoc_req_chan_buf_size" default:"20"`
 	EnableProfiling        bool          `config:"profiling" default:"false"`
