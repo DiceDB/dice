@@ -52,15 +52,6 @@ func NewHTTPCommandExecutor() *HTTPCommandExecutor {
 	}
 }
 
-func NewHTTPWatchCommandExecutor() *HTTPCommandExecutor {
-	return &HTTPCommandExecutor{
-		baseURL: "http://localhost:8083",
-		httpClient: &http.Client{
-			Timeout: time.Second * 150,
-		},
-	}
-}
-
 type HTTPCommand struct {
 	Command string
 	Body    map[string]interface{}
