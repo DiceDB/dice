@@ -256,7 +256,7 @@ func MergeFlags(flags *Config) {
 			DiceConfig.Logging.LogLevel = flags.Logging.LogLevel
 		case "log-dir":
 			DiceConfig.Logging.LogDir = flags.Logging.LogDir
-		case "persistence-enable":
+		case "enable-persistence":
 			DiceConfig.Persistence.Enabled = flags.Persistence.Enabled
 		case "restore-from-wal":
 			DiceConfig.Persistence.RestoreFromWAL = flags.Persistence.RestoreFromWAL

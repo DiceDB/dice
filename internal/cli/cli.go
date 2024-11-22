@@ -87,7 +87,7 @@ func Execute() {
 	flag.StringVar(&flagsConfig.Logging.LogLevel, "log-level", "info", "log level, values: info, debug")
 	flag.StringVar(&config.DiceConfig.Logging.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
 
-	flag.BoolVar(&flagsConfig.Persistence.Enabled, "persistence-enable", false, "enable write-ahead logging")
+	flag.BoolVar(&flagsConfig.Persistence.Enabled, "enable-persistence", false, "enable write-ahead logging")
 	flag.BoolVar(&flagsConfig.Persistence.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
 	flag.StringVar(&flagsConfig.Persistence.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
 
@@ -124,7 +124,7 @@ func Execute() {
 		fmt.Println("  -enable-profiling      Enable profiling and capture critical metrics and traces in .prof files (default: false)")
 		fmt.Println("  -log-level             Log level, values: info, debug (default: \"info\")")
 		fmt.Println("  -log-dir               Log directory path (default: \"/tmp/dicedb\")")
-		fmt.Println("  -enable-wal            Enable write-ahead logging (default: false)")
+		fmt.Println("  -enable-persistence    Enable write-ahead logging (default: false)")
 		fmt.Println("  -restore-wal           Restore the database from the WAL files (default: false)")
 		fmt.Println("  -wal-engine            WAL engine to use, values: sqlite, aof (default: \"null\")")
 		fmt.Println("  -requirepass           Enable authentication for the default user (default: \"\")")
