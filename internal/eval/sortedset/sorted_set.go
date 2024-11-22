@@ -314,14 +314,11 @@ func DeserializeSortedSet(buf *bytes.Reader) (*Set, error) {
 }
 
 // GetScoreRange returns a slice of members with scores between min and max, inclusive.
-// It returns the members in ascending order if reverse is false, and descending order if reverse is true.
 // If withScores is true, the members will be returned with their scores.
-func (ss *Set) GetScoreRange(
-	minScore, maxScore float64,
-	withScores bool,
-	reverse bool,
-) []string {
-	var result []string
+func (ss *Set) GetMemberScoresInRange(minScore, maxScore float64, count, max int) ([]string, []float64) {
+	var members []string
+	var scores []float64
+
 	iterFunc := func(item btree.Item) bool {
 		ssi := item.(*Item)
 		if ssi.Score < minScore {
@@ -330,17 +327,17 @@ func (ss *Set) GetScoreRange(
 		if ssi.Score > maxScore {
 			return false
 		}
-		result = append(result, ssi.Member)
-		if withScores {
-			scoreStr := strconv.FormatFloat(ssi.Score, 'g', -1, 64)
-			result = append(result, scoreStr)
+		members = append(members, ssi.Member)
+		scores = append(scores, ssi.Score)
+		count++
+
+		if max > 0 && count == max {
+			return false
 		}
+
 		return true
 	}
-	if reverse {
-		ss.tree.Descend(iterFunc)
-	} else {
-		ss.tree.Ascend(iterFunc)
-	}
-	return result
+
+	ss.tree.Ascend(iterFunc)
+	return members, scores
 }

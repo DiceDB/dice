@@ -7150,6 +7150,90 @@ func parseFloatInt(input string) (result interface{}, err error) {
 	return
 }
 
+type geoRadiusOpts struct {
+	WithCoord bool
+	WithDist  bool
+	WithHash  bool
+	Count     int  // 0 means no count specified
+	CountAny  bool // true if ANY was specified with COUNT
+	IsSorted  bool // By default return items are not sorted
+	Ascending bool // If IsSorted is true, return items nearest to farthest relative to the center (ascending) or farthest to nearest relative to the center (descending)
+	Store     string
+	StoreDist string
+}
+
+func parseGeoRadiusOpts(args []string) (*geoRadiusOpts, error) {
+	opts := &geoRadiusOpts{
+		Ascending: true, // Default to ascending order if sorted
+	}
+
+	for i := 0; i < len(args); i++ {
+		param := strings.ToUpper(args[i])
+
+		switch param {
+		case "WITHDIST":
+			opts.WithDist = true
+		case "WITHCOORD":
+			opts.WithCoord = true
+		case "WITHHASH":
+			opts.WithHash = true
+		case "COUNT":
+
+			// TODO validate this logic
+
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("ERR syntax error")
+			}
+
+			count, err := strconv.Atoi(args[i+1])
+			if err != nil {
+				return nil, fmt.Errorf("ERR value is not an integer or out of range")
+			}
+			if count <= 0 {
+				return nil, fmt.Errorf("ERR COUNT must be > 0")
+			}
+			opts.Count = count
+			i++
+
+			// Check for ANY option after COUNT
+			if i+1 < len(args) && strings.ToUpper(args[i+1]) == "ANY" {
+				opts.CountAny = true
+				i++
+			}
+		case "ASC":
+			opts.IsSorted = true
+			opts.Ascending = true
+
+		case "DESC":
+			opts.IsSorted = true
+			opts.Ascending = false
+
+		case "STORE":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("STORE option requires a key name")
+			}
+			opts.Store = args[i+1]
+			i++
+
+		case "STOREDIST":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("STOREDIST option requires a key name")
+			}
+			opts.StoreDist = args[i+1]
+			i++
+
+		default:
+			return nil, fmt.Errorf("unknown parameter: %s", args[i])
+		}
+	}
+
+	if opts.Store != "" && opts.StoreDist != "" {
+		return nil, fmt.Errorf("STORE and STOREDIST are mutually exclusive")
+	}
+
+	return opts, nil
+}
+
 func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 4 {
 		return &EvalResponse{
@@ -7166,31 +7250,33 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 	distVal, parseErr := strconv.ParseFloat(dist, 64)
 	if parseErr != nil {
 		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrInvalidFloat,
+			Error: diceerrors.ErrInvalidFloat,
 		}
 	}
 
-	// TODO parse options
-	// parseGeoRadiusOptions(args[4:])
+	opts, parseErr := parseGeoRadiusOpts(args[4:])
+	if parseErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  parseErr,
+		}
+	}
 
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
 			Result: clientio.NIL,
-			Error:  nil,
 		}
 	}
 
 	ss, err := sortedset.FromObject(obj)
 	if err != nil {
 		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
+			Error: diceerrors.ErrWrongTypeOperation,
 		}
 	}
 
-	memberHash, ok := ss.Get(member)
+	centerHash, ok := ss.Get(member)
 	if !ok {
 		return &EvalResponse{
 			Result: nil,
@@ -7206,14 +7292,20 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	area, steps := geo.Area(memberHash, radius)
+	area, steps := geo.Area(centerHash, radius)
 
 	/* When a huge Radius (in the 5000 km range or more) is used,
 	 * adjacent neighbors can be the same, leading to duplicated
 	 * elements. Skip every range which is the same as the one
 	 * processed previously. */
-
 	var members []string
+	var hashes []float64
+
+	anyMax, count := 0, 0
+	if opts.CountAny {
+		anyMax = opts.Count
+	}
+
 	var lastProcessed uint64
 	for _, hash := range area {
 		if hash == 0 {
@@ -7224,18 +7316,117 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		// TODO handle COUNT arg to limit number of returned members
-
 		hashMin, hashMax := geo.HashMinMax(hash, steps)
-		rangeMembers := ss.GetScoreRange(float64(hashMin), float64(hashMax), false, false)
-		for _, member := range rangeMembers {
-			members = append(members, fmt.Sprintf("%q", member))
+		rangeMembers, rangeHashes := ss.GetMemberScoresInRange(float64(hashMin), float64(hashMax), count, anyMax)
+		members = append(members, rangeMembers...)
+		hashes = append(hashes, rangeHashes...)
+	}
+
+	dists := make([]float64, 0, len(members))
+	coords := make([][]float64, 0, len(members))
+
+	centerLat, centerLon := geo.DecodeHash(centerHash)
+
+	if opts.IsSorted || opts.WithDist || opts.WithCoord {
+		for i := range hashes {
+			msLat, msLon := geo.DecodeHash(hashes[i])
+
+			if opts.WithDist || opts.IsSorted {
+				dist := geo.GetDistance(centerLon, centerLat, msLon, msLat)
+				dists = append(dists, dist)
+			}
+
+			if opts.WithCoord {
+				coords = append(coords, []float64{msLat, msLon})
+			}
 		}
 	}
 
-	// TODO handle options
+	// Sorting is done by distance. Since our output can be dynamic and we can avoid allocating memory
+	// for each optional output property (hash, dist, coord), we follow an indirect sort approach:
+	// 1. Save the member inidices.
+	// 2. Sort the indices based on the distances in ascending or descending order.
+	// 3. Build the response based on the requested options.
+	indices := make([]int, len(members))
+	for i := range indices {
+		indices[i] = i
+	}
+
+	if opts.IsSorted {
+		if opts.Ascending {
+			sort.Slice(indices, func(i, j int) bool {
+				return dists[indices[i]] < dists[indices[j]]
+			})
+		} else {
+			sort.Slice(indices, func(i, j int) bool {
+				return dists[indices[i]] > dists[indices[j]]
+			})
+		}
+	}
+
+	optCount := 0
+	if opts.WithDist {
+		optCount++
+	}
+
+	if opts.WithHash {
+		optCount++
+	}
+
+	if opts.WithCoord {
+		optCount++
+	}
+
+	max := opts.Count
+	if max > len(members) {
+		max = len(members)
+	}
+
+	if optCount == 0 {
+		response := make([]string, len(members))
+		for i := range members {
+			response[i] = members[indices[i]]
+		}
+
+		if max > 0 {
+			response = response[:max]
+		}
+
+		return &EvalResponse{
+			Result: clientio.Encode(response, false),
+		}
+	}
+
+	response := make([][]interface{}, len(members))
+	for i := range members {
+		item := make([]any, optCount+1)
+		item[0] = members[i]
+
+		itemIdx := 1
+
+		if opts.WithDist {
+			item[itemIdx] = dists[i]
+			itemIdx++
+		}
+
+		if opts.WithHash {
+			item[itemIdx] = hashes[i]
+			itemIdx++
+		}
+
+		if opts.WithCoord {
+			item[itemIdx] = coords[i]
+			itemIdx++
+		}
+
+		response[indices[i]] = item
+	}
+
+	if max > 0 {
+		response = response[:max]
+	}
 
 	return &EvalResponse{
-		Result: clientio.Encode(members, false),
+		Result: clientio.Encode(response, false),
 	}
 }
