@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	DiceDBVersion     = "0.0.5"
+	DiceDBVersion     = "0.1.0"
 	DefaultConfigName = "dicedb.conf"
 	DefaultConfigDir  = "."
 
@@ -28,7 +28,7 @@ const (
 	defaultConfigTemplate = `# Configuration file for Dicedb
 
 # Version
-version = "0.0.5"
+version = "0.1.0"
 
 # Async Server Configuration
 async_server.addr = "0.0.0.0"
@@ -93,7 +93,7 @@ var (
 )
 
 type Config struct {
-	Version     string      `config:"version" default:"0.0.5"`
+	Version     string      `config:"version" default:"0.1.0"`
 	InstanceID  string      `config:"instance_id"`
 	Auth        auth        `config:"auth"`
 	RespServer  respServer  `config:"async_server"`

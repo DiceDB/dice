@@ -11,7 +11,7 @@ import (
 
 // TestConfig is a test struct that mimics your actual config structure
 type TestConfig struct {
-	Version     string      `config:"version" default:"0.0.5"`
+	Version     string      `config:"version" default:"0.1.0"`
 	InstanceID  string      `config:"instance_id"`
 	Auth        auth        `config:"auth"`
 	AsyncServer asyncServer `config:"async_server"`
