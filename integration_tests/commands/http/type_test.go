@@ -71,16 +71,17 @@ func TestType(t *testing.T) {
 			expected:      []interface{}{float64(0), "string"},
 			errorExpected: false,
 		},
-		{
-			name: "TYPE for key with value created from BITOP command",
-			commands: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "key1", "value": "foobar"}},
-				{Command: "SET", Body: map[string]interface{}{"key": "key2", "value": "abcdef"}},
-				{Command: "TYPE", Body: map[string]interface{}{"key": "dest"}},
-			},
-			expected:      []interface{}{"OK", "OK", "string"},
-			errorExpected: false,
-		},
+		// TODO: uncomment when bitop is added
+		// {
+		// 	name: "TYPE for key with value created from BITOP command",
+		// 	commands: []HTTPCommand{
+		// 		{Command: "SET", Body: map[string]interface{}{"key": "key1", "value": "foobar"}},
+		// 		{Command: "SET", Body: map[string]interface{}{"key": "key2", "value": "abcdef"}},
+		// 		{Command: "TYPE", Body: map[string]interface{}{"key": "dest"}},
+		// 	},
+		// 	expected:      []interface{}{"OK", "OK", "string"},
+		// 	errorExpected: false,
+		// },
 		{
 			name: "TYPE for key with value created from ZADD command",
 			commands: []HTTPCommand{

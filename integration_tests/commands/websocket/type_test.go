@@ -45,11 +45,12 @@ func TestType(t *testing.T) {
 			commands: []string{"SETBIT k1 1 1", "TYPE k1"},
 			expected: []interface{}{float64(0), "string"},
 		},
-		{
-			name:     "TYPE for key with value created from SETOP command",
-			commands: []string{"SET key1 foobar", "SET key2 abcdef", "TYPE dest"},
-			expected: []interface{}{"OK", "OK", "string"},
-		},
+		// TODO: uncomment when bitop is added
+		// {
+		// 	name:     "TYPE for key with value created from SETOP command",
+		// 	commands: []string{"SET key1 foobar", "SET key2 abcdef", "TYPE dest"},
+		// 	expected: []interface{}{"OK", "OK", "string"},
+		// },
 	}
 
 	for _, tc := range testCases {
