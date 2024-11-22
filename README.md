@@ -105,19 +105,6 @@ By default, DiceDB will look for the configuration file at `./dicedb.conf`. (Lin
 
 > [!TIP]
 > If you want to use a custom configuration file, you can specify the path using the `-c` flag. and to output the configuration file to a specific location, you can specify the output dir path using the `-o` flag.
-#### Additional Configuration Options:
-
-If you'd like to use a different location, you can specify a custom configuration file path with the `-c flag`:
-
-```bash
-go run main.go -c /path/to/config.toml
-```
-If you'd like to output the configuration file to a specific location, you can specify a custom output path with the `-o flag`:
-
-```bash
-go run main.go -o /path/of/output/dir
-```
-
 
 ### Setting up CLI
 
