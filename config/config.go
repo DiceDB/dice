@@ -227,18 +227,22 @@ func loadDiceConfig(configFilePath string) error {
 	return parser.Loadconfig(DiceConfig)
 }
 
-func ManageSubCommandActions(version bool, flagsConfig *Config) {
+func ManageSubCommandActions(version bool, flagsConfig *Config) bool {
 	if version {
 		showDiceDBVersion()
 	}
 
 	if CustomConfigFilePath != utils.EmptyStr {
 		parseCustomConfigFile(flagsConfig, CustomConfigFilePath)
+		return true
 	}
 
 	if CustomConfigDirPath != utils.EmptyStr {
 		saveConfigFileAtSpecifiedPath(flagsConfig, CustomConfigDirPath)
+		return true
 	}
+
+	return false
 }
 
 func showDiceDBVersion() {

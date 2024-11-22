@@ -54,7 +54,6 @@ func printConfiguration() {
 
 // printConfigTable prints key-value pairs in a vertical table format.
 func render() {
-	color.Set(color.FgHiRed)
 	fmt.Print(`
 	██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
 	██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
@@ -64,7 +63,6 @@ func render() {
 	╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 			
 `)
-	color.Unset()
 	printConfiguration()
 }
 
@@ -140,10 +138,12 @@ func Execute() {
 	}
 
 	flag.Parse()
-	config.ManageSubCommandActions(version, &flagsConfig)
+	if ok := config.ManageSubCommandActions(version, &flagsConfig); ok {
+		render()
+	}
 
 	// this subcommand is used to read the config file values from the stdin i.e echo 'resp_server.port="8888"' | ./dicedb -
-	if os.Args[1] == "-" {
+	if len(os.Args) == 2 && os.Args[1] == "-" {
 		parser := config.NewConfigParser()
 		if err := parser.ParseFromStdin(); err != nil {
 			log.Fatal(err)
@@ -151,10 +151,11 @@ func Execute() {
 		if err := parser.Loadconfig(config.DiceConfig); err != nil {
 			log.Fatal(err)
 		}
-		slog.Info("config file loaded from stdin")
 		render()
+		slog.Info("config file loaded from stdin")
 	} else {
 		defaultConfig(&flagsConfig)
+		render()
 	}
 }
 
