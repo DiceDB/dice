@@ -1321,6 +1321,14 @@ var (
 		NewEval:    evalGEODIST,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	geoRadiusCmdMeta = DiceCmdMeta{
+		Name:       "GEORADIUS",
+		Info:       `Returns members of a sorted set with geospatial data that lie within a specified radius from a given center location.`,
+		Arity:      -5,
+		IsMigrated: true,
+		NewEval:    evalGEORADIUS,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
 	jsonstrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRAPPEND",
 		Info: `JSON.STRAPPEND key [path] value

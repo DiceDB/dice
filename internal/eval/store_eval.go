@@ -6333,6 +6333,124 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+func evalGEORADIUS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 || len(args) > 4 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEORADIUS"),
+		}
+	}
+
+	key := args[0]
+
+	longitude, err := strconv.ParseFloat(args[1], 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("value is not a valid float"),
+		}
+	}
+
+	latitude, err := strconv.ParseFloat(args[2], 64)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("value is not a valid float"),
+		}
+	}
+
+	if math.IsNaN(latitude) || math.IsNaN(longitude) || longitude < -180 || longitude > 180 || latitude < -85.05112878 || latitude > 85.05112878 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrFormatted("invalid longitude,latitude pair %v %v", longitude, latitude),
+		}
+	}
+	unit := strings.ToUpper(args[4])
+	if unit != "M" || unit != "KM" || unit != "MI" || unit != "FT" {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("unsupported unit provided. please use M, KM, FT, MI"),
+		}
+	}
+
+	var withCoord, withDist, withHash, countAny bool
+	var sortOrder, storeKey, storeDistKey string
+	var countValue int
+
+	//Parse optional parameters
+	for i := 5; i < len(args); i++ {
+		option := strings.ToUpper(args[i])
+
+		switch {
+		case option == "WITHCOORD":
+			withCoord = true
+		case option == "WITHDIST":
+			withDist = true
+		case option == "WITHHASH":
+			withHash = true
+		case option == "ASC" || option == "DESC":
+			sortOrder = option
+		case option == "COUNT":
+			if i+1 < len(args) {
+				count, err := strconv.Atoi(args[i+1])
+				if err != nil {
+					return &EvalResponse{
+						Result: nil,
+						Error:  diceerrors.ErrIntegerOutOfRange,
+					}
+				}
+				countValue = count
+				if i+2 < len(args) && strings.ToUpper(args[i+2]) == "ANY" {
+					countAny = true
+					i++
+				}
+				i++
+			} else {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrGeneral("syntax error"),
+				}
+			}
+		case option == "ANY":
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("the ANY argument requires COUNT argument"),
+			}
+		case option == "STORE":
+			if i+1 < len(args) {
+				storeKey = args[i+1]
+				i++
+			} else {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrGeneral("syntax error"),
+				}
+			}
+		case option == "STOREDIST":
+			if i+1 < len(args) {
+				storeDistKey = args[i+1]
+				i++
+			} else {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrGeneral("syntax error"),
+				}
+			}
+		default:
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("syntax error"),
+			}
+		}
+	}
+
+	fmt.Println(key, longitude, latitude, unit, withCoord, withDist, withHash, sortOrder, countAny, countValue, storeKey, storeDistKey)
+	return &EvalResponse{
+		Result: nil,
+		Error:  nil,
+	}
+}
+
 func evalTouch(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("TOUCH"))
