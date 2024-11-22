@@ -79,7 +79,6 @@ func NewHTTPServer(shardManager *shard.ShardManager, wl wal.AbstractWAL) *HTTPSe
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
-	//mux.HandleFunc("/q.watch", httpServer.DiceHTTPQwatchHandler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("ok"))
 		if err != nil {
