@@ -29,9 +29,6 @@ const (
 
 	defaultConfigTemplate = `# Configuration file for Dicedb
 
-# Version
-version = "0.1.0"
-
 # RESP Server Configuration
 resp_server.addr = "0.0.0.0"
 resp_server.port = 7379
