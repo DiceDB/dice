@@ -15,52 +15,46 @@ import (
 	"github.com/fatih/color"
 )
 
-type configEntry struct {
-	Key   string
-	Value interface{}
-}
-
-var configTable = []configEntry{}
-
 // configuration function used to add configuration values to the print table at the startup.
 // add entry to this function to add a new row in the startup configuration table.
-func configuration() {
-	// Add the version of the DiceDB to the configuration table
-	addEntry("Version", config.DiceDBVersion)
+func printConfiguration() {
+	// Add the version of the DiceDB
+	slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))
 
-	// Add the port number on which DiceDB is running to the configuration table
-	addEntry("Port", config.DiceConfig.RespServer.Port)
+	// Add the port number on which DiceDB is running
+	slog.Info("running with", slog.Int("port", config.DiceConfig.RespServer.Port))
 
-	// Add whether multi-threading is enabled to the configuration table
-	addEntry("Multi Threading Enabled", true)
-
-	// Add the number of CPU cores available on the machine to the configuration table
-	addEntry("Cores", runtime.NumCPU())
-
-	// Conditionally add the number of shards to be used for DiceDB to the configuration table
-	if config.DiceConfig.Performance.NumShards > 0 {
-		configTable = append(configTable, configEntry{"Shards", config.DiceConfig.Performance.NumShards})
-	} else {
-		configTable = append(configTable, configEntry{"Shards", runtime.NumCPU()})
+	//	 HTTP and WebSocket server configuration
+	if config.DiceConfig.HTTP.Enabled {
+		slog.Info("running with", slog.Int("http-port", config.DiceConfig.HTTP.Port))
 	}
 
-	// Add whether the watch feature is enabled to the configuration table
-	addEntry("Watch Enabled", config.DiceConfig.Performance.EnableWatch)
+	if config.DiceConfig.WebSocket.Enabled {
+		slog.Info("running with", slog.Int("websocket-port", config.DiceConfig.WebSocket.Port))
+	}
 
-	// Add whether the watch feature is enabled to the configuration table
-	addEntry("HTTP Enabled", config.DiceConfig.HTTP.Enabled)
+	// Add the number of CPU cores available on the machine
+	slog.Info("running with", slog.Int("cores", runtime.NumCPU()))
 
-	// Add whether the watch feature is enabled to the configuration table
-	addEntry("Websocket Enabled", config.DiceConfig.WebSocket.Enabled)
-}
+	// Conditionally add the number of shards to be used for DiceDB
+	numShards := runtime.NumCPU()
+	if config.DiceConfig.Performance.NumShards > 0 {
+		numShards = config.DiceConfig.Performance.NumShards
+	}
+	slog.Info("running with", slog.Int("shards", numShards))
 
-func addEntry(k string, v interface{}) {
-	configTable = append(configTable, configEntry{k, v})
+	// Add whether the watch feature is enabled
+	slog.Info("running with", slog.Bool("watch", config.DiceConfig.Performance.EnableWatch))
+
+	// Add whether the watch feature is enabled
+	slog.Info("running with", slog.Bool("profiling", config.DiceConfig.Performance.EnableProfiling))
+
+	// Add whether the watch feature is enabled
+	slog.Info("running with", slog.Bool("persistence", config.DiceConfig.Persistence.Enabled))
 }
 
 // printConfigTable prints key-value pairs in a vertical table format.
 func render() {
-	color.Set(color.FgHiRed)
 	fmt.Print(`
 	██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
 	██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
@@ -69,45 +63,8 @@ func render() {
 	██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
 	╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 			
-	`)
-	color.Unset()
-	renderConfigTable()
-}
-
-func renderConfigTable() {
-	configuration()
-	color.Set(color.FgGreen)
-	// Find the longest key to align the values properly
-	// Default value length for alignment
-	// Create the table header and separator line
-	// 7 is for spacing and pipes
-	// Print each configuration key-value pair without row lines
-	// Final bottom line
-	maxKeyLength := 0
-	maxValueLength := 20
-	for _, entry := range configTable {
-		if len(entry.Key) > maxKeyLength {
-			maxKeyLength = len(entry.Key)
-		}
-		if len(fmt.Sprintf("%v", entry.Value)) > maxValueLength {
-			maxValueLength = len(fmt.Sprintf("%v", entry.Value))
-		}
-	}
-
-	color.Set(color.FgGreen)
-	fmt.Println()
-	totalWidth := maxKeyLength + maxValueLength + 7
-	fmt.Println(strings.Repeat("-", totalWidth))
-	fmt.Printf("| %-*s | %-*s |\n", maxKeyLength, "Configuration", maxValueLength, "Value")
-	fmt.Println(strings.Repeat("-", totalWidth))
-
-	for _, entry := range configTable {
-		fmt.Printf("| %-*s | %-20v |\n", maxKeyLength, entry.Key, entry.Value)
-	}
-
-	fmt.Println(strings.Repeat("-", totalWidth))
-	fmt.Println()
-	color.Unset()
+`)
+	printConfiguration()
 }
 
 func Execute() {

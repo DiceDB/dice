@@ -53,7 +53,6 @@ func main() {
 	)
 
 	wl, _ = wal.NewNullWAL()
-	slog.Info("running with", slog.Bool("persistence-enabled", config.DiceConfig.Persistence.Enabled))
 	if config.DiceConfig.Persistence.Enabled {
 		if config.DiceConfig.Persistence.WALEngine == "sqlite" {
 			_wl, err := wal.NewSQLiteWAL(config.DiceConfig.Persistence.WALDir)

@@ -19,7 +19,7 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 DiceDB supports HTTP protocol for clients to connect to the database. This allows clients to connect to DiceDB over the web stack, enabling frontends to have direct access to DiceDB, which is currently not possible with Redis.
 
-All commands except `QWATCH` are synchronous and will return the result of the command immediately. For `QWATCH`, we use [SSE](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) to be able to respond with changes to the result set of the queries.
+[//]: # (All commands except `QWATCH` are synchronous and will return the result of the command immediately. For `QWATCH`, we use [SSE]&#40;https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events&#41; to be able to respond with changes to the result set of the queries.)
 
 ## API Endpoint
 
@@ -183,8 +183,8 @@ Host: your-server-address
 Content-Type: application/json
 
 {
-"key": "test",
-"field": "test"
+  "key": "test",
+  "field": "test"
 }
 
 ````
@@ -210,35 +210,3 @@ curl --location 'http://your-server-address:PORT/HGET' \
   "data": "test"
 }
 ```
-
-### QWATCH Example
-
-**NOTE**: The `QWATCH` command is asynchronous and requires the use of Server-Sent Events (SSE) to receive updates. The following example demonstrates how to use `QWATCH` with SSE.
-
-**Request:**
-
-<Tabs syncKey="http-request-format">
-  <TabItem label="HTTP Request">
-```http
-POST /QWATCH HTTP/1.1
-Host: your-server-address
-Content-Type: application/json
-
-{
-"query": "SELECT $key, $value WHERE $key like 'match:100:\*' AND $value > 10 ORDER BY $value DESC LIMIT 3"
-}
-
-````
-
-</TabItem>
-  <TabItem label="cURL">
-```bash
-curl --location 'http://your-server-address:PORT/QWATCH' \
---header 'Content-Type: application/json' \
---data '{
-  "query": "SELECT $key, $value WHERE $key like '\''match:100:*'\'' AND $value > 10 ORDER BY $value DESC LIMIT 3"
-}'
-````
-
-  </TabItem>
-</Tabs>

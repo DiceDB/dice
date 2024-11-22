@@ -96,8 +96,6 @@ func (s *Server) Run(ctx context.Context) (err error) {
 		}
 	}(wg)
 
-	slog.Info("ready to accept and serve requests on", slog.Int("port", config.DiceConfig.RespServer.Port))
-
 	select {
 	case <-ctx.Done():
 		slog.Info("initiating shutdown")
