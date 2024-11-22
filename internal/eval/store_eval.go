@@ -6366,7 +6366,7 @@ func evalGEORADIUS(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 	unit := strings.ToUpper(args[4])
-	if unit != "M" || unit != "KM" || unit != "MI" || unit != "FT" {
+	if unit != "M" && unit != "KM" && unit != "MI" && unit != "FT" {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrGeneral("unsupported unit provided. please use M, KM, FT, MI"),
