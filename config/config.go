@@ -3,9 +3,11 @@ package config
 import (
 	"flag"
 	"fmt"
+	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/dicedb/dice/internal/server/utils"
@@ -30,12 +32,12 @@ const (
 # Version
 version = "0.1.0"
 
-# Async Server Configuration
-async_server.addr = "0.0.0.0"
-async_server.port = 7379
-async_server.keepalive = 300
-async_server.timeout = 300
-async_server.max_conn = 0
+# RESP Server Configuration
+resp_server.addr = "0.0.0.0"
+resp_server.port = 7379
+resp_server.keepalive = 300
+resp_server.timeout = 300
+resp_server.max_conn = 0
 
 # HTTP Configuration
 http.enabled = false
@@ -93,10 +95,9 @@ var (
 )
 
 type Config struct {
-	Version     string      `config:"version" default:"0.1.0"`
 	InstanceID  string      `config:"instance_id"`
 	Auth        auth        `config:"auth"`
-	RespServer  respServer  `config:"async_server"`
+	RespServer  respServer  `config:"resp_server"`
 	HTTP        http        `config:"http"`
 	WebSocket   websocket   `config:"websocket"`
 	Performance performance `config:"performance"`
@@ -227,6 +228,77 @@ func loadDiceConfig(configFilePath string) error {
 	}
 
 	return parser.Loadconfig(DiceConfig)
+}
+
+func ManageSubCommandActions(version bool, flagsConfig *Config) {
+	if version {
+		showDiceDBVersion()
+	}
+
+	if CustomConfigFilePath != utils.EmptyStr {
+		parseCustomConfigFile(flagsConfig, CustomConfigFilePath)
+	}
+
+	if CustomConfigDirPath != utils.EmptyStr {
+		saveConfigFileAtSpecifiedPath(flagsConfig, CustomConfigDirPath)
+	}
+}
+
+func showDiceDBVersion() {
+	fmt.Printf("DiceDB v%s\n", DiceDBVersion)
+	os.Exit(0)
+}
+
+func saveConfigFileAtSpecifiedPath(flagsConfig *Config, dirPath string) {
+	info, err := os.Stat(dirPath)
+	switch {
+	case os.IsNotExist(err):
+		log.Fatal("output file path does not exist")
+	case err != nil:
+		log.Fatalf("error checking output file path: %v", err)
+	case !info.IsDir():
+		log.Fatal("output file path is not a directory")
+	}
+
+	filePath := filepath.Join(dirPath, DefaultConfigName)
+	if _, err := os.Stat(filePath); err == nil {
+		slog.Warn("config file already exists at the specified path", slog.String("path", filePath), slog.String("action", "skipping file creation"))
+	}
+
+	if err := CreateConfigFile(filePath); err != nil {
+		log.Fatal(err)
+	}
+
+	MergeFlags(flagsConfig)
+}
+
+func parseCustomConfigFile(flagsConfig *Config, filePath string) {
+	info, err := os.Stat(filePath)
+
+	switch {
+	case os.IsNotExist(err):
+		log.Fatalf("config file does not exist: %s", filePath)
+	case err != nil:
+		log.Fatalf("unable to check config file: %v", err)
+	}
+
+	if info.IsDir() {
+		log.Fatalf("config file path points to a directory: %s", filePath)
+	}
+
+	if !strings.HasSuffix(filePath, ".conf") {
+		log.Fatalf("config file must have a .conf extension: %s", filePath)
+	}
+
+	parser := NewConfigParser()
+	if err := parser.ParseFromFile(filePath); err != nil {
+		log.Fatal(err)
+	}
+	if err := parser.Loadconfig(DiceConfig); err != nil {
+		log.Fatal(err)
+	}
+
+	MergeFlags(flagsConfig)
 }
 
 func MergeFlags(flags *Config) {

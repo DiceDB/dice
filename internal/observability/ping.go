@@ -38,7 +38,7 @@ func Ping() {
 	payload := &PingPayload{
 		HardwareConfig: hwConfig,
 		InstanceID:     config.DiceConfig.InstanceID,
-		Version:        config.DiceConfig.Version,
+		Version:        config.DiceDBVersion,
 		Err:            err,
 		Date:           time.Now().UTC().Format("2006-01-02 15:04:05"),
 		DBConfig:       DBConfig{},
