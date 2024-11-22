@@ -69,7 +69,6 @@ OK
 OK
 ```
 
-
 ### Invalid Usage
 
 Trying to set fields in a key that is not a hash.

@@ -19,10 +19,10 @@ This command does not accept any parameters.
 
 ## Return values
 
-| Condition | Return Value |
-|-----------|--------------|
+| Condition             | Return Value                                                             |
+| --------------------- | ------------------------------------------------------------------------ |
 | Command is successful | Help text detailing the available subcommands for the `COMMAND` command. |
-| Error | An error is returned if the command fails. |
+| Error                 | An error is returned if the command fails.                               |
 
 ## Behavior
 

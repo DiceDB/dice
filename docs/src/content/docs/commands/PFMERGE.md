@@ -37,10 +37,11 @@ PFMERGE destkey sourcekey [sourcekey ...]
 The `PFMERGE` command can raise errors in the following scenarios:
 
 1. `Wrong Type Error`:
+
    - `(error)`: `WRONGTYPE Operation against a key holding the wrong kind of value`
    - If any of the `sourcekey` keys or the `destkey` key contains a value that is not a HyperLogLog, DiceDB will return an error.
 
-2. `Non-Existent Key Error`: 
+2. `Non-Existent Key Error`:
    - If any of the `sourcekey` keys do not exist, DiceDB will treat them as empty HyperLogLogs and proceed with the merge operation without raising an error.
 
 ## Example Usage

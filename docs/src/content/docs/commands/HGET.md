@@ -101,7 +101,6 @@ OK
 (error) ERR wrong number of arguments for 'hget' command
 ```
 
-
 ## Notes
 
 - The `HGET` command is a read-only command and does not modify the hash or any other data in the DiceDB database.

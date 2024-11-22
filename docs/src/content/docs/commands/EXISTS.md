@@ -78,8 +78,8 @@ Checking if a non-existent key (`nonExistentKey`) is present in the database:
 (integer) 0
 ```
 
-
 ### All Non-Existent Keys
+
 Checking if all non-existent keys return 0:
 
 ```bash
@@ -88,6 +88,7 @@ Checking if all non-existent keys return 0:
 ```
 
 ### Empty Command
+
 Providing no keys should trigger an error:
 
 ```bash

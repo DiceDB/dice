@@ -65,6 +65,7 @@ OK
 127.0.0.1:7379>DECRBY mycounter 3
 (integer)7
 ```
+
 - In this example, the value of `mycounter` is set to 10
 - The `DECRBY` command decremented `mycounter`by 3, resulting in a new value of 7.
 

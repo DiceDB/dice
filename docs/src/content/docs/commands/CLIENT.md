@@ -25,7 +25,6 @@ Errors may be raised in the following scenarios:
   - `Error Message`: `(error) ERR unknown subcommand`
   - Occurs when an invalid subcommand is provided to the `CLIENT` command.
 
-
 ## Example Usage
 
 ### CLIENT LIST
@@ -105,7 +104,6 @@ OK
 OK
 ```
 
-
 ## Additional Information
 
 The `CLIENT` command has several subcommands, each serving a specific purpose. The available subcommands are:
@@ -121,7 +119,6 @@ The `CLIENT` command has several subcommands, each serving a specific purpose. T
 - `CLIENT TRACKING`
 - `CLIENT CACHING`
 - `CLIENT NO-EVICT`
-
 
 ### CLIENT LIST
 

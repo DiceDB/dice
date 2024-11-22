@@ -28,13 +28,12 @@ SET key value  [NX | XX] [GET] [EX seconds | PX milliseconds | EXAT unix-time-se
 
 ## Return values
 
-| Condition                                   | Return Value |
-| ------------------------------------------- | ------------ |
-| Command is successful                       | `OK`         |
-| `NX` or `XX` conditions are not met         | `nil`        |
-| Syntax or specified constraints are invalid | error        |
-| If the `GET` option is provided              | The value of the key before setting it or error if value cannot be returned as a string |
-
+| Condition                                   | Return Value                                                                            |
+| ------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Command is successful                       | `OK`                                                                                    |
+| `NX` or `XX` conditions are not met         | `nil`                                                                                   |
+| Syntax or specified constraints are invalid | error                                                                                   |
+| If the `GET` option is provided             | The value of the key before setting it or error if value cannot be returned as a string |
 
 ## Behaviour
 
@@ -144,6 +143,7 @@ OK
 127.0.0.1:7379> set foo bazz get
 "bar"
 ```
+
 ### Set with GET option when key does not exist
 
 ```bash
@@ -154,8 +154,10 @@ OK
 ```
 
 ### Set with Get with wrong type of value
+
 ```bash
 127.0.0.1:7379> sadd foo item1
 (integer) 1
 127.0.0.1:7379> set foo bazz get
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
+```

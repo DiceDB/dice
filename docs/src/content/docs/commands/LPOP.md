@@ -17,8 +17,6 @@ LPOP key
 | --------- | ------------------------------------------------------------------------------ | ------ | -------- |
 | `key`     | The key of the list from which the first element will be removed and returned. | String | Yes      |
 
-
-
 ## Return Value
 
 | Condition                    | Return Value                                         |
@@ -27,11 +25,9 @@ LPOP key
 | If the key does not exist    | `nil`                                                |
 | The key is of the wrong type | error                                                |
 
-
-
 ## Behavior
 
-- When the `LPOP` command is executed, DiceDB checks if the key exists and is associated with a list. 
+- When the `LPOP` command is executed, DiceDB checks if the key exists and is associated with a list.
 - If the list has elements, the first element is removed and returned.
 - If the key does not exist, the command treats it as an empty list and returns `nil`.
 - If the key exists but is not associated with a list, a `WRONGTYPE` error is returned.

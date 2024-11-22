@@ -15,19 +15,17 @@ COMMAND GETKEYS command arg [arg ...]
 
 ## Parameters
 
-| Parameter | Description                                                                 | Type   | Required |
-|-----------|-----------------------------------------------------------------------------|--------|----------|
-| `command` | The command for which keys need to be extracted.                            | String | Yes      |
-| `arg`     | Arguments for the specified command.                                        | String | Yes      |
-
+| Parameter | Description                                      | Type   | Required |
+| --------- | ------------------------------------------------ | ------ | -------- |
+| `command` | The command for which keys need to be extracted. | String | Yes      |
+| `arg`     | Arguments for the specified command.             | String | Yes      |
 
 ## Return values
 
-| Condition | Return Value |
-|-----------|--------------|
-| Command is successful | Array of keys |
-| Error | An error is returned if the command fails. |
-
+| Condition             | Return Value                               |
+| --------------------- | ------------------------------------------ |
+| Command is successful | Array of keys                              |
+| Error                 | An error is returned if the command fails. |
 
 ## Behavior
 

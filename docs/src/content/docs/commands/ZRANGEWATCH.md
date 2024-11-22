@@ -11,8 +11,8 @@ It allows clients to subscribe to a sorted set and receive notifications wheneve
 | Protocol  | Supported |
 | --------- | --------- |
 | TCP-RESP  | ✅        |
-| HTTP      | ✅        |
-| WebSocket | ✅        |
+| HTTP      | ❌        |
+| WebSocket | ❌        |
 
 ## Syntax
 
@@ -22,19 +22,18 @@ ZRANGE.WATCH <key> <start> <stop>
 
 ## Parameters
 
-| Parameter    | Description                                                                         | Type   | Required |
-| ------------ | ----------------------------------------------------------------------------------- | ------ | -------- |
-| `key` | key which the client would like to get updates on | String | Yes      |
-| `start` | start index of the sorted set | Integer | Yes      |
-| `stop` | stop index of the sorted set | Integer | Yes      |
-| options | Additional options to be passed to the command `ZRANGE` | String | No       |
-
+| Parameter | Description                                             | Type    | Required |
+| --------- | ------------------------------------------------------- | ------- | -------- |
+| `key`     | key which the client would like to get updates on       | String  | Yes      |
+| `start`   | start index of the sorted set                           | Integer | Yes      |
+| `stop`    | stop index of the sorted set                            | Integer | Yes      |
+| options   | Additional options to be passed to the command `ZRANGE` | String  | No       |
 
 ## Return Value
 
-| Condition             | Return Value                                               |
-| --------------------- | ---------------------------------------------------------- |
-| Command is successful |  returns a message similar to `subscribe` |
+| Condition             | Return Value                             |
+| --------------------- | ---------------------------------------- |
+| Command is successful | returns a message similar to `subscribe` |
 
 ## Behavior
 
@@ -53,15 +52,12 @@ ZRANGE.WATCH <key> <start> <stop>
 
 ### Basic Usage
 
-
 Let's explore a practical example of using the `ZRANGE.WATCH` command to create a real-time submission leaderboard for a game match.
 
 ```bash
 127.0.0.1:7379> ZRANGE.WATCH match:100 0 1 REV WITHSCORES
-ZRANGE.WATCH
-Command: ZRANGE
-Fingerprint: 4016579015
-Data: 
+Press Ctrl+C to exit watch mode.
+
 ```
 
 This query does the following:
@@ -69,7 +65,7 @@ This query does the following:
 - Monitors key matching the name `match:100`
 
 When the sorted set is updated using following set of commands from another client:
-    
+
 ```bash
 127.0.0.1:7379> ZADD match:100 1 "player1"
 OK
@@ -82,19 +78,14 @@ OK
 ```
 
 The client will receive a message similar to the following:
+
 ```bash
-Command: ZRANGE
-Fingerprint: 4016579015
-Data: [{1 player1}]
-Command: ZRANGE
-Fingerprint: 4016579015
-Data: [{2 player2}]
-Command: ZRANGE
-Fingerprint: 4016579015
-Data: [{2 player2}]
-Command: ZRANGE
-Fingerprint: 4016579015
-Data: [{4 player4}]
+127.0.0.1:7379> ZRANGE.WATCH match:100 0 1 REV WITHSCORES
+Press Ctrl+C to exit watch mode.
+[{1 player1}]
+[{2 player2} {1 player1}]
+[{2 player2} {1 player3}]
+[{4 player4} {2 player2}]
 ```
 
 ## Notes
@@ -105,6 +96,7 @@ the [ZRANGE.UNWATCH](/commands/zrangeunwatch) command documentation for more inf
 ## Related commands
 
 following are the related commands to `ZRANGE.WATCH`:
-- [GET.WATCH](/commands/getwatch)
-- [Q.WATCH](/commands/qwatch)
 
+- [GET.WATCH](/commands/getwatch)
+- [PFCOUNT.WATCH](/commands/pfcountwatch)
+- [ZRANGE.UNWATCH](/commands/zrangeunwatch)

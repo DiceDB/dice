@@ -17,13 +17,12 @@ COMMAND
 
 This command does not accept any parameters.
 
-
 ## Return values
 
-| Condition | Return Value |
-|-----------|--------------|
+| Condition             | Return Value                                                                             |
+| --------------------- | ---------------------------------------------------------------------------------------- |
 | Command is successful | Array containing detailed information about all commands supported by the DiceDB server. |
-| Error | An error is returned if the command fails. |
+| Error                 | An error is returned if the command fails.                                               |
 
 - **Command Name**: The name of the command.
 - **Arity**: An integer representing the number of arguments the command expects.
@@ -52,7 +51,6 @@ This command does not accept any parameters.
 ## Behavior
 
 When no subcommand is provided, this command functions as the default implementation of the `COMMAND INFO` command in the absence of a specified command name. It iterates through the list of registered commands and subcommands, returning an array containing detailed metadata for each command.
-
 
 ## Errors
 

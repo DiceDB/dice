@@ -12,11 +12,12 @@ SETBIT key offset value
 ```
 
 ## Parameters
-| Parameter | Description                                                                                                              | Type    | Required |
-|-----------|--------------------------------------------------------------------------------------------------------------------------|---------|----------|
-| `key`     | The key of the string where the bit is to be set or cleared. If the key does not exist, a new string value is created.   | String  | Yes      |
-| `offset`  | The position of the bit to be set or cleared. The offset is a zero-based integer, meaning the first bit is at position 0.| Integer | Yes      |
-| `value`   | The value to set the bit to. This must be either 0 or 1.                                                                 | Bit     | Yes      |
+
+| Parameter | Description                                                                                                               | Type    | Required |
+| --------- | ------------------------------------------------------------------------------------------------------------------------- | ------- | -------- |
+| `key`     | The key of the string where the bit is to be set or cleared. If the key does not exist, a new string value is created.    | String  | Yes      |
+| `offset`  | The position of the bit to be set or cleared. The offset is a zero-based integer, meaning the first bit is at position 0. | Integer | Yes      |
+| `value`   | The value to set the bit to. This must be either 0 or 1.                                                                  | Bit     | Yes      |
 
 ## Return Value
 
@@ -29,14 +30,16 @@ The command returns the original bit value stored at the specified offset before
 - The command only affects the bit at the specified offset and leaves all other bits unchanged.
 
 ## Error Handling
+
 1. `Bit is not an integer or out of range`:
-    - Error Message: `(error) ERR bit is not an integer or out of range`
-    - This error is raised if the `offset` is not a valid integer or if it is negative.
-    - This error is also raised if the `value` is not 0 or 1.
+
+   - Error Message: `(error) ERR bit is not an integer or out of range`
+   - This error is raised if the `offset` is not a valid integer or if it is negative.
+   - This error is also raised if the `value` is not 0 or 1.
 
 2. `WRONGTYPE Operation against a key holding the wrong kind of value`:
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-    - This error is raised if the key exists but does not hold a bit string value.
+   - This error is raised if the key exists but does not hold a bit string value.
 
 ## Example Usage
 

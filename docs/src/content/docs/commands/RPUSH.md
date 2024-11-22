@@ -18,7 +18,6 @@ RPUSH key value [value ...]
 | `key`              | The name of the list where values are inserted. If it does not exist, it will be created. | String | Yes      |
 | `value [value...]` | One or more space separated values to be inserted at the tail of the list.                | String | Yes      |
 
-
 ## Return Value
 
 | Condition                                   | Return Value                                   |
@@ -37,11 +36,11 @@ RPUSH key value [value ...]
 
 1. `Wrong Number of Arguments`
 
-    - Error Message: `(error) ERR wrong number of arguments for 'rpush' command`
-    - Occurs if the key parameters is not provided or at least one value is not provided. 
+   - Error Message: `(error) ERR wrong number of arguments for 'rpush' command`
+   - Occurs if the key parameters is not provided or at least one value is not provided.
 
-2. `Wrong Type of Key or Value`: 
-   
+2. `Wrong Type of Key or Value`:
+
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs if the key exists and is not a list. DiceDB expects the key to either be non-existent or to hold a list data type.
 
