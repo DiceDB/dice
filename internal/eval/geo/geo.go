@@ -3,7 +3,7 @@ package geo
 import (
 	"math"
 
-	"github.com/dicedb/dice/internal/errors"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/mmcloughlin/geohash"
 )
 
@@ -85,10 +85,7 @@ func DecodeHash(hash float64) (lat, lon float64) {
 }
 
 // ConvertDistance converts a distance from meters to the desired unit
-func ConvertDistance(
-	distance float64,
-	unit string,
-) (converted float64, err []byte) {
+func ConvertDistance(distance float64, unit string) (float64, error) {
 	switch Unit(unit) {
 	case Meters:
 		return distance, nil
@@ -99,7 +96,7 @@ func ConvertDistance(
 	case Feet:
 		return distance / 0.3048, nil
 	default:
-		return 0, errors.NewErrWithMessage("ERR unsupported unit provided. please use m, km, ft, mi")
+		return 0, diceerrors.ErrUnsupportedUnit
 	}
 }
 
