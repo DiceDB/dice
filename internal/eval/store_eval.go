@@ -6817,7 +6817,7 @@ func parseGeoRadiusOpts(args []string) (*geoRadiusOpts, error) {
 				}
 				i++
 			} else {
-				return nil, diceerrors.ErrGeneral("syntax error")
+				return nil, diceerrors.ErrSyntax
 			}
 		case "ANY":
 			return nil, diceerrors.ErrGeneral("the ANY argument requires COUNT argument")
@@ -6830,7 +6830,7 @@ func parseGeoRadiusOpts(args []string) (*geoRadiusOpts, error) {
 				opts.StoreDist = false
 				i++
 			} else {
-				return nil, diceerrors.ErrGeneral("syntax error")
+				return nil, diceerrors.ErrSyntax
 			}
 		case "STOREDIST":
 			if opts.WithCoord || opts.WithDist || opts.WithHash {
@@ -6841,10 +6841,10 @@ func parseGeoRadiusOpts(args []string) (*geoRadiusOpts, error) {
 				opts.StoreDist = true
 				i++
 			} else {
-				return nil, diceerrors.ErrGeneral("syntax error")
+				return nil, diceerrors.ErrSyntax
 			}
 		default:
-			return nil, diceerrors.ErrGeneral("syntax error")
+			return nil, diceerrors.ErrSyntax
 		}
 	}
 
@@ -6855,7 +6855,7 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 4 {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("GEODIST"),
+			Error:  diceerrors.ErrWrongArgumentCount("GEORADIUSBYMEMBER"),
 		}
 	}
 
@@ -6867,7 +6867,8 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 	distVal, parseErr := strconv.ParseFloat(dist, 64)
 	if parseErr != nil {
 		return &EvalResponse{
-			Error: diceerrors.ErrInvalidFloat,
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("need numeric radius"),
 		}
 	}
 
@@ -6882,14 +6883,16 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: clientio.EmptyArray,
+			Error:  nil,
 		}
 	}
 
 	ss, err := sortedset.FromObject(obj)
 	if err != nil {
 		return &EvalResponse{
-			Error: diceerrors.ErrWrongTypeOperation,
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
 
@@ -6897,7 +6900,7 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 	if !ok {
 		return &EvalResponse{
 			Result: nil,
-			Error:  nil,
+			Error:  diceerrors.ErrGeneral("could not decode requested zset member"),
 		}
 	}
 
