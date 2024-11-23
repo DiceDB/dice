@@ -7154,81 +7154,75 @@ type geoRadiusOpts struct {
 	WithCoord bool
 	WithDist  bool
 	WithHash  bool
-	Count     int  // 0 means no count specified
-	CountAny  bool // true if ANY was specified with COUNT
-	IsSorted  bool // By default return items are not sorted
-	Ascending bool // If IsSorted is true, return items nearest to farthest relative to the center (ascending) or farthest to nearest relative to the center (descending)
-	Store     string
-	StoreDist string
+	Count     int    // 0 means no count specified
+	CountAny  bool   // true if ANY was specified with COUNT
+	IsSorted  bool   // By default return items are not sorted
+	Ascending bool   // If IsSorted is true, return items nearest to farthest relative to the center (ascending) or farthest to nearest relative to the center (descending)
+	Store     string // If both StoreDist and Store are specified, last argument takes precedence
+	StoreDist bool
 }
 
 func parseGeoRadiusOpts(args []string) (*geoRadiusOpts, error) {
-	opts := &geoRadiusOpts{
-		Ascending: true, // Default to ascending order if sorted
-	}
+	opts := &geoRadiusOpts{}
 
 	for i := 0; i < len(args); i++ {
-		param := strings.ToUpper(args[i])
+		option := strings.ToUpper(args[i])
 
-		switch param {
-		case "WITHDIST":
-			opts.WithDist = true
+		switch option {
 		case "WITHCOORD":
 			opts.WithCoord = true
+		case "WITHDIST":
+			opts.WithDist = true
 		case "WITHHASH":
 			opts.WithHash = true
-		case "COUNT":
-
-			// TODO validate this logic
-
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("ERR syntax error")
-			}
-
-			count, err := strconv.Atoi(args[i+1])
-			if err != nil {
-				return nil, fmt.Errorf("ERR value is not an integer or out of range")
-			}
-			if count <= 0 {
-				return nil, fmt.Errorf("ERR COUNT must be > 0")
-			}
-			opts.Count = count
-			i++
-
-			// Check for ANY option after COUNT
-			if i+1 < len(args) && strings.ToUpper(args[i+1]) == "ANY" {
-				opts.CountAny = true
-				i++
-			}
 		case "ASC":
 			opts.IsSorted = true
 			opts.Ascending = true
-
 		case "DESC":
 			opts.IsSorted = true
 			opts.Ascending = false
-
+		case "COUNT":
+			if i+1 < len(args) {
+				count, err := strconv.Atoi(args[i+1])
+				if err != nil {
+					return nil, diceerrors.ErrIntegerOutOfRange
+				}
+				opts.Count = count
+				if i+2 < len(args) && strings.EqualFold(args[i+2], "ANY") {
+					opts.CountAny = true
+					i++
+				}
+				i++
+			} else {
+				return nil, diceerrors.ErrGeneral("syntax error")
+			}
+		case "ANY":
+			return nil, diceerrors.ErrGeneral("the ANY argument requires COUNT argument")
 		case "STORE":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("STORE option requires a key name")
+			if opts.WithCoord || opts.WithDist || opts.WithHash {
+				return nil, diceerrors.ErrGeneral("STORE option in GEORADIUS is not compatible with WITHDIST, WITHHASH and WITHCOORD options")
 			}
-			opts.Store = args[i+1]
-			i++
-
+			if i+1 < len(args) {
+				opts.Store = args[i+1]
+				opts.StoreDist = false
+				i++
+			} else {
+				return nil, diceerrors.ErrGeneral("syntax error")
+			}
 		case "STOREDIST":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("STOREDIST option requires a key name")
+			if opts.WithCoord || opts.WithDist || opts.WithHash {
+				return nil, diceerrors.ErrGeneral("STORE option in GEORADIUS is not compatible with WITHDIST, WITHHASH and WITHCOORD options")
 			}
-			opts.StoreDist = args[i+1]
-			i++
-
+			if i+1 < len(args) {
+				opts.Store = args[i+1]
+				opts.StoreDist = true
+				i++
+			} else {
+				return nil, diceerrors.ErrGeneral("syntax error")
+			}
 		default:
-			return nil, fmt.Errorf("unknown parameter: %s", args[i])
+			return nil, diceerrors.ErrGeneral("syntax error")
 		}
-	}
-
-	if opts.Store != "" && opts.StoreDist != "" {
-		return nil, fmt.Errorf("STORE and STOREDIST are mutually exclusive")
 	}
 
 	return opts, nil
