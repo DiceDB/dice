@@ -6219,12 +6219,12 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 
 	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
 
-	result, err := geo.ConvertDistance(distance, unit)
+	result, conversionErr := geo.ConvertDistance(distance, unit)
 
-	if err != nil {
+	if conversionErr != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
+			Error:  conversionErr,
 		}
 	}
 
@@ -7317,6 +7317,8 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 		rangeMembers, rangeHashes := ss.GetMemberScoresInRange(float64(hashMin), float64(hashMax), count, anyMax)
 		members = append(members, rangeMembers...)
 		hashes = append(hashes, rangeHashes...)
+		count += len(rangeMembers)
+		lastProcessed = hash
 	}
 
 	dists := make([]float64, 0, len(members))
@@ -7330,7 +7332,14 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 
 			if opts.WithDist || opts.IsSorted {
 				dist := geo.GetDistance(centerLon, centerLat, msLon, msLat)
-				dists = append(dists, dist)
+				distance, err := geo.ConvertDistance(dist, unit)
+				if err != nil {
+					return &EvalResponse{
+						Result: nil,
+						Error:  err,
+					}
+				}
+				dists = append(dists, distance)
 			}
 
 			if opts.WithCoord {
@@ -7361,69 +7370,31 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	optCount := 0
-	if opts.WithDist {
-		optCount++
+	var countVal int
+	if opts.Count == 0 {
+		countVal = len(members)
+	} else {
+		countVal = opts.Count
 	}
 
-	if opts.WithHash {
-		optCount++
-	}
-
-	if opts.WithCoord {
-		optCount++
-	}
-
-	max := opts.Count
-	if max > len(members) {
-		max = len(members)
-	}
-
-	if optCount == 0 {
-		response := make([]string, len(members))
-		for i := range members {
-			response[i] = members[indices[i]]
-		}
-
-		if max > 0 {
-			response = response[:max]
-		}
-
-		return &EvalResponse{
-			Result: clientio.Encode(response, false),
-		}
-	}
-
-	response := make([][]interface{}, len(members))
-	for i := range members {
-		item := make([]any, optCount+1)
-		item[0] = members[i]
-
-		itemIdx := 1
-
+	response := make([][]interface{}, 0, min(len(members), countVal))
+	for i := 0; i < cap(response); i++ {
+		member := []interface{}{}
+		member = append(member, members[indices[i]])
 		if opts.WithDist {
-			item[itemIdx] = dists[i]
-			itemIdx++
+			member = append(member, dists[indices[i]])
 		}
-
 		if opts.WithHash {
-			item[itemIdx] = hashes[i]
-			itemIdx++
+			member = append(member, hashes[indices[i]])
 		}
-
 		if opts.WithCoord {
-			item[itemIdx] = coords[i]
-			itemIdx++
+			member = append(member, coords[indices[i]])
 		}
-
-		response[indices[i]] = item
-	}
-
-	if max > 0 {
-		response = response[:max]
+		response = append(response, member)
 	}
 
 	return &EvalResponse{
-		Result: clientio.Encode(response, false),
+		Result: response,
+		Error:  nil,
 	}
 }
