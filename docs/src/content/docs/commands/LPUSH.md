@@ -102,3 +102,6 @@ LPUSH mylist
 - The `LPUSH` command can be used to implement a stack (LIFO) by always pushing new elements to the head of the list.
 
 By understanding the `LPUSH` command, you can efficiently manage lists in DiceDB, ensuring that elements are added to the head of the list as needed.
+
+## Notes
+- Please refer to the [RPUSH](/commands/rpush), [LPOP](/commands/lpop), [LLEN](/commands/llen) and [RPOP](/commands/rpop) commands documentation for more information.

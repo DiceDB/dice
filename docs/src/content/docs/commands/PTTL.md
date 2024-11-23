@@ -86,3 +86,6 @@ In this example, the `PTTL` command is used with an extra argument. This results
 ## Alternatives
 
 - `TTL`: Similar to `PTTL` but returns the time-to-live in seconds instead of milliseconds
+
+## Notes
+- Please refer to the [EXPIRE](/commands/expire) and [TTL](/commands/ttl) commands documentation for more information.

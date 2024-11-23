@@ -81,3 +81,4 @@ Retrieve both the rank and the score of `member2` in the sorted set `myzset`:
 ## Notes
 
 - This command is particularly useful for implementing leaderboards, pagination in ranked lists, and analytics on data distribution.
+- Please refer to the [ZADD](/commands/zadd) command documentation for more information.

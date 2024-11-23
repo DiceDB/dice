@@ -114,3 +114,6 @@ LPOP mylist secondlist
 - `Use in Conjunction with Other List Commands`: The `LPOP` command is often used alongside other list commands like `RPUSH`, `LPUSH`, `LLEN`, and `RPOP` to manage and process lists effectively.
 
 By understanding and using the `LPOP` command effectively, you can manage list data structures in DiceDB efficiently, implementing queue-like behaviors and more.
+
+## Notes
+- Please refer to the [RPUSH](/commands/rpush), [LPUSH](/commands/lpush), [LLEN](/commands/llen) and [RPOP](/commands/rpop) commands documentation for more information.

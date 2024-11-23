@@ -26,7 +26,7 @@ BITFIELD_RO key [GET type offset [GET type offset ...]]
 ## Behaviour
 
 - Read-only variant of the BITFIELD command. It is like the original BITFIELD but only accepts GET subcommand.
-- See original BITFIELD for more details.
+- See original [BITFIELD](/commands/bitfield) for more details.
 
 ## Example Usage
 

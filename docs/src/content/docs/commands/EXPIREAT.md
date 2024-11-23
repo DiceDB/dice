@@ -145,3 +145,6 @@ OK
 ## Alternatives
 
 - Use `EXPIRE` command for simpler expiration control based on relative time
+
+## Notes
+- Please refer to the [TTL](/commands/ttl), [PERSIST](/commands/persist) and [EXPIRE](/commands/expire)  commands documentation for more information.

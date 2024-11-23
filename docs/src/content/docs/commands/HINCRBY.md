@@ -158,3 +158,4 @@ Incrementing the hash value with a very large integer results in an integer over
 ## Notes
 
 - The `HINCRBY` command is a powerful tool for managing counters and numerical values stored in hash fields, making it essential for applications that rely on incremental updates.
+- Please refer to the [HINCRBYFLOAT](/commands/hincrbyfloat) command documentation for more information.

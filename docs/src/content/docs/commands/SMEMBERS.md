@@ -90,3 +90,4 @@ OK
 2. The order of returned elements is not guaranteed and may vary between calls
 3. Memory usage scales linearly with the size of the set
 4. This command has O(N) time complexity where N is the set size
+5. Please refer to the [EXISTS](/commands/exists) command documentation for more information

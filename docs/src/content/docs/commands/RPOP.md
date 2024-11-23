@@ -92,3 +92,6 @@ RPOP mylist secondlist
 - `Use in Conjunction with Other List Commands`: The `RPOP` command is often used alongside other list commands like `RPUSH`, `LPUSH`, `LLEN`, and `LPOP` to manage and process lists effectively.
 
 By understanding the `RPOP` command, you can effectively manage lists in DiceDB, ensuring that you can retrieve and process elements in a LIFO order.
+
+## Notes
+- Please refer to the [RPUSH](/commands/rpush), [LLEN](/commands/llen), [LPOP](/commands/lpop) and [LPUSH](/commands/lpush) commands documentation for more information.

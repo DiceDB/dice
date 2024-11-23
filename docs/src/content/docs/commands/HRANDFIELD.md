@@ -129,3 +129,4 @@ Passing invalid number of arguments to the `hrandfield` command
 
 - The `HRANDFIELD` command is useful for scenarios where random selection from hash fields is required, such as in games, lotteries, or randomized surveys.
 - The command can return multiple fields at once, allowing for efficient random sampling without the need for multiple calls. This can be particularly advantageous when working with larger hashes.
+- Please refer to the [HEXISTS](/commands/hexists), [HKEYS](/commands/hkeys) and [HSCAN](/commands/hscan) commands documentation for more information.

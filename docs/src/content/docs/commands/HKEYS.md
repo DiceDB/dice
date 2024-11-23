@@ -82,7 +82,7 @@ If the hash `user:1003` does not exist:
 - `HGETALL`: The `HGETALL` command retrieves all field-value pairs in a hash as an array, rather than only the field names.
 
 ## Notes
-
+- Please refer to the [HGETALL](/commands/hgetall) command documentation for more information.
 - Ensure that `key` is of type hash before using `HKEYS`, as other data types will produce errors.
 
 Using the `HKEYS` command, you can efficiently access all field names in hash structures, making it a valuable tool for dynamic data inspection in DiceDB.

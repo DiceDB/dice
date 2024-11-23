@@ -104,3 +104,6 @@ This example shows what happens when trying to set an expiration on a non-existe
 ## Alternatives
 
 - Use `EXPIREAT` command for more precise expiration control based on Unix timestamps
+
+## Notes
+- Please refer to the [TTL](/commands/ttl), [PERSIST](/commands/persist) and [EXPIREAT](/commands/expireat)  commands documentation for more information.

@@ -95,3 +95,6 @@ Incrementing a key `mykey` with a value that exceeds the maximum integer value:
 
 - You can also use the `INCRBY` command to increment the value of a key by a specified amount.
 - You can also use the `INCRBYFLOAT` command to increment the value of a key by a fractional amount.
+
+## Notes
+- Please refer to the [DECR](/commands/decr), [INCRBY](/commands/incrby) and [INCRBYFLOAT](/commands/incrbyfloat) commands documentation for more information.
