@@ -65,7 +65,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, wl wal.AbstractWAL) *HTTPSe
 	mux := http.NewServeMux()
 	caseInsensitiveMux := &CaseInsensitiveMux{mux: mux}
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%d", config.HTTPPort),
+		Addr:              fmt.Sprintf(":%d", config.DiceConfig.HTTP.Port),
 		Handler:           caseInsensitiveMux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
@@ -79,7 +79,6 @@ func NewHTTPServer(shardManager *shard.ShardManager, wl wal.AbstractWAL) *HTTPSe
 	}
 
 	mux.HandleFunc("/", httpServer.DiceHTTPHandler)
-	mux.HandleFunc("/q.watch", httpServer.DiceHTTPQwatchHandler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("ok"))
 		if err != nil {
@@ -120,7 +119,6 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		slog.Info("also listening HTTP on", slog.String("port", s.httpServer.Addr[1:]))
 		listenErr = s.httpServer.ListenAndServe()
 	}()
 

@@ -55,7 +55,6 @@ The `HSET` command can raise errors in the following scenarios:
 
 ## Example Usage
 
-
 ### Creating a New Hash
 
 ```bash

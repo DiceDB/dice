@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
 )
 
@@ -24,6 +23,10 @@ const (
 	// MultiShard represents a command that operates across multiple shards.
 	// This type of command spans more than one shard and may involve coordination between shards.
 	MultiShard
+
+	// AllShard represents a command that operates across all available shards.
+	// This type of command spans more than one shard and may involve coordination between shards.
+	AllShard
 
 	// Custom represents a command that is user-defined or has custom logic.
 	// This command type allows for flexibility in executing specific, non-standard operations.
@@ -43,41 +46,118 @@ const (
 	CmdPing  = "PING"
 	CmdAbort = "ABORT"
 	CmdAuth  = "AUTH"
+	CmdEcho  = "ECHO"
+	CmdHello = "HELLO"
+	CmdSleep = "SLEEP"
 )
 
 // Single-shard commands.
 const (
-	CmdExpire        = "EXPIRE"
-	CmdExpireAt      = "EXPIREAT"
-	CmdExpireTime    = "EXPIRETIME"
-	CmdSet           = "SET"
-	CmdGet           = "GET"
-	CmdGetSet        = "GETSET"
-	CmdGetEx         = "GETEX"
-	CmdGetDel        = "GETDEL"
-	CmdLrange        = "LRANGE"
-	CmdLinsert       = "LINSERT"
-	CmdJSONArrAppend = "JSON.ARRAPPEND"
-	CmdJSONArrLen    = "JSON.ARRLEN"
-	CmdJSONArrPop    = "JSON.ARRPOP"
-	CmdJSONClear     = "JSON.CLEAR"
-	CmdJSONDel       = "JSON.DEL"
-	CmdJSONForget    = "JSON.FORGET"
-	CmdJSONGet       = "JSON.GET"
-	CmdJSONStrlen    = "JSON.STRLEN"
-	CmdJSONObjlen    = "JSON.OBJLEN"
-	CmdJSONNumIncrBY = "JSON.NUMINCRBY"
-	CmdJSONNumMultBy = "JSON.NUMMULTBY"
-	CmdJSONType      = "JSON.TYPE"
-	CmdJSONToggle    = "JSON.TOGGLE"
-	CmdJSONNumMultBY = "JSON.NUMMULTBY"
-	CmdJSONDebug     = "JSON.DEBUG"
-	CmdJSONResp      = "JSON.RESP"
-	CmdLPush         = "LPUSH"
-	CmdRPush         = "RPUSH"
-	CmdLPop          = "LPOP"
-	CmdRPop          = "RPOP"
-	CmdLLEN          = "LLEN"
+	CmdHExists             = "HEXISTS"
+	CmdHKeys               = "HKEYS"
+	CmdHVals               = "HVALS"
+	CmdZPopMin             = "ZPOPMIN"
+	CmdZAdd                = "ZADD"
+	CmdZRange              = "ZRANGE"
+	CmdZRank               = "ZRANK"
+	CmdZCount              = "ZCOUNT"
+	CmdZRem                = "ZREM"
+	CmdZCard               = "ZCARD"
+	CmdPFAdd               = "PFADD"
+	CmdPFCount             = "PFCOUNT"
+	CmdPFMerge             = "PFMERGE"
+	CmdTTL                 = "TTL"
+	CmdPTTL                = "PTTL"
+	CmdIncr                = "INCR"
+	CmdIncrBy              = "INCRBY"
+	CmdDecr                = "DECR"
+	CmdDecrBy              = "DECRBY"
+	CmdIncrByFloat         = "INCRBYFLOAT"
+	CmdHIncrBy             = "HINCRBY"
+	CmdHIncrByFloat        = "HINCRBYFLOAT"
+	CmdHRandField          = "HRANDFIELD"
+	CmdGetRange            = "GETRANGE"
+	CmdAppend              = "APPEND"
+	CmdZPopMax             = "ZPOPMAX"
+	CmdHLen                = "HLEN"
+	CmdHStrLen             = "HSTRLEN"
+	CmdHScan               = "HSCAN"
+	CmdBFAdd               = "BF.ADD"
+	CmdBFReserve           = "BF.RESERVE"
+	CmdBFInfo              = "BF.INFO"
+	CmdBFExists            = "BF.EXISTS"
+	CmdCMSQuery            = "CMS.QUERY"
+	CmdCMSInfo             = "CMS.INFO"
+	CmdCMSInitByDim        = "CMS.INITBYDIM"
+	CmdCMSInitByProb       = "CMS.INITBYPROB"
+	CmdCMSMerge            = "CMS.MERGE"
+	CmdCMSIncrBy           = "CMS.INCRBY"
+	CmdHSet                = "HSET"
+	CmdHGet                = "HGET"
+	CmdHSetnx              = "HSETNX"
+	CmdHDel                = "HDEL"
+	CmdHMSet               = "HMSET"
+	CmdHMGet               = "HMGET"
+	CmdSetBit              = "SETBIT"
+	CmdGetBit              = "GETBIT"
+	CmdBitCount            = "BITCOUNT"
+	CmdBitField            = "BITFIELD"
+	CmdBitPos              = "BITPOS"
+	CmdBitFieldRO          = "BITFIELD_RO"
+	CmdSadd                = "SADD"
+	CmdSrem                = "SREM"
+	CmdScard               = "SCARD"
+	CmdSmembers            = "SMEMBERS"
+	CmdDump                = "DUMP"
+	CmdRestore             = "RESTORE"
+	CmdGeoAdd              = "GEOADD"
+	CmdGeoDist             = "GEODIST"
+	CmdClient              = "CLIENT"
+	CmdLatency             = "LATENCY"
+	CmdDel                 = "DEL"
+	CmdExists              = "EXISTS"
+	CmdPersist             = "PERSIST"
+	CmdTypeOf              = "TYPE"
+	CmdObject              = "OBJECT"
+	CmdExpire              = "EXPIRE"
+	CmdExpireAt            = "EXPIREAT"
+	CmdExpireTime          = "EXPIRETIME"
+	CmdSet                 = "SET"
+	CmdGet                 = "GET"
+	CmdGetSet              = "GETSET"
+	CmdGetEx               = "GETEX"
+	CmdGetDel              = "GETDEL"
+	CmdLrange              = "LRANGE"
+	CmdLinsert             = "LINSERT"
+	CmdJSONArrAppend       = "JSON.ARRAPPEND"
+	CmdJSONArrLen          = "JSON.ARRLEN"
+	CmdJSONArrPop          = "JSON.ARRPOP"
+	CmdJSONClear           = "JSON.CLEAR"
+	CmdJSONDel             = "JSON.DEL"
+	CmdJSONForget          = "JSON.FORGET"
+	CmdJSONGet             = "JSON.GET"
+	CmdJSONStrlen          = "JSON.STRLEN"
+	CmdJSONObjlen          = "JSON.OBJLEN"
+	CmdJSONNumIncrBY       = "JSON.NUMINCRBY"
+	CmdJSONNumMultBy       = "JSON.NUMMULTBY"
+	CmdJSONType            = "JSON.TYPE"
+	CmdJSONToggle          = "JSON.TOGGLE"
+	CmdJSONNumMultBY       = "JSON.NUMMULTBY"
+	CmdJSONDebug           = "JSON.DEBUG"
+	CmdJSONResp            = "JSON.RESP"
+	CmdLPush               = "LPUSH"
+	CmdRPush               = "RPUSH"
+	CmdLPop                = "LPOP"
+	CmdRPop                = "RPOP"
+	CmdLLEN                = "LLEN"
+	CmdCommand             = "COMMAND"
+	CmdCommandCount        = "COMMAND|COUNT"
+	CmdCommandHelp         = "COMMAND|HELP"
+	CmdCommandInfo         = "COMMAND|INFO"
+	CmdCommandList         = "COMMAND|LIST"
+	CmdCommandDocs         = "COMMAND|DOCS"
+	CmdCommandGetKeys      = "COMMAND|GETKEYS"
+	CmdCommandGetKeysFlags = "COMMAND|GETKEYSANDFLAGS"
 )
 
 // Multi-shard commands.
@@ -88,6 +168,9 @@ const (
 	CmdSDiff    = "SDIFF"
 	CmdJSONMget = "JSON.MGET"
 	CmdKeys     = "KEYS"
+	CmdTouch    = "TOUCH"
+	CmdDBSize   = "DBSIZE"
+	CmdFlushDB  = "FLUSHDB"
 )
 
 // Multi-Step-Multi-Shard commands
@@ -98,73 +181,12 @@ const (
 
 // Watch commands
 const (
-	CmdHExists       = "HEXISTS"
-	CmdHKeys         = "HKEYS"
-	CmdHVals         = "HVALS"
-	CmdZPopMin       = "ZPOPMIN"
-	CmdZAdd          = "ZADD"
-	CmdZRange        = "ZRANGE"
-	CmdZRank         = "ZRANK"
-	CmdZCount        = "ZCOUNT"
-	CmdZRem          = "ZREM"
-	CmdZCard         = "ZCARD"
-	CmdPFAdd         = "PFADD"
-	CmdPFCount       = "PFCOUNT"
-	CmdPFCountWatch  = "PFCOUNT.WATCH"
-	CmdPFMerge       = "PFMERGE"
-	CmdTTL           = "TTL"
-	CmdPTTL          = "PTTL"
-	CmdIncr          = "INCR"
-	CmdIncrBy        = "INCRBY"
-	CmdDecr          = "DECR"
-	CmdDecrBy        = "DECRBY"
-	CmdIncrByFloat   = "INCRBYFLOAT"
-	CmdHIncrBy       = "HINCRBY"
-	CmdHIncrByFloat  = "HINCRBYFLOAT"
-	CmdHRandField    = "HRANDFIELD"
-	CmdGetRange      = "GETRANGE"
-	CmdAppend        = "APPEND"
-	CmdZPopMax       = "ZPOPMAX"
-	CmdHLen          = "HLEN"
-	CmdHStrLen       = "HSTRLEN"
-	CmdHScan         = "HSCAN"
-	CmdBFAdd         = "BF.ADD"
-	CmdBFReserve     = "BF.RESERVE"
-	CmdBFInfo        = "BF.INFO"
-	CmdBFExists      = "BF.EXISTS"
-	CmdCMSQuery      = "CMS.QUERY"
-	CmdCMSInfo       = "CMS.INFO"
-	CmdCMSInitByDim  = "CMS.INITBYDIM"
-	CmdCMSInitByProb = "CMS.INITBYPROB"
-	CmdCMSMerge      = "CMS.MERGE"
-	CmdCMSIncrBy     = "CMS.INCRBY"
-	CmdHSet          = "HSET"
-	CmdHGet          = "HGET"
-	CmdHSetnx        = "HSETNX"
-	CmdHDel          = "HDEL"
-	CmdHMSet         = "HMSET"
-	CmdHMGet         = "HMGET"
-	CmdSetBit        = "SETBIT"
-	CmdGetBit        = "GETBIT"
-	CmdBitCount      = "BITCOUNT"
-	CmdBitField      = "BITFIELD"
-	CmdBitPos        = "BITPOS"
-	CmdBitFieldRO    = "BITFIELD_RO"
-	CmdSadd          = "SADD"
-	CmdSrem          = "SREM"
-	CmdScard         = "SCARD"
-	CmdSmembers      = "SMEMBERS"
-	CmdDump          = "DUMP"
-	CmdRestore       = "RESTORE"
-	CmdGeoAdd        = "GEOADD"
-	CmdGeoDist       = "GEODIST"
-)
-
-// Watch commands
-const (
-	CmdGetWatch    = "GET.WATCH"
-	CmdGetUnWatch  = "GET.UNWATCH"
-	CmdZRangeWatch = "ZRANGE.WATCH"
+	CmdGetWatch       = "GET.WATCH"
+	CmdGetUnWatch     = "GET.UNWATCH"
+	CmdZRangeWatch    = "ZRANGE.WATCH"
+	CmdZRangeUnWatch  = "ZRANGE.UNWATCH"
+	CmdPFCountWatch   = "PFCOUNT.WATCH"
+	CmdPFCountUnWatch = "PFCOUNT.UNWATCH"
 )
 
 type CmdMeta struct {
@@ -196,12 +218,6 @@ type CmdMeta struct {
 }
 
 var CommandsMeta = map[string]CmdMeta{
-	// Global commands.
-	CmdPing: {
-		CmdType:              Global,
-		WorkerCommandHandler: eval.RespPING,
-	},
-
 	// Single-shard commands.
 	CmdSet: {
 		CmdType: SingleShard,
@@ -261,6 +277,18 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONDel: {
+		CmdType: SingleShard,
+	},
+	CmdDel: {
+		CmdType: SingleShard,
+	},
+	CmdExists: {
+		CmdType: SingleShard,
+	},
+	CmdPersist: {
+		CmdType: SingleShard,
+	},
+	CmdTypeOf: {
 		CmdType: SingleShard,
 	},
 	CmdJSONForget: {
@@ -473,6 +501,39 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGeoDist: {
 		CmdType: SingleShard,
 	},
+	CmdClient: {
+		CmdType: SingleShard,
+	},
+	CmdLatency: {
+		CmdType: SingleShard,
+	},
+	CmdObject: {
+		CmdType: SingleShard,
+	},
+	CmdCommand: {
+		CmdType: SingleShard,
+	},
+	CmdCommandCount: {
+		CmdType: SingleShard,
+	},
+	CmdCommandHelp: {
+		CmdType: SingleShard,
+	},
+	CmdCommandInfo: {
+		CmdType: SingleShard,
+	},
+	CmdCommandList: {
+		CmdType: SingleShard,
+	},
+	CmdCommandDocs: {
+		CmdType: SingleShard,
+	},
+	CmdCommandGetKeys: {
+		CmdType: SingleShard,
+	},
+	CmdCommandGetKeysFlags: {
+		CmdType: SingleShard,
+	},
 
 	// Multi-shard commands.
 	CmdRename: {
@@ -520,12 +581,38 @@ var CommandsMeta = map[string]CmdMeta{
 		decomposeCommand: decomposeJSONMget,
 		composeResponse:  composeJSONMget,
 	},
+	CmdTouch: {
+		CmdType:          MultiShard,
+		decomposeCommand: decomposeTouch,
+		composeResponse:  composeTouch,
+	},
+	CmdDBSize: {
+		CmdType:          AllShard,
+		decomposeCommand: decomposeDBSize,
+		composeResponse:  composeDBSize,
+	},
+	CmdKeys: {
+		CmdType:          AllShard,
+		decomposeCommand: decomposeKeys,
+		composeResponse:  composeKeys,
+	},
+	CmdFlushDB: {
+		CmdType:          AllShard,
+		decomposeCommand: decomposeFlushDB,
+		composeResponse:  composeFlushDB,
+	},
 
 	// Custom commands.
 	CmdAbort: {
 		CmdType: Custom,
 	},
 	CmdAuth: {
+		CmdType: Custom,
+	},
+	CmdEcho: {
+		CmdType: Custom,
+	},
+	CmdPing: {
 		CmdType: Custom,
 	},
 
@@ -542,6 +629,12 @@ var CommandsMeta = map[string]CmdMeta{
 
 	// Unwatch commands
 	CmdGetUnWatch: {
+		CmdType: Unwatch,
+	},
+	CmdZRangeUnWatch: {
+		CmdType: Unwatch,
+	},
+	CmdPFCountUnWatch: {
 		CmdType: Unwatch,
 	},
 }
@@ -561,7 +654,7 @@ func validateCmdMeta(c string, meta CmdMeta) error {
 		if meta.WorkerCommandHandler == nil {
 			return fmt.Errorf("global command %s must have WorkerCommandHandler function", c)
 		}
-	case MultiShard:
+	case MultiShard, AllShard:
 		if meta.decomposeCommand == nil || meta.composeResponse == nil {
 			return fmt.Errorf("multi-shard command %s must have both decomposeCommand and composeResponse implemented", c)
 		}

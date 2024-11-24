@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -165,6 +166,12 @@ func TestNetConnIOHandler_RESP(t *testing.T) {
 				conn:   mock,
 				reader: bufio.NewReaderSize(mock, 512),
 				writer: bufio.NewWriterSize(mock, 1024),
+				readPool: &sync.Pool{
+					New: func() interface{} {
+						b := make([]byte, ioBufferSize)
+						return &b // Return pointer
+					},
+				},
 			}
 
 			ctx := context.Background()

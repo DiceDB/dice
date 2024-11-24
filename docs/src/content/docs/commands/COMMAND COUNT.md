@@ -20,10 +20,10 @@ This command does not accept any parameters.
 
 ## Return values
 
-| Condition | Return Value |
-|-----------|--------------|
-| Command is successful | Integer |
-| Error | An error is returned if the command fails. |
+| Condition             | Return Value                               |
+| --------------------- | ------------------------------------------ |
+| Command is successful | Integer                                    |
+| Error                 | An error is returned if the command fails. |
 
 ## Behavior
 

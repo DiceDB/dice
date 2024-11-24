@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -33,6 +34,13 @@ type WebsocketCommandExecutor struct {
 	baseURL         string
 	websocketClient *http.Client
 	upgrader        websocket.Upgrader
+}
+
+func init() {
+	parser := config.NewConfigParser()
+	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
+		log.Fatalf("failed to load configuration: %v", err)
+	}
 }
 
 func NewWebsocketCommandExecutor() *WebsocketCommandExecutor {
@@ -115,7 +123,7 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel)
 	queryWatcherLocal := querymanager.NewQueryManager()
-	config.WebsocketPort = opt.Port
+	config.DiceConfig.WebSocket.Port = opt.Port
 	testServer := server.NewWebSocketServer(shardManager, testPort1, nil)
 	setupCtx, cancelSetupCtx := context.WithCancel(ctx)
 

@@ -51,8 +51,8 @@ func TestSet(t *testing.T) {
 
 func TestSetWithOptions(t *testing.T) {
 	conn := getLocalConnection()
-	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 	defer conn.Close()
+	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 
 	testCases := []TestCase{
 		{
@@ -193,8 +193,8 @@ func TestSetWithExat(t *testing.T) {
 
 func TestWithKeepTTLFlag(t *testing.T) {
 	conn := getLocalConnection()
-	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 	defer conn.Close()
+	expiryTime := strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 
 	for _, tcase := range []TestCase{
 		{

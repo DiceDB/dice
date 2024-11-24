@@ -39,9 +39,8 @@ var (
 	// Metadata for global commands that don't interact with shards.
 	// PING is an example of global command.
 	pingCmdMeta = CmdsMeta{
-		Cmd:          "PING",
-		CmdType:      Global,
-		RespNoShards: eval.RespPING,
+		Cmd:     "PING",
+		CmdType: Global,
 	}
 
 	// Metadata for single-shard commands that only interact with one shard.
@@ -202,6 +201,22 @@ var (
 	}
 	bitfieldroCmdMeta = CmdsMeta{
 		Cmd:     "BITFIELD_RO",
+		CmdType: SingleShard,
+	}
+	delCmdMeta = CmdsMeta{
+		Cmd:     "DEL",
+		CmdType: SingleShard,
+	}
+	existsCmdMeta = CmdsMeta{
+		Cmd:     "EXISTS",
+		CmdType: SingleShard,
+	}
+	persistCmdMeta = CmdsMeta{
+		Cmd:     "PERSIST",
+		CmdType: SingleShard,
+	}
+	typeCmdMeta = CmdsMeta{
+		Cmd:     "TYPE",
 		CmdType: SingleShard,
 	}
 
@@ -443,6 +458,55 @@ var (
 		Cmd:     "GEODIST",
 		CmdType: SingleShard,
 	}
+	clientCmdMeta = CmdsMeta{
+		Cmd:     "CLIENT",
+		CmdType: SingleShard,
+	}
+	latencyCmdMeta = CmdsMeta{
+		Cmd:     "LATENCY",
+		CmdType: SingleShard,
+	}
+	flushDBCmdMeta = CmdsMeta{
+		Cmd:     "FLUSHDB",
+		CmdType: MultiShard,
+	}
+	objectCmdMeta = CmdsMeta{
+		Cmd:     "OBJECT",
+		CmdType: SingleShard,
+	}
+	commandCmdMeta = CmdsMeta{
+		Cmd:     "COMMAND",
+		CmdType: SingleShard,
+	}
+	CmdCommandCountMeta = CmdsMeta{
+		Cmd:     "COMMAND|COUNT",
+		CmdType: SingleShard,
+	}
+	CmdCommandHelp = CmdsMeta{
+		Cmd:     "COMMAND|HELP",
+		CmdType: SingleShard,
+	}
+	CmdCommandInfo = CmdsMeta{
+		Cmd:     "COMMAND|INFO",
+		CmdType: SingleShard,
+	}
+	CmdCommandList = CmdsMeta{
+		Cmd:     "COMMAND|LIST",
+		CmdType: SingleShard,
+	}
+	CmdCommandDocs = CmdsMeta{
+		Cmd:     "COMMAND|DOCS",
+		CmdType: SingleShard,
+	}
+	CmdCommandGetKeys = CmdsMeta{
+		Cmd:     "COMMAND|GETKEYS",
+		CmdType: SingleShard,
+	}
+	CmdCommandGetKeysFlags = CmdsMeta{
+		Cmd:     "COMMAND|GETKEYSANDFLAGS",
+		CmdType: SingleShard,
+	}
+
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
 
@@ -495,6 +559,10 @@ func init() {
 	WorkerCmdsMeta["ZPOPMIN"] = zpopminCmdMeta
 	WorkerCmdsMeta["PFCOUNT"] = pfcountCmdMeta
 	WorkerCmdsMeta["PFMERGE"] = pfmergeCmdMeta
+	WorkerCmdsMeta["DEL"] = delCmdMeta
+	WorkerCmdsMeta["EXISTS"] = existsCmdMeta
+	WorkerCmdsMeta["PERSIST"] = persistCmdMeta
+	WorkerCmdsMeta["TYPE"] = typeCmdMeta
 	WorkerCmdsMeta["HLEN"] = hlenCmdMeta
 	WorkerCmdsMeta["HSTRLEN"] = hstrlenCmdMeta
 	WorkerCmdsMeta["HSCAN"] = hscanCmdMeta
@@ -569,5 +637,16 @@ func init() {
 	WorkerCmdsMeta["RESTORE"] = restoreCmdMeta
 	WorkerCmdsMeta["GEOADD"] = geoaddCmdMeta
 	WorkerCmdsMeta["GEODIST"] = geodistCmdMeta
-	// Additional commands (multishard, custom) can be added here as needed.
+	WorkerCmdsMeta["CLIENT"] = clientCmdMeta
+	WorkerCmdsMeta["LATENCY"] = latencyCmdMeta
+	WorkerCmdsMeta["FLUSHDB"] = flushDBCmdMeta
+	WorkerCmdsMeta["OBJECT"] = objectCmdMeta
+	WorkerCmdsMeta["COMMAND"] = commandCmdMeta
+	WorkerCmdsMeta["COMMAND|COUNT"] = CmdCommandCountMeta
+	WorkerCmdsMeta["COMMAND|HELP"] = CmdCommandHelp
+	WorkerCmdsMeta["COMMAND|INFO"] = CmdCommandInfo
+	WorkerCmdsMeta["COMMAND|LIST"] = CmdCommandList
+	WorkerCmdsMeta["COMMAND|DOCS"] = CmdCommandDocs
+	WorkerCmdsMeta["COMMAND|GETKEYS"] = CmdCommandGetKeys
+	WorkerCmdsMeta["COMMAND|GETKEYSANDFLAGS"] = CmdCommandGetKeysFlags
 }

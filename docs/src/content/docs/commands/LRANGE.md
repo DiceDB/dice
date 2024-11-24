@@ -15,32 +15,31 @@ If stop is larger than the actual end of the list it will be treated like the la
 
 ## Syntax
 
-```
+```bash
 LRANGE key start stop
 ```
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-|-----------|---------------------------------------------------------------------------|---------|----------|
-| `key`     | The key associated with the list whose length you want to retrieve.       | String  | Yes      |
-| `start`   | The start offset.                                                         | String  | Yes      |
-| `stop`    | The stop offset.                                                          | String  | Yes      |
-
+| Parameter | Description                                                         | Type   | Required |
+| --------- | ------------------------------------------------------------------- | ------ | -------- |
+| `key`     | The key associated with the list whose length you want to retrieve. | String | Yes      |
+| `start`   | The start offset.                                                   | String | Yes      |
+| `stop`    | The stop offset.                                                    | String | Yes      |
 
 ## Return values
 
-| Condition                                      | Return Value                                                    |
-|------------------------------------------------|-----------------------------------------------------------------|
-| Command is successful                          | Array reply: a list of elements in the specified range          |
-| If the key does not exist                      | An empty array if the key doesn't exist.                        |
-| Syntax or specified constraints are invalid    | error                                                           |
+| Condition                                   | Return Value                                           |
+| ------------------------------------------- | ------------------------------------------------------ |
+| Command is successful                       | Array reply: a list of elements in the specified range |
+| If the key does not exist                   | An empty array if the key doesn't exist.               |
+| Syntax or specified constraints are invalid | error                                                  |
 
 ## Behaviour
 
- - If the key exists and is associated with a list, the `LRANGE` command returns the specified elements of the list stored at key.
- - If the key does not exist, the `LRANGE` command returns an empty array.
- - If the key exists but is not associated with a list, an error is returned.
+- If the key exists and is associated with a list, the `LRANGE` command returns the specified elements of the list stored at key.
+- If the key does not exist, the `LRANGE` command returns an empty array.
+- If the key exists but is not associated with a list, an error is returned.
 
 ## Errors
 
@@ -51,13 +50,13 @@ LRANGE key start stop
 
 2. `Wrong number of arguments`:
 
-    - Error Message: `(error) wrong number of arguments for LRANGE`
-    - Occurs when invalid arguments are passed to the command.
+   - Error Message: `(error) wrong number of arguments for LRANGE`
+   - Occurs when invalid arguments are passed to the command.
 
 3. `Invalid start or stop offsets`:
 
-    - Error Message: `(error) ERR value is not an integer or out of range`
-    - Occurs when the start/stop offset is not valid.
+   - Error Message: `(error) ERR value is not an integer or out of range`
+   - Occurs when the start/stop offset is not valid.
 
 ## Example Usage
 
@@ -87,6 +86,7 @@ Getting the `LRANGE` of a list `nonExistentList` which does not exist.
 ```
 
 ### Invalid start/stop offset
+
 Trying to get the `LRANGE` on a key `mylist` with invalid stop offset.
 
 ```bash
@@ -95,6 +95,7 @@ Trying to get the `LRANGE` on a key `mylist` with invalid stop offset.
 ```
 
 ### Invalid usage
+
 Trying to get the `LRANGE` on a key `myhash` which doens't hold list data type.
 
 ```bash

@@ -55,8 +55,8 @@ type Server struct {
 func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager,
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
-		Host:                     config.DiceConfig.AsyncServer.Addr,
-		Port:                     config.DiceConfig.AsyncServer.Port,
+		Host:                     config.DiceConfig.RespServer.Addr,
+		Port:                     config.DiceConfig.RespServer.Port,
 		connBacklogSize:          DefaultConnBacklogSize,
 		workerManager:            workerManager,
 		shardManager:             shardManager,
@@ -95,8 +95,6 @@ func (s *Server) Run(ctx context.Context) (err error) {
 			errChan <- fmt.Errorf("failed to accept connections %w", err)
 		}
 	}(wg)
-
-	slog.Info("ready to accept and serve requests on", slog.Int("port", config.Port))
 
 	select {
 	case <-ctx.Done():

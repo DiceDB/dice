@@ -38,7 +38,12 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 				return nil, evalResp.Error
 			}
 
-			val = evalResp.Result.(string)
+			switch v := evalResp.Result.(type) {
+			case string:
+				val = v
+			default:
+				return nil, diceerrors.ErrGeneral("no such key")
+			}
 		}
 	}
 
@@ -188,6 +193,74 @@ func decomposeJSONMget(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 			&cmd.DiceDBCmd{
 				Cmd:  store.JSONGet,
 				Args: []string{cd.Args[i], pattern},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeTouch(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) == 0 {
+		return nil, diceerrors.ErrWrongArgumentCount("TOUCH")
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := 0; i < len(cd.Args); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.SingleShardTouch,
+				Args: []string{cd.Args[i]},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeDBSize(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) > 0 {
+		return nil, diceerrors.ErrWrongArgumentCount("DBSIZE")
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := uint8(0); i < uint8(w.shardManager.GetShardCount()); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.SingleShardSize,
+				Args: []string{},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeKeys(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) != 1 {
+		return nil, diceerrors.ErrWrongArgumentCount("KEYS")
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := uint8(0); i < uint8(w.shardManager.GetShardCount()); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.SingleShardKeys,
+				Args: []string{cd.Args[0]},
+			},
+		)
+	}
+	return decomposedCmds, nil
+}
+
+func decomposeFlushDB(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) > 1 {
+		return nil, diceerrors.ErrWrongArgumentCount("FLUSHDB")
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := uint8(0); i < uint8(w.shardManager.GetShardCount()); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.FlushDB,
+				Args: cd.Args,
 			},
 		)
 	}

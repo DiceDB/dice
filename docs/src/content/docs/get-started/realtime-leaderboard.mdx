@@ -21,12 +21,12 @@ But, before we start, make sure you have
 
 ### Starting DiceDB
 
-Start the DiceDB server with the two flags `--enable-multithreading`, and `--enable-watch`
-to enable multi-threading and watch mode, respectively. Your command would look something
+Start the DiceDB server with the flag `--enable-watch`
+to enable watch mode, respectively. Your command would look something
 like this
 
 ```bash
-docker run -p 7379:7379 dicedb/dicedb --enable-multithreading --enable-watch
+docker run -p 7379:7379 dicedb/dicedb --enable-watch
 ```
 
 Once the DiceDB server starts, you will see output similar to this
@@ -39,7 +39,7 @@ Once the DiceDB server starts, you will see output similar to this
 ██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
 ╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 
-2024-10-24T18:35:55Z INF starting DiceDB version=0.0.5
+2024-10-24T18:35:55Z INF starting DiceDB version=0.1.0
 2024-10-24T18:35:55Z INF running with port=7379
 2024-10-24T18:35:55Z INF running with enable-watch=true
 2024-10-24T18:35:55Z INF running with mode=multi-threaded num-shards=12

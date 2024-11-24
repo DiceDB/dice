@@ -55,8 +55,6 @@ The `GETSET` command can raise errors in the following scenarios:
 "Hello"
 ```
 
- 
-
 - The initial value of `mykey` is set to "Hello".
 - The `GETSET` command retrieves the current value "Hello" and sets the new value "World".
 - The old value "Hello" is returned.
@@ -67,8 +65,6 @@ The `GETSET` command can raise errors in the following scenarios:
 127.0.0.1:7379> GETSET newkey "NewValue"
 (nil)
 ```
-
- 
 
 - The key `newkey` does not exist.
 - The `GETSET` command sets the value of `newkey` to "NewValue".
@@ -88,8 +84,6 @@ OK
 127.0.0.1:7379> TTL newkey
 (integer) -1
 ```
-
- 
 
 - The `newkey` used in the `GETSET` command had an existing `TTL` set to expire in 60 seconds
 - When `GETSET` is executed on the mentioned key, it updates the value and resets the `TTL` on the key.

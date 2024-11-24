@@ -193,3 +193,56 @@ func composeJSONMget(responses ...ops.StoreResponse) interface{} {
 	}
 	return results
 }
+
+func composeTouch(responses ...ops.StoreResponse) interface{} {
+	count := 0
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+		count += responses[idx].EvalResponse.Result.(int)
+	}
+
+	return count
+}
+
+func composeDBSize(responses ...ops.StoreResponse) interface{} {
+	count := uint64(0)
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+		count += responses[idx].EvalResponse.Result.(uint64)
+	}
+
+	return count
+}
+
+func composeKeys(responses ...ops.StoreResponse) interface{} {
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].SeqID < responses[j].SeqID
+	})
+
+	results := []string{}
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+		resp := responses[idx].EvalResponse.Result.([]string)
+		if len(resp) > 0 {
+			results = append(results, resp...)
+		}
+	}
+
+	return results
+}
+
+func composeFlushDB(responses ...ops.StoreResponse) interface{} {
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+	}
+
+	return clientio.OK
+}

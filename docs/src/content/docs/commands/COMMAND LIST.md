@@ -17,10 +17,10 @@ This command does not accept any parameters.
 
 ## Return values
 
-| Condition | Return Value |
-|-----------|--------------|
+| Condition             | Return Value                                                               |
+| --------------------- | -------------------------------------------------------------------------- |
 | Command is successful | Array containing the names of all commands supported by the DiceDB server. |
-| Error | An error is returned if the command fails. |
+| Error                 | An error is returned if the command fails.                                 |
 
 ## Behavior
 

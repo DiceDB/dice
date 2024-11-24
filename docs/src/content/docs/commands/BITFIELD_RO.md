@@ -11,19 +11,17 @@ BITFIELD_RO key [GET type offset [GET type offset ...]]
 
 ## Parameters
 
-| Parameter | Description                                                                                                                         |Type  |Required|
-|-----------|-------------------------------------------------------------------------------------------------------------------------------------|------|--------|
-|  `key`    |    The name of the key containing the bitfield.                                                                                     |String|Yes     |
-| `GET type offset`  |  Retrieves bits starting at the specified offset with the specified type. Type defines the signed/unsigned integer format. |String|Optional|
-
-
+| Parameter         | Description                                                                                                               | Type   | Required |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `key`             | The name of the key containing the bitfield.                                                                              | String | Yes      |
+| `GET type offset` | Retrieves bits starting at the specified offset with the specified type. Type defines the signed/unsigned integer format. | String | Optional |
 
 ## Return values
 
-| Condition                                                      | Return Value                                          |
-|----------------------------------------------------------------|-------------------------------------------------------|
-| Command is successful                                          | Array of results corresponding to each `GET` command  |
-| Syntax or specified constraints are invalid                    | error                                                 |
+| Condition                                   | Return Value                                         |
+| ------------------------------------------- | ---------------------------------------------------- |
+| Command is successful                       | Array of results corresponding to each `GET` command |
+| Syntax or specified constraints are invalid | error                                                |
 
 ## Behaviour
 
@@ -31,6 +29,7 @@ BITFIELD_RO key [GET type offset [GET type offset ...]]
 - See original BITFIELD for more details.
 
 ## Example Usage
+
 ### Basic Usage
 
 ```bash

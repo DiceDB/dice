@@ -210,7 +210,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			sp.Client = comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 
 			// subscribe client for updates if watch is enabled
-			if config.EnableWatch {
+			if config.DiceConfig.Performance.EnableWatch {
 				event := QuerySubscription{
 					Subscribe:          true,
 					Cmd:                diceDBCmd,

@@ -17,7 +17,6 @@ RPOP key
 | --------- | ---------------------------------------------------------------- | ------ | -------- |
 | `key`     | The key of the list from which the last element will be removed. | String | Yes      |
 
-
 ## Return values
 
 | Condition                    | Return Value                                       |
@@ -26,10 +25,9 @@ RPOP key
 | The key does not exist       | `nil`                                              |
 | The key is of the wrong type | error                                              |
 
-
 ## Behaviour
 
-- When the `RPOP` command is executed, DiceDB checks if the key exists and is associated with a list. 
+- When the `RPOP` command is executed, DiceDB checks if the key exists and is associated with a list.
 - If the list has elements, the last element is removed and returned.
 - If the key does not exist, the command treats it as an empty list and returns `nil`.
 - If the key exists but is not associated with a list, a `WRONGTYPE` error is returned.
@@ -88,6 +86,7 @@ RPOP mylist secondlist
 ```
 
 ## Best Practices
+
 - `Check Key Type`: Before using `RPOP`, ensure that the key is associated with a list to avoid errors.
 - `Handle Non-Existent Keys`: Be prepared to handle the case where the key does not exist, as `RPOP` will return `nil` in such scenarios.
 - `Use in Conjunction with Other List Commands`: The `RPOP` command is often used alongside other list commands like `RPUSH`, `LPUSH`, `LLEN`, and `LPOP` to manage and process lists effectively.
