@@ -28,9 +28,9 @@ import (
 	"github.com/google/uuid"
 )
 
-var (
-	requestCounter uint32
-)
+const defaultRequestTimeout = 6 * time.Second
+
+var requestCounter uint32
 
 // IOThread interface
 type IOThread interface {
@@ -79,114 +79,125 @@ func (t *BaseIOThread) ID() string {
 
 func (t *BaseIOThread) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
-
-	dataChan := make(chan []byte)
+	incomingDataChan := make(chan []byte)
 	readErrChan := make(chan error)
 
 	runCtx, runCancel := context.WithCancel(ctx)
 	defer runCancel()
 
-	go func() {
-		defer close(dataChan)
-		defer close(readErrChan)
-
-		for {
-			data, err := t.ioHandler.Read(runCtx)
-			if err != nil {
-				select {
-				case readErrChan <- err:
-				case <-runCtx.Done(): // exit if io thread exits
-				}
-				return
-			}
-
-			select {
-			case dataChan <- data:
-			case <-runCtx.Done(): // exit if io-thread exits
-				return
-			}
-		}
-	}()
+	// This method is run in a separate goroutine to ensure that the main event loop in the Start method
+	// remains non-blocking and responsive to other events, such as adhoc requests or context cancellations.
+	go t.startInputReader(runCtx, incomingDataChan, readErrChan)
 
 	for {
 		select {
 		case <-ctx.Done():
-			err := t.Stop()
-			if err != nil {
+			if err := t.Stop(); err != nil {
 				slog.Warn("Error stopping io-thread:", slog.String("id", t.id), slog.Any("error", err))
 			}
 			return ctx.Err()
 		case err := <-errChan:
-			if err != nil {
-				if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
-					slog.Debug("Connection closed for io-thread", slog.String("id", t.id), slog.Any("error", err))
-					return err
-				}
-			}
-			return fmt.Errorf("error writing response: %t", err)
+			return t.handleError(err)
 		case cmdReq := <-t.adhocReqChan:
-			// Handle adhoc requests of DiceDBCmd
-			func() {
-				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
-				defer cancel()
-
-				// adhoc requests should be classified as watch requests
-				t.executeCommandHandler(execCtx, errChan, []*cmd.DiceDBCmd{cmdReq}, true)
-			}()
-		case data := <-dataChan:
-			cmds, err := t.parser.Parse(data)
-			if err != nil {
-				err = t.ioHandler.Write(ctx, err)
-				if err != nil {
-					slog.Debug("Write error, connection closed possibly", slog.String("id", t.id), slog.Any("error", err))
-					return err
-				}
+			t.handleCmdRequestWithTimeout(ctx, errChan, []*cmd.DiceDBCmd{cmdReq}, true, defaultRequestTimeout)
+		case data := <-incomingDataChan:
+			if err := t.processIncomingData(ctx, &data, errChan); err != nil {
+				return err
 			}
-			if len(cmds) == 0 {
-				err = t.ioHandler.Write(ctx, fmt.Errorf("ERR: Invalid request"))
-				if err != nil {
-					slog.Debug("Write error, connection closed possibly", slog.String("id", t.id), slog.Any("error", err))
-					return err
-				}
-				continue
-			}
-
-			// DiceDB supports clients to send only one request at a time
-			// We also need to ensure that the client is blocked until the response is received
-			if len(cmds) > 1 {
-				err = t.ioHandler.Write(ctx, fmt.Errorf("ERR: Multiple commands not supported"))
-				if err != nil {
-					slog.Debug("Write error, connection closed possibly", slog.String("id", t.id), slog.Any("error", err))
-					return err
-				}
-			}
-
-			err = t.isAuthenticated(cmds[0])
-			if err != nil {
-				werr := t.ioHandler.Write(ctx, err)
-				if werr != nil {
-					slog.Debug("Write error, connection closed possibly", slog.Any("error", errors.Join(err, werr)))
-					return errors.Join(err, werr)
-				}
-			}
-			// executeCommand executes the command and return the response back to the client
-			func(errChan chan error) {
-				execCtx, cancel := context.WithTimeout(ctx, 6*time.Second) // Timeout set to 6 seconds for integration tests
-				defer cancel()
-				t.executeCommandHandler(execCtx, errChan, cmds, false)
-			}(errChan)
 		case err := <-readErrChan:
-			slog.Debug("Read error, connection closed possibly", slog.String("id", t.id), slog.Any("error", err))
+			slog.Debug("Read error in io-thread, connection closed possibly", slog.String("id", t.id), slog.Any("error", err))
 			return err
 		}
 	}
 }
 
-func (t *BaseIOThread) executeCommandHandler(execCtx context.Context, errChan chan error, cmds []*cmd.DiceDBCmd, isWatchNotification bool) {
+// startInputReader continuously reads input data from the ioHandler and sends it to the incomingDataChan.
+func (t *BaseIOThread) startInputReader(ctx context.Context, incomingDataChan chan []byte, readErrChan chan error) {
+	defer close(incomingDataChan)
+	defer close(readErrChan)
+
+	for {
+		data, err := t.ioHandler.Read(ctx)
+		if err != nil {
+			select {
+			case readErrChan <- err:
+			case <-ctx.Done():
+			}
+			return
+		}
+
+		select {
+		case incomingDataChan <- data:
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (t *BaseIOThread) handleError(err error) error {
+	if err != nil {
+		if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
+			slog.Debug("Connection closed for io-thread", slog.String("id", t.id), slog.Any("error", err))
+			return err
+		}
+	}
+	return fmt.Errorf("error writing response: %v", err)
+}
+
+func (t *BaseIOThread) processIncomingData(ctx context.Context, data *[]byte, errChan chan error) error {
+	commands, err := t.parser.Parse(*data)
+
+	if err != nil {
+		err = t.ioHandler.Write(ctx, err)
+		if err != nil {
+			slog.Debug("Write error, connection closed possibly", slog.String("id", t.id), slog.Any("error", err))
+			return err
+		}
+	}
+
+	if len(commands) == 0 {
+		err = t.ioHandler.Write(ctx, fmt.Errorf("ERR: Invalid request"))
+		if err != nil {
+			slog.Debug("Write error, connection closed possibly", slog.String("id", t.id), slog.Any("error", err))
+			return err
+		}
+		return nil
+	}
+
+	// DiceDB supports clients to send only one request at a time
+	// We also need to ensure that the client is blocked until the response is received
+	if len(commands) > 1 {
+		err = t.ioHandler.Write(ctx, fmt.Errorf("ERR: Multiple commands not supported"))
+		if err != nil {
+			slog.Debug("Write error, connection closed possibly", slog.String("id", t.id), slog.Any("error", err))
+			return err
+		}
+	}
+
+	err = t.isAuthenticated(commands[0])
+	if err != nil {
+		werr := t.ioHandler.Write(ctx, err)
+		if werr != nil {
+			slog.Debug("Write error, connection closed possibly", slog.Any("error", errors.Join(err, werr)))
+			return errors.Join(err, werr)
+		}
+	}
+
+	t.handleCmdRequestWithTimeout(ctx, errChan, commands, false, defaultRequestTimeout)
+	return nil
+}
+
+func (t *BaseIOThread) handleCmdRequestWithTimeout(ctx context.Context, errChan chan error, commands []*cmd.DiceDBCmd, isWatchNotification bool, timeout time.Duration) {
+	execCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	t.executeCommandHandler(execCtx, errChan, commands, isWatchNotification)
+}
+
+func (t *BaseIOThread) executeCommandHandler(execCtx context.Context, errChan chan error, commands []*cmd.DiceDBCmd, isWatchNotification bool) {
 	// Retrieve metadata for the command to determine if multisharding is supported.
-	meta, ok := CommandsMeta[cmds[0].Cmd]
+	meta, ok := CommandsMeta[commands[0].Cmd]
 	if ok && meta.preProcessing {
-		if err := meta.preProcessResponse(t, cmds[0]); err != nil {
+		if err := meta.preProcessResponse(t, commands[0]); err != nil {
 			e := t.ioHandler.Write(execCtx, err)
 			if e != nil {
 				slog.Debug("Error executing for io-thread", slog.String("id", t.id), slog.Any("error", err))
@@ -194,7 +205,7 @@ func (t *BaseIOThread) executeCommandHandler(execCtx context.Context, errChan ch
 		}
 	}
 
-	err := t.executeCommand(execCtx, cmds[0], isWatchNotification)
+	err := t.executeCommand(execCtx, commands[0], isWatchNotification)
 	if err != nil {
 		slog.Error("Error executing command", slog.String("id", t.id), slog.Any("error", err))
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ETIMEDOUT) {
