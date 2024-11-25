@@ -1,6 +1,10 @@
 ---
 title: GET.WATCH
 description: The `GET.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
+sidebar:
+  badge:
+    text: Reactive
+    variant: success
 ---
 
 The `GET.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
