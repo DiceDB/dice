@@ -1,6 +1,10 @@
 ---
 title: ZRANGE.WATCH
 description: The `ZRANGE.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
+sidebar:
+  badge:
+    text: Reactive
+    variant: success
 ---
 
 The `ZRANGE.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
