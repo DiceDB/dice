@@ -1,6 +1,10 @@
 ---
 title: PFCOUNT.UNWATCH
 description: The `PFCOUNT.UNWATCH` command is a feature to stop receiving updates on a HyperLogLog.
+sidebar:
+  badge:
+    text: Reactive
+    variant: success
 ---
 
 The `PFCOUNT.UNWATCH` command is a feature to stop receiving updates on a HyperLogLog.

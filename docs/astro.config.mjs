@@ -15,6 +15,19 @@ export default defineConfig({
       // themes: ['starlight-theme-light'],
       // useStarlightDarkModeSwitch: false,
       favicon: "/favicon.png",
+      editLink: {
+        baseUrl: 'https://github.com/DiceDB/dice/edit/master/docs/',
+      },
+      lastUpdated: true,
+      expressiveCode: {
+        textMarkers: true,
+        defaultProps: {
+          wrap: true,
+        },
+        styleOverrides: { 
+          borderRadius: '0.2rem' 
+        },
+      },
       sidebar: [
         {
           label: "Get started",

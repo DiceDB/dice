@@ -77,7 +77,7 @@ If the hash `user:1002` does not exist:
 
 ## Alternatives
 
-- `HGET`: The `HGET` command retrieves the value of a specified field within a hash. However, unlike `HEXISTS`, it returns `nil` if the field does not exist, rather than a boolean response.
+- [`HGET`](/commands/hget): The `HGET` command retrieves the value of a specified field within a hash. However, unlike `HEXISTS`, it returns `nil` if the field does not exist, rather than a boolean response.
 
 ## Notes
 

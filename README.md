@@ -10,7 +10,7 @@ DiceDB is a redis-compliant, reactive, scalable, highly available, unified cache
 We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [block our calendar](https://cal.com/dicedb-arpit). always up for a chat.
 
 > [!CAUTION]
-> DiceDB is under development and it supports a subset of Redis commands. So, please do not use it in production. But, feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
+> DiceDB is under active development and supports a subset of Redis commands. Inconsistent behavior is expected. Feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
 
 ## Want to contribute?
 
@@ -105,19 +105,6 @@ By default, DiceDB will look for the configuration file at `./dicedb.conf`. (Lin
 
 > [!TIP]
 > If you want to use a custom configuration file, you can specify the path using the `-c` flag. and to output the configuration file to a specific location, you can specify the output dir path using the `-o` flag.
-#### Additional Configuration Options:
-
-If you'd like to use a different location, you can specify a custom configuration file path with the `-c flag`:
-
-```bash
-go run main.go -c /path/to/config.toml
-```
-If you'd like to output the configuration file to a specific location, you can specify a custom output path with the `-o flag`:
-
-```bash
-go run main.go -o /path/of/output/dir
-```
-
 
 ### Setting up CLI
 

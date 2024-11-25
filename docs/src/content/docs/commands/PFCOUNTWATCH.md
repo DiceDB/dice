@@ -1,6 +1,10 @@
 ---
 title: PFCOUNT.WATCH
 description: The `PFCOUNT.WATCH` command is a novel feature designed to provide real-time updates to clients whenever the cardinality of a HyperLogLog changes.
+sidebar:
+  badge:
+    text: Reactive
+    variant: success
 ---
 
 The `PFCOUNT.WATCH` command is a novel feature designed to provide real-time updates to clients whenever the cardinality of a HyperLogLog changes. This enables clients to track approximate set cardinality in real-time as new data is added or merged.

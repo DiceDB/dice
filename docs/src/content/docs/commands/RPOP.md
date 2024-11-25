@@ -89,6 +89,6 @@ RPOP mylist secondlist
 
 - `Check Key Type`: Before using `RPOP`, ensure that the key is associated with a list to avoid errors.
 - `Handle Non-Existent Keys`: Be prepared to handle the case where the key does not exist, as `RPOP` will return `nil` in such scenarios.
-- `Use in Conjunction with Other List Commands`: The `RPOP` command is often used alongside other list commands like `RPUSH`, `LPUSH`, `LLEN`, and `LPOP` to manage and process lists effectively.
+- `Use in Conjunction with Other List Commands`: The `RPOP` command is often used alongside other list commands like [`RPUSH`](/commands/rpush), [`LPUSH`](/commands/lpush), [`LLEN`](/commands/llen), and [`LPOP`](/commands/lpop) to manage and process lists effectively.
 
 By understanding the `RPOP` command, you can effectively manage lists in DiceDB, ensuring that you can retrieve and process elements in a LIFO order.
