@@ -100,4 +100,4 @@ OK
 
 ## Alternatives
 
-You can also use the `DECRBY` command to decrement the value of a key by a specified amount.
+You can also use the [`DECRBY`](/commands/decrby) command to decrement the value of a key by a specified amount.
