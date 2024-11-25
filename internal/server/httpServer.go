@@ -96,7 +96,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	httpCtx, cancelHTTP := context.WithCancel(ctx)
 	defer cancelHTTP()
 
-	s.shardManager.RegisterWorker("httpServer", s.ioChan, nil)
+	s.shardManager.RegisterIOThread("httpServer", s.ioChan, nil)
 
 	wg.Add(1)
 	go func() {
@@ -167,10 +167,10 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 
 	// send request to Shard Manager
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:      diceDBCmd,
-		WorkerID: "httpServer",
-		ShardID:  0,
-		HTTPOp:   true,
+		Cmd:        diceDBCmd,
+		IOThreadID: "httpServer",
+		ShardID:    0,
+		HTTPOp:     true,
 	}
 
 	// Wait for response
@@ -218,11 +218,11 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	qwatchClient := comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 	// Prepare the store operation
 	storeOp := &ops.StoreOp{
-		Cmd:      diceDBCmd,
-		WorkerID: "httpServer",
-		ShardID:  0,
-		Client:   qwatchClient,
-		HTTPOp:   true,
+		Cmd:        diceDBCmd,
+		IOThreadID: "httpServer",
+		ShardID:    0,
+		Client:     qwatchClient,
+		HTTPOp:     true,
 	}
 
 	slog.Info("Registered client for watching query", slog.Any("clientID", clientIdentifierID),
@@ -342,7 +342,7 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 
 	// Check if the command is migrated, if it is we use EvalResponse values
 	// else we use RESPParser to decode the response
-	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
+	_, ok := CmdMetaMap[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		responseValue, err = DecodeEvalResponse(result.EvalResponse)

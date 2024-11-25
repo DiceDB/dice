@@ -104,15 +104,15 @@ func (manager *ShardManager) GetShard(id ShardID) *ShardThread {
 	return nil
 }
 
-// RegisterWorker registers a worker with all Shards present in the ShardManager.
-func (manager *ShardManager) RegisterWorker(workerID string, request, processing chan *ops.StoreResponse) {
+// RegisterIOThread registers a io-thread with all Shards present in the ShardManager.
+func (manager *ShardManager) RegisterIOThread(id string, request, processing chan *ops.StoreResponse) {
 	for _, shard := range manager.shards {
-		shard.registerWorker(workerID, request, processing)
+		shard.registerIOThread(id, request, processing)
 	}
 }
 
-func (manager *ShardManager) UnregisterWorker(workerID string) {
+func (manager *ShardManager) UnregisterIOThread(id string) {
 	for _, shard := range manager.shards {
-		shard.unregisterWorker(workerID)
+		shard.unregisterIOThread(id)
 	}
 }
