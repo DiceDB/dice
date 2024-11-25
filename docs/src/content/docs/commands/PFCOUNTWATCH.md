@@ -106,5 +106,4 @@ The following commands are related to `PFCOUNT.WATCH`:
 - [PFCOUNT.UNWATCH](/commands/pfcountunwatch)
 - [ZRANGE.WATCH](/commands/zrangewatch)
 - [GET.WATCH](/commands/getwatch)
-- [Q.WATCH](/commands/qwatch)
 - [PFMERGE](/commands/pfmerge)
