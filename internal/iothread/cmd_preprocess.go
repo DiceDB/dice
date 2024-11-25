@@ -1,4 +1,4 @@
-package worker
+package iothread
 
 import (
 	"github.com/dicedb/dice/internal/cmd"
@@ -9,7 +9,7 @@ import (
 // preProcessRename prepares the RENAME command for preprocessing by sending a GET command
 // to retrieve the value of the original key. The retrieved value is used later in the
 // decomposeRename function to delete the old key and set the new key.
-func preProcessRename(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
+func preProcessRename(w *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 	if len(diceDBCmd.Args) < 2 {
 		return diceerrors.ErrWrongArgumentCount("RENAME")
 	}
@@ -26,7 +26,7 @@ func preProcessRename(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
 		SeqID:         0,
 		RequestID:     GenerateUniqueRequestID(),
 		Cmd:           &preCmd,
-		WorkerID:      w.id,
+		IOThreadID:    w.id,
 		ShardID:       sid,
 		Client:        nil,
 		PreProcessing: true,
@@ -38,7 +38,7 @@ func preProcessRename(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
 // preProcessCopy prepares the COPY command for preprocessing by sending a GET command
 // to retrieve the value of the original key. The retrieved value is used later in the
 // decomposeCopy function to copy the value to the destination key.
-func customProcessCopy(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
+func customProcessCopy(w *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 	if len(diceDBCmd.Args) < 2 {
 		return diceerrors.ErrWrongArgumentCount("COPY")
 	}
@@ -55,7 +55,7 @@ func customProcessCopy(w *BaseWorker, diceDBCmd *cmd.DiceDBCmd) error {
 		SeqID:         0,
 		RequestID:     GenerateUniqueRequestID(),
 		Cmd:           &preCmdk,
-		WorkerID:      w.id,
+		IOThreadID:    w.id,
 		ShardID:       sid,
 		Client:        nil,
 		PreProcessing: true,

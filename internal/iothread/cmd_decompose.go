@@ -1,4 +1,4 @@
-package worker
+package iothread
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/dicedb/dice/internal/store"
 )
 
-// This file is utilized by the Worker to decompose commands that need to be executed
+// This file is utilized by the IOThread to decompose commands that need to be executed
 // across multiple shards. For commands that operate on multiple keys or necessitate
 // distribution across shards (e.g., MultiShard commands), a Breakup function is invoked
 // to transform the original command into multiple smaller commands, each directed at
@@ -25,12 +25,12 @@ import (
 // decomposeRename breaks down the RENAME command into separate DELETE and SET commands.
 // It first waits for the result of a GET command from shards. If successful, it removes
 // the old key using a DEL command and sets the new key with the retrieved value using a SET command.
-func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeRename(ctx context.Context, w *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	// Waiting for GET command response
 	var val string
 	select {
 	case <-ctx.Done():
-		slog.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
+		slog.Error("IOThread timed out waiting for response from shards", slog.String("id", w.id), slog.Any("error", ctx.Err()))
 	case preProcessedResp, ok := <-w.preprocessingChan:
 		if ok {
 			evalResp := preProcessedResp.EvalResponse
@@ -69,12 +69,12 @@ func decomposeRename(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 // decomposeCopy breaks down the COPY command into a SET command that copies a value from
 // one key to another. It first retrieves the value of the original key from shards, then
 // sets the value to the destination key using a SET command.
-func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeCopy(ctx context.Context, w *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	// Waiting for GET command response
 	var resp *ops.StoreResponse
 	select {
 	case <-ctx.Done():
-		slog.Error("Timed out waiting for response from shards", slog.String("workerID", w.id), slog.Any("error", ctx.Err()))
+		slog.Error("IOThread timed out waiting for response from shards", slog.String("id", w.id), slog.Any("error", ctx.Err()))
 	case preProcessedResp, ok := <-w.preprocessingChan:
 		if ok {
 			resp = preProcessedResp
@@ -108,7 +108,7 @@ func decomposeCopy(ctx context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 // decomposeMSet decomposes the MSET (Multi-set) command into individual SET commands.
 // It expects an even number of arguments (key-value pairs). For each pair, it creates
 // a separate SET command to store the value at the given key.
-func decomposeMSet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeMSet(_ context.Context, _ *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args)%2 != 0 {
 		return nil, diceerrors.ErrWrongArgumentCount("MSET")
 	}
@@ -132,7 +132,7 @@ func decomposeMSet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.
 // decomposeMGet decomposes the MGET (Multi-get) command into individual GET commands.
 // It expects a list of keys, and for each key, it creates a separate GET command to
 // retrieve the value associated with that key.
-func decomposeMGet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeMGet(_ context.Context, _ *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args) < 1 {
 		return nil, diceerrors.ErrWrongArgumentCount("MGET")
 	}
@@ -148,7 +148,7 @@ func decomposeMGet(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.
 	return decomposedCmds, nil
 }
 
-func decomposeSInter(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeSInter(_ context.Context, _ *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args) < 1 {
 		return nil, diceerrors.ErrWrongArgumentCount("SINTER")
 	}
@@ -164,7 +164,7 @@ func decomposeSInter(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 	return decomposedCmds, nil
 }
 
-func decomposeSDiff(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeSDiff(_ context.Context, _ *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args) < 1 {
 		return nil, diceerrors.ErrWrongArgumentCount("SDIFF")
 	}
@@ -180,7 +180,7 @@ func decomposeSDiff(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd
 	return decomposedCmds, nil
 }
 
-func decomposeJSONMget(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeJSONMget(_ context.Context, _ *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args) < 2 {
 		return nil, diceerrors.ErrWrongArgumentCount("JSON.MGET")
 	}
@@ -199,7 +199,7 @@ func decomposeJSONMget(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*
 	return decomposedCmds, nil
 }
 
-func decomposeTouch(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeTouch(_ context.Context, _ *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args) == 0 {
 		return nil, diceerrors.ErrWrongArgumentCount("TOUCH")
 	}
@@ -216,7 +216,7 @@ func decomposeTouch(_ context.Context, _ *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd
 	return decomposedCmds, nil
 }
 
-func decomposeDBSize(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeDBSize(_ context.Context, w *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args) > 0 {
 		return nil, diceerrors.ErrWrongArgumentCount("DBSIZE")
 	}
@@ -233,7 +233,7 @@ func decomposeDBSize(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cm
 	return decomposedCmds, nil
 }
 
-func decomposeKeys(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeKeys(_ context.Context, w *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args) != 1 {
 		return nil, diceerrors.ErrWrongArgumentCount("KEYS")
 	}
@@ -250,7 +250,7 @@ func decomposeKeys(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.
 	return decomposedCmds, nil
 }
 
-func decomposeFlushDB(_ context.Context, w *BaseWorker, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func decomposeFlushDB(_ context.Context, w *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	if len(cd.Args) > 1 {
 		return nil, diceerrors.ErrWrongArgumentCount("FLUSHDB")
 	}

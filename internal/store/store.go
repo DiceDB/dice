@@ -143,8 +143,8 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 		}
 		store.expires.Delete(currentObject)
 	} else {
-		// TODO: Inform all the workers and shards about the eviction.
-		// TODO: Start the eviction only when all the workers and shards have acknowledged the eviction.
+		// TODO: Inform all the io-threads and shards about the eviction.
+		// TODO: Start the eviction only when all the io-thread and shards have acknowledged the eviction.
 		evictCount := store.evictionStrategy.ShouldEvict(store)
 		if evictCount > 0 {
 			store.evict(evictCount)
