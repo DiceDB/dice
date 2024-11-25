@@ -490,7 +490,7 @@ func TestDSQLQueryString(t *testing.T) {
 				OrderBy: QueryOrder{OrderBy: Value{Value: "_key", Type: FieldKey}, Order: "DESC"},
 				Limit:   5,
 			},
-			expected: "SELECT $key, $value WHERE $key like match:100:* and $value = test ORDER BY $key DESC LIMIT 5",
+			expected: "SELECT $key, $value WHERE $key like 'match:100:*' and $value = test ORDER BY $key DESC LIMIT 5",
 		},
 	}
 

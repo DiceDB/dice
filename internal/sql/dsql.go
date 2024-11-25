@@ -466,7 +466,11 @@ func comparisonExprToSQL(expr *ComparisonNode) string {
 	sqlBuilder.WriteString(" ")
 	sqlBuilder.WriteString(string(expr.Operator))
 	sqlBuilder.WriteString(" ")
-	sqlBuilder.WriteString(expr.Right.Value)
+	if expr.Operator == OpLike || expr.Operator == OpNotLike {
+		sqlBuilder.WriteString("'" + expr.Right.Value + "'")
+	} else {
+		sqlBuilder.WriteString(expr.Right.Value)
+	}
 
 	return sqlBuilder.String()
 }
