@@ -52,3 +52,35 @@ func TestGeoAdd(t *testing.T) {
 		})
 	}
 }
+
+func TestGeoDist(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []interface{}
+		delays []time.Duration
+	}{
+		{
+			name: "GEODIST b/w existing points",
+			cmds: []string{
+				"GEOADD points 13.361389 38.115556 Palermo",
+				"GEOADD points 15.087269 37.502669 Catania",
+				"GEODIST points Palermo Catania",
+				"GEODIST points Palermo Catania km",
+			},
+			expect: []interface{}{int64(1), int64(1), "166274.144", "166.2741"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+			}
+		})
+	}
+}
