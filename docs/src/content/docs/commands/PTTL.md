@@ -81,8 +81,8 @@ In this example, the `PTTL` command is used with an extra argument. This results
 
 ## Best Practices
 
-- Use `PTTL` in conjunction with `EXPIRE` or `PEXPIRE` commands to manage key expiration effectively
+- Use `PPTL` in conjunction with [`EXPIRE`](/commands/expire) or `PEXPIRE` commands to manage key expiration effectively
 
 ## Alternatives
 
-- `TTL`: Similar to `PTTL` but returns the time-to-live in seconds instead of milliseconds
+- [`TTL`](/commands/ttl): Similar to `PTTL` but returns the time-to-live in seconds instead of milliseconds

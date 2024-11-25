@@ -79,7 +79,7 @@ If the hash `user:1003` does not exist:
 
 ## Alternatives
 
-- `HGETALL`: The `HGETALL` command retrieves all field-value pairs in a hash, providing both names and values.
+- [`HGETALL`](/commands/hgetall): The `HGETALL` command retrieves all field-value pairs in a hash, providing both names and values.
 
 ## Notes
 
