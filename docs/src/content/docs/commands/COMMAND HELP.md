@@ -26,7 +26,7 @@ This command does not accept any parameters.
 
 ## Behavior
 
-The `COMMAND HELP` command outputs help text that lists all the available subcommands for the `COMMAND` command. It is used to understand how each subcommand functions and the available options for those subcommands.
+The `COMMAND HELP` command outputs help text that lists all the available subcommands for the [`COMMAND`](/commands/command) command. It is used to understand how each subcommand functions and the available options for those subcommands.
 
 ## Errors
 

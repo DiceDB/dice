@@ -483,6 +483,30 @@ func TestBitCount(t *testing.T) {
 		},
 		{
 			InCmds: []HTTPCommand{
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{-1, 1}}},
+			},
+			Out: []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []HTTPCommand{
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{-1, 0}}},
+			},
+			Out: []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []HTTPCommand{
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{-10000, 1}}},
+			},
+			Out: []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []HTTPCommand{
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{-10000, 0}}},
+			},
+			Out: []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []HTTPCommand{
 				{Command: "GETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{122}}},
 			},
 			Out: []interface{}{float64(1)},

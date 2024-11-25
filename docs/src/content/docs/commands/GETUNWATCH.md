@@ -1,6 +1,10 @@
 ---
 title: GET.UNWATCH
 description: The `GET.UNWATCH` command is a feature to stop receiving updates on a key.
+sidebar:
+  badge:
+    text: Reactive
+    variant: success
 ---
 
 The `GET.UNWATCH` command is a feature to stop receiving updates on a key.
