@@ -40,6 +40,7 @@ type IOThread interface {
 }
 
 type BaseIOThread struct {
+	IOThread
 	id                       string
 	ioHandler                iohandler.IOHandler
 	parser                   requestparser.Parser
