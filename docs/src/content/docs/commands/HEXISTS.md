@@ -77,11 +77,10 @@ If the hash `user:1002` does not exist:
 
 ## Alternatives
 
-- `HGET`: The `HGET` command retrieves the value of a specified field within a hash. However, unlike `HEXISTS`, it returns `nil` if the field does not exist, rather than a boolean response.
+- [`HGET`](/commands/hget): The `HGET` command retrieves the value of a specified field within a hash. However, unlike `HEXISTS`, it returns `nil` if the field does not exist, rather than a boolean response.
 
 ## Notes
 
-- Please refer to the [HGET](/commands/hget) command documentation for more information.
 - If `key` is not of type hash, consider using commands specifically designed for other data types.
 
 By utilizing the `HEXISTS` command, you can conditionally manage hash data in DiceDB, verifying field presence before performing operations based on field existence.

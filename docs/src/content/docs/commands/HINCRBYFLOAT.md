@@ -129,12 +129,11 @@ Executing `hincrbyfloat` with a string increment value
 
 ## Alternatives
 
-- `HINCRBY`: Use this command if you only need to increment a hash field by an integer. It is specifically designed for integer increments and may be more efficient for non-floating-point operations.
-- `HSET` and `HGET`: If you need to set or retrieve values without incrementing, consider using `HSET` to assign a value directly and HGET to retrieve the current value of a field.
+- [`HINCRBY`](/commands/hincrby): Use this command if you only need to increment a hash field by an integer. It is specifically designed for integer increments and may be more efficient for non-floating-point operations.
+- [`HSET`](/commands/hset) and [`HGET`](/commands/hget): If you need to set or retrieve values without incrementing, consider using `HSET` to assign a value directly and `HGET` to retrieve the current value of a field.
 
 ## Notes
 
 - The `HINCRBYFLOAT` command is a powerful tool for managing floating-point counters and numerical values stored in hash fields, making it essential for applications that require precision in incremental updates.
 - The command operates atomically, meaning it will complete without interruption, making it safe to use in concurrent environments where multiple clients may modify the same hash fields.
 - `HINCRBYFLOAT` can be beneficial in scenarios such as tracking scores in a game, maintaining balances in accounts, or managing quantities in inventory systems where floating-point values are common.
-- Please refer to the [HGET](/commands/hget), [HSET](/commands/hset) and [HINCRBY](/commands/hincrby) commands documentation for more information.

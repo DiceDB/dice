@@ -76,9 +76,8 @@ Retrieve both the rank and the score of `member2` in the sorted set `myzset`:
 
 ## Best Practices
 
-- Use `ZRANK` in combination with `ZADD` and `ZSCORE` for efficient management of sorted sets and leaderboards.
+- Use `ZRANK` in combination with [`ZADD`](/commands/zadd) and `ZSCORE` for efficient management of sorted sets and leaderboards.
 
 ## Notes
 
 - This command is particularly useful for implementing leaderboards, pagination in ranked lists, and analytics on data distribution.
-- Please refer to the [ZADD](/commands/zadd) command documentation for more information.

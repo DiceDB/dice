@@ -80,7 +80,7 @@ OK
 
 1. Always verify the key type before using SMEMBERS to avoid type errors
 2. Implement proper error handling in your application for WRONGTYPE errors
-3. Use EXISTS command to check for key presence before SMEMBERS if key existence is uncertain
+3. Use [`EXISTS`](/commands/exists) command to check for key presence before SMEMBERS if key existence is uncertain
    <!--  TODO: uncomment when SSCAN is implemented -->
    <!-- 4. For large sets, consider using SSCAN instead of SMEMBERS to avoid blocking operations -->
 
@@ -90,4 +90,3 @@ OK
 2. The order of returned elements is not guaranteed and may vary between calls
 3. Memory usage scales linearly with the size of the set
 4. This command has O(N) time complexity where N is the set size
-5. Please refer to the [EXISTS](/commands/exists) command documentation for more information

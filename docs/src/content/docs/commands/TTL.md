@@ -81,11 +81,8 @@ In this example, the `TTL` command is used with an extra argument. This results 
 
 ## Best Practices
 
-- Use `TTL` in conjunction with `EXPIRE` or `EXPIREAT` commands to manage key expiration effectively
+- Use `TTL` in conjunction with [`EXPIRE`](/commands/expire) or [`EXPIREAT`](/commands/expireat) commands to manage key expiration effectively
 
 ## Alternatives
 
-- `PTTL`: Similar to `TTL` but returns the time-to-live in milliseconds instead of seconds
-
-## Notes
-- Please refer to the [EXPIRE](/commands/expire), [EXPIREAT](/commands/expireat) and [PTTL](/commands/pttl) commands documentation for more information.
+- [`PTTL`](/commands/pttl): Similar to `TTL` but returns the time-to-live in milliseconds instead of seconds

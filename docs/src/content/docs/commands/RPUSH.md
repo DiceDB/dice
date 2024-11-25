@@ -87,7 +87,4 @@ RPUSH mylist
 ## Best Practices
 
 - `Check Key Type`: Before using `RPUSH`, ensure that the key is associated with a list to avoid errors.
-- `Use in Conjunction with Other List Commands`: The `RPUSH` command is often used alongside other list commands like `LLEN`, `LPUSH`, `LPOP`, and `RPOP` to manage and process lists effectively.
-
-## Notes
-- Please refer to the [RPOP](/commands/rpop), [LLEN](/commands/llen), [LPOP](/commands/lpop) and [LPUSH](/commands/lpush) commands documentation for more information.
+- `Use in Conjunction with Other List Commands`: The `RPUSH` command is often used alongside other list commands like [`LLEN`](/commands/llen), [`LPUSH`](/commands/lpush), [`LPOP`](/commands/lpop), and [`RPOP`](/commands/rpop) to manage and process lists effectively.
