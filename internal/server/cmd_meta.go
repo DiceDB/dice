@@ -458,6 +458,10 @@ var (
 		Cmd:     "GEODIST",
 		CmdType: SingleShard,
 	}
+	geoposCmdMeta = CmdsMeta{
+		Cmd:     "GEOPOS",
+		CmdType: SingleShard,
+	}
 	clientCmdMeta = CmdsMeta{
 		Cmd:     "CLIENT",
 		CmdType: SingleShard,
@@ -637,6 +641,7 @@ func init() {
 	WorkerCmdsMeta["RESTORE"] = restoreCmdMeta
 	WorkerCmdsMeta["GEOADD"] = geoaddCmdMeta
 	WorkerCmdsMeta["GEODIST"] = geodistCmdMeta
+	WorkerCmdsMeta["GEOPOS"] = geoposCmdMeta
 	WorkerCmdsMeta["CLIENT"] = clientCmdMeta
 	WorkerCmdsMeta["LATENCY"] = latencyCmdMeta
 	WorkerCmdsMeta["FLUSHDB"] = flushDBCmdMeta

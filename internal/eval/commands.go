@@ -1301,6 +1301,14 @@ var (
 		NewEval:    evalGEODIST,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	geoPosCmdMeta = DiceCmdMeta{
+		Name:       "GEOPOS",
+		Info:       `Returns the latitude and longitude of the members identified by the particular index.`,
+		Arity:      -3,
+		NewEval:    evalGEOPOS,
+		IsMigrated: true,
+		KeySpecs: 	KeySpecs{BeginIndex: 1},
+	}
 	jsonstrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRAPPEND",
 		Info: `JSON.STRAPPEND key [path] value
@@ -1444,6 +1452,7 @@ func init() {
 	DiceCmds["FLUSHDB"] = flushdbCmdMeta
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
+	DiceCmds["GEOPOS"] = geoPosCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["GETBIT"] = getBitCmdMeta
 	DiceCmds["GETDEL"] = getDelCmdMeta
