@@ -92,8 +92,8 @@ func Execute() {
 	flag.StringVar(&flagsConfig.Persistence.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
 
 	flag.StringVar(&flagsConfig.Auth.Password, "requirepass", utils.EmptyStr, "enable authentication for the default user")
-	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the flagsConfig file")
-	flag.StringVar(&config.CustomConfigDirPath, "c", config.CustomConfigDirPath, "file path of the config file")
+	flag.StringVar(&config.CustomConfigDirPath, "o", config.CustomConfigDirPath, "dir path to create the flagsConfig file")
+	flag.StringVar(&config.CustomConfigFilePath, "c", config.CustomConfigFilePath, "file path of the config file")
 
 	flag.IntVar(&flagsConfig.Memory.KeysLimit, "keys-limit", config.DefaultKeysLimit, "keys limit for the DiceDB server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
@@ -138,9 +138,7 @@ func Execute() {
 	}
 
 	flag.Parse()
-	if ok := config.ManageSubCommandActions(version, &flagsConfig); ok {
-		render()
-	}
+	config.ManageSubCommandActions(version, &flagsConfig)
 
 	// this subcommand is used to read the config file values from the stdin i.e echo 'resp_server.port="8888"' | ./dicedb -
 	if len(os.Args) == 2 && os.Args[1] == "-" {
