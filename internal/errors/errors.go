@@ -19,7 +19,7 @@ const (
 	WrongTypeErr           = "-WRONGTYPE Operation against a key holding the wrong kind of value"
 	WrongTypeHllErr        = "-WRONGTYPE Key is not a valid HyperLogLog string value."
 	InvalidHllErr          = "-INVALIDOBJ Corrupted HLL object detected"
-	WorkerNotFoundErr      = "worker with ID %s not found"
+	IOThreadNotFoundErr    = "io-thread with ID %s not found"
 	JSONPathValueTypeErr   = "-WRONGTYPE wrong type of path value - expected string but found %s"
 	HashValueNotIntegerErr = "hash value is not an integer"
 	InternalServerError    = "-ERR: Internal server error, unable to process command"

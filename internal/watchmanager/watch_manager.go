@@ -12,7 +12,7 @@ import (
 type (
 	WatchSubscription struct {
 		Subscribe    bool                // Subscribe is true for subscribe, false for unsubscribe. Required.
-		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the worker. Required.
+		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the io-thread. Required.
 		WatchCmd     *cmd.DiceDBCmd      // WatchCmd Represents a unique key for each watch artifact, only populated for subscriptions.
 		Fingerprint  uint32              // Fingerprint is a unique identifier for each watch artifact, only populated for unsubscriptions.
 	}

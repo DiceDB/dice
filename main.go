@@ -23,12 +23,12 @@ import (
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/iothread"
 	"github.com/dicedb/dice/internal/observability"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/internal/worker"
 )
 
 func main() {
@@ -134,8 +134,8 @@ func main() {
 		}
 		defer stopProfiling()
 	}
-	workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-	respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
+	ioThreadManager := iothread.NewManager(config.DiceConfig.Performance.MaxClients, shardManager)
+	respServer := resp.NewServer(shardManager, ioThreadManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 	serverWg.Add(1)
 	go runServer(ctx, &serverWg, respServer, serverErrCh)
 
