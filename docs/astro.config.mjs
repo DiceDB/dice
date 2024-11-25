@@ -12,7 +12,6 @@ export default defineConfig({
         dark: "./public/dicedb-logo-dark.png",
       },
       customCss: ["./src/styles/docs.css"],
-      // themes: ['starlight-theme-light'],
       // useStarlightDarkModeSwitch: false,
       favicon: "/favicon.png",
       editLink: {
@@ -21,6 +20,7 @@ export default defineConfig({
       lastUpdated: true,
       expressiveCode: {
         textMarkers: true,
+        themes: ['ayu-dark','light-plus'],
         defaultProps: {
           wrap: true,
         },

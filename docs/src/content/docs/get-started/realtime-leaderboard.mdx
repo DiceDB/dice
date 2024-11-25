@@ -32,18 +32,26 @@ docker run -p 7379:7379 dicedb/dicedb --enable-watch
 Once the DiceDB server starts, you will see output similar to this
 
 ```
-██████╗ ██╗ ██████╗███████╗██████╗ ██████╗
-██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
-██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
-██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
-██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
-╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
+        ██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
+        ██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
+        ██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
+        ██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
+        ██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
+        ╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 
-2024-10-24T18:35:55Z INF starting DiceDB version=0.1.0
-2024-10-24T18:35:55Z INF running with port=7379
-2024-10-24T18:35:55Z INF running with enable-watch=true
-2024-10-24T18:35:55Z INF running with mode=multi-threaded num-shards=12
-2024-10-24T18:35:55Z INF ready to accept and serve requests on port=7379
+
+--------------------------------------------------
+| Configuration           | Value                |
+--------------------------------------------------
+| Version                 | 0.0.5                |
+| Port                    | 7379                 |
+| Multi Threading Enabled | true                 |
+| Cores                   | 8                    |
+| Shards                  | 8                    |
+| Watch Enabled           | false                |
+| HTTP Enabled            | false                |
+| Websocket Enabled       | false                |
+--------------------------------------------------
 ```
 
 ### Starting the application server
