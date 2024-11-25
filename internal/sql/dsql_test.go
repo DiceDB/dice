@@ -6,7 +6,6 @@ import (
 
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/stretchr/testify/assert"
-	"github.com/xwb1989/sqlparser"
 )
 
 func TestParseQuery(t *testing.T) {

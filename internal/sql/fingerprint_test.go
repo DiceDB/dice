@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/xwb1989/sqlparser"
 )
 
 func TestExpressionString(t *testing.T) {
