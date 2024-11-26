@@ -111,6 +111,9 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 		if len(clients) == 0 {
 			// Remove the fingerprint from tcpSubscriptionMap
 			delete(m.tcpSubscriptionMap, fingerprint)
+		} else {
+			// Other clients still subscribed, no need to remove the fingerprint altogether
+			return
 		}
 	}
 
