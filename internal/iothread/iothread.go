@@ -153,6 +153,7 @@ func (t *BaseIOThread) processIncomingData(ctx context.Context, data *[]byte, er
 			slog.Debug("Write error, connection closed possibly", slog.String("id", t.id), slog.Any("error", err))
 			return err
 		}
+		return nil
 	}
 
 	if len(commands) == 0 {
@@ -176,11 +177,12 @@ func (t *BaseIOThread) processIncomingData(ctx context.Context, data *[]byte, er
 
 	err = t.isAuthenticated(commands[0])
 	if err != nil {
-		werr := t.ioHandler.Write(ctx, err)
-		if werr != nil {
-			slog.Debug("Write error, connection closed possibly", slog.Any("error", errors.Join(err, werr)))
-			return errors.Join(err, werr)
+		writeErr := t.ioHandler.Write(ctx, err)
+		if writeErr != nil {
+			slog.Debug("Write error, connection closed possibly", slog.Any("error", errors.Join(err, writeErr)))
+			return errors.Join(err, writeErr)
 		}
+		return nil
 	}
 
 	t.handleCmdRequestWithTimeout(ctx, errChan, commands, false, defaultRequestTimeout)
