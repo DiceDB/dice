@@ -2,8 +2,6 @@ package iothread
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -489,7 +487,7 @@ func (t *BaseIOThread) gather(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, num
 	// Process command based on its type
 	cmdMeta, ok := CommandsMeta[diceDBCmd.Cmd]
 	if !ok {
-		return t.handleLegacyCommand(ctx, storeOp[0])
+		return t.handleUnsupportedCommand(ctx, storeOp[0])
 	}
 
 	return t.handleCommand(ctx, cmdMeta, diceDBCmd, storeOp)
@@ -544,8 +542,8 @@ func (t *BaseIOThread) handleWatchNotification(ctx context.Context, diceDBCmd *c
 	return t.writeResponse(ctx, querymanager.GenericWatchResponse(firstRespElem, fingerprint, resp.EvalResponse.Result))
 }
 
-// handleLegacyCommand processes commands not in CommandsMeta
-func (t *BaseIOThread) handleLegacyCommand(ctx context.Context, resp ops.StoreResponse) error {
+// handleUnsupportedCommand processes commands not in CommandsMeta
+func (t *BaseIOThread) handleUnsupportedCommand(ctx context.Context, resp ops.StoreResponse) error {
 	if resp.EvalResponse.Error != nil {
 		return t.writeResponse(ctx, resp.EvalResponse.Error)
 	}
@@ -606,15 +604,6 @@ func (t *BaseIOThread) Stop() error {
 	slog.Info("Stopping io-thread", slog.String("id", t.id))
 	t.Session.Expire()
 	return nil
-}
-
-func GenerateRandomUint32() (uint32, error) {
-	var b [4]byte             // Create a byte array to hold the random bytes
-	_, err := rand.Read(b[:]) // Fill the byte array with secure random bytes
-	if err != nil {
-		return 0, err // Return an error if reading failed
-	}
-	return binary.BigEndian.Uint32(b[:]), nil // Convert bytes to uint32
 }
 
 func GenerateUniqueRequestID() uint32 {
