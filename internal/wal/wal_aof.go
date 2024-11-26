@@ -166,7 +166,7 @@ func (w *WALAOF) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
 
 			commandParts := strings.SplitN(*entry.Command, " ", 2)
 			if len(commandParts) < 2 {
-				return fmt.Errorf("invalid command format in WAL entry: %s", entry.Command)
+				return fmt.Errorf("invalid command format in WAL entry: %s", *entry.Command)
 			}
 
 			c := cmd.DiceDBCmd{
