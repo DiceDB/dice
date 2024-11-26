@@ -325,6 +325,16 @@ func TestGETWATCHWhenClientUnsubscribe(t *testing.T) {
 	err := publisher.Set(context.Background(), getWatchKey, "new-updated-val", 0).Err()
 	assert.Nil(t, err)
 
+	// Assert other unsubscribed clients don't get any updates
+	for _, channel := range channels[:2] {
+		select {
+		case v := <-channel:
+			assert.Fail(t, fmt.Sprintf("Unexpected update received: %v", v))
+		case <-time.After(100 * time.Millisecond):
+			// This is the expected behavior - no response within the timeout
+		}
+	}
+
 	lastMsg := <-channels[2]
 	assert.Equal(t, "GET", lastMsg.Command)
 	assert.Equal(t, "2714318480", lastMsg.Fingerprint)
