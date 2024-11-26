@@ -187,7 +187,7 @@ const (
 	CmdZRangeUnWatch  = "ZRANGE.UNWATCH"
 	CmdPFCountWatch   = "PFCOUNT.WATCH"
 	CmdPFCountUnWatch = "PFCOUNT.UNWATCH"
-	CmdHMGetAll    = "HMGETALL"
+	CmdHMGetAll       = "HMGETALL"
 )
 
 type CmdMeta struct {
