@@ -29,7 +29,7 @@ func generateBenchmarkData(count int, store *dstore.Store) {
 	for i := 0; i < count; i++ {
 		key := fmt.Sprintf("k%d", i)
 		value := fmt.Sprintf("v%d", i)
-		data[key] = store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+		data[key] = store.NewObj(value, -1, object.ObjTypeString)
 	}
 	store.PutAll(data)
 }
@@ -302,7 +302,7 @@ func generateBenchmarkJSONData(b *testing.B, count int, json string, store *dsto
 			b.Fatalf("Failed to unmarshal JSON: %v", err)
 		}
 
-		data[key] = store.NewObj(jsonValue, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+		data[key] = store.NewObj(jsonValue, -1, object.ObjTypeJSON)
 	}
 	store.PutAll(data)
 }

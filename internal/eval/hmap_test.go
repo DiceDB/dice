@@ -79,7 +79,7 @@ func TestGetValueFromHashMap(t *testing.T) {
 	hmap.Set(field, value)
 
 	obj := &object.Obj{
-		Type:           object.ObjTypeHashMap | object.ObjEncodingHashMap,
+		Type:           object.ObjTypeHashMap,
 		Value:          hmap,
 		LastAccessedAt: uint32(time.Now().Unix()),
 	}

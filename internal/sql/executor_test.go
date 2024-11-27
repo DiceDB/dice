@@ -279,7 +279,7 @@ func setupJSON(t *testing.T, store *dstore.Store, dataset []keyValue) {
 			t.Fatalf("Failed to unmarshal value: %v", err)
 		}
 
-		store.Put(data.key, store.NewObj(jsonValue, -1, object.ObjTypeJSON, object.ObjEncodingJSON))
+		store.Put(data.key, store.NewObj(jsonValue, -1, object.ObjTypeJSON))
 	}
 }
 
