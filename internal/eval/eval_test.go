@@ -133,7 +133,6 @@ func TestEval(t *testing.T) {
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
 	testEvalSINTER(t, store)
-	testEvalOBJECTENCODING(t, store)
 	testEvalJSONSTRAPPEND(t, store)
 	testEvalINCR(t, store)
 	testEvalINCRBY(t, store)
@@ -8381,55 +8380,6 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 	}
 
 	runEvalTests(t, tests, evalSINTER, store)
-}
-
-func testEvalOBJECTENCODING(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value": {
-			setup: func() {},
-			input: nil,
-			migratedOutput: EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongArgumentCount("OBJECT"),
-			},
-		},
-		"empty array": {
-			setup: func() {},
-			input: []string{},
-			migratedOutput: EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongArgumentCount("OBJECT"),
-			},
-		},
-		"object with invalid subcommand": {
-			setup: func() {},
-			input: []string{"TESTSUBCOMMAND", "key"},
-			migratedOutput: EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrSyntax,
-			},
-		},
-		"key does not exist": {
-			setup: func() {},
-			input: []string{"ENCODING", "NONEXISTENT_KEY"},
-			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
-				Error:  nil,
-			},
-		},
-		"key exists": {
-			setup: func() {
-				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
-			},
-			input: []string{"ENCODING", "EXISTING_KEY"},
-			migratedOutput: EvalResponse{
-				Result: "deque",
-				Error:  nil,
-			},
-		},
-	}
-
-	runMigratedEvalTests(t, tests, evalOBJECT, store)
 }
 
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {

@@ -6651,8 +6651,6 @@ func evalOBJECT(args []string, store *dstore.Store) *EvalResponse {
 	switch subcommand {
 	case "IDLETIME":
 		return evalObjectIdleTime(key, store)
-	case "ENCODING":
-		return evalObjectEncoding(key, store)
 	default:
 		return makeEvalError(diceerrors.ErrSyntax)
 	}
