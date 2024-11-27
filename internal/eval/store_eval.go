@@ -6605,57 +6605,6 @@ func evalObjectIdleTime(key string, store *dstore.Store) *EvalResponse {
 	return makeEvalResult(int64(dstore.GetIdleTime(obj.LastAccessedAt)))
 }
 
-func evalObjectEncoding(key string, store *dstore.Store) *EvalResponse {
-	var encodingTypeStr string
-
-	obj := store.GetNoTouch(key)
-	if obj == nil {
-		return makeEvalResult(clientio.NIL)
-	}
-
-	oType := object.ExtractType(obj)
-	switch {
-	case oType == object.ObjTypeString:
-		encodingTypeStr = "raw"
-		return makeEvalResult(encodingTypeStr)
-
-	case oType == object.ObjTypeInt:
-		encodingTypeStr = "int"
-		return makeEvalResult(encodingTypeStr)
-
-	case oType == object.ObjTypeDequeue:
-		encodingTypeStr = "deque"
-		return makeEvalResult(encodingTypeStr)
-
-	case oType == object.ObjTypeBF:
-		encodingTypeStr = "bf"
-		return makeEvalResult(encodingTypeStr)
-
-	case oType == object.ObjTypeJSON:
-		encodingTypeStr = "json"
-		return makeEvalResult(encodingTypeStr)
-
-	case oType == object.ObjTypeByteArray:
-		encodingTypeStr = "bytearray"
-		return makeEvalResult(encodingTypeStr)
-
-	case oType == object.ObjTypeSet:
-		encodingTypeStr = "setstr"
-		return makeEvalResult(encodingTypeStr)
-
-	case oType == object.ObjTypeHashMap:
-		encodingTypeStr = "hashmap"
-		return makeEvalResult(encodingTypeStr)
-
-	case oType == object.ObjTypeSortedSet:
-		encodingTypeStr = "btree"
-		return makeEvalResult(encodingTypeStr)
-
-	default:
-		return makeEvalError(diceerrors.ErrWrongTypeOperation)
-	}
-}
-
 func evalOBJECT(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 2 {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("OBJECT"))
