@@ -324,14 +324,14 @@ func (ss *Set) GetMemberScoresInRange(minScore, maxScore float64, count, max int
 		if ssi.Score < minScore {
 			return true
 		}
-		if ssi.Score > maxScore {
+		if ssi.Score >= maxScore {
 			return false
 		}
 		members = append(members, ssi.Member)
 		scores = append(scores, ssi.Score)
 		count++
 
-		if max > 0 && count == max {
+		if max > 0 && count >= max {
 			return false
 		}
 

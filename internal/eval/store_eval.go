@@ -7326,26 +7326,27 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 
 	centerLat, centerLon := geo.DecodeHash(centerHash)
 
-	if opts.IsSorted || opts.WithDist || opts.WithCoord {
-		for i := range hashes {
-			msLat, msLon := geo.DecodeHash(hashes[i])
+	for i := range hashes {
+		msLat, msLon := geo.DecodeHash(hashes[i])
 
-			if opts.WithDist || opts.IsSorted {
-				dist := geo.GetDistance(centerLon, centerLat, msLon, msLat)
-				distance, err := geo.ConvertDistance(dist, unit)
-				if err != nil {
-					return &EvalResponse{
-						Result: nil,
-						Error:  err,
-					}
-				}
-				dists = append(dists, distance)
-			}
+		dist := geo.GetDistance(centerLon, centerLat, msLon, msLat)
 
-			if opts.WithCoord {
-				coords = append(coords, []float64{msLat, msLon})
+		// Geohash scores are not linear. Therefore, we can sometimes receive results
+		// which are out of the geographical range and we need to post filter the results here.
+		if dist > radius {
+			members[i] = ""
+		}
+
+		distance, err := geo.ConvertDistance(dist, unit)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  err,
 			}
 		}
+
+		dists = append(dists, distance)
+		coords = append(coords, []float64{msLat, msLon})
 	}
 
 	// Sorting is done by distance. Since our output can be dynamic and we can avoid allocating memory
@@ -7379,6 +7380,10 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 
 	response := make([][]interface{}, 0, min(len(members), countVal))
 	for i := 0; i < cap(response); i++ {
+		if members[indices[i]] == "" {
+			continue
+		}
+
 		member := []interface{}{}
 		member = append(member, members[indices[i]])
 		if opts.WithDist {

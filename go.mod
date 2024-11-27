@@ -57,7 +57,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/mattn/go-sqlite3 v1.14.24
-	github.com/mmcloughlin/geohash v0.10.0
 	github.com/ohler55/ojg v1.25.0
 	github.com/rs/xid v1.6.0
 	github.com/rs/zerolog v1.33.0
