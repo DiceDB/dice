@@ -1,14 +1,15 @@
 package eval
 
 import (
-	"github.com/dicedb/dice/internal/object"
 	"testing"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
-// TestDeduceTypeEncoding tests the deduceTypeEncoding function using table-driven tests.
-func TestDeduceTypeEncoding(t *testing.T) {
+// TestDeduceType tests the deduceType function using table-driven tests.
+func TestDeduceType(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -49,9 +50,9 @@ func TestDeduceTypeEncoding(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotType, gotEnc := deduceTypeEncoding(tt.input)
+			gotType, gotEnc := deduceType(tt.input)
 			if gotType != tt.wantType || gotEnc != tt.wantEnc {
-				t.Errorf("deduceTypeEncoding(%q) = (%v, %v), want (%v, %v)", tt.input, gotType, gotEnc, tt.wantType, tt.wantEnc)
+				t.Errorf("deduceType(%q) = (%v, %v), want (%v, %v)", tt.input, gotType, gotEnc, tt.wantType, tt.wantEnc)
 			}
 		})
 	}

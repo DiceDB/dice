@@ -117,7 +117,7 @@ func ExecuteQuery(query *DSQLQuery, store common.ITable[string, *object.Obj]) ([
 func MarshalResultIfJSON(row *QueryResultRow) error {
 	// if the row contains JSON field then convert the json object into string representation so it can be encoded
 	// before being returned to the client
-	if object.GetEncoding(row.Value.TypeEncoding) == object.ObjEncodingJSON && object.GetType(row.Value.TypeEncoding) == object.ObjTypeJSON {
+	if object.GetType(row.Value.Type) == object.ObjTypeJSON {
 		marshaledData, err := sonic.MarshalString(row.Value.Value)
 		if err != nil {
 			return err
@@ -333,11 +333,7 @@ func getExprValueAndType(expr sqlparser.Expr, row QueryResultRow, jsonPathCache 
 }
 
 func isJSONField(expr *sqlparser.SQLVal, obj *object.Obj) bool {
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingJSON); err != nil {
-		return false
-	}
-
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeJSON); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeJSON); err != nil {
 		return false
 	}
 

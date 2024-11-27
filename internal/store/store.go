@@ -84,10 +84,10 @@ func ResetStore(store *Store) *Store {
 	return store
 }
 
-func (store *Store) NewObj(value interface{}, expDurationMs int64, oType, oEnc uint8) *object.Obj {
+func (store *Store) NewObj(value interface{}, expDurationMs int64, oType uint8) *object.Obj {
 	obj := &object.Obj{
 		Value:          value,
-		TypeEncoding:   oType | oEnc,
+		Type:           oType,
 		LastAccessedAt: getCurrentClock(),
 	}
 	if expDurationMs >= 0 {

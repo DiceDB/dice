@@ -526,11 +526,7 @@ func getCountMinSketch(key string, store *dstore.Store) (*CountMinSketch, error)
 		return nil, diceerrors.NewErr("key does not exist")
 	}
 
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeCountMinSketch); err != nil {
-		return nil, err
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingMatrix); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeCountMinSketch); err != nil {
 		return nil, err
 	}
 
