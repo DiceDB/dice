@@ -5343,7 +5343,7 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 		"TYPE key exists and is of type List": {
 			name: "TYPE key exists and is of type List",
 			setup: func() {
-				store.Put("list_key", store.NewObj([]byte("value"), -1, object.ObjTypeDequeue))
+				evalLPUSH([]string{"list_key", "value"}, store)
 			},
 			input: []string{"list_key"},
 			migratedOutput: EvalResponse{
@@ -9273,7 +9273,7 @@ func testEvalLRANGE(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY", "0", "4"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-WRONGTYPE Operation against a key holding the wrong kind of value")},
 		},
 	}
 	runMigratedEvalTests(t, tests, evalLRANGE, store)

@@ -4997,6 +4997,10 @@ func evalLRANGE(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalResult([]string{})
 	}
 
+	if object.AssertType(obj.Type, object.ObjTypeDequeue) != nil {
+		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
+	}
+
 	q := obj.Value.(*Deque)
 	res, err := q.LRange(start, stop)
 	if err != nil {
