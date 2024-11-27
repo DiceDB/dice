@@ -165,17 +165,17 @@ func evalMSET(args []string, store *dstore.Store) []byte {
 	insertMap := make(map[string]*object.Obj, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
 		key, value := args[i], args[i+1]
-		oType, oEnc := deduceTypeEncoding(value)
+		oType := deduceType(value)
 		var storedValue interface{}
-		switch oEnc {
-		case object.ObjEncodingInt:
+		switch oType {
+		case object.ObjTypeInt:
 			storedValue, _ = strconv.ParseInt(value, 10, 64)
-		case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+		case object.ObjTypeString:
 			storedValue = value
 		default:
-			return clientio.Encode(fmt.Errorf("ERR unsupported encoding: %d", oEnc), false)
+			return clientio.Encode(fmt.Errorf("ERR unsupported type: %d", oType), false)
 		}
-		insertMap[key] = store.NewObj(storedValue, exDurationMs, oType, oEnc)
+		insertMap[key] = store.NewObj(storedValue, exDurationMs, oType)
 	}
 
 	store.PutAll(insertMap)
@@ -294,7 +294,7 @@ func jsonMGETHelper(store *dstore.Store, path, key string) (result interface{}, 
 	}
 
 	// Check if the object is of JSON type
-	errWithMessage := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeJSON, object.ObjEncodingJSON)
+	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON, object.ObjEncodingJSON)
 	if errWithMessage != nil {
 		return result, errWithMessage
 	}
@@ -625,11 +625,7 @@ func evalSDIFF(args []string, store *dstore.Store) []byte {
 		return clientio.Encode([]string{}, false)
 	}
 
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
-		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeSet); err != nil {
 		return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 	}
 
@@ -656,11 +652,7 @@ func evalSDIFF(args []string, store *dstore.Store) []byte {
 		}
 
 		// If the object exists, check if it is a set object.
-		if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-		}
-
-		if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSet); err != nil {
 			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 
@@ -710,11 +702,7 @@ func evalSINTER(args []string, store *dstore.Store) []byte {
 		}
 
 		// If the object exists, check if it is a set object.
-		if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
-		}
-
-		if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSet); err != nil {
 			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
 		}
 

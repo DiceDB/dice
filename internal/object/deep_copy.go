@@ -10,7 +10,7 @@ type DeepCopyable interface {
 
 func (obj *Obj) DeepCopy() *Obj {
 	newObj := &Obj{
-		TypeEncoding:   obj.TypeEncoding,
+		Type:           obj.Type,
 		LastAccessedAt: obj.LastAccessedAt,
 	}
 
@@ -19,7 +19,7 @@ func (obj *Obj) DeepCopy() *Obj {
 		newObj.Value = copier.DeepCopy()
 	} else {
 		// Handle types that are not DeepCopyable
-		sourceType, _ := ExtractTypeEncoding(obj)
+		sourceType := ExtractType(obj)
 		switch sourceType {
 		case ObjTypeString:
 			sourceValue := obj.Value.(string)

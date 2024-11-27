@@ -9,19 +9,19 @@ import (
 
 // Similar to
 // tryObjectEncoding function in Redis
-func deduceTypeEncoding(v string) (o, e uint8) {
+func deduceType(v string) (o uint8) {
 	// Check if the value has leading zero
 	if len(v) > 1 && v[0] == '0' {
 		// If so, treat as string
-		return object.ObjTypeString, object.ObjEncodingRaw
+		return object.ObjTypeString
 	}
 	if _, err := strconv.ParseInt(v, 10, 64); err == nil {
-		return object.ObjTypeInt, object.ObjEncodingInt
+		return object.ObjTypeInt
 	}
 	if len(v) <= 44 {
-		return object.ObjTypeString, object.ObjEncodingEmbStr
+		return object.ObjTypeString
 	}
-	return object.ObjTypeString, object.ObjEncodingRaw
+	return object.ObjTypeString
 }
 
 // Function to handle converting the value based on the encoding type
