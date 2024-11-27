@@ -4711,6 +4711,29 @@ func BenchmarkEvalHKEYS(b *testing.B) {
 	}
 }
 
+func BenchmarkEvalPFADD(b *testing.B) {
+	sizes := []int{0, 10, 100, 1000, 10000, 100000}
+	store := *dstore.NewStore(nil, nil, nil)
+
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("PFAddSize_%d", size), func(b *testing.B) {
+			key := fmt.Sprintf("benchmark_pfadd_%d", size)
+
+			args := []string{key}
+			for i := range size {
+				args = append(args, fmt.Sprintf("pf_item_%d", i))
+			}
+
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				_ = evalPFADD(args, &store)
+			}
+		})
+	}
+}
+
 func BenchmarkEvalPFCOUNT(b *testing.B) {
 	store := *dstore.NewStore(nil, nil, nil)
 
