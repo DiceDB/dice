@@ -52,7 +52,7 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 	var buf bytes.Buffer
 	buf.WriteByte(0x09)
 
-	switch object.GetType(obj.Type) {
+	switch obj.Type {
 	case object.ObjTypeString:
 		str, ok := obj.Value.(string)
 		if !ok {
