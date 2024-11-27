@@ -117,7 +117,7 @@ func ExecuteQuery(query *DSQLQuery, store common.ITable[string, *object.Obj]) ([
 func MarshalResultIfJSON(row *QueryResultRow) error {
 	// if the row contains JSON field then convert the json object into string representation so it can be encoded
 	// before being returned to the client
-	if object.GetType(row.Value.Type) == object.ObjTypeJSON {
+	if row.Value.Type == object.ObjTypeJSON {
 		marshaledData, err := sonic.MarshalString(row.Value.Value)
 		if err != nil {
 			return err

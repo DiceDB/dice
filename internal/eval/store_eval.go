@@ -1273,8 +1273,7 @@ func evalJSONCLEAR(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -1384,8 +1383,7 @@ func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
 	}
 
 	// Check if the object is of JSON type
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -1525,8 +1523,7 @@ func evalJSONSET(args []string, store *dstore.Store) *EvalResponse {
 		}
 	} else {
 		// If the key exists, check if it's a JSON object
-		err := object.AssertType(obj.Type, object.ObjTypeJSON)
-		if err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeJSON); err != nil {
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongTypeOperation,
@@ -1631,8 +1628,7 @@ func evalJSONTYPE(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -1797,8 +1793,7 @@ func evalJSONSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 	path := args[1]
 
 	// Check if the object is of JSON type
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -1912,8 +1907,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// check if the object is json
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -2434,16 +2428,14 @@ func incrDecrCmd(args []string, incr int64, store *dstore.Store) *EvalResponse {
 	}
 	// if the type is not KV : return wrong type error
 	// if the encoding or type is not int : return value is not an int error
-	errStr := object.AssertType(obj.Type, object.ObjTypeString)
-	if errStr == nil {
+	if err := object.AssertTypeWithError(obj.Type, object.ObjTypeString); err == nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrIntegerOutOfRange,
 		}
 	}
 
-	errTypeInt := object.AssertType(obj.Type, object.ObjTypeInt)
-	if errTypeInt != nil {
+	if errTypeInt := object.AssertType(obj.Type, object.ObjTypeInt); errTypeInt != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -3058,8 +3050,7 @@ func evalJSONARRTRIM(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrGeneral(string(errWithMessage)),
@@ -3395,8 +3386,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 			Error:  nil,
 		}
 	}
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -3498,8 +3488,7 @@ func evalJSONARRLEN(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -3641,8 +3630,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -3752,8 +3740,7 @@ func evalJSONARRINSERT(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrGeneral(string(errWithMessage)),
@@ -3889,8 +3876,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// Check if the object is of JSON type
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrGeneral(string(errWithMessage)),
@@ -3986,8 +3972,7 @@ func evalJSONRESP(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// Check if the object is of JSON type
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -4122,8 +4107,7 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// check if the object is a valid JSON
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrInvalidJSONPathType,
@@ -5013,11 +4997,6 @@ func evalLRANGE(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalResult([]string{})
 	}
 
-	// if object is a set type, return error
-	if object.AssertType(obj.Type, object.ObjTypeSet) == nil {
-		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
-	}
-
 	q := obj.Value.(*Deque)
 	res, err := q.LRange(start, stop)
 	if err != nil {
@@ -5047,7 +5026,7 @@ func evalLINSERT(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// if object is a set type, return error
-	if object.AssertType(obj.Type, object.ObjTypeDequeue) == nil {
+	if object.AssertType(obj.Type, object.ObjTypeDequeue) != nil {
 		return makeEvalError(errors.New(diceerrors.WrongTypeErr))
 	}
 
@@ -5564,8 +5543,7 @@ func evalJSONSTRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
 	}
 
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return makeEvalError(diceerrors.ErrWrongTypeOperation)
 	}
 
@@ -5633,8 +5611,7 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
 	}
 
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return makeEvalError(diceerrors.ErrWrongTypeOperation)
 	}
 
@@ -5722,8 +5699,7 @@ func evalJSONDEL(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalResult(clientio.IntegerZero)
 	}
 
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return makeEvalError(diceerrors.ErrWrongTypeOperation)
 	}
 
@@ -5837,8 +5813,7 @@ func evalJSONNUMMULTBY(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// Check if the object is of JSON type
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return makeEvalError(diceerrors.ErrWrongTypeOperation)
 	}
 	path := args[1]
@@ -6004,8 +5979,7 @@ func evalJSONNUMINCRBY(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// Check if the object is of JSON type
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
-	if errWithMessage != nil {
+	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
 		return makeEvalError(diceerrors.ErrWrongTypeOperation)
 	}
 

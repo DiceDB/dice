@@ -9227,7 +9227,7 @@ func testEvalLINSERT(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY", "before", "mock_value", "element"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-WRONGTYPE Operation against a key holding the wrong kind of value")},
 		},
 	}
 	runMigratedEvalTests(t, tests, evalLINSERT, store)
