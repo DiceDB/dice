@@ -10,7 +10,7 @@ func GetType(te uint8) uint8 {
 	return (te >> 4) << 4
 }
 
-func assertType(te, t uint8) error {
+func AssertTypeWithError(te, t uint8) error {
 	if GetType(te) != t {
 		return errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
 	}
@@ -18,7 +18,7 @@ func assertType(te, t uint8) error {
 }
 
 func AssertType(Type, expectedType uint8) []byte {
-	if err := assertType(Type, expectedType); err != nil {
+	if err := AssertTypeWithError(Type, expectedType); err != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongKeyTypeErr)
 	}
 	return nil

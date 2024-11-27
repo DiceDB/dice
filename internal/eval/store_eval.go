@@ -642,8 +642,8 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	var str string
-	switch _, oEnc := object.ExtractType(obj); oEnc {
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+	switch oType := object.ExtractType(obj); oType {
+	case object.ObjTypeString:
 		if val, ok := obj.Value.(string); ok {
 			str = val
 		} else {
@@ -652,9 +652,9 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 				Error:  diceerrors.ErrGeneral("expected string but got another type"),
 			}
 		}
-	case object.ObjEncodingInt:
+	case object.ObjTypeInt:
 		str = strconv.FormatInt(obj.Value.(int64), 10)
-	case object.ObjEncodingByteArray:
+	case object.ObjTypeByteArray:
 		if val, ok := obj.Value.(*ByteArray); ok {
 			str = string(val.data)
 		} else {
@@ -881,7 +881,7 @@ func shouldSkipMember(score, currentScore float64, exists bool, flags map[string
 
 // storeUpdatedSet stores the updated sorted set in the store.
 func storeUpdatedSet(store *dstore.Store, key string, sortedSet *sortedset.Set) {
-	store.Put(key, store.NewObj(sortedSet, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree), dstore.WithPutCmd(dstore.ZAdd))
+	store.Put(key, store.NewObj(sortedSet, -1, object.ObjTypeSortedSet), dstore.WithPutCmd(dstore.ZAdd))
 }
 
 // getOrCreateSortedSet fetches the sorted set if it exists, otherwise creates a new one.
@@ -1096,10 +1096,10 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 	// Key does not exist, create a new key
 	if obj == nil {
 		// Deduce type and encoding based on the value if no leading zeros
-		oType, oEnc := deduceType(value)
+		oType := deduceType(value)
 
 		// Transform the value based on the type and encoding
-		storedValue, err := storeValueWithEncoding(value, oEnc)
+		storedValue, err := storeValueWithType(value, oType)
 		if err != nil {
 			return &EvalResponse{
 				Result: nil,
@@ -1107,7 +1107,7 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 
-		store.Put(key, store.NewObj(storedValue, exDurationMs, oType, oEnc))
+		store.Put(key, store.NewObj(storedValue, exDurationMs, oType))
 		return &EvalResponse{
 			Result: len(value),
 			Error:  nil,
@@ -1121,10 +1121,10 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
-	_, currentEnc := object.ExtractType(obj)
+	oType := object.ExtractType(obj)
 
 	// Transform the value based on the current encoding
-	currentValue, err := convertValueToString(obj, currentEnc)
+	currentValue, err := convertValueToString(obj, oType)
 	if err != nil {
 		// If the encoding is neither integer nor string, return a "wrong type" error
 		return &EvalResponse{
@@ -1139,7 +1139,7 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 	// We need to store the new appended value as a string
 	// Even if append is performed on integers, the result will be stored as a string
 	// This is consistent with the redis implementation as append is considered a string operation
-	store.Put(key, store.NewObj(newValue, exDurationMs, object.ObjTypeString, object.ObjEncodingRaw))
+	store.Put(key, store.NewObj(newValue, exDurationMs, object.ObjTypeString))
 	return &EvalResponse{
 		Result: len(newValue),
 		Error:  nil,
@@ -1710,7 +1710,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 			hll.Insert([]byte(arg))
 		}
 
-		obj = store.NewObj(hll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+		obj = store.NewObj(hll, -1, object.ObjTypeString)
 
 		store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 		return &EvalResponse{
@@ -1731,7 +1731,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 		existingHll.Insert([]byte(arg))
 	}
 
-	obj = store.NewObj(existingHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+	obj = store.NewObj(existingHll, -1, object.ObjTypeString)
 	store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 
 	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
@@ -2052,7 +2052,7 @@ func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// Save the mergedHll
-	obj = store.NewObj(mergedHll, -1, object.ObjTypeString, object.ObjEncodingRaw)
+	obj = store.NewObj(mergedHll, -1, object.ObjTypeString)
 	store.Put(destKey, obj, dstore.WithPutCmd(dstore.PFMERGE))
 
 	return &EvalResponse{
@@ -2425,7 +2425,7 @@ func incrDecrCmd(args []string, incr int64, store *dstore.Store) *EvalResponse {
 	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		obj = store.NewObj(incr, -1, object.ObjTypeInt, object.ObjEncodingInt)
+		obj = store.NewObj(incr, -1, object.ObjTypeInt)
 		store.Put(key, obj)
 		return &EvalResponse{
 			Result: incr,
@@ -2496,8 +2496,8 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 
 	if obj == nil {
 		strValue := formatFloat(incr, false)
-		oType, oEnc := deduceType(strValue)
-		obj = store.NewObj(strValue, -1, oType, oEnc)
+		oType := deduceType(strValue)
+		obj = store.NewObj(strValue, -1, oType)
 		store.Put(key, obj)
 		return &EvalResponse{
 			Result: strValue,
@@ -2530,14 +2530,14 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 	}
 	strValue := formatFloat(value, true)
 
-	oType, oEnc := deduceType(strValue)
+	oType := deduceType(strValue)
 
 	// Remove the trailing decimal for integer values
 	// to maintain consistency with redis
 	strValue = strings.TrimSuffix(strValue, ".0")
 
 	obj.Value = strValue
-	obj.Type = oType | oEnc
+	obj.Type = oType
 
 	return &EvalResponse{
 		Result: strValue,
@@ -2665,7 +2665,7 @@ func evalRestore(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrGeneral("deserialization failed"))
 	}
 
-	newobj := store.NewObj(obj.Value, ttl, obj.Type, obj.Type)
+	newobj := store.NewObj(obj.Value, ttl, obj.Type)
 	var keepttl = true
 
 	if ttl > 0 {
@@ -6176,7 +6176,7 @@ func evalGEOADD(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)
+	obj = store.NewObj(ss, -1, object.ObjTypeSortedSet)
 	store.Put(key, obj)
 
 	return &EvalResponse{
@@ -6619,7 +6619,7 @@ func evalObjectEncoding(key string, store *dstore.Store) *EvalResponse {
 		return makeEvalResult(clientio.NIL)
 	}
 
-	oType, oEnc := object.ExtractType(obj)
+	oType := object.ExtractType(obj)
 	switch {
 	case oType == object.ObjTypeString:
 		encodingTypeStr = "raw"
