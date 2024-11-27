@@ -6625,10 +6625,6 @@ func evalObjectEncoding(key string, store *dstore.Store) *EvalResponse {
 		encodingTypeStr = "raw"
 		return makeEvalResult(encodingTypeStr)
 
-	case oType == object.ObjTypeString:
-		encodingTypeStr = "embstr"
-		return makeEvalResult(encodingTypeStr)
-
 	case oType == object.ObjTypeInt:
 		encodingTypeStr = "int"
 		return makeEvalResult(encodingTypeStr)
@@ -6651,10 +6647,6 @@ func evalObjectEncoding(key string, store *dstore.Store) *EvalResponse {
 
 	case oType == object.ObjTypeSet:
 		encodingTypeStr = "setstr"
-		return makeEvalResult(encodingTypeStr)
-
-	case oType == object.ObjTypeSet:
-		encodingTypeStr = "setint"
 		return makeEvalResult(encodingTypeStr)
 
 	case oType == object.ObjTypeHashMap:
