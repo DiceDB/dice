@@ -18,14 +18,11 @@ func deduceType(v string) (o uint8) {
 	if _, err := strconv.ParseInt(v, 10, 64); err == nil {
 		return object.ObjTypeInt
 	}
-	if len(v) <= 44 {
-		return object.ObjTypeString
-	}
 	return object.ObjTypeString
 }
 
 // Function to handle converting the value based on the encoding type
-func storeValueWithEncoding(value string, oEnc uint8) (interface{}, error) {
+func storeValueWithType(value string, oType uint8) (interface{}, error) {
 	var returnValue interface{}
 
 	// treat as string if value has leading zero
@@ -34,14 +31,14 @@ func storeValueWithEncoding(value string, oEnc uint8) (interface{}, error) {
 		return value, nil
 	}
 
-	switch oEnc {
-	case object.ObjEncodingInt:
+	switch oType {
+	case object.ObjTypeInt:
 		intValue, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return nil, diceerrors.ErrWrongTypeOperation
 		}
 		returnValue = intValue
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+	case object.ObjTypeString:
 		returnValue = value
 	default:
 		return nil, diceerrors.ErrWrongTypeOperation
@@ -51,17 +48,17 @@ func storeValueWithEncoding(value string, oEnc uint8) (interface{}, error) {
 }
 
 // Function to convert the value to a string for concatenation or manipulation
-func convertValueToString(obj *object.Obj, oEnc uint8) (string, error) {
+func convertValueToString(obj *object.Obj, oType uint8) (string, error) {
 	var currentValueStr string
 
-	switch oEnc {
-	case object.ObjEncodingInt:
+	switch oType {
+	case object.ObjTypeInt:
 		// Convert int64 to string for concatenation
 		currentValueStr = strconv.FormatInt(obj.Value.(int64), 10)
-	case object.ObjEncodingEmbStr, object.ObjEncodingRaw:
+	case object.ObjTypeString:
 		// Use the string value directly
 		currentValueStr = obj.Value.(string)
-	case object.ObjEncodingByteArray:
+	case object.ObjTypeByteArray:
 		val, ok := obj.Value.(*ByteArray)
 		if !ok {
 			return "", diceerrors.ErrWrongTypeOperation

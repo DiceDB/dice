@@ -294,7 +294,7 @@ func jsonMGETHelper(store *dstore.Store, path, key string) (result interface{}, 
 	}
 
 	// Check if the object is of JSON type
-	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON, object.ObjEncodingJSON)
+	errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON)
 	if errWithMessage != nil {
 		return result, errWithMessage
 	}
