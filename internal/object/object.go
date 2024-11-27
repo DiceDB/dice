@@ -72,26 +72,16 @@ type InternalObj struct {
 	ExDuration int64
 }
 
-var ObjTypeString uint8 = 0 << 4
-
-var ObjTypeBitSet uint8 = 2 << 4 // 00100000
-
-var ObjTypeJSON uint8 = 3 << 4 // 00110000
-
-var ObjTypeByteArray uint8 = 4 << 4 // 01000000
-
-var ObjTypeInt uint8 = 5 << 4 // 01010000
-
-var ObjTypeSet uint8 = 6 << 4 // 01010000
-
-var ObjTypeHashMap uint8 = 7 << 4
-
-var ObjTypeSortedSet uint8 = 8 << 4
-
-var ObjTypeCountMinSketch uint8 = 9 << 4
-
-var ObjTypeBF uint8 = 10 << 4 // 00100000
-var ObjTypeDequeue uint8 = 11 << 4
+var ObjTypeString uint8 = 0
+var ObjTypeJSON uint8 = 3
+var ObjTypeByteArray uint8 = 4
+var ObjTypeInt uint8 = 5
+var ObjTypeSet uint8 = 6
+var ObjTypeHashMap uint8 = 7
+var ObjTypeSortedSet uint8 = 8
+var ObjTypeCountMinSketch uint8 = 9
+var ObjTypeBF uint8 = 10
+var ObjTypeDequeue uint8 = 11
 
 func ExtractType(obj *Obj) (e1 uint8) {
 	return obj.Type & 0b11110000

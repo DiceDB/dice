@@ -298,7 +298,7 @@ func GetBloomFilter(key string, store *dstore.Store) (*Bloom, error) {
 	if obj == nil {
 		return nil, nil
 	}
-	if err := object.AssertType(obj.Type, object.ObjTypeBitSet); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeBF); err != nil {
 		return nil, diceerrors.ErrWrongTypeOperation
 	}
 
