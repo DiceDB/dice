@@ -17,8 +17,8 @@ func AssertTypeWithError(te, t uint8) error {
 	return nil
 }
 
-func AssertType(Type, expectedType uint8) []byte {
-	if err := AssertTypeWithError(Type, expectedType); err != nil {
+func AssertType(_type, expectedType uint8) []byte {
+	if err := AssertTypeWithError(_type, expectedType); err != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongKeyTypeErr)
 	}
 	return nil
