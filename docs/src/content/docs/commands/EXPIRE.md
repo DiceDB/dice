@@ -96,11 +96,11 @@ This example shows what happens when trying to set an expiration on a non-existe
 
 ## Best Practices
 
-- Use `TTL` command to check remaining time before expiration
-- Consider using `PERSIST` command to remove expiration if needed
+- Use [`TTL`](/commands/ttl) command to check remaining time before expiration
+- Consider using [`PERSIST`](/commands/persist) command to remove expiration if needed
 - Choose appropriate conditional flags (NX, XX, GT, LT) based on your use case
 - Ensure timeout values are appropriate for your application's needs
 
 ## Alternatives
 
-- Use `EXPIREAT` command for more precise expiration control based on Unix timestamps
+- Use [`EXPIREAT`](/commands/expireat) command for more precise expiration control based on Unix timestamps

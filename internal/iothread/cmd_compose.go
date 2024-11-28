@@ -1,4 +1,4 @@
-package worker
+package iothread
 
 import (
 	"math"
@@ -8,7 +8,7 @@ import (
 	"github.com/dicedb/dice/internal/ops"
 )
 
-// This file contains functions used by the Worker to handle and process responses
+// This file contains functions used by the IOThread to handle and process responses
 // from multiple shards during distributed operations. For commands that are executed
 // across several shards, such as MultiShard commands, dedicated functions are responsible
 // for aggregating and managing the results.

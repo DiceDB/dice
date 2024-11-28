@@ -1,4 +1,4 @@
-package worker
+package iothread
 
 import (
 	"context"
@@ -191,12 +191,12 @@ const (
 
 type CmdMeta struct {
 	CmdType
-	Cmd                  string
-	WorkerCommandHandler func([]string) []byte
+	Cmd             string
+	IOThreadHandler func([]string) []byte
 
 	// decomposeCommand is a function that takes a DiceDB command and breaks it down into smaller,
 	// manageable DiceDB commands for each shard processing. It returns a slice of DiceDB commands.
-	decomposeCommand func(ctx context.Context, worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error)
+	decomposeCommand func(ctx context.Context, thread *BaseIOThread, DiceDBCmd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error)
 
 	// composeResponse is a function that combines multiple responses from the execution of commands
 	// into a single response object. It accepts a variadic parameter of EvalResponse objects
@@ -211,10 +211,10 @@ type CmdMeta struct {
 
 	// preProcessResponse is a function that handles the preprocessing of a DiceDB command by
 	// preparing the necessary operations (e.g., fetching values from shards) before the command
-	// is executed. It takes the worker and the original DiceDB command as parameters and
+	// is executed. It takes the io-thread and the original DiceDB command as parameters and
 	// ensures that any required information is retrieved and processed in advance. Use this when set
 	// preProcessingReq = true.
-	preProcessResponse func(worker *BaseWorker, DiceDBCmd *cmd.DiceDBCmd) error
+	preProcessResponse func(thread *BaseIOThread, DiceDBCmd *cmd.DiceDBCmd) error
 }
 
 var CommandsMeta = map[string]CmdMeta{
@@ -642,7 +642,7 @@ var CommandsMeta = map[string]CmdMeta{
 func init() {
 	for c, meta := range CommandsMeta {
 		if err := validateCmdMeta(c, meta); err != nil {
-			slog.Error("error validating worker command metadata %s: %v", c, err)
+			slog.Error("error validating command metadata %s: %v", c, err)
 		}
 	}
 }
@@ -651,8 +651,8 @@ func init() {
 func validateCmdMeta(c string, meta CmdMeta) error {
 	switch meta.CmdType {
 	case Global:
-		if meta.WorkerCommandHandler == nil {
-			return fmt.Errorf("global command %s must have WorkerCommandHandler function", c)
+		if meta.IOThreadHandler == nil {
+			return fmt.Errorf("global command %s must have IOThreadHandler function", c)
 		}
 	case MultiShard, AllShard:
 		if meta.decomposeCommand == nil || meta.composeResponse == nil {

@@ -91,7 +91,7 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 	wsCtx, cancelWS := context.WithCancel(ctx)
 	defer cancelWS()
 
-	s.shardManager.RegisterWorker("wsServer", s.ioChan, nil)
+	s.shardManager.RegisterIOThread("wsServer", s.ioChan, nil)
 
 	// start server
 	wg.Add(1)
@@ -199,7 +199,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		// create request
 		sp := &ops.StoreOp{
 			Cmd:         diceDBCmd,
-			WorkerID:    "wsServer",
+			IOThreadID:  "wsServer",
 			ShardID:     0,
 			WebsocketOp: true,
 		}
@@ -340,7 +340,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	var responseValue interface{}
 	// Check if the command is migrated, if it is we use EvalResponse values
 	// else we use RESPParser to decode the response
-	_, ok := WorkerCmdsMeta[diceDBCmd.Cmd]
+	_, ok := CmdMetaMap[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		responseValue, err = DecodeEvalResponse(response.EvalResponse)

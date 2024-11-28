@@ -32,18 +32,26 @@ docker run -p 7379:7379 dicedb/dicedb --enable-watch
 Once the DiceDB server starts, you will see output similar to this
 
 ```
-██████╗ ██╗ ██████╗███████╗██████╗ ██████╗
-██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
-██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
-██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
-██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
-╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
+        ██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
+        ██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
+        ██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
+        ██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
+        ██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
+        ╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 
-2024-10-24T18:35:55Z INF starting DiceDB version=0.1.0
-2024-10-24T18:35:55Z INF running with port=7379
-2024-10-24T18:35:55Z INF running with enable-watch=true
-2024-10-24T18:35:55Z INF running with mode=multi-threaded num-shards=12
-2024-10-24T18:35:55Z INF ready to accept and serve requests on port=7379
+
+--------------------------------------------------
+| Configuration           | Value                |
+--------------------------------------------------
+| Version                 | 0.0.5                |
+| Port                    | 7379                 |
+| Multi Threading Enabled | true                 |
+| Cores                   | 8                    |
+| Shards                  | 8                    |
+| Watch Enabled           | true                 |
+| HTTP Enabled            | false                |
+| Websocket Enabled       | false                |
+--------------------------------------------------
 ```
 
 ### Starting the application server
@@ -72,8 +80,8 @@ Once the DiceDB server starts, you will see output similar to this
 
 1. DiceDB: As the in-memory data store to realtime track user scores.
 2. DiceDB Go SDK: To allow interaction between application server and DiceDB.
-3. `ZRANGEWATCH` command: Allows the application to subscribe to changes in the leaderboard.
-4. `ZADD` command: We'd leverage this command to add scores for users.
+3. [`ZRANGEWATCH`](/commands/zrangewatch) command: Allows the application to subscribe to changes in the leaderboard.
+4. [`ZADD`](/commands/zadd) command: We'd leverage this command to add scores for users.
 5. Websocket: To push real-time updates to connected users.
 
 In this application, every player assigned with higher score is ranked at the top of leaderboard.
@@ -91,7 +99,7 @@ The `ZRANGEWATCH` command allows the application to subscribe to changes in the 
 This allows users to eradicate the need to continuously poll the server as updates are automatically delivered whenever changes occur.
 `ZRANGEWATCH` only sends the relevant changes to clients, making the process highly efficient in terms of both bandwidth and processing power.
 
-### Flow of `ZRANGEWATCH`:
+#### Flow of `ZRANGEWATCH`:
 
 1. Setup: The client subscribes to updates on the leaderboard using `ZRANGEWATCH`.
 2. Data Changes: Whenever a player's score is updated, DiceDB triggers an update.
@@ -202,7 +210,7 @@ This allows users to eradicate the need to continuously poll the server as updat
    ```
 
    - Watch Connection: A Watch Connection is established with DiceDB using WatchConn.
-   - `ZRANGEWATCH`: This command watches the top 5 scores of the leaderboard.
+   - [`ZRANGEWATCH`](/commands/zrangewatch): This command watches the top 5 scores of the leaderboard.
    - Real-Time Updates: Whenever there's a change in the leaderboard, the watch channel(`watchCh`) receives an update, which is then broadcast to all connected clients via WebSocket.
 
 ## Conclusion

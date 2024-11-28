@@ -1,6 +1,10 @@
 ---
 title: ZRANGE.UNWATCH
 description: The `ZRANGE.UNWATCH` command is a feature to stop receiving updates on a sorted set
+sidebar:
+  badge:
+    text: Reactive
+    variant: success
 ---
 
 The `ZRANGE.UNWATCH` command is a feature to stop receiving updates on a sorted set.
