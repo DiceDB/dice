@@ -32,6 +32,7 @@ var (
 	ErrEmptyCommand               = errors.New("empty command")
 	ErrInvalidIPAddress           = errors.New("invalid IP address")
 	ErrInvalidFingerprint         = errors.New("invalid fingerprint")
+	ErrKeyDoesNotExist            = errors.New("ERR could not perform this operation on a key that doesn't exist")
 
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {
@@ -52,8 +53,8 @@ var (
 	ErrFormatted = func(errMsg string, opts ...any) error {
 		return ErrGeneral(fmt.Sprintf(errMsg, opts...))
 	}
-	ErrWorkerNotFound = func(workerID string) error {
-		return fmt.Errorf("ERR worker with ID %s not found", workerID) // Indicates that a worker with the specified ID does not exist.
+	ErrIOThreadNotFound = func(id string) error {
+		return fmt.Errorf("ERR io-thread with ID %s not found", id) // Indicates that an io-thread with the specified ID does not exist.
 	}
 
 	ErrJSONPathNotFound = func(path string) error {
@@ -71,4 +72,16 @@ var (
 	ErrUnexpectedJSONPathType = func(expectedType string, actualType interface{}) error {
 		return fmt.Errorf("ERR wrong type of path value - expected %s but found %s", expectedType, actualType) // Signals an unexpected type received when an integer was expected.
 	}
+
+	ErrUnknownCmd = func(cmd string) error {
+		return fmt.Errorf("ERROR unknown command '%v'", cmd) // Indicates that an unsupported encoding type was provided.
+	}
 )
+
+type PreProcessError struct {
+	Result interface{}
+}
+
+func (e *PreProcessError) Error() string {
+	return fmt.Sprintf("%v", e.Result)
+}

@@ -13,12 +13,11 @@ COPY <source> <destination> [DB destination-db] [REPLACE]
 
 ## Parameters
 
-| Parameter         | Description                                                                                                                                                  | Type    | Required |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | :------: |
-| source            | The key of the value you want to copy. This key must exist.                                                                                                  | String  |   Yes    |
-| destination       | The key where the value will be copied to. This key must not exist unless the `REPLACE` option is specified.                                                 | String  |   Yes    |
-| DB destination-db | The database number where the destination key will be created. If not specified, the destination key will be created in the same database as the source key. | Integer | optional |
-| REPLACE           | If specified, the command will overwrite the destination key if it already exists.                                                                           | String  | Optional |
+| Parameter   | Description                                                                                                  | Type   | Required |
+| ----------- | ------------------------------------------------------------------------------------------------------------ | ------ | :------: |
+| source      | The key of the value you want to copy. This key must exist.                                                  | String |   Yes    |
+| destination | The key where the value will be copied to. This key must not exist unless the `REPLACE` option is specified. | String |   Yes    |
+| REPLACE     | If specified, the command will overwrite the destination key if it already exists.                           | String | Optional |
 
 ## Return Value
 
@@ -37,7 +36,7 @@ When the `COPY` command is executed, DiceDB will:
 4. Copy the value from the source key to the destination key.
 5. Return `1` if the copy operation was successful.
 
-## Error Handling
+## Errors
 
 The `COPY` command can raise the following errors:
 

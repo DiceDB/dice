@@ -19,11 +19,14 @@ This command does not accept any parameters.
 
 ## Return values
 
-Returns an array of help text entries. Each entry describes a subcommand, its syntax, and its purpose.
+| Condition             | Return Value                                                             |
+| --------------------- | ------------------------------------------------------------------------ |
+| Command is successful | Help text detailing the available subcommands for the `COMMAND` command. |
+| Error                 | An error is returned if the command fails.                               |
 
 ## Behavior
 
-The `COMMAND HELP` command outputs help text that lists all the available subcommands for the `COMMAND` command. It is used to understand how each subcommand functions and the available options for those subcommands.
+The `COMMAND HELP` command outputs help text that lists all the available subcommands for the [`COMMAND`](/commands/command) command. It is used to understand how each subcommand functions and the available options for those subcommands.
 
 ## Errors
 

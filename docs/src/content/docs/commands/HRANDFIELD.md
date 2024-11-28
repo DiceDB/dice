@@ -116,16 +116,16 @@ Passing invalid number of arguments to the `hrandfield` command
 (error) ERR wrong number of arguments for 'hrandfield' command
 ```
 
-### Best Practices
+## Best Practices
 
-- `Check Key Existence`: Before using `HRANDFIELD`, ensure that the hash key exists to avoid unnecessary errors. You can use the `HEXISTS` command to verify the presence of the key.
+- `Check Key Existence`: Before using `HRANDFIELD`, ensure that the hash key exists to avoid unnecessary errors. You can use the [`HEXISTS`](/commands/hexists) command to verify the presence of the key.
 
-### Alternatives
+## Alternatives
 
-- `HKEYS`: Use `HKEYS` to retrieve all fields in a hash. If you need to work with all fields rather than a random selection, this command provides a complete view.
-- `Sampling with HSCAN`: For larger hashes, consider using `HSCAN` to iterate through the fields and randomly select a subset. This approach can help manage memory usage when dealing with large datasets.
+- [`HKEYS`](/commands/hkeys): Use `HKEYS` to retrieve all fields in a hash. If you need to work with all fields rather than a random selection, this command provides a complete view.
+- `Sampling with HSCAN`: For larger hashes, consider using [`HSCAN`](/commands/hscan) to iterate through the fields and randomly select a subset. This approach can help manage memory usage when dealing with large datasets.
 
-### Notes
+## Notes
 
 - The `HRANDFIELD` command is useful for scenarios where random selection from hash fields is required, such as in games, lotteries, or randomized surveys.
 - The command can return multiple fields at once, allowing for efficient random sampling without the need for multiple calls. This can be particularly advantageous when working with larger hashes.

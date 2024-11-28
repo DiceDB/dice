@@ -8,7 +8,7 @@ The `SET` command in DiceDB is used to set the value of a key. If the key alread
 ## Syntax
 
 ```bash
-SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix-time-milliseconds | KEEPTTL] [NX | XX]
+SET key value  [NX | XX] [GET] [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix-time-milliseconds | KEEPTTL]
 ```
 
 ## Parameters
@@ -24,14 +24,16 @@ SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix
 | `NX`      | Only set the key if it does not already exist.                            | None    | No       |
 | `XX`      | Only set the key if it already exists.                                    | None    | No       |
 | `KEEPTTL` | Retain the time-to-live associated with the key.                          | None    | No       |
+| `GET`     | Return the value of the key before setting it.                            | None    | No       |
 
 ## Return values
 
-| Condition                                   | Return Value |
-| ------------------------------------------- | ------------ |
-| Command is successful                       | `OK`         |
-| `NX` or `XX` conditions are not met         | `nil`        |
-| Syntax or specified constraints are invalid | error        |
+| Condition                                   | Return Value                                                                            |
+| ------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Command is successful                       | `OK`                                                                                    |
+| `NX` or `XX` conditions are not met         | `nil`                                                                                   |
+| Syntax or specified constraints are invalid | error                                                                                   |
+| If the `GET` option is provided             | The value of the key before setting it or error if value cannot be returned as a string |
 
 ## Behaviour
 
@@ -41,6 +43,7 @@ SET key value [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix
 - Using the `EX`, `EXAT`, `PX` or `PXAT` options together with `KEEPTTL` is not allowed and will result in an error.
 - When provided, `EX` sets the expiry time in seconds and `PX` sets the expiry time in milliseconds.
 - The `KEEPTTL` option ensures that the key's existing TTL is retained.
+- The `GET` option can be used to return the value of the key before setting it. If the key does not exist, `nil` is returned. If the key exists but does not contain a value which can be returned as a string, an error is returned. The set operation is not performed in this case.
 
 ## Errors
 
@@ -130,4 +133,31 @@ Trying to set key `foo` with both `EX` and `KEEPTTL` will result in an error
 ```bash
 127.0.0.1:7379> SET foo bar EX 10 KEEPTTL
 (error) ERR syntax error
+```
+
+### Set with GET option
+
+```bash
+127.0.0.1:7379> set foo bar
+OK
+127.0.0.1:7379> set foo bazz get
+"bar"
+```
+
+### Set with GET option when key does not exist
+
+```bash
+127.0.0.1:7379> set foo bazz get
+(nil)
+127.0.0.1:7379> get foo
+(nil)
+```
+
+### Set with Get with wrong type of value
+
+```bash
+127.0.0.1:7379> sadd foo item1
+(integer) 1
+127.0.0.1:7379> set foo bazz get
+(error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```

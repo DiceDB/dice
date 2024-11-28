@@ -3,17 +3,28 @@ package clientio_test
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"math"
 	"testing"
 
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/stretchr/testify/assert"
 )
 
+func init() {
+	parser := config.NewConfigParser()
+	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
+		log.Fatalf("failed to load configuration: %v", err)
+	}
+}
+
 func TestSimpleStringDecode(t *testing.T) {
 	cases := map[string]string{
-		"+OK\r\n": "OK",
+		"+OK\r\n":                  "OK",
+		"+Hello\rWorld\r\n":        "Hello\rWorld",
+		"+Hello\rWorld\rAgain\r\n": "Hello\rWorld\rAgain",
 	}
 	for k, v := range cases {
 		p := clientio.NewRESPParser(bytes.NewBuffer([]byte(k)))
@@ -25,6 +36,7 @@ func TestSimpleStringDecode(t *testing.T) {
 		if v != value {
 			t.Fail()
 		}
+		fmt.Println(v, value)
 	}
 }
 

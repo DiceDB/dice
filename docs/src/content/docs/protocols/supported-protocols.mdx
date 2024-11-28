@@ -29,9 +29,9 @@ Clients can also connect to DiceDB over HTTP. This allows clients to connect to 
 | ------------ | ----- | ------------------ |
 | Default Port | 8082  | `--http-port` flag |
 
-For all commands except `QWATCH`, the HTTP API is synchronous and will return the result of the command immediately.
-
-For [`QWATCH`](/commands/qwatch), we use [SSE](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) to be able to respond with changes to the result set of the queries.
+[//]: # "For all commands except `QWATCH`, the HTTP API is synchronous and will return the result of the command immediately."
+[//]: #
+[//]: # "For [`QWATCH`](/commands/qwatch), we use [SSE](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) to be able to respond with changes to the result set of the queries."
 
 To understand the request and response format better, please refer to the [HTTP Protocol](/protocols/http) documentation.
 
@@ -39,13 +39,13 @@ To understand the request and response format better, please refer to the [HTTP 
 
 - To connect to dice from a web frontend.
 - When you do not have access to a raw TCP connection.
-- With small number of queries you want to `QWATCH`.
 - Integrate dice with other web services using HTTP Webhooks.
 
-### Limitations
-
-- `QWATCH` uses SSE or Server Sent Events, and current implementation of HTTP in DiceDB is based on HTTP 1.1. This means that there would be a limit to how many queries you can `QWATCH` at a time ([ref](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)).
-- `QWATCH` using SSE also implies that the connection is stateful and the client needs to handle reconnections in case of network failures.
+[//]: # "- With small number of queries you want to `QWATCH`."
+[//]: # "### Limitations"
+[//]: #
+[//]: # "- `QWATCH` uses SSE or Server Sent Events, and current implementation of HTTP in DiceDB is based on HTTP 1.1. This means that there would be a limit to how many queries you can `QWATCH` at a time ([ref](https://developer.mozilla.org/en-US/docs/Web/API/EventSource))."
+[//]: # "- `QWATCH` using SSE also implies that the connection is stateful and the client needs to handle reconnections in case of network failures."
 
 ## WebSockets
 
@@ -60,9 +60,10 @@ To understand the request and response format better, please refer to the [WebSo
 ### When to use WebSockets
 
 - To connect to dice from a web frontend and maintain a persistent connection.
-- To `QWATCH` a large number of queries.
 - In cases wher you need large amount/high frequency of live updates being pushed from dice to the client.
 - To build real-time applications with high frequency of updates like collaborative editing, real-time gaming, etc.
+
+[//]: # "- To `QWATCH` a large number of queries."
 
 ### Limitations
 

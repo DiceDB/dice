@@ -71,15 +71,33 @@ func TestType(t *testing.T) {
 			expected:      []interface{}{float64(0), "string"},
 			errorExpected: false,
 		},
+		// TODO: uncomment when bitop is added
+		// {
+		// 	name: "TYPE for key with value created from BITOP command",
+		// 	commands: []HTTPCommand{
+		// 		{Command: "SET", Body: map[string]interface{}{"key": "key1", "value": "foobar"}},
+		// 		{Command: "SET", Body: map[string]interface{}{"key": "key2", "value": "abcdef"}},
+		// 		{Command: "TYPE", Body: map[string]interface{}{"key": "dest"}},
+		// 	},
+		// 	expected:      []interface{}{"OK", "OK", "string"},
+		// 	errorExpected: false,
+		// },
 		{
-			name: "TYPE for key with value created from BITOP command",
+			name: "TYPE for key with value created from ZADD command",
 			commands: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "key1", "value": "foobar"}},
-				{Command: "SET", Body: map[string]interface{}{"key": "key2", "value": "abcdef"}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "dest", "key1", "key2"}}},
-				{Command: "TYPE", Body: map[string]interface{}{"key": "dest"}},
+				{Command: "ZADD", Body: map[string]interface{}{"key": "k11", "values": [...]string{"1", "member11"}}},
+				{Command: "TYPE", Body: map[string]interface{}{"key": "k11"}},
 			},
-			expected:      []interface{}{"OK", "OK", float64(6), "string"},
+			expected:      []interface{}{float64(1), "zset"},
+			errorExpected: false,
+		},
+		{
+			name: "TYPE for key with value created from GEOADD command",
+			commands: []HTTPCommand{
+				{Command: "GEOADD", Body: map[string]interface{}{"key": "k12", "values": [...]string{"13.361389", "38.115556", "Palermo"}}},
+				{Command: "TYPE", Body: map[string]interface{}{"key": "k12"}},
+			},
+			expected:      []interface{}{float64(1), "zset"},
 			errorExpected: false,
 		},
 	}

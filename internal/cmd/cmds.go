@@ -5,11 +5,36 @@ import (
 	"strings"
 
 	"github.com/dgryski/go-farm"
+	"github.com/dicedb/dice/internal/object"
 )
 
+// DiceDBCmd represents a command structure to be executed
+// within a DiceDB system. This struct emulates the way DiceDB commands
+// are structured, including the command itself, additional arguments,
+// and an optional object to store or manipulate.
 type DiceDBCmd struct {
-	Cmd  string
+	// Cmd represents the command to execute (e.g., "SET", "GET", "DEL").
+	// This is the main command keyword that specifies the action to perform
+	// in DiceDB. For example:
+	// - "SET": To store a value.
+	// - "GET": To retrieve a value.
+	// - "DEL": To delete a value.
+	// - "EXPIRE": To set a time-to-live for a key.
+	Cmd string
+
+	// Args holds any additional parameters required by the command.
+	// For example:
+	// - If Cmd is "SET", Args might contain ["key", "value"].
+	// - If Cmd is "EXPIRE", Args might contain ["key", "seconds"].
+	// This slice allows flexible support for commands with variable arguments.
 	Args []string
+
+	// InternalObj is a pointer to an InternalObj, representing an optional data structure
+	// associated with the command. This contains pointer to the underlying simple
+	// types such as int, string or even complex types
+	// like hashes, sets, or sorted sets, which are stored and manipulated as objects.
+	// WARN: This parameter should be used with caution
+	InternalObj *object.InternalObj
 }
 
 type RedisCmds struct {

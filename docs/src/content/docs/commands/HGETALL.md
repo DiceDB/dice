@@ -37,23 +37,24 @@ When the `HGETALL` command is executed:
 
 The `HGETALL` command can raise the following errors:
 
-- `(error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value`: This error is raised if the specified key exists but is not a hash. DiceDB expects the key to be associated with a hash data structure, and if it is associated with a different data type (e.g., string, list, set, etc.), this error will be triggered.
-- `(empty array)` : This error is raised if the specified key does not exist.
-- `(error) ERROR wrong number of arguments for 'hgetall' command` : This error is raised if an invalid number of arguments are passed to the `HGETALL` command.
+1. `Non-hash type or wrong data type`:
+
+   - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
+   - Occurs if the key holds a non-hash data structure.
+
+2. `Incorrect Argument Count`:
+
+   - Error Message: `(error) ERR wrong number of arguments for 'hgetall' command`
+   - Occurs if the command is not provided with the correct number of arguments (i.e., more than one).
 
 ## Example Usage
 
-### Example 1: Retrieving all fields and values from an existing hash
+### Retrieving all fields and values from an existing hash
 
 ```bash
 127.0.0.1:7379> HSET user:1000 name "John Doe" age "30" country "USA"
 (integer) 3
 127.0.0.1:7379> HGETALL user:1000
-```
-
-`Output:`
-
-```
 1) "name"
 2) "John Doe"
 3) "age"
@@ -62,19 +63,14 @@ The `HGETALL` command can raise the following errors:
 6) "USA"
 ```
 
-### Example 2: Retrieving from a non-existing key
+### Retrieving from a non-existing key
 
 ```bash
 127.0.0.1:7379> HGETALL user:2000
-```
-
-`Output:`
-
-```
 (empty array)
 ```
 
-### Error Example:
+### Error Example
 
 Key is not a hash
 
@@ -82,24 +78,12 @@ Key is not a hash
 127.0.0.1:7379> SET user:3000 "This is a string"
 OK
 127.0.0.1:7379> HGETALL user:3000
-```
-
-`Output:`
-
-```
 (error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
-
-### Error Example:
 
 Invalid number of arguments are passed
 
 ```bash
 127.0.0.1:7379> HGETALL user:3000 helloworld
-```
-
-`Output:`
-
-```
 (error) ERROR wrong number of arguments for 'hgetall' command
 ```

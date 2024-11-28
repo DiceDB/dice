@@ -12,7 +12,7 @@ import (
 type (
 	WatchSubscription struct {
 		Subscribe    bool                // Subscribe is true for subscribe, false for unsubscribe. Required.
-		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the worker. Required.
+		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the io-thread. Required.
 		WatchCmd     *cmd.DiceDBCmd      // WatchCmd Represents a unique key for each watch artifact, only populated for subscriptions.
 		Fingerprint  uint32              // Fingerprint is a unique identifier for each watch artifact, only populated for unsubscriptions.
 	}
@@ -28,10 +28,12 @@ type (
 
 var (
 	affectedCmdMap = map[string]map[string]struct{}{
-		dstore.Set:    {dstore.Get: struct{}{}},
-		dstore.Del:    {dstore.Get: struct{}{}},
-		dstore.Rename: {dstore.Get: struct{}{}},
-		dstore.ZAdd:   {dstore.ZRange: struct{}{}},
+		dstore.Set:     {dstore.Get: struct{}{}},
+		dstore.Del:     {dstore.Get: struct{}{}},
+		dstore.Rename:  {dstore.Get: struct{}{}},
+		dstore.ZAdd:    {dstore.ZRange: struct{}{}},
+		dstore.PFADD:   {dstore.PFCOUNT: struct{}{}},
+		dstore.PFMERGE: {dstore.PFCOUNT: struct{}{}},
 	}
 )
 
@@ -109,6 +111,9 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 		if len(clients) == 0 {
 			// Remove the fingerprint from tcpSubscriptionMap
 			delete(m.tcpSubscriptionMap, fingerprint)
+		} else {
+			// Other clients still subscribed, no need to remove the fingerprint altogether
+			return
 		}
 	}
 

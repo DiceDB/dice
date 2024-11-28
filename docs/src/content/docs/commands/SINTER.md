@@ -37,14 +37,16 @@ If any of the specified keys do not exist, they are treated as empty sets. The i
 
 ## Error Handling
 
-- `Wrong Type Error`: If any of the specified keys exist but are not of the set data type, DiceDB will return an error.
+- `Wrong Type Error`:
   - `Error Message`: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
-- `No Key Error`: If no keys are provided, DiceDB will return an error.
+  - If any of the specified keys exist but are not of the set data type, DiceDB will return an error.
+- `No Key Error`:
   - `Error Message`: `(error) ERR wrong number of arguments for 'sinter' command`
+  - If no keys are provided, DiceDB will return an error.
 
 ## Example Usage
 
-### Example 1: Basic Intersection
+### Basic Intersection
 
 ```bash
 # Add elements to sets
@@ -60,7 +62,7 @@ If any of the specified keys do not exist, they are treated as empty sets. The i
 1) "c"
 ```
 
-### Example 2: Intersection with Non-Existent Set
+### Intersection with Non-Existent Set
 
 ```bash
 # Add elements to sets
@@ -76,7 +78,7 @@ If any of the specified keys do not exist, they are treated as empty sets. The i
 
 Note: By default, non-existent keys (such as set3 in the example above) are treated like empty sets. There's no built-in way to create an empty set.
 
-### Example 3: Error Handling - Wrong Type
+### Error Handling - Wrong Type
 
 ```bash
 # Add elements to sets
@@ -91,7 +93,7 @@ SINTER set1 stringKey
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-### Example 4: Error Handling - No Keys Provided
+### Error Handling - No Keys Provided
 
 ```bash
 # Attempt to compute intersection without providing any keys

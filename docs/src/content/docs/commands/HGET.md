@@ -50,9 +50,7 @@ When the `HGET` command is executed, DiceDB performs the following steps:
 
 ## Example Usage
 
-### Basic Usage
-
-#### Retrieving a value from a hash
+### Retrieving a value from a hash
 
 ```bash
 127.0.0.1:7379> HSET user:1000 name "John Doe"
@@ -63,14 +61,14 @@ When the `HGET` command is executed, DiceDB performs the following steps:
 "John Doe"
 ```
 
-#### Field does not exist
+### Field does not exist
 
 ```bash
 127.0.0.1:7379> HGET user:1000 email
 (nil)
 ```
 
-#### Key does not exist
+### Key does not exist
 
 ```bash
 127.0.0.1:7379> HGET user:2000 name
@@ -88,19 +86,12 @@ OK
 
 ### Invalid Usage
 
-Trying to get a field from a key that is not a hash.
-
 ```bash
 127.0.0.1:7379> SET product:2000 "This is a string"
 OK
 127.0.0.1:7379> HGET product:2000 name
 (error) WRONGTYPE Operation against a key holding the wrong kind of value
 ```
-
-- **Behavior**: The `SET` command sets the key `product:2000` to a string value.
-- **Error**: The `HGET` command will raise a WRONGTYPE error because `product:2000` is not a hash.
-
-Wrong Number of Arguments for HGET Command
 
 ```bash
 127.0.0.1:7379> HGET product:2000
@@ -109,9 +100,6 @@ Wrong Number of Arguments for HGET Command
 127.0.0.1:7379> HGET product:2000 name name2
 (error) ERR wrong number of arguments for 'hget' command
 ```
-
-- **Behavior**: The `HGET` command requires exactly two arguments: the key and the field name.
-- **Error**: The command will raise an error if provided with an incorrect number of arguments, indicating that the command requires a specific count.
 
 ## Notes
 

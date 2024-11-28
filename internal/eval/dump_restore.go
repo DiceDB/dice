@@ -2,67 +2,12 @@ package eval
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"hash/crc64"
-	"strconv"
 
-	"github.com/dicedb/dice/internal/clientio"
-	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
-	dstore "github.com/dicedb/dice/internal/store"
 )
-
-func evalDUMP(args []string, store *dstore.Store) []byte {
-	if len(args) < 1 {
-		return diceerrors.NewErrArity("DUMP")
-	}
-	key := args[0]
-	obj := store.Get(key)
-	if obj == nil {
-		return diceerrors.NewErrWithFormattedMessage("nil")
-	}
-
-	serializedValue, err := rdbSerialize(obj)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("serialization failed")
-	}
-	encodedResult := base64.StdEncoding.EncodeToString(serializedValue)
-	return clientio.Encode(encodedResult, false)
-}
-
-func evalRestore(args []string, store *dstore.Store) []byte {
-	if len(args) < 3 {
-		return diceerrors.NewErrArity("RESTORE")
-	}
-
-	key := args[0]
-	ttlStr := args[1]
-	ttl, _ := strconv.ParseInt(ttlStr, 10, 64)
-
-	encodedValue := args[2]
-	serializedData, err := base64.StdEncoding.DecodeString(encodedValue)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("failed to decode base64 value")
-	}
-
-	obj, err := rdbDeserialize(serializedData)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("deserialization failed: " + err.Error())
-	}
-
-	newobj := store.NewObj(obj.Value, ttl, obj.TypeEncoding, obj.TypeEncoding)
-	var keepttl = true
-
-	if ttl > 0 {
-		store.Put(key, newobj, dstore.WithKeepTTL(keepttl))
-	} else {
-		store.Put(key, obj)
-	}
-
-	return clientio.RespOK
-}
 
 func rdbDeserialize(data []byte) (*object.Obj, error) {
 	if len(data) < 3 {

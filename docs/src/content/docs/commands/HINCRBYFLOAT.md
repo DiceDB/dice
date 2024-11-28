@@ -123,16 +123,16 @@ Executing `hincrbyfloat` with a string increment value
 (error) ERROR value is not an integer or a float
 ```
 
-### Best Practices
+## Best Practices
 
 -`Ensure Field is Numeric`: Always verify that the field being incremented holds a valid numeric value (integer or float) to avoid errors related to type mismatches. -`Use Appropriate Data Types`: Choose the right data types for your fields. For floating-point operations, ensure that the values are stored and manipulated as floats to maintain precision.
 
-### Alternatives
+## Alternatives
 
-- `HINCRBY`: Use this command if you only need to increment a hash field by an integer. It is specifically designed for integer increments and may be more efficient for non-floating-point operations.
-- `HSET` and `HGET`: If you need to set or retrieve values without incrementing, consider using `HSET` to assign a value directly and HGET to retrieve the current value of a field.
+- [`HINCRBY`](/commands/hincrby): Use this command if you only need to increment a hash field by an integer. It is specifically designed for integer increments and may be more efficient for non-floating-point operations.
+- [`HSET`](/commands/hset) and [`HGET`](/commands/hget): If you need to set or retrieve values without incrementing, consider using `HSET` to assign a value directly and `HGET` to retrieve the current value of a field.
 
-### Notes
+## Notes
 
 - The `HINCRBYFLOAT` command is a powerful tool for managing floating-point counters and numerical values stored in hash fields, making it essential for applications that require precision in incremental updates.
 - The command operates atomically, meaning it will complete without interruption, making it safe to use in concurrent environments where multiple clients may modify the same hash fields.

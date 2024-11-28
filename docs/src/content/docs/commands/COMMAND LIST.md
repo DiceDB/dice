@@ -3,8 +3,6 @@ title: COMMAND LIST
 description: Documentation for the DiceDB command COMMAND LIST.
 ---
 
-## Introduction
-
 The `COMMAND LIST` command retrieves a list of all commands supported by the DiceDB server. This allows users to discover available commands for various operations, making it easier to understand the capabilities of the database.
 
 ## Syntax
@@ -19,7 +17,10 @@ This command does not accept any parameters.
 
 ## Return values
 
-The command returns an array of strings, where each string represents a command name available in the DiceDB server. If no commands are available (which is unlikely), an empty array is returned.
+| Condition             | Return Value                                                               |
+| --------------------- | -------------------------------------------------------------------------- |
+| Command is successful | Array containing the names of all commands supported by the DiceDB server. |
+| Error                 | An error is returned if the command fails.                                 |
 
 ## Behavior
 
