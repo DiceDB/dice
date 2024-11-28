@@ -153,7 +153,6 @@ func Execute() {
 		slog.Info("config file loaded from stdin")
 	} else {
 		defaultConfig(&flagsConfig)
-		render()
 	}
 }
 
