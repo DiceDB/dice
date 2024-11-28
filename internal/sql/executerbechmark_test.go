@@ -50,7 +50,7 @@ func BenchmarkExecuteQueryOrderBykey(b *testing.B) {
 
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -73,7 +73,7 @@ func BenchmarkExecuteQueryBasicOrderByValue(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -96,7 +96,7 @@ func BenchmarkExecuteQueryLimit(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -119,7 +119,7 @@ func BenchmarkExecuteQueryNoMatch(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -142,7 +142,7 @@ func BenchmarkExecuteQueryWithBasicWhere(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -165,7 +165,7 @@ func BenchmarkExecuteQueryWithComplexWhere(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -188,7 +188,7 @@ func BenchmarkExecuteQueryWithCompareWhereKeyandValue(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -211,7 +211,7 @@ func BenchmarkExecuteQueryWithBasicWhereNoMatch(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -233,7 +233,7 @@ func BenchmarkExecuteQueryWithCaseSesnsitivity(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -256,7 +256,7 @@ func BenchmarkExecuteQueryWithClauseOnKey(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -279,7 +279,7 @@ func BenchmarkExecuteQueryWithAllMatchingKeyRegex(b *testing.B) {
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("keys_%d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+				if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -322,7 +322,7 @@ func BenchmarkExecuteQueryWithJSON(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+					if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -347,7 +347,7 @@ func BenchmarkExecuteQueryWithNestedJSON(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+					if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -372,7 +372,7 @@ func BenchmarkExecuteQueryWithJsonInLeftAndRightExpressions(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+					if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -397,7 +397,7 @@ func BenchmarkExecuteQueryWithJsonNoMatch(b *testing.B) {
 			b.ResetTimer()
 			b.Run(fmt.Sprintf("%s_keys_%d", jsonSize, v), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := sql.ExecuteQuery(&query, store.GetStore()); err != nil {
+					if _, err := sql.ExecuteQuery(query, store.GetStore()); err != nil {
 						b.Fatal(err)
 					}
 				}

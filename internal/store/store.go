@@ -10,7 +10,6 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/sql"
 	"github.com/ohler55/ojg/jp"
-	"github.com/xwb1989/sqlparser"
 )
 
 func NewStoreRegMap() common.ITable[string, *object.Obj] {
@@ -349,7 +348,7 @@ func (store *Store) GetStore() common.ITable[string, *object.Obj] {
 
 // CacheKeysForQuery scans the store for keys that match the given where clause and sends them to the cache channel.
 // This allows the query manager to cache the existing keys that match the query.
-func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel chan *[]struct {
+func (store *Store) CacheKeysForQuery(whereClause sql.ConditionNode, cacheChannel chan *[]struct {
 	Key   string
 	Value *object.Obj
 }) {
