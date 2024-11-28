@@ -7378,6 +7378,22 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 		countVal = opts.Count
 	}
 
+	if !opts.WithCoord && !opts.WithDist && !opts.WithHash {
+		response := make([]string, 0, min(len(members), countVal))
+		for i := 0; i < cap(response); i++ {
+			if members[indices[i]] == "" {
+				continue
+			}
+
+			response = append(response, members[indices[i]])
+		}
+
+		return &EvalResponse{
+			Result: response,
+			Error:  nil,
+		}
+	}
+
 	response := make([][]interface{}, 0, min(len(members), countVal))
 	for i := 0; i < cap(response); i++ {
 		if members[indices[i]] == "" {
