@@ -122,13 +122,6 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 		}
 	}()
 
-	// listen for Q.WATCH subscriptions
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		s.listenForSubscriptions(wsCtx)
-	}()
-
 	// process Q.WATCH updates
 	wg.Add(1)
 	go func() {
@@ -211,13 +204,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 			// subscribe client for updates if watch is enabled
 			if config.DiceConfig.Performance.EnableWatch {
-				event := QuerySubscription{
-					Subscribe:          true,
-					Cmd:                diceDBCmd,
-					ClientIdentifierID: clientIdentifierID,
-					Client:             conn,
-				}
-				s.subscriptionChan <- event
+				s.subscribedClients.LoadOrStore(clientIdentifierID, conn)
 			} else {
 				if err := s.writeResponseWithRetries(conn, []byte("error: watch is not enabled"), maxRetries); err != nil {
 					slog.Debug(fmt.Sprintf("Error writing message: %v", err))
@@ -230,21 +217,6 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		resp := <-s.ioChan
 		if err := s.processResponse(conn, diceDBCmd, resp); err != nil {
 			break
-		}
-	}
-}
-
-func (s *WebsocketServer) listenForSubscriptions(ctx context.Context) {
-	for {
-		select {
-		case event := <-s.subscriptionChan:
-			if event.Subscribe {
-				s.subscribedClients.LoadOrStore(event.ClientIdentifierID, event.Client)
-			}
-		case <-s.shutdownChan:
-			return
-		case <-ctx.Done():
-			return
 		}
 	}
 }
