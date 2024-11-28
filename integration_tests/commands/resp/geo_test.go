@@ -84,3 +84,52 @@ func TestGeoDist(t *testing.T) {
 		})
 	}
 }
+
+func TestGeoPos(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []interface{}
+		delays []time.Duration
+	}{
+		{
+			name: "GEOPOS b/w existing points",
+			cmds: []string{
+				"GEOADD index 13.361389 38.115556 Palermo",
+				"GEOPOS index Palermo",
+			},
+			expect: []interface{}{
+				int64(1),
+				[]interface{}{"13.361387", "38.115556"},
+			},
+		},
+		{
+			name: "GEOPOS for non existing points",
+			cmds: []string{
+				"GEOPOS index NonExisting",
+			},
+			expect: []interface{}{
+				[]interface{}{"(nil)"},
+			},
+		},
+		{
+			name: "GEOPOS for non existing index",
+			cmds: []string{
+				"GEOPOS NonExisting Palermo",
+			},
+			expect: []interface{}{"(nil)"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+			}
+		})
+	}
+}
