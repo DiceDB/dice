@@ -14,7 +14,7 @@ import (
 type PingPayload struct {
 	Date           string         `json:"date"`
 	HardwareConfig HardwareConfig `json:"hardware_config"`
-	DBConfig       DBConfig       `json:"db_config"`
+	DBConfig       config.Config  `json:"db_config"`
 	Version        string         `json:"version"`
 	InstanceID     string         `json:"instance_id"`
 	Err            error          `json:"error"`
@@ -25,9 +25,6 @@ const (
 		"CJpZCI6ICJhZjcxNGExNC0xZWQyLTQ3ZDktOTM0MS0xMzgwNWNiOWFhNDYiLCAiaG9zdCI6ICJ1cy1lYXN0LWF3cyJ9.o9LqZqTZ9YkhbcusZOltsm95RzVQUzJLQOHV2YA7L0E"
 	url = "https://api.us-east.aws.tinybird.co/v0/events?name=ping2"
 )
-
-type DBConfig struct {
-}
 
 func Ping() {
 	hwConfig, err := GetHardwareMeta()
@@ -41,7 +38,7 @@ func Ping() {
 		Version:        config.DiceDBVersion,
 		Err:            err,
 		Date:           time.Now().UTC().Format("2006-01-02 15:04:05"),
-		DBConfig:       DBConfig{},
+		DBConfig:       *config.DiceConfig,
 	}
 
 	b, _ := json.Marshal(payload)
