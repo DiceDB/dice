@@ -246,9 +246,9 @@ func Area(centerHash, radius float64) ([9]uint64, uint8) {
 	 * north / south / west / east square is too near to the search area
 	 * to cover everything. */
 	north := areaBySteps(neighbors[0], steps)
-	south := areaBySteps(neighbors[4], steps)
+	south := areaBySteps(neighbors[1], steps)
 	east := areaBySteps(neighbors[2], steps)
-	west := areaBySteps(neighbors[6], steps)
+	west := areaBySteps(neighbors[3], steps)
 
 	decreaseStep := false
 	if north.Lat.Max < maxLat || south.Lat.Min > minLat || east.Lon.Max < maxLon || west.Lon.Min > minLon {
@@ -257,7 +257,7 @@ func Area(centerHash, radius float64) ([9]uint64, uint8) {
 
 	if steps > 1 && decreaseStep {
 		steps--
-		centerRadiusHash = encodeHash(centerLat, centerLon, steps)
+		centerRadiusHash = encodeHash(centerLon, centerLat, steps)
 		neighbors = geohashNeighbors(centerRadiusHash, steps)
 		area = areaBySteps(centerRadiusHash, steps)
 	}
@@ -265,27 +265,27 @@ func Area(centerHash, radius float64) ([9]uint64, uint8) {
 	// exclude useless areas
 	if steps >= 2 {
 		if area.Lat.Min < minLat {
-			neighbors[3] = 0 // south east
-			neighbors[4] = 0 // south
-			neighbors[5] = 0 // south west
+			neighbors[6] = 0 // south east
+			neighbors[1] = 0 // south
+			neighbors[7] = 0 // south west
 		}
 
 		if area.Lat.Max > maxLat {
 			neighbors[0] = 0 // north
-			neighbors[1] = 0 // north east
-			neighbors[7] = 0 // north west
+			neighbors[4] = 0 // north east
+			neighbors[5] = 0 // north west
 		}
 
 		if area.Lon.Min < minLon {
-			neighbors[5] = 0 // south west
-			neighbors[6] = 0 // west
-			neighbors[7] = 0 // north west
+			neighbors[7] = 0 // south west
+			neighbors[3] = 0 // west
+			neighbors[5] = 0 // north west
 		}
 
 		if area.Lon.Max > maxLon {
-			neighbors[1] = 0 // north east
+			neighbors[4] = 0 // north east
 			neighbors[2] = 0 // east
-			neighbors[3] = 0 // south east
+			neighbors[6] = 0 // south east
 		}
 	}
 
@@ -443,13 +443,13 @@ func geohashNeighbors(hash uint64, steps uint8) [8]uint64 {
 	neighbors := [8]uint64{}
 
 	neighbors[0] = geohashMoveY(hash, steps, 1)                           // North
-	neighbors[1] = geohashMoveX(geohashMoveY(hash, steps, 1), steps, 1)   // North-East
+	neighbors[1] = geohashMoveY(hash, steps, -1)                          // South
 	neighbors[2] = geohashMoveX(hash, steps, 1)                           // East
-	neighbors[3] = geohashMoveX(geohashMoveY(hash, steps, -1), steps, 1)  // South-East
-	neighbors[4] = geohashMoveY(hash, steps, -1)                          // South
-	neighbors[5] = geohashMoveX(geohashMoveY(hash, steps, -1), steps, -1) // South-West
-	neighbors[6] = geohashMoveX(hash, steps, -1)                          // West
-	neighbors[7] = geohashMoveX(geohashMoveY(hash, steps, 1), steps, -1)  // North-West
+	neighbors[3] = geohashMoveX(hash, steps, -1)                          // West
+	neighbors[4] = geohashMoveX(geohashMoveY(hash, steps, 1), steps, 1)   // North-East
+	neighbors[5] = geohashMoveX(geohashMoveY(hash, steps, 1), steps, -1)  // North-West
+	neighbors[6] = geohashMoveX(geohashMoveY(hash, steps, -1), steps, 1)  // South-East
+	neighbors[7] = geohashMoveX(geohashMoveY(hash, steps, -1), steps, -1) // South-West
 
 	return neighbors
 }

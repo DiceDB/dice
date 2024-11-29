@@ -142,6 +142,8 @@ func TestEval(t *testing.T) {
 	testEvalGEODIST(t, store)
 	testEvalGEOPOS(t, store)
 	testEvalGEOHASH(t, store)
+	testEvalGEORADIUSBYMEMBER(t, store)
+	testEvalSINTER(t, store)
 	testEvalJSONSTRAPPEND(t, store)
 	testEvalINCR(t, store)
 	testEvalINCRBY(t, store)
@@ -8285,7 +8287,7 @@ func testEvalGEODIST(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"points", "Palermo", "Catania"},
 			migratedOutput: EvalResponse{
-				Result: float64(166274.1440),
+				Result: float64(166274.1516),
 				Error:  nil,
 			},
 		},
@@ -8296,7 +8298,7 @@ func testEvalGEODIST(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"points", "Palermo", "Catania", "km"},
 			migratedOutput: EvalResponse{
-				Result: float64(166.2741),
+				Result: float64(166.2742),
 				Error:  nil,
 			},
 		},
@@ -9400,4 +9402,141 @@ func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
 			}
 		})
 	}
+}
+
+func testEvalGEORADIUSBYMEMBER(t *testing.T, store *dstore.Store) {
+    tests := map[string]evalTestCase{
+        "GEORADIUSBYMEMBER wrong number of arguments": {
+            input: []string{"nyc", "wtc one", "7"},
+            migratedOutput: EvalResponse{
+                Result: nil,
+                Error:  diceerrors.ErrWrongArgumentCount("GEORADIUSBYMEMBER"),
+            },
+        },
+        "GEORADIUSBYMEMBER non-numeric radius": {
+            input: []string{"nyc", "wtc one", "invalid", "km"},
+            migratedOutput: EvalResponse{
+                Result: nil,
+                Error:  diceerrors.ErrGeneral("need numeric radius"),
+            },
+        },
+        "GEORADIUSBYMEMBER non-existing key": {
+            input: []string{"nonexistent", "wtc one", "7", "km"},
+            migratedOutput: EvalResponse{
+                Result: clientio.EmptyArray,
+                Error:  nil,
+            },
+        },
+        "GEORADIUSBYMEMBER wrong type operation": {
+            setup: func() {
+                store.Put("wrongtype", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+            },
+            input: []string{"wrongtype", "wtc one", "7", "km"},
+            migratedOutput: EvalResponse{
+                Result: nil,
+                Error:  diceerrors.ErrWrongTypeOperation,
+            },
+        },
+        "GEORADIUSBYMEMBER non-existing member": {
+            setup: func() {
+                evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
+            },
+            input: []string{"nyc", "nonexistent", "7", "km"},
+            migratedOutput: EvalResponse{
+                Result: nil,
+                Error:  diceerrors.ErrGeneral("could not decode requested zset member"),
+            },
+        },
+        "GEORADIUSBYMEMBER unsupported unit": {
+            setup: func() {
+                evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
+            },
+            input: []string{"nyc", "wtc one", "7", "invalid"},
+            migratedOutput: EvalResponse{
+                Result: nil,
+                Error:  diceerrors.ErrUnsupportedUnit,
+            },
+        },
+        "GEORADIUSBYMEMBER simple radius search": {
+            setup: func() {
+                evalGEOADD([]string{"nyc", 
+                    "-73.9798091", "40.7598464", "wtc one",
+                    "-73.981", "40.768", "union square",
+                    "-73.973", "40.764", "central park n/q/r",
+                    "-73.990", "40.750", "4545",
+                    "-73.953", "40.748", "lic market",
+                }, store)
+            },
+            input: []string{"nyc", "wtc one", "7", "km"},
+            migratedOutput: EvalResponse{
+                Result: []string{"wtc one", "union square", "central park n/q/r", "4545", "lic market"},
+                Error:  nil,
+            },
+        },
+        "GEORADIUSBYMEMBER oblique direction search close points": {
+            setup: func() {
+                evalGEOADD([]string{"k1",
+                    "-0.15307903289794921875", "85", "n1",
+                    "0.3515625", "85.00019260486917005437", "n2",
+                }, store)
+            },
+            input: []string{"k1", "n1", "4891.94", "m"},
+            migratedOutput: EvalResponse{
+                Result: []string{"n1", "n2"},
+                Error:  nil,
+            },
+        },
+        "GEORADIUSBYMEMBER oblique direction search distant points": {
+            setup: func() {
+                evalGEOADD([]string{"k1",
+                    "-4.95211958885192871094", "85", "n3",
+                    "11.25", "85.0511", "n4",
+                }, store)
+            },
+            input: []string{"k1", "n3", "156544", "m"},
+            migratedOutput: EvalResponse{
+                Result: []string{"n3", "n4"},
+                Error:  nil,
+            },
+        },
+		"GEORADIUSBYMEMBER crossing poles": {
+            setup: func() {
+                evalGEOADD([]string{"k1",
+                    "45", "65", "n1",
+                    "-135", "85.05", "n2",
+                }, store)
+            },
+            input: []string{"k1", "n1", "5009431", "m"},
+            migratedOutput: EvalResponse{
+                Result: []string{"n1", "n2"},
+                Error:  nil,
+            },
+        },
+        "GEORADIUSBYMEMBER with coordinates option": {
+            setup: func() {
+                evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
+            },
+            input: []string{"nyc", "wtc one", "7", "km", "WITHCOORD"},
+            migratedOutput: EvalResponse{
+                Result: [][]interface{}{
+                    {"wtc one", []float64{40.759845946389994, -73.97980660200119}},
+                },
+                Error: nil,
+            },
+        },
+        "GEORADIUSBYMEMBER with distance option": {
+            setup: func() {
+                evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
+            },
+            input: []string{"nyc", "wtc one", "7", "km", "WITHDIST"},
+            migratedOutput: EvalResponse{
+                Result: [][]interface{}{
+                    {"wtc one", 0.0},
+                },
+                Error: nil,
+            },
+        },
+    }
+
+    runMigratedEvalTests(t, tests, evalGEORADIUSBYMEMBER, store)
 }
