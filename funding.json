@@ -1,0 +1,77 @@
+{
+  "version": "v0.1.0",
+  "entity": {
+      "type": "individual",
+      "role": "maintainer",
+      "name": "Arpit Bhayani",
+      "email": "arpit@dicedb.io",
+      "phone": "",
+      "description": "I am a software engineer passionate about databases, distributed systems, and system architecture. I spark engineering curiosity through my social media posts and YouTube videos.",
+      "webpageUrl": {
+          "url": "https://arpitbhayani.me",
+          "wellKnown": ""
+      }
+  },
+  "projects": [{
+      "guid": "DiceDB",
+      "name": "DiceDB",
+      "description": "DiceDB is a redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.",
+      "webpageUrl": {
+          "url": "https://dicedb.io"
+      },
+      "repositoryUrl": {
+          "url": "https://github.com/dicedb/dice",
+          "wellKnown": "https://github.com/example/zombo-app/blob/main/.well-known/funding-manifest-urls"
+      },
+      "licenses": ["BSL"],
+      "tags": ["database", "high-performance", "key-value-store"]
+  }],
+  "funding": {
+      "channels": [],
+      "plans": [
+          {
+              "guid": "perf-test",
+              "status": "active",
+              "name": "Load and performance testing",
+              "description": "This will cover the monthly server hosting costs to run load tests and performance tests.",
+              "amount": 7500,
+              "currency": "USD",
+              "frequency": "monthly",
+              "channels": []
+          },
+          {
+              "guid": "developer-time",
+              "status": "active",
+              "name": "Developer compensation",
+              "description": "This will cover the cost of 10 developers working part-time on the projects.",
+              "amount": 30000,
+              "currency": "USD",
+              "frequency": "monthly",
+              "channels": ["mybank"]
+          },
+          {
+              "guid": "playground",
+              "status": "active",
+              "name": "Hosting Playground",
+              "description": "This will cover the monthly server hosting costs to run DiceDB and host Playground making it easier for people to try out DiceDB.",
+              "amount": 2000,
+              "currency": "USD",
+              "frequency": "monthly",
+              "channels": []
+          },
+          {
+              "guid": "angel-plan",
+              "status": "active",
+              "name": "Goodwill plan",
+              "description": "Pay anything you wish to show your goodwill for the project.",
+              "amount": 0,
+              "currency": "USD",
+              "frequency": "one-time",
+              "channels": []
+          }
+      ],
+      "history": [
+          {"year": 2024, "income": 0, "expenses": 0, "taxes": 0, "currency": "USD", "description": "It has been a community effort up until now."}
+      ]
+  }
+}
