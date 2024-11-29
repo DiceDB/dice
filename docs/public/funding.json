@@ -20,7 +20,7 @@
               "url": "https://dicedb.io"
           },
           "repositoryUrl": {
-              "url": "https://dicedb.io"
+              "url": "https://github.com/dicedb/dice"
           },
           "licenses": [
               "BSL"
@@ -46,8 +46,8 @@
               "guid": "perf-test",
               "status": "active",
               "name": "Load and performance testing",
-              "description": "This will cover the monthly server hosting costs to run load tests, performance tests, and CI.",
-              "amount": 2500,
+              "description": "This will cover the monthly server hosting costs to run load tests, performance tests, and CI for core database engine.",
+              "amount": 5000,
               "currency": "USD",
               "frequency": "monthly",
               "channels": [
@@ -58,8 +58,8 @@
               "guid": "developer-time",
               "status": "active",
               "name": "Developer compensation",
-              "description": "This will cover the cost of one engineer working part-time on the projects.",
-              "amount": 10000,
+              "description": "This will cover the cost of seven senior engineers working part-time on building DiceDB.",
+              "amount": 70000,
               "currency": "USD",
               "frequency": "monthly",
               "channels": [
@@ -67,11 +67,23 @@
               ]
           },
           {
-              "guid": "playground",
+              "guid": "commuunity-contributors-and-events",
+              "status": "active",
+              "name": "Community swags, events and hackathons",
+              "description": "This will cover the cost of 160+ OSS contributors by giving them DiceDB swags and keeping their morale high. Some fraction of the funds will also be used to run hackathons and some community events like Database Paper Reading Sessions. We aim to build a thriving community around DiceDB and databases in India.",
+              "amount": 20000,
+              "currency": "USD",
+              "frequency": "monthly",
+              "channels": [
+                  "other"
+              ]
+          },
+          {
+              "guid": "hosting-playground",
               "status": "active",
               "name": "Hosting Playground",
               "description": "This will cover the monthly server hosting costs to run DiceDB and host Playground making it easier for people to try out DiceDB.",
-              "amount": 2000,
+              "amount": 4000,
               "currency": "USD",
               "frequency": "monthly",
               "channels": [
