@@ -41,6 +41,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
           cache-from: type=gha # This tells Buildx to attempt to use the GitHub Actions cache
           cache-to: type=gha,mode=max # This stores the generated cache in the GitHub Actions cache
 
