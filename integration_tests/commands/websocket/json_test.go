@@ -1219,3 +1219,131 @@ func TestJsonNumMultBy(t *testing.T) {
 
 	runIntegrationTests(t, exec, conn, testCases, preTestChecksCommand, postTestChecksCommand)
 }
+
+func TestJSONARRINDEX(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
+
+	preTestChecksCommand := "DEL docu"
+	postTestChecksCommand := "DEL docu"
+
+	defer exec.FireCommand(conn, postTestChecksCommand)
+
+	normalArray  := `[0,1,2,3,4,3]`
+	nestedArray  := `{"arrays":[{"arr":[1,2,3]},{"arr":[2,3,4]},{"arr":[1]}]}`
+	nestedArray2 := `{"a":[3],"nested":{"a":{"b":2,"c":1}}}`
+
+	tests := []IntegrationTestCase{
+		{
+			name:     "should return error if key is not present",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex nonExistentKey $ 3"},
+			expected: []interface{}{"OK", "ERR object with key does not exist"},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return error if json path is invalid",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $invalid_path 3"},
+			expected: []interface{}{"OK", "ERR invalid JSONPath"},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return error if provided path does not have any data",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $.some_path 3"},
+			expected: []interface{}{"OK", []interface{}{}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return error if invalid start index provided",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 abc"},
+			expected: []interface{}{"OK", "ERR invalid start index"},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return empty list if invalid stop index provided",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 4 abc"},
+			expected: []interface{}{"OK", "ERR invalid stop index"},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return array index when given element is present",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3"},
+			expected: []interface{}{"OK", []interface{}{float64(3)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return -1 when given element is not present",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 10"},
+			expected: []interface{}{"OK", []interface{}{float64(-1)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return array index with start optional param provided",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 4"},
+			expected: []interface{}{"OK", []interface{}{float64(5)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return array index with start and stop optional param provided",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 4 5"},
+			expected: []interface{}{"OK", []interface{}{float64(5)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return -1 with start and stop optional param provided where start > stop",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 2 1"},
+			expected: []interface{}{"OK", []interface{}{float64(-1)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return -1 with start (out of boud) and stop (out of bound) optional param provided",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 6 10"},
+			expected: []interface{}{"OK", []interface{}{float64(-1)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return list of array indexes for nested json",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $.arrays.*.arr 3"},
+			expected: []interface{}{"OK", []interface{}{float64(2), float64(1), float64(-1)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return list of array indexes for multiple json path",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3"},
+			expected: []interface{}{"OK", []interface{}{float64(2), float64(1), float64(-1)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return array of length 1 for nested json path, with index",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $.arrays[1].arr 3"},
+			expected: []interface{}{"OK", []interface{}{float64(1)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return empty array for nonexistent path in nested json",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr1 3"},
+			expected: []interface{}{"OK", []interface{}{}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return -1 for each nonexisting value in nested json",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 5"},
+			expected: []interface{}{"OK", []interface{}{float64(-1), float64(-1), float64(-1)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return nil for non-array path and -1 for array path if value DNE",
+			commands: []string{"json.set key $ " + nestedArray2, "json.arrindex key $..a 2"},
+			expected: []interface{}{"OK", []interface{}{float64(-1), "(nil)"}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return nil for non-array path if value DNE and valid index for array path if value exists",
+			commands: []string{"json.set key $ " + nestedArray2, "json.arrindex key $..a 3"},
+			expected: []interface{}{"OK", []interface{}{float64(0), "(nil)"}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+	}
+
+	runIntegrationTests(t, exec, conn, tests, preTestChecksCommand, postTestChecksCommand)
+}
