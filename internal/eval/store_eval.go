@@ -6973,7 +6973,6 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 	// Convert start to integer if provided
 	if len(args) >= 4 {
 		var err error
-		fmt.Println("4th argument is %s\n", args[3])
 		start, err = strconv.Atoi(args[3])
 		if err != nil {
 			return diceerrors.NewErrWithMessage("invalid start index")
