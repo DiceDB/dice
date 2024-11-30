@@ -6,6 +6,7 @@ description: The `DEL` command in DiceDB is used to remove one or more keys from
 The `DEL` command in DiceDB is used to remove one or more keys from the database. If a given key does not exist, it is ignored. This command is fundamental for data management in DiceDB, allowing for the deletion of key-value pairs. The command returns the number of keys that were removed.
 
 ## Syntax
+
 ```
 DEL key [key ...]
 ```
@@ -39,6 +40,7 @@ When the `DEL` command is executed, DiceDB will attempt to remove the specified 
 The `DEL` command is generally robust and straightforward, but there are a few scenarios where errors might occur:
 
 1. **Wrong Type of Argument**: If the command is provided with an argument that is not a valid key (e.g., a non-string type), DiceDB will raise a syntax error.
+
    - **Error Message**: `(error) ERR wrong number of arguments for 'del' command`
 
 2. **No Arguments Provided**: If no keys are provided to the `DEL` command, DiceDB will raise a syntax error.
@@ -47,6 +49,7 @@ The `DEL` command is generally robust and straightforward, but there are a few s
 ## Example Usage
 
 ### Basic Usage
+
 Deleting a single key `foo`:
 
 ```bash
@@ -55,15 +58,18 @@ Deleting a single key `foo`:
 ```
 
 ### Deleting Multiple Keys
+
 Deleting multiple keys `foo`, `bar`, and `baz`:
 
 ```bash
 127.0.0.1:7379> DEL foo bar baz
 (integer) 2
 ```
+
 In this example, if only `foo` and `bar` existed, the command would return 2, indicating that two keys were successfully deleted.
 
 ### Deleting Non-existent Keys
+
 Attempting to delete a non-existent key:
 
 ```bash
@@ -72,6 +78,7 @@ Attempting to delete a non-existent key:
 ```
 
 ### Complex Example
+
 Setting multiple keys and then deleting them:
 
 ```bash
@@ -84,6 +91,7 @@ OK
 127.0.0.1:7379> DEL key1 key2 key4
 (integer) 2
 ```
+
 In this example:
 
 - Three keys are set: `key1`, `key2`, and `key3`.
@@ -93,6 +101,7 @@ In this example:
 - The command returns 2, indicating two keys were deleted.
 
 ### Error Example
+
 Calling `DEL` without any arguments:
 
 ```bash

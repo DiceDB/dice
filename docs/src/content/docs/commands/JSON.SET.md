@@ -97,7 +97,6 @@ Set a JSON value only if the key already exists:
 OK
 ```
 
-
 ## JSONPath Support
 
 `JSON.SET` leverages the powerful JSONPath syntax to accurately pinpoint the target location for value insertion or modification. Key JSONPath concepts include:

@@ -1,6 +1,10 @@
 ---
 title: GET.UNWATCH
 description: The `GET.UNWATCH` command is a feature to stop receiving updates on a key.
+sidebar:
+  badge:
+    text: Reactive
+    variant: success
 ---
 
 The `GET.UNWATCH` command is a feature to stop receiving updates on a key.
@@ -10,8 +14,8 @@ The `GET.UNWATCH` command is a feature to stop receiving updates on a key.
 | Protocol  | Supported |
 | --------- | --------- |
 | TCP-RESP  | ✅        |
-| HTTP      | ✅        |
-| WebSocket | ✅        |
+| HTTP      | ❌        |
+| WebSocket | ❌        |
 
 ## Syntax
 
@@ -21,17 +25,15 @@ GET.UNWATCH <fingerprint>
 
 ## Parameters
 
-| Parameter    | Description                                                                         | Type   | Required |
-| ------------ | ----------------------------------------------------------------------------------- | ------ | -------- |
+| Parameter     | Description                                         | Type   | Required |
+| ------------- | --------------------------------------------------- | ------ | -------- |
 | `fingerprint` | Fingerprint returned as part of the get.watch query | String | Yes      |
-
-
 
 ## Return Value
 
-| Condition             | Return Value                                               |
-| --------------------- | ---------------------------------------------------------- |
-| Command is successful |  `OK`  |
+| Condition             | Return Value |
+| --------------------- | ------------ |
+| Command is successful | `OK`         |
 
 ## Behavior
 
@@ -62,7 +64,7 @@ This query does the following:
 - Monitors key matching the name `journal:user:0`
 
 When the key is updated using following set of commands from another client:
-    
+
 ```bash
 127.0.0.1:7379> set journal:user:0 "Hello World, I am user 0 of dice db"
 OK
@@ -73,6 +75,7 @@ OK
 ```
 
 The client will receive a message similar to the following:
+
 ```bash
 Command: GET
 Fingerprint: 4016579015
@@ -92,7 +95,6 @@ To stop receiving updates on the key, use the `GET.UNWATCH` command.
 OK
 ```
 
-
 ## Notes
 
 Use the `GET.WATCH` command to subscribe to a key. This will allow the client to receive updates on the key. Please refer to
@@ -101,5 +103,6 @@ the [GET.WATCH](/commands/getwatch) command documentation for more information.
 ## Related commands
 
 following are the related commands to `GET.UNWATCH`:
-- [ZRANGE.UNWATCH](/commands/zrangeunwatch)
 
+- [ZRANGE.UNWATCH](/commands/zrangeunwatch)
+- [PFCOUNT.UNWATCH](/commands/pfcountunwatch)

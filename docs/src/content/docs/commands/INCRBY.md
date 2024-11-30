@@ -66,7 +66,6 @@ OK
 (integer)13
 ```
 
-
 - In this example, the value of `mycounter` is set to 10
 - The `INCRBY` command incremented `mycounter` by 3, resulting in a new value of 13.
 
@@ -76,7 +75,6 @@ OK
 127.0.0.1:7379>INCRBY newcounter 5
 (integer)5
 ```
-
 
 - In this example, since `newcounter` does not exist, DiceDB treats its value as 0 and increments it by 5, resulting in a new value of 5.
 
@@ -88,7 +86,6 @@ OK
 127.0.0.1:7379>INCRBY mystring 2
 (error) ERR value is not an integer or out of range
 ```
-
 
 - In this example, the key `mystring` holds a non-integer value, so the `INCRBY` command returns an error.
 

@@ -1,5 +1,5 @@
 ---
-title: PERSIST  
+title: PERSIST
 description: The `PERSIST` command in DiceDB is used to remove the expiration time from a key, making it persistent. This allows the key to remain in the database indefinitely until it is explicitly deleted.
 ---
 
@@ -82,13 +82,13 @@ OK
 
 - The command returns `0` because the key `mykey` does not exist in the database.
 
-
 ### Persisting a Key Without Expiration
 
 ```bash
 127.0.0.1:7379> SET mykey "Hello"
 OK
 ```
+
 ```bash
 127.0.0.1:7379> PERSIST mykey
 (integer) 0

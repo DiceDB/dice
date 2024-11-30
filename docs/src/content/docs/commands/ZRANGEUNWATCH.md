@@ -1,6 +1,10 @@
 ---
 title: ZRANGE.UNWATCH
 description: The `ZRANGE.UNWATCH` command is a feature to stop receiving updates on a sorted set
+sidebar:
+  badge:
+    text: Reactive
+    variant: success
 ---
 
 The `ZRANGE.UNWATCH` command is a feature to stop receiving updates on a sorted set.
@@ -10,8 +14,8 @@ The `ZRANGE.UNWATCH` command is a feature to stop receiving updates on a sorted 
 | Protocol  | Supported |
 | --------- | --------- |
 | TCP-RESP  | ✅        |
-| HTTP      | ✅        |
-| WebSocket | ✅        |
+| HTTP      | ❌        |
+| WebSocket | ❌        |
 
 ## Syntax
 
@@ -21,17 +25,15 @@ ZRANGE.UNWATCH <fingerprint>
 
 ## Parameters
 
-| Parameter    | Description                                                                         | Type   | Required |
-| ------------ | ----------------------------------------------------------------------------------- | ------ | -------- |
+| Parameter     | Description                                            | Type   | Required |
+| ------------- | ------------------------------------------------------ | ------ | -------- |
 | `fingerprint` | Fingerprint returned as part of the zrange.watch query | String | Yes      |
-
-
 
 ## Return Value
 
-| Condition             | Return Value                                               |
-| --------------------- | ---------------------------------------------------------- |
-| Command is successful |  `OK`  |
+| Condition             | Return Value |
+| --------------------- | ------------ |
+| Command is successful | `OK`         |
 
 ## Behavior
 
@@ -54,10 +56,11 @@ Let's explore a practical example of using the `ZRANGE.WATCH` command to create 
 ZRANGE.WATCH
 Command: ZRANGE
 Fingerprint: 4016579015
-Data: 
+Data:
 ```
+
 When the sorted set is updated using following set of commands from another client:
-    
+
 ```bash
 127.0.0.1:7379> ZADD match:100 1 "player1"
 OK
@@ -70,6 +73,7 @@ OK
 ```
 
 The client will receive a message similar to the following:
+
 ```bash
 Command: ZRANGE
 Fingerprint: 4016579015
@@ -92,7 +96,6 @@ To stop receiving updates on the key, use the `ZRANGE.UNWATCH` command.
 OK
 ```
 
-
 ## Notes
 
 Use the `ZRANGE.WATCH` command to subscribe to a key. This will allow the client to receive updates on the sorted set. Please refer to
@@ -101,5 +104,6 @@ the [ZRANGE.WATCH](/commands/zrangewatch) command documentation for more informa
 ## Related commands
 
 following are the related commands to `ZRANGE.UNWATCH`:
-- [GET.UNWATCH](/commands/getunwatch)
 
+- [ZRANGE.WATCH](/commands/zrangewatch)
+- [GET.UNWATCH](/commands/getunwatch)

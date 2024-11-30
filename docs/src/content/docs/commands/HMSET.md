@@ -1,6 +1,10 @@
 ---
 title: HMSET
 description: The `HMSET` command in DiceDB is used to set multiple field-value pairs in a hash at once. If the hash does not exist, a new hash is created. This command is efficient for setting multiple fields at once within a hash data structure.
+sidebar:
+  badge:
+    text: Deprecated
+    variant: danger
 ---
 
 The `HMSET` command in DiceDB is used to set multiple field-value pairs in a hash at once. If the hash does not exist, a new hash is created. This command is efficient for setting multiple fields at once within a hash data structure.
@@ -68,7 +72,6 @@ OK
 127.0.0.1:7379> HMSET product:4000 price 279.99 stock 25
 OK
 ```
-
 
 ### Invalid Usage
 

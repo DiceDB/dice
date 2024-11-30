@@ -18,4 +18,5 @@ const (
 	SingleShardSize  string = "SINGLEDBSIZE"
 	SingleShardTouch string = "SINGLETOUCH"
 	SingleShardKeys  string = "SINGLEKEYS"
+	FlushDB          string = "FLUSHDB"
 )

@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dicedb/dice/internal/iothread"
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dice/internal/watchmanager"
-	"github.com/dicedb/dice/internal/worker"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dicedb/dice/config"
@@ -29,7 +29,8 @@ import (
 )
 
 type TestServerOptions struct {
-	Port int
+	Port       int
+	MaxClients int32
 }
 
 func init() {
@@ -39,11 +40,9 @@ func init() {
 	}
 }
 
-// getLocalConnection returns a local TCP connection to the database
-//
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.AsyncServer.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.RespServer.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -99,7 +98,7 @@ func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 //nolint:unused
 func getLocalSdk() *dicedb.Client {
 	return dicedb.NewClient(&dicedb.Options{
-		Addr: fmt.Sprintf(":%d", config.DiceConfig.AsyncServer.Port),
+		Addr: fmt.Sprintf(":%d", config.DiceConfig.RespServer.Port),
 
 		DialTimeout:           10 * time.Second,
 		ReadTimeout:           30 * time.Second,
@@ -187,9 +186,9 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	// #1261: Added here to prevent resp integration tests from failing on lower-spec machines
 	config.DiceConfig.Memory.KeysLimit = 2000
 	if opt.Port != 0 {
-		config.DiceConfig.AsyncServer.Port = opt.Port
+		config.DiceConfig.RespServer.Port = opt.Port
 	} else {
-		config.DiceConfig.AsyncServer.Port = 9739
+		config.DiceConfig.RespServer.Port = 9739
 	}
 
 	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
@@ -197,13 +196,13 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec)
-	workerManager := worker.NewWorkerManager(20000, shardManager)
+	ioThreadManager := iothread.NewManager(20000, shardManager)
 	// Initialize the RESP Server
 	wl, _ := wal.NewNullWAL()
-	testServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, wl)
+	testServer := resp.NewServer(shardManager, ioThreadManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, wl)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fmt.Println("Starting the test server on port", config.DiceConfig.AsyncServer.Port)
+	fmt.Println("Starting the test server on port", config.DiceConfig.RespServer.Port)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)

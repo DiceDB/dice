@@ -89,9 +89,9 @@ Incrementing a key `mykey` with a value that exceeds the maximum integer value:
 
 - The `INCR` command is often used in scenarios where counters are needed, such as counting page views, tracking user actions, or generating unique IDs.
 - The atomic nature of the `INCR` command ensures that it is safe to use in concurrent environments without additional synchronization mechanisms.
-- For decrementing a value, you can use the `DECR` command, which works similarly but decreases the value by one.
+- For decrementing a value, you can use the [`DECR`](/commands/decr) command, which works similarly but decreases the value by one.
 
 ## Alternatives
 
-- You can also use the `INCRBY` command to increment the value of a key by a specified amount.
-- You can also use the `INCRBYFLOAT` command to increment the value of a key by a fractional amount.
+- You can also use the [`INCRBY`](/commands/incrby) command to increment the value of a key by a specified amount.
+- You can also use the [`INCRBYFLOAT`](/commands/incrbyfloat) command to increment the value of a key by a fractional amount.

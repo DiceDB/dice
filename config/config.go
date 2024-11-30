@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	DiceDBVersion     = "0.0.5"
+	DiceDBVersion     = "0.1.0"
 	DefaultConfigName = "dicedb.conf"
 	DefaultConfigDir  = "."
 
@@ -28,7 +28,7 @@ const (
 	defaultConfigTemplate = `# Configuration file for Dicedb
 
 # Version
-version = "0.0.5"
+version = "0.1.0"
 
 # Async Server Configuration
 async_server.addr = "0.0.0.0"
@@ -52,7 +52,6 @@ performance.watch_chan_buf_size = 20000
 performance.shard_cron_frequency = 1s
 performance.multiplexer_poll_timeout = 100ms
 performance.max_clients = 20000
-performance.enable_multithreading = false
 performance.store_map_init_size = 1024000
 performance.adhoc_req_chan_buf_size = 20
 performance.enable_profiling = false
@@ -94,10 +93,10 @@ var (
 )
 
 type Config struct {
-	Version     string      `config:"version" default:"0.0.5"`
+	Version     string      `config:"version" default:"0.1.0"`
 	InstanceID  string      `config:"instance_id"`
 	Auth        auth        `config:"auth"`
-	AsyncServer asyncServer `config:"async_server"`
+	RespServer  respServer  `config:"async_server"`
 	HTTP        http        `config:"http"`
 	WebSocket   websocket   `config:"websocket"`
 	Performance performance `config:"performance"`
@@ -112,7 +111,7 @@ type auth struct {
 	Password string `config:"password"`
 }
 
-type asyncServer struct {
+type respServer struct {
 	Addr      string `config:"addr" default:"0.0.0.0" validate:"ipv4"`
 	Port      int    `config:"port" default:"7379" validate:"number,gte=0,lte=65535"`
 	KeepAlive int32  `config:"keepalive" default:"300"`
@@ -137,7 +136,6 @@ type performance struct {
 	ShardCronFrequency     time.Duration `config:"shard_cron_frequency" default:"1s"`
 	MultiplexerPollTimeout time.Duration `config:"multiplexer_poll_timeout" default:"100ms"`
 	MaxClients             int32         `config:"max_clients" default:"20000" validate:"min=0"`
-	EnableMultiThreading   bool          `config:"enable_multithreading" default:"false"`
 	StoreMapInitSize       int           `config:"store_map_init_size" default:"1024000"`
 	AdhocReqChanBufSize    int           `config:"adhoc_req_chan_buf_size" default:"20"`
 	EnableProfiling        bool          `config:"profiling" default:"false"`
@@ -154,7 +152,7 @@ type memory struct {
 }
 
 type persistence struct {
-	Enabled           bool   `config:"enabled" default:"true"`
+	Enabled           bool   `config:"enabled" default:"false"`
 	AOFFile           string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
 	WriteAOFOnCleanup bool   `config:"write_aof_on_cleanup" default:"false"`
 	WALDir            string `config:"wal-dir" default:"./" validate:"dirpath"`
@@ -237,39 +235,39 @@ func MergeFlags(flags *Config) {
 		// updating values for flags that were explicitly set by the user
 		switch f.Name {
 		case "host":
-			DiceConfig.AsyncServer.Addr = flags.AsyncServer.Addr
+			DiceConfig.RespServer.Addr = flags.RespServer.Addr
 		case "port":
-			DiceConfig.AsyncServer.Port = flags.AsyncServer.Port
+			DiceConfig.RespServer.Port = flags.RespServer.Port
 		case "enable-http":
 			DiceConfig.HTTP.Enabled = flags.HTTP.Enabled
 		case "http-port":
 			DiceConfig.HTTP.Port = flags.HTTP.Port
 		case "enable-websocket":
 			DiceConfig.WebSocket.Enabled = flags.WebSocket.Enabled
-		case "enable-multithreading":
-			DiceConfig.Performance.EnableMultiThreading = flags.Performance.EnableMultiThreading
 		case "websocket-port":
 			DiceConfig.WebSocket.Port = flags.WebSocket.Port
 		case "num-shards":
 			DiceConfig.Performance.NumShards = flags.Performance.NumShards
+		case "enable-watch":
+			DiceConfig.Performance.EnableWatch = flags.Performance.EnableWatch
+		case "enable-profiling":
+			DiceConfig.Performance.EnableProfiling = flags.Performance.EnableProfiling
+		case "log-level":
+			DiceConfig.Logging.LogLevel = flags.Logging.LogLevel
+		case "log-dir":
+			DiceConfig.Logging.LogDir = flags.Logging.LogDir
+		case "enable-persistence":
+			DiceConfig.Persistence.Enabled = flags.Persistence.Enabled
+		case "restore-from-wal":
+			DiceConfig.Persistence.RestoreFromWAL = flags.Persistence.RestoreFromWAL
+		case "wal-engine":
+			DiceConfig.Persistence.WALEngine = flags.Persistence.WALEngine
 		case "require-pass":
 			DiceConfig.Auth.Password = flags.Auth.Password
 		case "keys-limit":
 			DiceConfig.Memory.KeysLimit = flags.Memory.KeysLimit
 		case "eviction-ratio":
 			DiceConfig.Memory.EvictionRatio = flags.Memory.EvictionRatio
-		case "enable-profiling":
-			DiceConfig.Performance.EnableProfiling = flags.Performance.EnableProfiling
-		case "enable-watch":
-			DiceConfig.Performance.EnableWatch = flags.Performance.EnableWatch
-		case "log-dir":
-			DiceConfig.Logging.LogDir = flags.Logging.LogDir
-		case "persistence-enable":
-			DiceConfig.Persistence.Enabled = flags.Persistence.Enabled
-		case "restore-from-wal":
-			DiceConfig.Persistence.RestoreFromWAL = flags.Persistence.RestoreFromWAL
-		case "wal-engine":
-			DiceConfig.Persistence.WALEngine = flags.Persistence.WALEngine
 		}
 	})
 }

@@ -11,7 +11,7 @@ import (
 
 // TestConfig is a test struct that mimics your actual config structure
 type TestConfig struct {
-	Version     string      `config:"version" default:"0.0.5"`
+	Version     string      `config:"version" default:"0.1.0"`
 	InstanceID  string      `config:"instance_id"`
 	Auth        auth        `config:"auth"`
 	AsyncServer asyncServer `config:"async_server"`
@@ -54,7 +54,6 @@ type performance struct {
 	ShardCronFrequency     time.Duration `config:"shard_cron_frequency" default:"1s"`
 	MultiplexerPollTimeout time.Duration `config:"multiplexer_poll_timeout" default:"100ms"`
 	MaxClients             int32         `config:"max_clients" default:"20000" validate:"min=0"`
-	EnableMultiThreading   bool          `config:"enable_multithreading" default:"false"`
 	StoreMapInitSize       int           `config:"store_map_init_size" default:"1024000"`
 	AdhocReqChanBufSize    int           `config:"adhoc_req_chan_buf_size" default:"20"`
 	EnableProfiling        bool          `config:"profiling" default:"false"`
@@ -74,7 +73,6 @@ type persistence struct {
 	AOFFile            string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
 	PersistenceEnabled bool   `config:"persistence_enabled" default:"true"`
 	WriteAOFOnCleanup  bool   `config:"write_aof_on_cleanup" default:"false"`
-	EnableWAL          bool   `config:"enable-wal" default:"false"`
 	WALDir             string `config:"wal-dir" default:"./" validate:"dirpath"`
 	RestoreFromWAL     bool   `config:"restore-wal" default:"false"`
 	WALEngine          string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`

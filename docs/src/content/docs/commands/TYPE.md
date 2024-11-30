@@ -13,16 +13,16 @@ TYPE key
 
 ## Parameters
 
-| Parameter | Description | Type | Required |
-| --------- | ----------- | ---- | -------- |
-| `key` | The key to check for its value type | String | Yes |
+| Parameter | Description                         | Type   | Required |
+| --------- | ----------------------------------- | ------ | -------- |
+| `key`     | The key to check for its value type | String | Yes      |
 
 ## Return values
 
-| Condition | Return Value |
-| --------- | ------------ |
-| Key exists | The type of the value stored at the key (string, list, set, zset, hash, stream) |
-| Key does not exist | "none" |
+| Condition          | Return Value                                                                    |
+| ------------------ | ------------------------------------------------------------------------------- |
+| Key exists         | The type of the value stored at the key (string, list, set, zset, hash, stream) |
+| Key does not exist | "none"                                                                          |
 
 ## Behaviour
 

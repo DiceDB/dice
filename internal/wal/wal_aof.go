@@ -58,7 +58,7 @@ func (w *WALAOF) LogCommand(c *cmd.DiceDBCmd) {
 	repr := fmt.Sprintf("%s %s", c.Cmd, strings.Join(c.Args, " "))
 
 	entry := &WALLogEntry{
-		Command:  repr,
+		Command:  &repr,
 		Checksum: checksum(repr),
 	}
 
@@ -160,9 +160,13 @@ func (w *WALAOF) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
 				return fmt.Errorf("failed to unmarshal WAL entry: %v", err)
 			}
 
-			commandParts := strings.SplitN(entry.Command, " ", 2)
+			if entry.Command == nil {
+				return fmt.Errorf("invalid WAL entry: missing command field")
+			}
+
+			commandParts := strings.SplitN(*entry.Command, " ", 2)
 			if len(commandParts) < 2 {
-				return fmt.Errorf("invalid command format in WAL entry: %s", entry.Command)
+				return fmt.Errorf("invalid command format in WAL entry: %s", *entry.Command)
 			}
 
 			c := cmd.DiceDBCmd{

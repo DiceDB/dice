@@ -5152,7 +5152,7 @@ func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
 
 	key := args[0]
 	offset, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
+	if err != nil || offset < 0 {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrGeneral("bit offset is not an integer or out of range"),
@@ -6520,4 +6520,443 @@ func evalGEOSEARCH(args []string, store *dstore.Store) *EvalResponse {
 		Result: "geosearch implementation",
 		Error: nil,
 	}
+}
+
+// // BITOP <AND | OR | XOR | NOT> destkey key [key ...]
+// func evalBITOP(args []string, store *dstore.Store) *EvalResponse {
+// 	operation, destKey := args[0], args[1]
+// 	operation = strings.ToUpper(operation)
+
+// 	// get all the keys
+// 	keys := args[2:]
+
+// 	// validation of commands
+// 	// if operation is not from enums, then error out
+// 	if !(operation == AND || operation == OR || operation == XOR || operation == NOT) {
+// 		return makeEvalError(diceerrors.ErrSyntax)
+// 	}
+
+// 	if operation == NOT {
+// 		if len(keys) != 1 {
+// 			return makeEvalError(diceerrors.ErrGeneral("BITOP NOT must be called with a single source key"))
+// 		}
+// 		key := keys[0]
+// 		obj := store.Get(key)
+// 		if obj == nil {
+// 			return makeEvalResult(clientio.IntegerZero)
+// 		}
+
+// 		var value []byte
+
+// 		switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+// 		case object.ObjTypeByteArray:
+// 			byteArray := obj.Value.(*ByteArray)
+// 			byteArrayObject := *byteArray
+// 			value = byteArrayObject.data
+// 			// perform the operation
+// 			result := make([]byte, len(value))
+// 			for i := 0; i < len(value); i++ {
+// 				result[i] = ^value[i]
+// 			}
+
+// 			// initialize result with byteArray
+// 			operationResult := NewByteArray(len(result))
+// 			operationResult.data = result
+// 			operationResult.Length = int64(len(result))
+
+// 			// resize the byte array if necessary
+// 			operationResult.ResizeIfNecessary()
+
+// 			// create object related to result
+// 			obj = store.NewObj(operationResult, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+
+// 			// store the result in destKey
+// 			store.Put(destKey, obj)
+// 			return makeEvalResult(len(value))
+
+// 		case object.ObjTypeString, object.ObjTypeInt:
+// 			if oType == object.ObjTypeString {
+// 				value = []byte(obj.Value.(string))
+// 			} else {
+// 				value = []byte(strconv.FormatInt(obj.Value.(int64), 10))
+// 			}
+// 			// perform the operation
+// 			result := make([]byte, len(value))
+// 			for i := 0; i < len(value); i++ {
+// 				result[i] = ^value[i]
+// 			}
+// 			resOType, resOEnc := deduceTypeEncoding(string(result))
+// 			var storedValue interface{}
+// 			if resOType == object.ObjTypeInt {
+// 				storedValue, _ = strconv.ParseInt(string(result), 10, 64)
+// 			} else {
+// 				storedValue = string(result)
+// 			}
+// 			store.Put(destKey, store.NewObj(storedValue, -1, resOType, resOEnc))
+// 			return makeEvalResult(len(value))
+
+// 		default:
+// 			return makeEvalError(diceerrors.ErrWrongTypeOperation)
+// 		}
+// 	}
+// 	// if operation is AND, OR, XOR
+// 	values := make([][]byte, len(keys))
+
+// 	// get the values of all keys
+// 	for i, key := range keys {
+// 		obj := store.Get(key)
+// 		if obj == nil {
+// 			values[i] = make([]byte, 0)
+// 		} else {
+// 			// handle the case when it is byte array
+// 			switch oType, _ := object.ExtractTypeEncoding(obj); oType {
+// 			case object.ObjTypeByteArray:
+// 				byteArray := obj.Value.(*ByteArray)
+// 				byteArrayObject := *byteArray
+// 				values[i] = byteArrayObject.data
+// 			case object.ObjTypeString:
+// 				value := obj.Value.(string)
+// 				values[i] = []byte(value)
+// 			case object.ObjTypeInt:
+// 				value := strconv.FormatInt(obj.Value.(int64), 10)
+// 				values[i] = []byte(value)
+// 			default:
+// 				return makeEvalError(diceerrors.ErrWrongTypeOperation)
+// 			}
+// 		}
+// 	}
+// 	// get the length of the largest value
+// 	maxLength := 0
+// 	minLength := len(values[0])
+// 	maxKeyIterator := 0
+// 	for keyIterator, value := range values {
+// 		if len(value) > maxLength {
+// 			maxLength = len(value)
+// 			maxKeyIterator = keyIterator
+// 		}
+// 		minLength = min(minLength, len(value))
+// 	}
+
+// 	result := make([]byte, maxLength)
+// 	if operation == AND {
+// 		for i := 0; i < maxLength; i++ {
+// 			result[i] = 0
+// 			if i < minLength {
+// 				result[i] = values[maxKeyIterator][i]
+// 			}
+// 		}
+// 	} else {
+// 		for i := 0; i < maxLength; i++ {
+// 			result[i] = 0x00
+// 		}
+// 	}
+
+// 	// perform the operation
+// 	for _, value := range values {
+// 		for i := 0; i < len(value); i++ {
+// 			switch operation {
+// 			case AND:
+// 				result[i] &= value[i]
+// 			case OR:
+// 				result[i] |= value[i]
+// 			case XOR:
+// 				result[i] ^= value[i]
+// 			}
+// 		}
+// 	}
+// 	// initialize result with byteArray
+// 	operationResult := NewByteArray(len(result))
+// 	operationResult.data = result
+// 	operationResult.Length = int64(len(result))
+
+// 	// create object related to result
+// 	operationResultObject := store.NewObj(operationResult, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+
+// 	// store the result in destKey
+// 	store.Put(destKey, operationResultObject)
+
+// 	return makeEvalResult(len(result))
+// }
+
+func evalFLUSHDB(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) > 1 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("FLUSHDB"))
+	}
+
+	flushType := Sync
+	if len(args) == 1 {
+		flushType = strings.ToUpper(args[0])
+	}
+
+	switch flushType {
+	case Sync, Async:
+		store.ResetStore()
+	default:
+		return makeEvalError(diceerrors.ErrSyntax)
+	}
+
+	return makeEvalResult(clientio.OK)
+}
+
+func evalObjectIdleTime(key string, store *dstore.Store) *EvalResponse {
+	obj := store.GetNoTouch(key)
+	if obj == nil {
+		return makeEvalResult(clientio.NIL)
+	}
+
+	return makeEvalResult(int64(dstore.GetIdleTime(obj.LastAccessedAt)))
+}
+
+func evalObjectEncoding(key string, store *dstore.Store) *EvalResponse {
+	var encodingTypeStr string
+
+	obj := store.GetNoTouch(key)
+	if obj == nil {
+		return makeEvalResult(clientio.NIL)
+	}
+
+	oType, oEnc := object.ExtractTypeEncoding(obj)
+	switch {
+	case oType == object.ObjTypeString && oEnc == object.ObjEncodingRaw:
+		encodingTypeStr = "raw"
+		return makeEvalResult(encodingTypeStr)
+
+	case oType == object.ObjTypeString && oEnc == object.ObjEncodingEmbStr:
+		encodingTypeStr = "embstr"
+		return makeEvalResult(encodingTypeStr)
+
+	case oType == object.ObjTypeInt && oEnc == object.ObjEncodingInt:
+		encodingTypeStr = "int"
+		return makeEvalResult(encodingTypeStr)
+
+	case oType == object.ObjTypeByteList && oEnc == object.ObjEncodingDeque:
+		encodingTypeStr = "deque"
+		return makeEvalResult(encodingTypeStr)
+
+	case oType == object.ObjTypeBitSet && oEnc == object.ObjEncodingBF:
+		encodingTypeStr = "bf"
+		return makeEvalResult(encodingTypeStr)
+
+	case oType == object.ObjTypeJSON && oEnc == object.ObjEncodingJSON:
+		encodingTypeStr = "json"
+		return makeEvalResult(encodingTypeStr)
+
+	case oType == object.ObjTypeByteArray && oEnc == object.ObjEncodingByteArray:
+		encodingTypeStr = "bytearray"
+		return makeEvalResult(encodingTypeStr)
+
+	case oType == object.ObjTypeSet && oEnc == object.ObjEncodingSetStr:
+		encodingTypeStr = "setstr"
+		return makeEvalResult(encodingTypeStr)
+
+	case oType == object.ObjTypeSet && oEnc == object.ObjEncodingSetInt:
+		encodingTypeStr = "setint"
+		return makeEvalResult(encodingTypeStr)
+
+	case oType == object.ObjTypeHashMap && oEnc == object.ObjEncodingHashMap:
+		encodingTypeStr = "hashmap"
+		return makeEvalResult(encodingTypeStr)
+
+	case oType == object.ObjTypeSortedSet && oEnc == object.ObjEncodingBTree:
+		encodingTypeStr = "btree"
+		return makeEvalResult(encodingTypeStr)
+
+	default:
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+}
+
+func evalOBJECT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("OBJECT"))
+	}
+
+	subcommand := strings.ToUpper(args[0])
+	key := args[1]
+
+	switch subcommand {
+	case "IDLETIME":
+		return evalObjectIdleTime(key, store)
+	case "ENCODING":
+		return evalObjectEncoding(key, store)
+	default:
+		return makeEvalError(diceerrors.ErrSyntax)
+	}
+}
+
+// evalCommand evaluates COMMAND <subcommand> command based on subcommand
+// COUNT: return total count of commands in Dice.
+func evalCommand(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) == 0 {
+		return evalCommandDefault()
+	}
+	subcommand := strings.ToUpper(args[0])
+	switch subcommand {
+	case Count:
+		return evalCommandCount(args[1:])
+	case GetKeys:
+		return evalCommandGetKeys(args[1:])
+	case List:
+		return evalCommandList(args[1:])
+	case Help:
+		return evalCommandHelp(args[1:])
+	case Info:
+		return evalCommandInfo(args[1:])
+	case Docs:
+		return evalCommandDocs(args[1:])
+	default:
+		return makeEvalError(diceerrors.ErrGeneral(fmt.Sprintf("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)))
+	}
+}
+
+func evalCommandDefault() *EvalResponse {
+	cmds := convertDiceCmdsMapToSlice()
+	return makeEvalResult(cmds)
+}
+
+// evalCommandCount returns a number of commands supported by DiceDB
+func evalCommandCount(args []string) *EvalResponse {
+	if len(args) > 0 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("COMMAND|COUNT"))
+	}
+
+	return makeEvalResult(diceCommandsCount)
+}
+
+func evalCommandGetKeys(args []string) *EvalResponse {
+	if len(args) == 0 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("COMMAND|GETKEYS"))
+	}
+	diceCmd, ok := DiceCmds[strings.ToUpper(args[0])]
+	if !ok {
+		return makeEvalError(diceerrors.ErrGeneral("invalid command specified"))
+	}
+
+	keySpecs := diceCmd.KeySpecs
+	if keySpecs.BeginIndex == 0 {
+		return makeEvalError(diceerrors.ErrGeneral("the command has no key arguments"))
+	}
+
+	arity := diceCmd.Arity
+	if (arity < 0 && len(args) < -arity) ||
+		(arity >= 0 && len(args) != arity) {
+		return makeEvalError(diceerrors.ErrGeneral("invalid number of arguments specified for command"))
+	}
+	keys := make([]string, 0)
+	step := max(keySpecs.Step, 1)
+	lastIdx := keySpecs.BeginIndex
+	if keySpecs.LastKey != 0 {
+		lastIdx = len(args) + keySpecs.LastKey
+	}
+	for i := keySpecs.BeginIndex; i <= lastIdx; i += step {
+		keys = append(keys, args[i])
+	}
+
+	return makeEvalResult(keys)
+}
+
+func evalCommandList(args []string) *EvalResponse {
+	if len(args) > 0 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("COMMAND|LIST"))
+	}
+
+	cmds := make([]string, 0, diceCommandsCount)
+	for k := range DiceCmds {
+		cmds = append(cmds, k)
+		for _, sc := range DiceCmds[k].SubCommands {
+			cmds = append(cmds, fmt.Sprint(k, "|", sc))
+		}
+	}
+	return makeEvalResult(cmds)
+}
+
+// evalCommandHelp prints help message
+func evalCommandHelp(args []string) *EvalResponse {
+	if len(args) > 0 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("COMMAND|HELP"))
+	}
+
+	format := "COMMAND <subcommand> [<arg> [value] [opt] ...]. Subcommands are:"
+	noTitle := "(no subcommand)"
+	noMessage := "     Return details about all DiceDB commands."
+	countTitle := CountConst
+	countMessage := "     Return the total number of commands in this DiceDB server."
+	listTitle := "LIST"
+	listMessage := "     Return a list of all commands in this DiceDB server."
+	infoTitle := "INFO [<command-name> ...]"
+	infoMessage := "     Return details about the specified DiceDB commands. If no command names are given, documentation details for all commands are returned."
+	docsTitle := "DOCS [<command-name> ...]"
+	docsMessage := "\tReturn documentation details about multiple diceDB commands.\n\tIf no command names are given, documentation details for all\n\tcommands are returned."
+	getKeysTitle := "GETKEYS <full-command>"
+	getKeysMessage := "     Return the keys from a full DiceDB command."
+	helpTitle := "HELP"
+	helpMessage := "     Print this help."
+	message := []string{
+		format,
+		noTitle,
+		noMessage,
+		countTitle,
+		countMessage,
+		listTitle,
+		listMessage,
+		infoTitle,
+		infoMessage,
+		docsTitle,
+		docsMessage,
+		getKeysTitle,
+		getKeysMessage,
+		helpTitle,
+		helpMessage,
+	}
+
+	return makeEvalResult(message)
+}
+
+func evalCommandDefaultDocs() *EvalResponse {
+	cmds := convertDiceCmdsMapToDocs()
+	return makeEvalResult(cmds)
+}
+
+func evalCommandInfo(args []string) *EvalResponse {
+	if len(args) == 0 {
+		return evalCommandDefault()
+	}
+
+	cmdMetaMap := make(map[string]interface{})
+	for _, cmdMeta := range DiceCmds {
+		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToSlice(&cmdMeta)
+	}
+
+	var result []interface{}
+	for _, arg := range args {
+		arg = strings.ToUpper(arg)
+		if cmdMeta, found := cmdMetaMap[arg]; found {
+			result = append(result, cmdMeta)
+		} else {
+			result = append(result, clientio.RespNIL)
+		}
+	}
+
+	return makeEvalResult(result)
+}
+
+func evalCommandDocs(args []string) *EvalResponse {
+	if len(args) == 0 {
+		return evalCommandDefaultDocs()
+	}
+
+	cmdMetaMap := make(map[string]interface{})
+	for _, cmdMeta := range DiceCmds {
+		cmdMetaMap[cmdMeta.Name] = convertCmdMetaToDocs(&cmdMeta)
+	}
+
+	var result []interface{}
+	for _, arg := range args {
+		arg = strings.ToUpper(arg)
+		if cmdMeta, found := cmdMetaMap[arg]; found {
+			result = append(result, cmdMeta)
+		}
+	}
+
+	return makeEvalResult(result)
 }

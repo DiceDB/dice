@@ -17,8 +17,6 @@ LPOP key
 | --------- | ------------------------------------------------------------------------------ | ------ | -------- |
 | `key`     | The key of the list from which the first element will be removed and returned. | String | Yes      |
 
-
-
 ## Return Value
 
 | Condition                    | Return Value                                         |
@@ -27,11 +25,9 @@ LPOP key
 | If the key does not exist    | `nil`                                                |
 | The key is of the wrong type | error                                                |
 
-
-
 ## Behavior
 
-- When the `LPOP` command is executed, DiceDB checks if the key exists and is associated with a list. 
+- When the `LPOP` command is executed, DiceDB checks if the key exists and is associated with a list.
 - If the list has elements, the first element is removed and returned.
 - If the key does not exist, the command treats it as an empty list and returns `nil`.
 - If the key exists but is not associated with a list, a `WRONGTYPE` error is returned.
@@ -115,6 +111,6 @@ LPOP mylist secondlist
 
 - `Check Key Type`: Before using `LPOP`, ensure that the key is associated with a list to avoid errors.
 - `Handle Non-Existent Keys`: Be prepared to handle the case where the key does not exist, as `LPOP` will return `nil` in such scenarios.
-- `Use in Conjunction with Other List Commands`: The `LPOP` command is often used alongside other list commands like `RPUSH`, `LPUSH`, `LLEN`, and `RPOP` to manage and process lists effectively.
+- `Use in Conjunction with Other List Commands`: The `LPOP` command is often used alongside other list commands like [`RPUSH`](/commands/rpush), [`LPUSH`](/commands/lpush), [`LLEN`](/commands/llen), and [`RPOP`](/commands/rpop) to manage and process lists effectively.
 
 By understanding and using the `LPOP` command effectively, you can manage list data structures in DiceDB efficiently, implementing queue-like behaviors and more.

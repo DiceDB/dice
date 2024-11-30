@@ -23,12 +23,12 @@ import (
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/iothread"
 	"github.com/dicedb/dice/internal/observability"
 	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/internal/worker"
 )
 
 func main() {
@@ -53,7 +53,6 @@ func main() {
 	)
 
 	wl, _ = wal.NewNullWAL()
-	slog.Info("running with", slog.Bool("persistence-enabled", config.DiceConfig.Persistence.Enabled))
 	if config.DiceConfig.Persistence.Enabled {
 		if config.DiceConfig.Persistence.WALEngine == "sqlite" {
 			_wl, err := wal.NewSQLiteWAL(config.DiceConfig.Persistence.WALDir)
@@ -102,15 +101,10 @@ func main() {
 	// This determines the total number of logical processors that can be utilized
 	// for parallel execution. Setting the maximum number of CPUs to the available
 	// core count ensures the application can make full use of all available hardware.
-	// If multithreading is not enabled, server will run on a single core.
 	var numShards int
-	if config.DiceConfig.Performance.EnableMultiThreading {
-		numShards = runtime.NumCPU()
-		if config.DiceConfig.Performance.NumShards > 0 {
-			numShards = config.DiceConfig.Performance.NumShards
-		}
-	} else {
-		numShards = 1
+	numShards = runtime.NumCPU()
+	if config.DiceConfig.Performance.NumShards > 0 {
+		numShards = config.DiceConfig.Performance.NumShards
 	}
 
 	// The runtime.GOMAXPROCS(numShards) call limits the number of operating system
@@ -132,35 +126,23 @@ func main() {
 
 	var serverWg sync.WaitGroup
 
-	if config.DiceConfig.Performance.EnableMultiThreading {
-		if config.DiceConfig.Performance.EnableProfiling {
-			stopProfiling, err := startProfiling()
-			if err != nil {
-				slog.Error("Profiling could not be started", slog.Any("error", err))
-				sigs <- syscall.SIGKILL
-			}
-			defer stopProfiling()
-		}
-
-		workerManager := worker.NewWorkerManager(config.DiceConfig.Performance.MaxClients, shardManager)
-		respServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
-		serverWg.Add(1)
-		go runServer(ctx, &serverWg, respServer, serverErrCh)
-	} else {
-		asyncServer := server.NewAsyncServer(shardManager, queryWatchChan, wl)
-		if err := asyncServer.FindPortAndBind(); err != nil {
-			slog.Error("Error finding and binding port", slog.Any("error", err))
+	if config.DiceConfig.Performance.EnableProfiling {
+		stopProfiling, err := startProfiling()
+		if err != nil {
+			slog.Error("Profiling could not be started", slog.Any("error", err))
 			sigs <- syscall.SIGKILL
 		}
+		defer stopProfiling()
+	}
+	ioThreadManager := iothread.NewManager(config.DiceConfig.Performance.MaxClients, shardManager)
+	respServer := resp.NewServer(shardManager, ioThreadManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
+	serverWg.Add(1)
+	go runServer(ctx, &serverWg, respServer, serverErrCh)
 
+	if config.DiceConfig.HTTP.Enabled {
+		httpServer := server.NewHTTPServer(shardManager, wl)
 		serverWg.Add(1)
-		go runServer(ctx, &serverWg, asyncServer, serverErrCh)
-
-		if config.DiceConfig.HTTP.Enabled {
-			httpServer := server.NewHTTPServer(shardManager, wl)
-			serverWg.Add(1)
-			go runServer(ctx, &serverWg, httpServer, serverErrCh)
-		}
+		go runServer(ctx, &serverWg, httpServer, serverErrCh)
 	}
 
 	if config.DiceConfig.WebSocket.Enabled {
