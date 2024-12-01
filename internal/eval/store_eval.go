@@ -7047,7 +7047,7 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 
 // adjustIndices adjusts the start and stop indices for array traversal. 
 // It handles negative indices and ensures they are within the array bounds. 
-func adjustIndices(start, stop, length int) (int, int) { 
+func adjustIndices(start, stop, length int) (adjustedStart int, adjustedStop int) { 
 	if length == 0 {
 		return -1, -1 
 	}
