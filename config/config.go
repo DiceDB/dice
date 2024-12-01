@@ -152,7 +152,7 @@ type memory struct {
 }
 
 type persistence struct {
-	Enabled           bool   `config:"enabled" default:"true"`
+	Enabled           bool   `config:"enabled" default:"false"`
 	AOFFile           string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
 	WriteAOFOnCleanup bool   `config:"write_aof_on_cleanup" default:"false"`
 	WALDir            string `config:"wal-dir" default:"./" validate:"dirpath"`

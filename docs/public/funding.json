@@ -1,0 +1,117 @@
+{
+  "version": "v1.0.0",
+  "entity": {
+      "type": "organisation",
+      "role": "owner",
+      "name": "DiceDB",
+      "email": "arpit@dicedb.io",
+      "phone": "",
+      "description": "DiceDB is a redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.",
+      "webpageUrl": {
+          "url": "https://dicedb.io"
+      }
+  },
+  "projects": [
+      {
+          "guid": "dicedb",
+          "name": "DiceDB",
+          "description": "DiceDB is a redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.",
+          "webpageUrl": {
+              "url": "https://dicedb.io"
+          },
+          "repositoryUrl": {
+              "url": "https://github.com/dicedb/dice"
+          },
+          "licenses": [
+              "BSL"
+          ],
+          "tags": [
+              "database",
+              "high-performance",
+              "key-value-store"
+          ]
+      }
+  ],
+  "funding": {
+      "channels": [
+          {
+              "guid": "other",
+              "type": "other",
+              "address": "",
+              "description": "Yet to setup"
+          }
+      ],
+      "plans": [
+          {
+              "guid": "perf-test",
+              "status": "active",
+              "name": "Load and performance testing",
+              "description": "This will cover the monthly server hosting costs to run load tests, performance tests, and CI for core database engine.",
+              "amount": 5000,
+              "currency": "USD",
+              "frequency": "monthly",
+              "channels": [
+                  "other"
+              ]
+          },
+          {
+              "guid": "developer-time",
+              "status": "active",
+              "name": "Developer compensation",
+              "description": "This will cover the cost of seven senior engineers working part-time on building DiceDB.",
+              "amount": 70000,
+              "currency": "USD",
+              "frequency": "monthly",
+              "channels": [
+                  "other"
+              ]
+          },
+          {
+              "guid": "commuunity-contributors-and-events",
+              "status": "active",
+              "name": "Community swags, events and hackathons",
+              "description": "This will cover the cost of 160+ OSS contributors by giving them DiceDB swags and keeping their morale high. Some fraction of the funds will also be used to run hackathons and some community events like Database Paper Reading Sessions. We aim to build a thriving community around DiceDB and databases in India.",
+              "amount": 20000,
+              "currency": "USD",
+              "frequency": "monthly",
+              "channels": [
+                  "other"
+              ]
+          },
+          {
+              "guid": "hosting-playground",
+              "status": "active",
+              "name": "Hosting Playground",
+              "description": "This will cover the monthly server hosting costs to run DiceDB and host Playground making it easier for people to try out DiceDB.",
+              "amount": 4000,
+              "currency": "USD",
+              "frequency": "monthly",
+              "channels": [
+                  "other"
+              ]
+          },
+          {
+              "guid": "angel-plan",
+              "status": "active",
+              "name": "Goodwill plan",
+              "description": "Pay anything you wish to show your goodwill for the project.",
+              "amount": 1000,
+              "currency": "USD",
+              "frequency": "one-time",
+              "channels": [
+                  "other"
+              ]
+          }
+      ],
+      "history": [
+          {
+              "year": 2024,
+              "income": 0,
+              "expenses": 100,
+              "taxes": 0,
+              "currency": "USD",
+              "description": "Infrastrucuture cost"
+          }
+      ]
+  }
+}
