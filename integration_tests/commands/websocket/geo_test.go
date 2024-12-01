@@ -104,7 +104,7 @@ func TestGeoPos(t *testing.T) {
 			},
 			expect: []interface{}{
 				float64(1),
-				[]interface{}{[]interface {}{float64(13.361387), float64(38.115556)}},
+				[]interface{}{float64(13.361387), float64(38.115556)},
 			},
 		},
 		{

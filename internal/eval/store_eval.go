@@ -6360,23 +6360,23 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	results := make([]interface{}, len(args) - 1)
+	results := make([]interface{}, 0)
 
     for index := 1; index < len(args); index++ {
         member := args[index]
         hash, ok := ss.Get(member)
 
         if !ok {
-            results[index - 1] = (nil)
+            results = append(results, nil)
             continue
         }
 
         lat, lon := geo.DecodeHash(hash)
 
-    	lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
 		latFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lat), 64)
+    	lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
 
-		results[index - 1] = []interface{}{lonFloat, latFloat}
+		results = append(results, lonFloat, latFloat)
     }
 
 	return &EvalResponse{
