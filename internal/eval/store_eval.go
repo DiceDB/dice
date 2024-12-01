@@ -6347,7 +6347,7 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 	if obj == nil {
 		return &EvalResponse{
 			Result: clientio.NIL,
-			Error: nil,
+			Error:  nil,
 		}
 	}
 
@@ -6362,26 +6362,26 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 
 	results := make([]interface{}, 0)
 
-    for index := 1; index < len(args); index++ {
-        member := args[index]
-        hash, ok := ss.Get(member)
+	for index := 1; index < len(args); index++ {
+		member := args[index]
+		hash, ok := ss.Get(member)
 
-        if !ok {
-            results = append(results, nil)
-            continue
-        }
+		if !ok {
+			results = append(results, nil)
+			continue
+		}
 
-        lat, lon := geo.DecodeHash(hash)
+		lat, lon := geo.DecodeHash(hash)
 
 		latFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lat), 64)
-    	lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
+		lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
 
 		results = append(results, lonFloat, latFloat)
-    }
+	}
 
 	return &EvalResponse{
 		Result: results,
-		Error: nil,
+		Error:  nil,
 	}
 }
 

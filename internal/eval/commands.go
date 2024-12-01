@@ -1307,7 +1307,7 @@ var (
 		Arity:      -3,
 		NewEval:    evalGEOPOS,
 		IsMigrated: true,
-		KeySpecs: 	KeySpecs{BeginIndex: 1},
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	jsonstrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRAPPEND",
