@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"reflect"
 	"strconv"
 	"strings"
@@ -9405,138 +9406,299 @@ func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalGEORADIUSBYMEMBER(t *testing.T, store *dstore.Store) {
-    tests := map[string]evalTestCase{
-        "GEORADIUSBYMEMBER wrong number of arguments": {
-            input: []string{"nyc", "wtc one", "7"},
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error:  diceerrors.ErrWrongArgumentCount("GEORADIUSBYMEMBER"),
-            },
-        },
-        "GEORADIUSBYMEMBER non-numeric radius": {
-            input: []string{"nyc", "wtc one", "invalid", "km"},
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error:  diceerrors.ErrGeneral("need numeric radius"),
-            },
-        },
-        "GEORADIUSBYMEMBER non-existing key": {
-            input: []string{"nonexistent", "wtc one", "7", "km"},
-            migratedOutput: EvalResponse{
-                Result: clientio.EmptyArray,
-                Error:  nil,
-            },
-        },
-        "GEORADIUSBYMEMBER wrong type operation": {
-            setup: func() {
-                store.Put("wrongtype", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
-            },
-            input: []string{"wrongtype", "wtc one", "7", "km"},
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error:  diceerrors.ErrWrongTypeOperation,
-            },
-        },
-        "GEORADIUSBYMEMBER non-existing member": {
-            setup: func() {
-                evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
-            },
-            input: []string{"nyc", "nonexistent", "7", "km"},
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error:  diceerrors.ErrGeneral("could not decode requested zset member"),
-            },
-        },
-        "GEORADIUSBYMEMBER unsupported unit": {
-            setup: func() {
-                evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
-            },
-            input: []string{"nyc", "wtc one", "7", "invalid"},
-            migratedOutput: EvalResponse{
-                Result: nil,
-                Error:  diceerrors.ErrUnsupportedUnit,
-            },
-        },
-        "GEORADIUSBYMEMBER simple radius search": {
-            setup: func() {
-                evalGEOADD([]string{"nyc", 
-                    "-73.9798091", "40.7598464", "wtc one",
-                    "-73.981", "40.768", "union square",
-                    "-73.973", "40.764", "central park n/q/r",
-                    "-73.990", "40.750", "4545",
-                    "-73.953", "40.748", "lic market",
-                }, store)
-            },
-            input: []string{"nyc", "wtc one", "7", "km"},
-            migratedOutput: EvalResponse{
-                Result: []string{"wtc one", "union square", "central park n/q/r", "4545", "lic market"},
-                Error:  nil,
-            },
-        },
-        "GEORADIUSBYMEMBER oblique direction search close points": {
-            setup: func() {
-                evalGEOADD([]string{"k1",
-                    "-0.15307903289794921875", "85", "n1",
-                    "0.3515625", "85.00019260486917005437", "n2",
-                }, store)
-            },
-            input: []string{"k1", "n1", "4891.94", "m"},
-            migratedOutput: EvalResponse{
-                Result: []string{"n1", "n2"},
-                Error:  nil,
-            },
-        },
-        "GEORADIUSBYMEMBER oblique direction search distant points": {
-            setup: func() {
-                evalGEOADD([]string{"k1",
-                    "-4.95211958885192871094", "85", "n3",
-                    "11.25", "85.0511", "n4",
-                }, store)
-            },
-            input: []string{"k1", "n3", "156544", "m"},
-            migratedOutput: EvalResponse{
-                Result: []string{"n3", "n4"},
-                Error:  nil,
-            },
-        },
+	tests := map[string]evalTestCase{
+		"GEORADIUSBYMEMBER wrong number of arguments": {
+			input: []string{"nyc", "wtc one", "7"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("GEORADIUSBYMEMBER"),
+			},
+		},
+		"GEORADIUSBYMEMBER non-numeric radius": {
+			input: []string{"nyc", "wtc one", "invalid", "km"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("need numeric radius"),
+			},
+		},
+		"GEORADIUSBYMEMBER non-existing key": {
+			input: []string{"nonexistent", "wtc one", "7", "km"},
+			migratedOutput: EvalResponse{
+				Result: clientio.EmptyArray,
+				Error:  nil,
+			},
+		},
+		"GEORADIUSBYMEMBER wrong type operation": {
+			setup: func() {
+				store.Put("wrongtype", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			},
+			input: []string{"wrongtype", "wtc one", "7", "km"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+		"GEORADIUSBYMEMBER non-existing member": {
+			setup: func() {
+				evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
+			},
+			input: []string{"nyc", "nonexistent", "7", "km"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("could not decode requested zset member"),
+			},
+		},
+		"GEORADIUSBYMEMBER unsupported unit": {
+			setup: func() {
+				evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
+			},
+			input: []string{"nyc", "wtc one", "7", "invalid"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrUnsupportedUnit,
+			},
+		},
+		"GEORADIUSBYMEMBER simple radius search": {
+			setup: func() {
+				evalGEOADD([]string{"nyc",
+					"-73.9798091", "40.7598464", "wtc one",
+					"-73.981", "40.768", "union square",
+					"-73.973", "40.764", "central park n/q/r",
+					"-73.990", "40.750", "4545",
+					"-73.953", "40.748", "lic market",
+				}, store)
+			},
+			input: []string{"nyc", "wtc one", "7", "km"},
+			migratedOutput: EvalResponse{
+				Result: []string{"wtc one", "union square", "central park n/q/r", "4545", "lic market"},
+				Error:  nil,
+			},
+		},
+		"GEORADIUSBYMEMBER oblique direction search close points": {
+			setup: func() {
+				evalGEOADD([]string{"k1",
+					"-0.15307903289794921875", "85", "n1",
+					"0.3515625", "85.00019260486917005437", "n2",
+				}, store)
+			},
+			input: []string{"k1", "n1", "4891.94", "m"},
+			migratedOutput: EvalResponse{
+				Result: []string{"n1", "n2"},
+				Error:  nil,
+			},
+		},
+		"GEORADIUSBYMEMBER oblique direction search distant points": {
+			setup: func() {
+				evalGEOADD([]string{"k1",
+					"-4.95211958885192871094", "85", "n3",
+					"11.25", "85.0511", "n4",
+				}, store)
+			},
+			input: []string{"k1", "n3", "156544", "m"},
+			migratedOutput: EvalResponse{
+				Result: []string{"n3", "n4"},
+				Error:  nil,
+			},
+		},
 		"GEORADIUSBYMEMBER crossing poles": {
-            setup: func() {
-                evalGEOADD([]string{"k1",
-                    "45", "65", "n1",
-                    "-135", "85.05", "n2",
-                }, store)
-            },
-            input: []string{"k1", "n1", "5009431", "m"},
-            migratedOutput: EvalResponse{
-                Result: []string{"n1", "n2"},
-                Error:  nil,
-            },
-        },
-        "GEORADIUSBYMEMBER with coordinates option": {
-            setup: func() {
-                evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
-            },
-            input: []string{"nyc", "wtc one", "7", "km", "WITHCOORD"},
-            migratedOutput: EvalResponse{
-                Result: [][]interface{}{
-                    {"wtc one", []float64{40.759845946389994, -73.97980660200119}},
-                },
-                Error: nil,
-            },
-        },
-        "GEORADIUSBYMEMBER with distance option": {
-            setup: func() {
-                evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
-            },
-            input: []string{"nyc", "wtc one", "7", "km", "WITHDIST"},
-            migratedOutput: EvalResponse{
-                Result: [][]interface{}{
-                    {"wtc one", 0.0},
-                },
-                Error: nil,
-            },
-        },
-    }
+			setup: func() {
+				evalGEOADD([]string{"k1",
+					"45", "65", "n1",
+					"-135", "85.05", "n2",
+				}, store)
+			},
+			input: []string{"k1", "n1", "5009431", "m"},
+			migratedOutput: EvalResponse{
+				Result: []string{"n1", "n2"},
+				Error:  nil,
+			},
+		},
+		"GEORADIUSBYMEMBER with coordinates option": {
+			setup: func() {
+				evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
+			},
+			input: []string{"nyc", "wtc one", "7", "km", "WITHCOORD"},
+			migratedOutput: EvalResponse{
+				Result: [][]interface{}{
+					{"wtc one", []float64{40.759845946389994, -73.97980660200119}},
+				},
+				Error: nil,
+			},
+		},
+		"GEORADIUSBYMEMBER with distance option": {
+			setup: func() {
+				evalGEOADD([]string{"nyc", "-73.9798091", "40.7598464", "wtc one"}, store)
+			},
+			input: []string{"nyc", "wtc one", "7", "km", "WITHDIST"},
+			migratedOutput: EvalResponse{
+				Result: [][]interface{}{
+					{"wtc one", 0.0},
+				},
+				Error: nil,
+			},
+		},
+	}
 
     runMigratedEvalTests(t, tests, evalGEORADIUSBYMEMBER, store)
+}
+
+func generateMembers(count int) []struct {
+	name      string
+	latitude  float64
+	longitude float64
+} {
+	locations := make([]struct {
+		name      string
+		latitude  float64
+		longitude float64
+	}, count)
+
+	// Generate locations around San Francisco area
+	for i := range locations {
+		locations[i] = struct {
+			name      string
+			latitude  float64
+			longitude float64
+		}{
+			name:      "loc" + strconv.Itoa(i),
+			latitude:  37.7749 + (rand.Float64()*2 - 1), // ±1 degree from SF
+			longitude: -122.4194 + (rand.Float64()*2 - 1),
+		}
+	}
+	return locations
+}
+
+// setupTestStore creates a store with test data
+func setupTestStore(locations []struct {
+	name      string
+	latitude  float64
+	longitude float64
+}) *dstore.Store {
+	store := dstore.NewStore(nil, nil, nil)
+
+	for _, loc := range locations {
+		evalGEOADD([]string{
+			"locations",
+			"NX",
+			fmt.Sprintf("%f", loc.longitude),
+			fmt.Sprintf("%f", loc.latitude),
+			loc.name,
+		}, store)
+	}
+
+	return store
+}
+
+func BenchmarkGEORADIUSBYMEMBER(b *testing.B) {
+	scenarios := []struct {
+		name      string
+		locations int
+	}{
+		{"Small", 100},
+		{"Medium", 1000},
+		{"Large", 10000},
+	}
+
+	for _, sc := range scenarios {
+		b.Run(sc.name, func(b *testing.B) {
+			locations := generateMembers(sc.locations)
+			store := setupTestStore(locations)
+
+			middlePoint := locations[len(locations)/2]
+
+			args := []string{
+				"locations",
+				middlePoint.name,
+				"5",
+				"km",
+				"WITHCOORD",
+				"WITHDIST",
+				"COUNT", "50",
+				"ASC",
+			}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				response := evalGEORADIUSBYMEMBER(args, store)
+				if response.Error != nil {
+					b.Fatal(response.Error)
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkGEORADIUSBYMEMBER_DifferentRadii tests performance with different search radii
+func BenchmarkGEORADIUSBYMEMBER_DifferentRadii(b *testing.B) {
+	cases := []struct {
+		name   string
+		radius string
+	}{
+		{"SmallRadius", "1"},
+		{"MediumRadius", "10"},
+		{"LargeRadius", "50"},
+	}
+
+	locations := generateMembers(1000)
+	store := setupTestStore(locations)
+	middlePoint := locations[len(locations)/2]
+
+	for _, tc := range cases {
+		b.Run(tc.name, func(b *testing.B) {
+			args := []string{
+				"locations",
+				middlePoint.name,
+				tc.radius,
+				"km",
+				"WITHCOORD",
+				"WITHDIST",
+				"ASC",
+			}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				response := evalGEORADIUSBYMEMBER(args, store)
+				if response.Error != nil {
+					b.Fatal(response.Error)
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkGEORADIUSBYMEMBER_DifferentOptions tests performance with different output options
+func BenchmarkGEORADIUSBYMEMBER_DifferentOptions(b *testing.B) {
+	locations := generateMembers(1000)
+	store := setupTestStore(locations)
+	middlePoint := locations[len(locations)/2]
+
+	cases := []struct {
+		name    string
+		options []string
+	}{
+		{"NoOptions", []string{}},
+		{"WithCoord", []string{"WITHCOORD"}},
+		{"WithDist", []string{"WITHDIST"}},
+		{"WithHash", []string{"WITHHASH"}},
+		{"AllOptions", []string{"WITHCOORD", "WITHDIST", "WITHHASH"}},
+	}
+
+	for _, tc := range cases {
+		b.Run(tc.name, func(b *testing.B) {
+			args := append([]string{
+				"locations",
+				middlePoint.name,
+				"5",
+				"km",
+			}, tc.options...)
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				response := evalGEORADIUSBYMEMBER(args, store)
+				if response.Error != nil {
+					b.Fatal(response.Error)
+				}
+			}
+		})
+	}
 }
