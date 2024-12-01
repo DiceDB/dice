@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/bits"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -6966,7 +6967,7 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 		value, err = strconv.ParseFloat(args[2], 64)
 
 		if err != nil {
-			return diceerrors.NewErrWithMessage("invalid value provided")
+			return diceerrors.NewErrWithFormattedMessage("Couldn't parse as integer")
 		}
 	}
 
@@ -6975,7 +6976,7 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 		var err error
 		start, err = strconv.Atoi(args[3])
 		if err != nil {
-			return diceerrors.NewErrWithMessage("invalid start index")
+			return diceerrors.NewErrWithMessage("Couldn't parse as integer")
 		}
 	}
 
@@ -6984,7 +6985,7 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 		var err error
 		stop, err = strconv.Atoi(args[4])
 		if err != nil {
-			return diceerrors.NewErrWithMessage("invalid stop index")
+			return diceerrors.NewErrWithMessage("Couldn't parse as integer")
 		}
 	}
 
@@ -7015,20 +7016,18 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 		case utils.ArrayType:
 			elementFound := false
 			arr := result.([]interface{})
+			length := len(arr)
 
-			// stop 0 means end of the array
-			if stop > 0 && start > stop {
-				arrIndexList = append(arrIndexList, -1)
-				continue
+			adjustedStart, adjustedStop := adjustIndices(start, stop, length)
+
+			if adjustedStart == -1 { 
+				arrIndexList = append(arrIndexList, -1) 
+				continue 
 			}
 
-			// Ensure stop is within bounds
-			if stop == 0 || stop >= len(arr) {
-				stop = len(arr) - 1
-			}
-
-			for i := start; i <= stop; i++ {
-				if arr[i] == value {
+			// Range [start, stop) : start is inclusive, stop is exclusive
+			for i := adjustedStart; i < adjustedStop; i++ {
+				if reflect.DeepEqual(arr[i], value) {
 					arrIndexList = append(arrIndexList, i)
 					elementFound = true
 					break
@@ -7044,4 +7043,36 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 	}
 
 	return clientio.Encode(arrIndexList, false)
+}
+
+// adjustIndices adjusts the start and stop indices for array traversal. 
+// It handles negative indices and ensures they are within the array bounds. 
+func adjustIndices(start, stop, length int) (int, int) { 
+	if length == 0 {
+		return -1, -1 
+	}
+	if start < 0 {
+		start += length 
+	}
+
+	// 0 or -1 means the last element is included.
+	if stop <= 0 || stop == -1 {
+		stop += length 
+	}
+	if start < 0 {
+		start = 0
+	}
+	if stop < 0 {
+		stop = 0
+	}
+	if start >= length {
+		return -1, -1
+	}
+	if stop > length {
+		stop = length
+	}
+	if start > stop {
+		return -1, -1
+	}
+	return start, stop
 }

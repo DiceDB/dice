@@ -1826,9 +1826,9 @@ func TestJSONARRINDEX(t *testing.T) {
 			name:     "should return array index with start and stop optional param provided",
 			commands: []HTTPCommand{
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(normalArray)}},
-				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$", "values": []string{"3", "4", "5"}}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$", "values": []string{"4", "4", "5"}}},
 			},
-			expected: []interface{}{"OK", []interface{}{float64(5)}},
+			expected: []interface{}{"OK", []interface{}{float64(4)}},
 			assertType: []string{"equal", "equal"},
 			cleanUp: []HTTPCommand{
 				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},

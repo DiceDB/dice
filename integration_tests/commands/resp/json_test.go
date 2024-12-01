@@ -1702,13 +1702,13 @@ func TestJSONARRINDEX(t *testing.T) {
 		{
 			name:     "should return error if invalid start index provided",
 			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 abc"},
-			expected: []interface{}{"OK", "ERR invalid start index"},
+			expected: []interface{}{"OK", "ERR Couldn't parse as integer"},
 			assertType: []string{"equal", "equal"},
 		},
 		{
 			name:     "should return empty list if invalid stop index provided",
 			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 4 abc"},
-			expected: []interface{}{"OK", "ERR invalid stop index"},
+			expected: []interface{}{"OK", "ERR Couldn't parse as integer"},
 			assertType: []string{"equal", "equal"},
 		},
 		{
@@ -1731,8 +1731,8 @@ func TestJSONARRINDEX(t *testing.T) {
 		},
 		{
 			name:     "should return array index with start and stop optional param provided",
-			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 4 5"},
-			expected: []interface{}{"OK", []interface{}{int64(5)}},
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 4 4 5"},
+			expected: []interface{}{"OK", []interface{}{int64(4)}},
 			assertType: []string{"equal", "equal"},
 		},
 		{
@@ -1789,11 +1789,28 @@ func TestJSONARRINDEX(t *testing.T) {
 			expected: []interface{}{"OK", []interface{}{int64(0), "(nil)"}},
 			assertType: []string{"equal", "deep_equal"},
 		},
+		{
+			name:     "should handle stop index - 0 which should be last index",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 1 0", "json.arrindex key $..arr 3 2 0"},
+			expected: []interface{}{"OK", []interface{}{int64(2), int64(1), int64(-1)}, []interface{}{int64(2), int64(-1), int64(-1)}},
+			assertType: []string{"equal", "deep_equal", "deep_equal"},
+		},
+		{
+			name:     "should handle stop index - -1 which should be last index",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 1 -1", "json.arrindex key $..arr 3 2 -1"},
+			expected: []interface{}{"OK", []interface{}{int64(2), int64(1), int64(-1)}, []interface{}{int64(2), int64(-1), int64(-1)}},
+			assertType: []string{"equal", "deep_equal", "deep_equal"},
+		},
+		{
+			name:     "should handle negative start index",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 -1"},
+			expected: []interface{}{"OK", []interface{}{int64(2), int64(-1), int64(-1)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			FireCommand(conn, "DEL nonExistentKey")
 			FireCommand(conn, "DEL key")
 
 			for i, cmd := range tc.commands {
@@ -1802,6 +1819,7 @@ func TestJSONARRINDEX(t *testing.T) {
 				if tc.assertType[i] == "equal" {
 					assert.Equal(t, result, expected)
 				} else if tc.assertType[i] == "deep_equal" {
+					fmt.Printf("result is %v and expected is %v\n", result, expected)
 					assert.True(t, testutils.ArraysArePermutations(result.([]interface{}), expected.([]interface{})))
 				}
 			}
