@@ -8342,7 +8342,7 @@ func testEvalGEOPOS(t *testing.T, store *dstore.Store) {
             },
             input: []string{"index", "Palermo"},
             migratedOutput: EvalResponse{
-                Result: []interface{}{float64(13.361387), float64(38.115556)},
+                Result: []interface{}{[]interface{}{float64(13.361387), float64(38.115556)}},
                 Error:  nil,
             },
         },
@@ -8353,8 +8353,10 @@ func testEvalGEOPOS(t *testing.T, store *dstore.Store) {
             },
             input: []string{"points", "Palermo", "Catania"},
             migratedOutput: EvalResponse{
-                Result: []interface{}{float64(13.361387), float64(38.115556), 
-							float64(15.087265), float64(37.502668)},
+                Result: []interface{}{
+                    []interface{}{float64(13.361387), float64(38.115556)},
+                    []interface{}{float64(15.087265), float64(37.502668)},
+                },
                 Error: nil,
             },
         },
@@ -8374,7 +8376,10 @@ func testEvalGEOPOS(t *testing.T, store *dstore.Store) {
             },
             input: []string{"index", "Palermo", "NonExisting"},
             migratedOutput: EvalResponse{
-                Result: []interface{}{float64(13.361387), float64(38.115556), interface{}(nil)},
+                Result: []interface{}{
+                    []interface{}{float64(13.361387), float64(38.115556)},
+                    nil,
+                },
                 Error: nil,
             },
         },
@@ -8384,7 +8389,9 @@ func testEvalGEOPOS(t *testing.T, store *dstore.Store) {
             },
             input: []string{"", "Palermo"},
             migratedOutput: EvalResponse{
-                Result: []interface{}{float64(13.361387), float64(38.115556)},
+                Result: []interface{}{
+                    []interface{}{float64(13.361387), float64(38.115556)},
+                },
                 Error: nil,
             },
         },

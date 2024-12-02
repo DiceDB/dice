@@ -101,10 +101,10 @@ func TestGeoPos(t *testing.T) {
             },
 			expected: []interface{}{
 				float64(1),
-				[]interface{}{float64(13.361387), float64(38.115556)},
+				[]interface{}{[]interface{}{float64(13.361387), float64(38.115556)}},
 			},
         },
-        {
+        {	
             name: "GEOPOS for non-existing points",
             commands: []HTTPCommand{
                 {Command: "GEOPOS", Body: map[string]interface{}{"key": "index", "values": []interface{}{"NonExisting"}}},
