@@ -36,7 +36,7 @@ func readString(data []byte) (*object.Obj, error) {
 		return nil, err
 	}
 
-	return &object.Obj{TypeEncoding: object.ObjTypeString, Value: string(strBytes)}, nil
+	return &object.Obj{Type: object.ObjTypeString, Value: string(strBytes)}, nil
 }
 
 func readInt(data []byte) (*object.Obj, error) {
@@ -45,14 +45,14 @@ func readInt(data []byte) (*object.Obj, error) {
 		return nil, err
 	}
 
-	return &object.Obj{TypeEncoding: object.ObjTypeInt, Value: intVal}, nil
+	return &object.Obj{Type: object.ObjTypeInt, Value: intVal}, nil
 }
 
 func rdbSerialize(obj *object.Obj) ([]byte, error) {
 	var buf bytes.Buffer
 	buf.WriteByte(0x09)
 
-	switch object.GetType(obj.TypeEncoding) {
+	switch obj.Type {
 	case object.ObjTypeString:
 		str, ok := obj.Value.(string)
 		if !ok {

@@ -8,7 +8,7 @@ package object
 //
 // Fields:
 //
-//   - TypeEncoding: A uint8 field used to store the encoding type of the object. This
+//   - Type: A uint8 field used to store the type of the object. This
 //     helps in identifying how the object is encoded or serialized (e.g., as a string,
 //     number, or more complex type). It is crucial for determining how the object should
 //     be interpreted or processed when retrieved from storage.
@@ -18,14 +18,14 @@ package object
 //     freshness of the object and can be used for cache expiry or eviction policies.
 //     in DiceDB we use 32 bits due to Go's lack of native support for bitfields,
 //     and to simplify management by not combining
-//     `TypeEncoding` and `LastAccessedAt` into a single integer.
+//     `Type` and `LastAccessedAt` into a single integer.
 //
 //   - Value: An `interface{}` type that holds the actual data of the object. This could
 //     represent any type of data, allowing flexibility to store different kinds of
 //     objects (e.g., strings, numbers, complex data structures like lists or maps).
 type Obj struct {
-	// TypeEncoding holds the encoding type of the object (e.g., string, int, complex structure)
-	TypeEncoding uint8
+	// Type holds the type of the object (e.g., string, int, complex structure)
+	Type uint8
 
 	// LastAccessedAt stores the last access timestamp of the object.
 	// It helps track when the object was last accessed and may be used for cache eviction or freshness tracking.
@@ -72,39 +72,17 @@ type InternalObj struct {
 	ExDuration int64
 }
 
-var ObjTypeString uint8 = 0 << 4
+var ObjTypeString uint8 = 0
+var ObjTypeJSON uint8 = 3
+var ObjTypeByteArray uint8 = 4
+var ObjTypeInt uint8 = 5
+var ObjTypeSet uint8 = 6
+var ObjTypeHashMap uint8 = 7
+var ObjTypeSortedSet uint8 = 8
+var ObjTypeCountMinSketch uint8 = 9
+var ObjTypeBF uint8 = 10
+var ObjTypeDequeue uint8 = 11
 
-var ObjEncodingRaw uint8 = 0
-var ObjEncodingInt uint8 = 1
-var ObjEncodingEmbStr uint8 = 8
-
-var ObjTypeByteList uint8 = 1 << 4
-var ObjEncodingDeque uint8 = 4
-
-var ObjTypeBitSet uint8 = 2 << 4 // 00100000
-var ObjEncodingBF uint8 = 2      // 00000010
-
-var ObjTypeJSON uint8 = 3 << 4 // 00110000
-var ObjEncodingJSON uint8 = 0
-
-var ObjTypeByteArray uint8 = 4 << 4 // 01000000
-var ObjEncodingByteArray uint8 = 4
-
-var ObjTypeInt uint8 = 5 << 4 // 01010000
-
-var ObjTypeSet uint8 = 6 << 4 // 01010000
-var ObjEncodingSetInt uint8 = 11
-var ObjEncodingSetStr uint8 = 12
-
-var ObjEncodingHashMap uint8 = 6
-var ObjTypeHashMap uint8 = 7 << 4
-
-var ObjTypeSortedSet uint8 = 8 << 4
-var ObjEncodingBTree uint8 = 8
-
-var ObjTypeCountMinSketch uint8 = 9 << 4
-var ObjEncodingMatrix uint8 = 9
-
-func ExtractTypeEncoding(obj *Obj) (e1, e2 uint8) {
-	return obj.TypeEncoding & 0b11110000, obj.TypeEncoding & 0b00001111
+func ExtractType(obj *Obj) (e1 uint8) {
+	return obj.Type
 }

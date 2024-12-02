@@ -511,7 +511,7 @@ func createCountMinSketch(key string, opts *CountMinSketchOpts, store *dstore.St
 		return diceerrors.NewErr("key already exists")
 	}
 
-	obj = store.NewObj(newCountMinSketch(opts), -1, object.ObjTypeCountMinSketch, object.ObjEncodingMatrix)
+	obj = store.NewObj(newCountMinSketch(opts), -1, object.ObjTypeCountMinSketch)
 	store.Put(key, obj)
 
 	return nil
@@ -526,11 +526,7 @@ func getCountMinSketch(key string, store *dstore.Store) (*CountMinSketch, error)
 		return nil, diceerrors.NewErr("key does not exist")
 	}
 
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeCountMinSketch); err != nil {
-		return nil, err
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingMatrix); err != nil {
+	if err := object.AssertTypeWithError(obj.Type, object.ObjTypeCountMinSketch); err != nil {
 		return nil, err
 	}
 

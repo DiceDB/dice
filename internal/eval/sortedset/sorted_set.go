@@ -42,7 +42,7 @@ func New() *Set {
 }
 
 func FromObject(obj *object.Obj) (value *Set, err []byte) {
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeSortedSet); err != nil {
 		return nil, err
 	}
 	value, ok := obj.Value.(*Set)
