@@ -123,6 +123,19 @@ func TestAPPEND(t *testing.T) {
 			},
 		},
 		{
+			name: "SET and SETBIT commands followed by GET",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "key", "value": "10"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "key", "values": []string{"1", "1"}}},
+				{Command: "GET", Body: map[string]interface{}{"key": "key"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "key", "values": []string{"0", "1"}}},
+			},
+			expected: []interface{}{"OK", float64(0), "q0", float64(0)},
+			cleanup: []HTTPCommand{
+				{Command: "del", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
 			name: "APPEND After SET and DEL",
 			commands: []HTTPCommand{
 				{Command: "SET", Body: map[string]interface{}{"key": "key", "value": "value"}},

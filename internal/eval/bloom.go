@@ -298,13 +298,10 @@ func GetBloomFilter(key string, store *dstore.Store) (*Bloom, error) {
 	if obj == nil {
 		return nil, nil
 	}
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeBitSet); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeBF); err != nil {
 		return nil, diceerrors.ErrWrongTypeOperation
 	}
 
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingBF); err != nil {
-		return nil, diceerrors.ErrWrongTypeOperation
-	}
 	return obj.Value.(*Bloom), nil
 }
 
@@ -319,7 +316,7 @@ func CreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom
 	if opts == nil {
 		opts = defaultBloomOpts()
 	}
-	obj := store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBitSet, object.ObjEncodingBF)
+	obj := store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBF)
 	store.Put(key, obj)
 	return obj.Value.(*Bloom), nil
 }
