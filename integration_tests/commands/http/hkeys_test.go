@@ -24,7 +24,7 @@ func TestHKeys(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "HKEYS", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{nil},
+			expected: []interface{}{[]interface{}{}},
 		},
 	}
 
