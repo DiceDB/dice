@@ -1819,7 +1819,6 @@ func TestJSONARRINDEX(t *testing.T) {
 				if tc.assertType[i] == "equal" {
 					assert.Equal(t, result, expected)
 				} else if tc.assertType[i] == "deep_equal" {
-					fmt.Printf("result is %v and expected is %v\n", result, expected)
 					assert.True(t, testutils.ArraysArePermutations(result.([]interface{}), expected.([]interface{})))
 				}
 			}

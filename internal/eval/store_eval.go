@@ -7056,7 +7056,7 @@ func adjustIndices(start, stop, length int) (adjustedStart, adjustedStop int) {
 	}
 
 	// 0 or -1 means the last element is included.
-	if stop <= 0 || stop == -1 {
+	if stop <= 0  {
 		stop += length 
 	}
 	if start < 0 {
