@@ -98,7 +98,7 @@ func DecodeHash(hash float64) (lat, lon float64) {
 }
 
 // decodeHash decodes the geohash into latitude and longitude with the specified number of steps.
-func decodeHash(hash uint64, steps uint8) (lat float64, lon float64) {
+func decodeHash(hash uint64, steps uint8) (lat, lon float64) {
 	hashSep := deinterleave64(hash)
 
 	latScale := globalMaxLat - globalMinLat
@@ -201,7 +201,7 @@ func geohashEstimateStepsByRadius(radius, lat float64) uint8 {
 }
 
 // boundingBox returns the bounding box for a given latitude, longitude and radius.
-func boundingBox(lat, lon, radius float64) (float64, float64, float64, float64) {
+func boundingBox(lat, lon, radius float64) (minLon, minLat, maxLon, maxLat float64) {
 	latDelta := RadToDeg(radius / earthRadius)
 	lonDeltaTop := RadToDeg(radius / earthRadius / math.Cos(DegToRad(lat+latDelta)))
 	lonDeltaBottom := RadToDeg(radius / earthRadius / math.Cos(DegToRad(lat-latDelta)))
@@ -211,30 +211,28 @@ func boundingBox(lat, lon, radius float64) (float64, float64, float64, float64) 
 		isSouthernHemisphere = true
 	}
 
-	minLon := lon - lonDeltaTop
+	minLon = lon - lonDeltaTop
 	if isSouthernHemisphere {
 		minLon = lon - lonDeltaBottom
 	}
 
-	maxLon := lon + lonDeltaTop
+	maxLon = lon + lonDeltaTop
 	if isSouthernHemisphere {
 		maxLon = lon + lonDeltaBottom
 	}
 
-	minLat := lat - latDelta
-	maxLat := lat + latDelta
+	minLat = lat - latDelta
+	maxLat = lat + latDelta
 
 	return minLon, minLat, maxLon, maxLat
 }
 
 // Area returns the geohashes of the area covered by a circle with a given radius. It returns the center hash
 // and the 8 surrounding hashes. The second return value is the number of steps used to cover the area.
-func Area(centerHash, radius float64) ([9]uint64, uint8) {
-	var result [9]uint64
-
+func Area(centerHash, radius float64) (result [9]uint64, steps uint8) {
 	centerLat, centerLon := decodeHash(uint64(centerHash), maxSteps)
 	minLon, minLat, maxLon, maxLat := boundingBox(centerLat, centerLon, radius)
-	steps := geohashEstimateStepsByRadius(radius, centerLat)
+	steps = geohashEstimateStepsByRadius(radius, centerLat)
 	centerRadiusHash := encodeHash(centerLon, centerLat, steps)
 
 	neighbors := geohashNeighbors(uint64(centerRadiusHash), steps)
@@ -299,11 +297,11 @@ func Area(centerHash, radius float64) ([9]uint64, uint8) {
 
 // HashMinMax returns the min and max hashes for a given hash and steps. This can be used to get the range of hashes
 // that a given hash and a radius (steps) will cover.
-func HashMinMax(hash uint64, steps uint8) (uint64, uint64) {
-	min := align52Bits(hash, steps)
+func HashMinMax(hash uint64, steps uint8) (minHash uint64, maxHash uint64) {
+	minHash = align52Bits(hash, steps)
 	hash++
-	max := align52Bits(hash, steps)
-	return min, max
+	maxHash = align52Bits(hash, steps)
+	return minHash, maxHash
 }
 
 // align52Bits aligns the hash to 52 bits.
@@ -410,10 +408,10 @@ func geohashMoveX(hash uint64, steps uint8, d int8) uint64 {
 	zz := 0x5555555555555555 >> (64 - steps*2)
 
 	if d > 0 {
-		x = x + uint64(zz+1)
+		x += uint64(zz + 1)
 	} else {
-		x = x | uint64(zz)
-		x = x - uint64(zz+1)
+		x |= uint64(zz)
+		x -= uint64(zz + 1)
 	}
 
 	x &= (0xaaaaaaaaaaaaaaaa >> (64 - steps*2))
@@ -428,10 +426,10 @@ func geohashMoveY(hash uint64, steps uint8, d int8) uint64 {
 	zz := uint64(0xaaaaaaaaaaaaaaaa) >> (64 - steps*2)
 
 	if d > 0 {
-		y = y + (zz + 1)
+		y += (zz + 1)
 	} else {
-		y = y | zz
-		y = y - (zz + 1)
+		y |= zz
+		y -= (zz + 1)
 	}
 
 	y &= (0x5555555555555555 >> (64 - steps*2))
