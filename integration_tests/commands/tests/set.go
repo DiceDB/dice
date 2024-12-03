@@ -7,7 +7,7 @@ import (
 
 var expiryTime = strconv.FormatInt(time.Now().Add(1*time.Minute).UnixMilli(), 10)
 
-var testCases = []Meta{
+var setTestCases = []Meta{
 	{
 		Name:    "Set and Get Simple Value",
 		Input:   []string{"SET k v", "GET k"},
@@ -125,5 +125,5 @@ var testCases = []Meta{
 }
 
 func init() {
-	RegisterTests(testCases)
+	RegisterTests(setTestCases)
 }

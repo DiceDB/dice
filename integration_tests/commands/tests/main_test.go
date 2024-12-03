@@ -13,17 +13,24 @@ import (
 func TestMain(m *testing.M) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
-	opts := servers.TestServerOptions{
+	respOpts := servers.TestServerOptions{
 		Port: 9738,
 	}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		servers.RunRespServer(ctx, &wg, opts)
+		servers.RunRespServer(ctx, &wg, respOpts)
 	}()
 	//TODO: run all three in paraller
 	//RunWebSocketServer
-	//RunHTTPServer
+	httpOpts := servers.TestServerOptions{
+		Port: 8083,
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		servers.RunHTTPServer(ctx, &wg, httpOpts)
+	}()
 
 	// Wait for the server to start
 	time.Sleep(2 * time.Second)
