@@ -1,6 +1,10 @@
 ---
 title: SETEX
 description: The SETEX command in DiceDB is used to set the value of a key and its expiration time in seconds. This command is atomic and is commonly used to create time-sensitive key-value pairs.
+sidebar:
+  badge:
+    text: Deprecated
+    variant: danger
 ---
 
 The SETEX command in DiceDB is used to set the value of a key and its expiration time in seconds. This command is atomic and is commonly used to create time-sensitive key-value pairs.
@@ -78,3 +82,6 @@ Attempting to use the command with missing arguments will result in an error:
 127.0.0.1:7379> SETEX foo 10
 (error) ERROR wrong number of arguments for 'setex' command
 ```
+
+### Notes:
+`SETEX` can be replaced via [`SET`](/commands/set) with `EX` option.
