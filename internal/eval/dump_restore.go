@@ -53,9 +53,9 @@ func rdbDeserialize(data []byte) (*object.Obj, error) {
 			return nil, err
 		}
 		value = byteArray
-	case object.ObjTypeByteList: // Byte list type (Deque)
+	case object.ObjTypeDequeue: // Byte list type (Deque)
 		value, err = DeserializeDeque(buf)
-	case object.ObjTypeBitSet: // Bloom filter type
+	case object.ObjTypeBF: // Bloom filter type
 		value, err = DeserializeBloom(buf)
 	case object.ObjTypeSortedSet:
 		value, err = sortedset.DeserializeSortedSet(buf)
@@ -67,7 +67,7 @@ func rdbDeserialize(data []byte) (*object.Obj, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &object.Obj{TypeEncoding: objType, Value: value}, nil
+	return &object.Obj{Type: objType, Value: value}, nil
 }
 
 func readString(buf *bytes.Reader) (interface{}, error) {
@@ -152,7 +152,7 @@ func rdbSerialize(obj *object.Obj) ([]byte, error) {
 		}
 		writeInt(&buf, byteArray.Length)
 		buf.Write(byteArray.data)
-	case object.ObjTypeByteList:
+	case object.ObjTypeDequeue:
 		deque, ok := obj.Value.(*Deque)
 		if !ok {
 			return nil, errors.New("invalid byte list value")
