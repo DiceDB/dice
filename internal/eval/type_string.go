@@ -9,7 +9,7 @@ import (
 
 type String struct {
 	Value string
-	Type  uint8
+	Type  object.ObjectType
 }
 
 func NewString(value string) *String {
@@ -23,28 +23,20 @@ func (s *String) Serialize() []byte {
 	return []byte{}
 }
 
-func deduceType(v string) (o uint8) {
-	// Check if the value has leading zero
+func getRawStringOrInt(v string) (interface{}, object.ObjectType) {
 	if len(v) > 1 && v[0] == '0' {
 		// If so, treat as string
-		return object.ObjTypeString
+		return v, object.ObjTypeString
 	}
-	if _, err := strconv.ParseInt(v, 10, 64); err == nil {
-		return object.ObjTypeInt
-	}
-	return object.ObjTypeString
-}
-
-func getRawStringOrInt(value string) (interface{}, uint8) {
-	intValue, err := strconv.ParseInt(value, 10, 64)
+	intValue, err := strconv.ParseInt(v, 10, 64)
 	if err != nil { // value is not an integer, hence a string
-		return value, object.ObjTypeString
+		return v, object.ObjTypeString
 	}
 	return intValue, object.ObjTypeInt // value is an integer
 }
 
 // Function to convert the value to a string for concatenation or manipulation
-func convertValueToString(obj *object.Obj, oType uint8) (string, error) {
+func convertValueToString(obj *object.Obj, oType object.ObjectType) (string, error) {
 	var currentValueStr string
 
 	switch oType {

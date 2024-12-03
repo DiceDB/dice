@@ -201,7 +201,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	var oldVal *interface{}
 
 	key, value = args[0], args[1]
-	oType := deduceType(value)
+	_, oType := getRawStringOrInt(value)
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
@@ -2477,7 +2477,7 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 
 	if obj == nil {
 		strValue := formatFloat(incr, false)
-		oType := deduceType(strValue)
+		_, oType := getRawStringOrInt(strValue)
 		obj = store.NewObj(strValue, -1, oType)
 		store.Put(key, obj)
 		return &EvalResponse{
@@ -2511,7 +2511,7 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 	}
 	strValue := formatFloat(value, true)
 
-	oType := deduceType(strValue)
+	_, oType := getRawStringOrInt(strValue)
 
 	// Remove the trailing decimal for integer values
 	// to maintain consistency with redis
