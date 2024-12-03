@@ -177,19 +177,19 @@ type persistence struct {
 }
 
 type WALConfig struct {
-	LogDir                      string        `config:"log_dir" default:"tmp/deicdeb-wal-lt"`
-	Enabled                     bool          `config:"enabled" default:"true"`
-	WalMode                     string        `config:"mode" default:"buffered" validate:"oneof=buffered unbuffered"`
-	WriteMode                   string        `config:"write_mode" default:"default" validate:"oneof=default fsync"`
-	BufferSizeMB                int           `config:"buffer_size" default:"1" validate:"min=1"`
-	RotationMode                string        `config:"rotation_mode" default:"segemnt-size" validate:"oneof=segment-size time"`
-	MaxSegmentSizeMB            int64         `config:"buffer_size" default:"16" validate:"min=1"`
-	SegmentRotationTimeSec      time.Duration `config:"max_segment_rotation_time" default:"60" validate:"min=1"`
-	BufferSyncIntervalMillis    time.Duration `config:"max_segment_rotation_time" default:"200" validate:"min=1"`
-	RetentionMode               string        `config:"retention_mode" default:"num-segments" validate:"oneof=num-segments time checkpoint"`
-	MaxSegmentCount             int           `config:"max_segment_count" default:"10" validate:"min=1"`
-	SegmentRetentionDurationSec time.Duration `config:"max_segment_retention_time" default:"600" validate:"min=1"`
-	RecoveryMode                string        `config:"recovery_mode" default:"strict" validate:"oneof=strict truncate ignore"`
+	LogDir                   string        `config:"log_dir" default:"tmp/deicdeb-wal-lt"`
+	Enabled                  bool          `config:"enabled" default:"true"`
+	WalMode                  string        `config:"mode" default:"buffered" validate:"oneof=buffered unbuffered"`
+	WriteMode                string        `config:"write_mode" default:"default" validate:"oneof=default fsync"`
+	BufferSizeMB             int           `config:"buffer_size" default:"1" validate:"min=1"`
+	RotationMode             string        `config:"rotation_mode" default:"segemnt-size" validate:"oneof=segment-size time"`
+	MaxSegmentSizeMB         int64         `config:"buffer_size" default:"16" validate:"min=1"`
+	SegmentRotationTime      time.Duration `config:"max_segment_rotation_time" default:"60" validate:"min=1"`
+	BufferSyncInterval       time.Duration `config:"max_segment_rotation_time" default:"200" validate:"min=1"`
+	RetentionMode            string        `config:"retention_mode" default:"num-segments" validate:"oneof=num-segments time checkpoint"`
+	MaxSegmentCount          int           `config:"max_segment_count" default:"10" validate:"min=1"`
+	SegmentRetentionDuration time.Duration `config:"max_segment_retention_time" default:"600" validate:"min=1"`
+	RecoveryMode             string        `config:"recovery_mode" default:"strict" validate:"oneof=strict truncate ignore"`
 }
 
 type logging struct {

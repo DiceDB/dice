@@ -55,15 +55,14 @@ type WALAOF struct {
 }
 
 func NewAOFWAL(directory string) (*WALAOF, error) {
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &WALAOF{
 		logDir:                 directory,
 		walMode:                config.DiceConfig.WAL.WalMode,
-		bufferSyncTicker:       time.NewTicker(config.DiceConfig.WAL.BufferSyncIntervalMillis * time.Millisecond),
-		segmentRotationTicker:  time.NewTicker(config.DiceConfig.WAL.SegmentRotationTimeSec * time.Second),
-		segmentRetentionTicker: time.NewTicker(config.DiceConfig.WAL.SegmentRetentionDurationSec * time.Second),
+		bufferSyncTicker:       time.NewTicker(config.DiceConfig.WAL.BufferSyncInterval * time.Millisecond),
+		segmentRotationTicker:  time.NewTicker(config.DiceConfig.WAL.SegmentRotationTime * time.Second),
+		segmentRetentionTicker: time.NewTicker(config.DiceConfig.WAL.SegmentRetentionDuration * time.Second),
 		writeMode:              config.DiceConfig.WAL.WriteMode,
 		maxSegmentSize:         config.DiceConfig.WAL.MaxSegmentSizeMB * 1024 * 1024,
 		maxSegmentCount:        config.DiceConfig.WAL.MaxSegmentCount,
@@ -76,37 +75,37 @@ func NewAOFWAL(directory string) (*WALAOF, error) {
 	}, nil
 }
 
-func (w *WALAOF) Init(t time.Time) error {
-
-	if err := w.validateConfig(); err != nil {
+func (wal *WALAOF) Init(t time.Time) error {
+	if err := wal.validateConfig(); err != nil {
 		return err
 	}
 
 	// TODO - Restore existing checkpoints to memory
 
 	// Create the directory if it doesn't exist
-	if err := os.MkdirAll(w.logDir, 0755); err != nil {
+	if err := os.MkdirAll(wal.logDir, 0755); err != nil {
 		return nil
 	}
 
 	// Get the list of log segment files in the directory
-	files, err := filepath.Glob(filepath.Join(w.logDir, segmentPrefix+"*"))
+	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"))
 	if err != nil {
 		return nil
 	}
 
 	if len(files) > 0 {
+		fmt.Println("Found existing log segments:", files)
 		// TODO - Check if we have newer WAL entries after the last checkpoint and simultaneously replay and checkpoint them
 	}
 
 	var wg sync.WaitGroup
-	errCh := make(chan error, w.maxSegmentCount)
+	errCh := make(chan error, wal.maxSegmentCount)
 
-	for i := 0; i < w.maxSegmentCount; i++ {
+	for i := 0; i < wal.maxSegmentCount; i++ {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			filePath := filepath.Join(w.logDir, segmentPrefix+fmt.Sprintf("-%d", index))
+			filePath := filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("-%d", index))
 			file, err := os.Create(filePath)
 			if err != nil {
 				errCh <- fmt.Errorf("error creating segment file %s: %v", filePath, err)
@@ -119,24 +118,24 @@ func (w *WALAOF) Init(t time.Time) error {
 	wg.Wait()
 	close(errCh)
 
-	w.lastSequenceNo = 0
-	w.currentSegmentIndex = 0
-	w.oldestSegmentIndex = 0
-	w.byteOffset = 0
-	w.currentSegmentFile, err = os.OpenFile(filepath.Join(w.logDir, "seg-0"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if _, err = w.currentSegmentFile.Seek(0, io.SeekEnd); err != nil {
+	wal.lastSequenceNo = 0
+	wal.currentSegmentIndex = 0
+	wal.oldestSegmentIndex = 0
+	wal.byteOffset = 0
+	wal.currentSegmentFile, err = os.OpenFile(filepath.Join(wal.logDir, "seg-0"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if _, err := wal.currentSegmentFile.Seek(0, io.SeekEnd); err != nil {
 		return err
 	}
-	w.bufWriter = bufio.NewWriterSize(w.currentSegmentFile, w.bufferSize)
+	wal.bufWriter = bufio.NewWriterSize(wal.currentSegmentFile, wal.bufferSize)
 
-	go w.keepSyncingBuffer()
+	go wal.keepSyncingBuffer()
 
-	if w.rotationMode == "time" {
-		go w.rotateSegmentPeriodically()
+	if wal.rotationMode == "time" { //nolint:goconst
+		go wal.rotateSegmentPeriodically()
 	}
 
-	if w.retentionMode == "time" {
-		go w.deleteSegmentPeriodically()
+	if wal.retentionMode == "time" { //nolint:goconst
+		go wal.deleteSegmentPeriodically()
 	}
 
 	return nil
@@ -161,7 +160,9 @@ func (wal *WALAOF) writeEntry(data []byte) error {
 	}
 
 	entrySize := getEntrySize(data)
-	wal.rotateLogIfNeeded(entrySize)
+	if err := wal.rotateLogIfNeeded(entrySize); err != nil {
+		return err
+	}
 
 	wal.byteOffset += entrySize
 
@@ -169,9 +170,11 @@ func (wal *WALAOF) writeEntry(data []byte) error {
 		return err
 	}
 
-	// if wal-mode unbuffered immediatley sync to disk
-	if wal.walMode == "unbuffered" {
-		wal.Sync()
+	// if wal-mode unbuffered immediately sync to disk
+	if wal.walMode == "unbuffered" { //nolint:goconst
+		if err := wal.Sync(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -232,7 +235,6 @@ func (wal *WALAOF) rotateLog() error {
 }
 
 func (wal *WALAOF) deleteOldestSegment() error {
-
 	oldestSegmentFilePath := filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("%d", wal.oldestSegmentIndex))
 
 	// TODO: checkpoint before deleting the file
@@ -260,7 +262,7 @@ func (wal *WALAOF) Sync() error {
 	if err := wal.bufWriter.Flush(); err != nil {
 		return err
 	}
-	if wal.writeMode == "fsync" {
+	if wal.writeMode == "fsync" { //nolint:goconst
 		if err := wal.currentSegmentFile.Sync(); err != nil {
 			return err
 		}
@@ -323,7 +325,7 @@ func (wal *WALAOF) deleteSegmentPeriodically() {
 	}
 }
 
-func (w *WALAOF) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
+func (wal *WALAOF) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
 	// TODO: implement this method
 	return nil
 }
