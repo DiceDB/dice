@@ -2867,11 +2867,17 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(err)
 	}
 
-	_, err = CreateBloomFilter(args[0], store, opts)
-	if err != nil {
+	key := args[0]
+
+	_, err = GetBloomFilter(key, store)
+	if err != nil && err != diceerrors.ErrKeyNotFound { // bloom filter does not exist
 		return makeEvalError(err)
+	} else if err != nil && err == diceerrors.ErrKeyNotFound { // key does not exists
+		CreateOrReplaceBloomFilter(key, opts, store)
+		return makeEvalResult(clientio.OK)
+	} else { // bloom filter already exists
+		return makeEvalResult(clientio.OK)
 	}
-	return makeEvalResult(clientio.OK)
 }
 
 // evalBFADD evaluates the BF.ADD command responsible for adding an element to a bloom filter. If the filter does not
@@ -2881,12 +2887,12 @@ func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.ADD"))
 	}
 
-	bloom, err := getOrCreateBloomFilter(args[0], store, nil)
+	bf, err := GetOrCreateBloomFilter(args[0], store, nil)
 	if err != nil {
 		return makeEvalError(err)
 	}
 
-	result, err := bloom.add(args[1])
+	result, err := bf.add(args[1])
 	if err != nil {
 		return makeEvalError(err)
 	}
@@ -2901,14 +2907,14 @@ func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.EXISTS"))
 	}
 
-	bloom, err := GetBloomFilter(args[0], store)
-	if err != nil {
+	bf, err := GetBloomFilter(args[0], store)
+	if err != nil && err != diceerrors.ErrKeyNotFound {
 		return makeEvalError(err)
-	}
-	if bloom == nil {
+	} else if err != nil && err == diceerrors.ErrKeyNotFound {
 		return makeEvalResult(clientio.IntegerZero)
 	}
-	result, err := bloom.exists(args[1])
+
+	result, err := bf.exists(args[1])
 	if err != nil {
 		return makeEvalError(err)
 	}
@@ -2922,25 +2928,20 @@ func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.INFO"))
 	}
 
-	bloom, err := GetBloomFilter(args[0], store)
-
+	bf, err := GetBloomFilter(args[0], store)
 	if err != nil {
 		return makeEvalError(err)
 	}
 
-	if bloom == nil {
-		return makeEvalError(diceerrors.ErrGeneral("not found"))
-	}
 	opt := ""
 	if len(args) == 2 {
 		opt = args[1]
 	}
-	result, err := bloom.info(opt)
 
+	result, err := bf.info(opt)
 	if err != nil {
 		return makeEvalError(err)
 	}
-
 	return makeEvalResult(result)
 }
 

@@ -8,14 +8,12 @@ import (
 )
 
 type String struct {
-	Value string
-	Type  object.ObjectType
+	value string
 }
 
 func NewString(value string) *String {
 	return &String{
-		Value: value,
-		Type:  object.ObjTypeString,
+		value: value,
 	}
 }
 

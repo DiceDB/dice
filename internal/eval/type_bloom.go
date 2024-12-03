@@ -92,7 +92,7 @@ func newBloomOpts(args []string) (*BloomOpts, error) {
 
 // newBloomFilter creates and returns a new filter. It is responsible for initializing the
 // underlying bit array.
-func newBloomFilter(opts *BloomOpts) *Bloom {
+func NewBloom(opts *BloomOpts) *Bloom {
 	// Calculate bits per element
 	// 		bpe = -log(errorRate)/ln(2)^2
 	num := -1 * math.Log(opts.errorRate)
@@ -278,45 +278,45 @@ func (opts *BloomOpts) updateIndexes(value string) error {
 	return nil
 }
 
-// getOrCreateBloomFilter attempts to fetch an existing bloom filter from
-// the kv store. If it does not exist, it tries to create one with
-// given `opts` and returns it.
-func getOrCreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom, error) {
-	bf, err := GetBloomFilter(key, store)
-	if err != nil {
-		return nil, err
+// CreateOrReplaceBloomFilter creates a new bloom filter with given `opts`
+// and stores it in the kv store. If the bloom filter already exists, it
+// replaces the existing one. If `opts` is nil, it uses the default options.
+func CreateOrReplaceBloomFilter(key string, opts *BloomOpts, store *dstore.Store) *Bloom {
+	if opts == nil {
+		opts = defaultBloomOpts()
 	}
-	if bf == nil {
-		bf, err = CreateBloomFilter(key, store, opts)
-	}
-	return bf, err
+	bf := NewBloom(opts)
+	obj := store.NewObj(bf, -1, object.ObjTypeBF)
+	store.Put(key, obj)
+	return bf
 }
 
-// get the bloom filter
+// GetOrCreateBloomFilter fetches an existing bloom filter from
+// the kv store and returns the datastructure instance of it.
+// If it does not exist, it tries to create one with given `opts` and returns it.
+// Note: It also stores it in the kv store.
+func GetOrCreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom, error) {
+	bf, err := GetBloomFilter(key, store)
+	if err != nil && err != diceerrors.ErrKeyNotFound {
+		return nil, err
+	} else if err != nil && err == diceerrors.ErrKeyNotFound {
+		bf = CreateOrReplaceBloomFilter(key, opts, store)
+	}
+	return bf, nil
+}
+
+// GetBloomFilter fetches an existing bloom filter from
+// the kv store and returns the datastructure instance of it.
+// The function also returns diceerrors.ErrKeyNotFound if the key does not exist.
+// It also returns diceerrors.ErrWrongTypeOperation if the object is not a bloom filter.
 func GetBloomFilter(key string, store *dstore.Store) (*Bloom, error) {
 	obj := store.Get(key)
 	if obj == nil {
-		return nil, nil
+		return nil, diceerrors.ErrKeyNotFound
 	}
 	if err := object.AssertType(obj.Type, object.ObjTypeBF); err != nil {
 		return nil, diceerrors.ErrWrongTypeOperation
 	}
 
-	return obj.Value.(*Bloom), nil
-}
-
-func CreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom, error) {
-	bf, err := GetBloomFilter(key, store)
-	if bf != nil {
-		return nil, diceerrors.ErrGeneral("item exists")
-	}
-	if err != nil {
-		return nil, err
-	}
-	if opts == nil {
-		opts = defaultBloomOpts()
-	}
-	obj := store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBF)
-	store.Put(key, obj)
 	return obj.Value.(*Bloom), nil
 }
