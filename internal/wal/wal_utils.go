@@ -30,28 +30,28 @@ func getEntrySize(data []byte) int {
 		timestampSize // Timestamp field
 }
 
-func (w *WALAOF) validateConfig() error {
-	if w.logDir == "" {
+func (wal *WALAOF) validateConfig() error {
+	if wal.logDir == "" {
 		return fmt.Errorf("logDir cannot be empty")
 	}
 
-	if w.maxSegmentSize <= 0 {
+	if wal.maxSegmentSize <= 0 {
 		return fmt.Errorf("maxSegmentSize must be greater than 0")
 	}
 
-	if w.maxSegmentCount <= 0 {
+	if wal.maxSegmentCount <= 0 {
 		return fmt.Errorf("maxSegmentCount must be greater than 0")
 	}
 
-	if w.bufferSize <= 0 {
+	if wal.bufferSize <= 0 {
 		return fmt.Errorf("bufferSize must be greater than 0")
 	}
 
-	if w.walMode == "buffered" && w.writeMode == "fsync" {
+	if wal.walMode == "buffered" && wal.writeMode == "fsync" {
 		return fmt.Errorf("walMode 'buffered' cannot be used with writeMode 'fsync'")
 	}
 
-	if w.walMode == "unbuffered" && w.writeMode == "default" {
+	if wal.walMode == "unbuffered" && wal.writeMode == "default" {
 		return fmt.Errorf("walMode 'unbuffered' cannot have writeMode as 'default'")
 	}
 
