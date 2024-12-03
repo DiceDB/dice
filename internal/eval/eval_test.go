@@ -2995,7 +2995,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 			name: "PFADD Incorrect type provided",
 			setup: func() {
 				key, value := "EXISTING_KEY", "VALUE"
-				oType := deduceType(value)
+				_, oType := getRawStringOrInt(value)
 				var exDurationMs int64 = -1
 				keepttl := false
 
@@ -4830,7 +4830,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: 89, Error: nil},
+			migratedOutput: EvalResponse{Result: 72, Error: nil},
 		},
 
 		"root path": {
@@ -4843,7 +4843,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$"},
-			migratedOutput: EvalResponse{Result: 89, Error: nil},
+			migratedOutput: EvalResponse{Result: 72, Error: nil},
 		},
 
 		"invalid path": {

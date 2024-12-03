@@ -13,7 +13,7 @@ func TestDeduceType(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		wantType uint8
+		wantType object.ObjectType
 		wantEnc  uint8
 	}{
 		{
@@ -45,7 +45,7 @@ func TestDeduceType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotType := deduceType(tt.input)
+			_, gotType := getRawStringOrInt(tt.input)
 			if gotType != tt.wantType {
 				t.Errorf("deduceType(%q) = (%v), want (%v)", tt.input, gotType, tt.wantType)
 			}
