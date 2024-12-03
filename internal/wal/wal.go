@@ -10,7 +10,7 @@ import (
 )
 
 type AbstractWAL interface {
-	LogCommand([] byte) error
+	LogCommand([]byte) error
 	Close() error
 	Init(t time.Time) error
 	ForEachCommand(f func(c cmd.DiceDBCmd) error) error

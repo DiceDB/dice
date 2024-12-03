@@ -564,13 +564,17 @@ func (t *BaseIOThread) handleCommand(ctx context.Context, cmdMeta CmdMeta, diceD
 		}
 
 		if err == nil && t.wl != nil {
-			t.wl.LogCommand([]byte(fmt.Sprintf("%s %s", diceDBCmd.Cmd, strings.Join(diceDBCmd.Args, " "))))
+			if err := t.wl.LogCommand([]byte(fmt.Sprintf("%s %s", diceDBCmd.Cmd, strings.Join(diceDBCmd.Args, " ")))); err != nil {
+				return err
+			}
 		}
 	case MultiShard, AllShard:
 		err = t.writeResponse(ctx, cmdMeta.composeResponse(storeOp...))
 
 		if err == nil && t.wl != nil {
-			t.wl.LogCommand([]byte(fmt.Sprintf("%s %s", diceDBCmd.Cmd, strings.Join(diceDBCmd.Args, " "))))
+			if err := t.wl.LogCommand([]byte(fmt.Sprintf("%s %s", diceDBCmd.Cmd, strings.Join(diceDBCmd.Args, " ")))); err != nil {
+				return err
+			}
 		}
 	default:
 		slog.Error("Unknown command type",
