@@ -36,7 +36,7 @@ func NewByteArrayFromObj(obj *object.Obj) (*ByteArray, error) {
 }
 
 func getValueAsByteSlice(obj *object.Obj) ([]byte, error) {
-	oType := object.ExtractType(obj)
+	oType := obj.Type
 	switch oType {
 	case object.ObjTypeInt:
 		return []byte(strconv.FormatInt(obj.Value.(int64), 10)), nil

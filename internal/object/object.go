@@ -82,7 +82,3 @@ var ObjTypeSortedSet uint8 = 8
 var ObjTypeCountMinSketch uint8 = 9
 var ObjTypeBF uint8 = 10
 var ObjTypeDequeue uint8 = 11
-
-func ExtractType(obj *Obj) (e1 uint8) {
-	return obj.Type
-}
