@@ -94,11 +94,11 @@ WriteMode = "default"
 BufferSizeMB = 1
 RotationMode = "segemnt-size"
 MaxSegmentSizeMB = 16
-SegmentRotationTimeSec = 60
-BufferSyncIntervalMillis = 200
+SegmentRotationTime = 60
+BufferSyncInterval = 200
 RetentionMode = "num-segments" 
 MaxSegmentCount = 10
-SegmentRetentionDurationSec = 600 
+SegmentRetentionDuration = 600 
 RecoveryMode = "strict"`
 )
 
@@ -184,11 +184,11 @@ type WALConfig struct {
 	BufferSizeMB             int           `config:"buffer_size" default:"1" validate:"min=1"`
 	RotationMode             string        `config:"rotation_mode" default:"segemnt-size" validate:"oneof=segment-size time"`
 	MaxSegmentSizeMB         int64         `config:"buffer_size" default:"16" validate:"min=1"`
-	SegmentRotationTime      time.Duration `config:"max_segment_rotation_time" default:"60" validate:"min=1"`
-	BufferSyncInterval       time.Duration `config:"max_segment_rotation_time" default:"200" validate:"min=1"`
+	SegmentRotationTime      time.Duration `config:"max_segment_rotation_time" default:"60s" validate:"min=1s"`
+	BufferSyncInterval       time.Duration `config:"max_segment_rotation_time" default:"200ms" validate:"min=1ms"`
 	RetentionMode            string        `config:"retention_mode" default:"num-segments" validate:"oneof=num-segments time checkpoint"`
 	MaxSegmentCount          int           `config:"max_segment_count" default:"10" validate:"min=1"`
-	SegmentRetentionDuration time.Duration `config:"max_segment_retention_time" default:"600" validate:"min=1"`
+	SegmentRetentionDuration time.Duration `config:"max_segment_retention_time" default:"600s" validate:"min=1s"`
 	RecoveryMode             string        `config:"recovery_mode" default:"strict" validate:"oneof=strict truncate ignore"`
 }
 

@@ -60,9 +60,9 @@ func NewAOFWAL(directory string) (*WALAOF, error) {
 	return &WALAOF{
 		logDir:                 directory,
 		walMode:                config.DiceConfig.WAL.WalMode,
-		bufferSyncTicker:       time.NewTicker(config.DiceConfig.WAL.BufferSyncInterval * time.Millisecond),
-		segmentRotationTicker:  time.NewTicker(config.DiceConfig.WAL.SegmentRotationTime * time.Second),
-		segmentRetentionTicker: time.NewTicker(config.DiceConfig.WAL.SegmentRetentionDuration * time.Second),
+		bufferSyncTicker:       time.NewTicker(config.DiceConfig.WAL.BufferSyncInterval),
+		segmentRotationTicker:  time.NewTicker(config.DiceConfig.WAL.SegmentRotationTime),
+		segmentRetentionTicker: time.NewTicker(config.DiceConfig.WAL.SegmentRetentionDuration),
 		writeMode:              config.DiceConfig.WAL.WriteMode,
 		maxSegmentSize:         config.DiceConfig.WAL.MaxSegmentSizeMB * 1024 * 1024,
 		maxSegmentCount:        config.DiceConfig.WAL.MaxSegmentCount,
