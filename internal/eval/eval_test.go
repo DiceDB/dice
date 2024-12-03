@@ -8107,13 +8107,7 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"INTEGER_KEY"},
 			migratedOutput: EvalResponse{
-				Result: base64.StdEncoding.EncodeToString([]byte{
-					0x09,
-					0xC0,
-					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A,
-					0xFF,
-					0x12, 0x77, 0xDE, 0x29, 0x53, 0xDB, 0x44, 0xC2,
-				}),
+				Result: "CQUAAAAAAAAACv9+l81XgsShqw==",
 				Error: nil,
 			},
 		},
