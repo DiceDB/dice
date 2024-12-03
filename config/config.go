@@ -84,7 +84,22 @@ auth.password = ""
 
 # Network Configuration
 network.io_buffer_length = 512
-network.io_buffer_length_max = 51200`
+network.io_buffer_length_max = 51200
+
+# WAL Configuration
+LogDir = "tmp/deicdeb-wal-lt"
+Enabled = "true"
+WalMode = "buffered"
+WriteMode = "default"
+BufferSizeMB = 1
+RotationMode = "segemnt-size"
+MaxSegmentSizeMB = 16
+SegmentRotationTimeSec = 60
+BufferSyncIntervalMillis = 200
+RetentionMode = "num-segments" 
+MaxSegmentCount = 10
+SegmentRetentionDurationSec = 600 
+RecoveryMode = "strict"`
 )
 
 var (
@@ -104,6 +119,7 @@ type Config struct {
 	Persistence persistence `config:"persistence"`
 	Logging     logging     `config:"logging"`
 	Network     network     `config:"network"`
+	WAL         WALConfig   `config:"WAL"`
 }
 
 type auth struct {
@@ -147,17 +163,33 @@ type memory struct {
 	MaxMemory      int64   `config:"max_memory" default:"0" validate:"min=0"`
 	EvictionPolicy string  `config:"eviction_policy" default:"allkeys-lfu" validate:"oneof=simple-first allkeys-random allkeys-lru allkeys-lfu"`
 	EvictionRatio  float64 `config:"eviction_ratio" default:"0.9" validate:"min=0,lte=1"`
-	KeysLimit      int     `config:"keys_limit" default:"200000000" validate:"min=0"`
+	KeysLimit      int     `config:"keys_limit" default:"200000000" validate:"min=10"`
 	LFULogFactor   int     `config:"lfu_log_factor" default:"10" validate:"min=0"`
 }
 
 type persistence struct {
-	Enabled           bool   `config:"enabled" default:"false"`
+	Enabled           bool   `config:"enabled" default:"true"`
 	AOFFile           string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
 	WriteAOFOnCleanup bool   `config:"write_aof_on_cleanup" default:"false"`
 	WALDir            string `config:"wal-dir" default:"./" validate:"dirpath"`
 	RestoreFromWAL    bool   `config:"restore-wal" default:"false"`
 	WALEngine         string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`
+}
+
+type WALConfig struct {
+	LogDir                      string        `config:"log_dir" default:"tmp/deicdeb-wal-lt"`
+	Enabled                     bool          `config:"enabled" default:"true"`
+	WalMode                     string        `config:"mode" default:"buffered" validate:"oneof=buffered unbuffered"`
+	WriteMode                   string        `config:"write_mode" default:"default" validate:"oneof=default fsync"`
+	BufferSizeMB                int           `config:"buffer_size" default:"1" validate:"min=1"`
+	RotationMode                string        `config:"rotation_mode" default:"segemnt-size" validate:"oneof=segment-size time"`
+	MaxSegmentSizeMB            int64         `config:"buffer_size" default:"16" validate:"min=1"`
+	SegmentRotationTimeSec      time.Duration `config:"max_segment_rotation_time" default:"60" validate:"min=1"`
+	BufferSyncIntervalMillis    time.Duration `config:"max_segment_rotation_time" default:"200" validate:"min=1"`
+	RetentionMode               string        `config:"retention_mode" default:"num-segments" validate:"oneof=num-segments time checkpoint"`
+	MaxSegmentCount             int           `config:"max_segment_count" default:"10" validate:"min=1"`
+	SegmentRetentionDurationSec time.Duration `config:"max_segment_retention_time" default:"600" validate:"min=1"`
+	RecoveryMode                string        `config:"recovery_mode" default:"strict" validate:"oneof=strict truncate ignore"`
 }
 
 type logging struct {

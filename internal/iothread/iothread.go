@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -563,13 +564,13 @@ func (t *BaseIOThread) handleCommand(ctx context.Context, cmdMeta CmdMeta, diceD
 		}
 
 		if err == nil && t.wl != nil {
-			t.wl.LogCommand(diceDBCmd)
+			t.wl.LogCommand([]byte(fmt.Sprintf("%s %s", diceDBCmd.Cmd, strings.Join(diceDBCmd.Args, " "))))
 		}
 	case MultiShard, AllShard:
 		err = t.writeResponse(ctx, cmdMeta.composeResponse(storeOp...))
 
 		if err == nil && t.wl != nil {
-			t.wl.LogCommand(diceDBCmd)
+			t.wl.LogCommand([]byte(fmt.Sprintf("%s %s", diceDBCmd.Cmd, strings.Join(diceDBCmd.Args, " "))))
 		}
 	default:
 		slog.Error("Unknown command type",
