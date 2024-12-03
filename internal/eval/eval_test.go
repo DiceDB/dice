@@ -6719,7 +6719,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: 3, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
-				oType := object.ExtractType(obj)
+				oType := obj.Type
 				if oType != object.ObjTypeInt {
 					t.Errorf("unexpected encoding")
 				}
@@ -6774,7 +6774,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: 2, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
-				oType := object.ExtractType(obj)
+				oType := obj.Type
 				if oType != object.ObjTypeString {
 					t.Errorf("unexpected encoding")
 				}
