@@ -1,6 +1,6 @@
 ---
 title: JSON.OBJKEYS
-description: The `JSON.OBJKEYS` command command in DiceDB retrieves the keys of a JSON object located at a specified path within the document stored under the given key. This command is useful when you want to list the fields within a JSON object stored in a database.
+description: The `JSON.OBJKEYS` command in DiceDB retrieves the keys of a JSON object located at a specified path within the document stored under the given key. This command is useful when you want to list the fields within a JSON object stored in a database.
 ---
 
 The `JSON.OBJKEYS` command in DiceDB allows users to access the keys of a JSON object stored at a specific path within a document identified by a given key. By executing this command, users can easily retrieve a list of the fields present in the JSON object, making it a valuable tool for exploring and managing the structure of JSON data stored in the database.
@@ -26,7 +26,7 @@ JSON.OBJKEYS key [path]
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | Success                                                | ([]String) `Array of strings containing the keys present within the JSON object at the specified path.` |
 | Key does not exist                                     | Error: `(error) ERR could not perform this operation on a key that doesn't exist`                       |
-| Wrong number of arguments                              | Error: `(error) ERR wrong number of arguments for JSON.ARRTRIM command`                                 |
+| Wrong number of arguments                              | Error: `(error) ERR wrong number of arguments for JSON.OBJKEYS command`                                 |
 | Key has wrong type                                     | Error: `(error) ERR Existing key has wrong Dice type`                                                   |
 | Operation attempted on a key with an incompatible type | Error: `(error) ERR WRONGTYPE Operation against a key holding the wrong kind of value`                  |
 
@@ -41,7 +41,7 @@ JSON.OBJKEYS key [path]
 
 1. `Wrong number of arguments`:
 
-   - Error Message: `(error) ERR wrong number of arguments for JSON.ARRINSERT command`
+   - Error Message: `(error) ERR wrong number of arguments for JSON.OBJKEYS command`
    - Raised if the number of arguments are less or more than expected.
 
 2. `Key doesn't exist`:
@@ -52,7 +52,7 @@ JSON.OBJKEYS key [path]
 3. `Key has wrong Dice type`:
 
    - Error Message: `(error) ERR Existing key has wrong Dice type`
-   - Raised if thevalue of the specified key doesn't match the specified value in DIceDb
+   - Raised if thevalue of the specified key doesn't match the specified value in DiceDb
 
 4. `Path doesn't exist`:
 
