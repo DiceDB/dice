@@ -8,7 +8,7 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/integration_tests/commands/tests/parsers"
 	"github.com/dicedb/dice/integration_tests/commands/tests/servers"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -24,6 +24,9 @@ func TestHttpCommands(t *testing.T) {
 
 	for _, test := range allTests {
 		t.Run(test.Name, func(t *testing.T) {
+			if !Validate(&test) {
+				t.Fatal("Test progression failed...")
+			}
 
 			// Setup commands
 			if len(test.Setup) > 0 {

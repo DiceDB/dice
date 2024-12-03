@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -63,4 +64,26 @@ func SwitchAsserts(t *testing.T, kind string, expected interface{}, actual inter
 	case ARRAY:
 		assert.ElementsMatch(t, expected, actual)
 	}
+}
+
+func Validate(test *Meta) bool {
+	// Validate test structure
+	if len(test.Input) != len(test.Output) {
+		fmt.Printf("Test %s: mismatch between number of inputs (%d) and outputs (%d)", test.Name, len(test.Input), len(test.Output))
+		return false
+	}
+	if len(test.Delays) > 0 && len(test.Delays) != len(test.Input) {
+		fmt.Printf("Test %s: mismatch between number of inputs (%d) and delays (%d)", test.Name, len(test.Input), len(test.Delays))
+		return false
+	}
+	if len(test.Setup) > 0 {
+		for _, setup := range test.Setup {
+			if len(setup.Input) != len(setup.Output) {
+				fmt.Printf("Test %s (Setup): mismatch between number of setup inputs (%d) and outputs (%d)", test.Name, len(setup.Input), len(setup.Output))
+				return false
+			}
+		}
+	}
+
+	return true
 }

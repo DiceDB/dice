@@ -3,11 +3,12 @@ package tests
 import (
 	"log"
 	"testing"
+	"time"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/integration_tests/commands/tests/parsers"
 	"github.com/dicedb/dice/integration_tests/commands/tests/servers"
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -23,7 +24,24 @@ func TestRespCommands(t *testing.T) {
 
 	for _, test := range allTests {
 		t.Run(test.Name, func(t *testing.T) {
+			if !Validate(&test) {
+				t.Fatal("Test progression failed...")
+			}
+
+			if len(test.Setup) > 0 {
+				for _, setup := range test.Setup {
+					for idx, cmd := range setup.Input {
+						output := parsers.RespCommandExecuter(conn, cmd)
+						assert.Equal(t, setup.Output[idx], output)
+					}
+				}
+			}
+
 			for idx, cmd := range test.Input {
+				if len(test.Delays) > 0 {
+					time.Sleep(test.Delays[idx])
+				}
+
 				output := parsers.RespCommandExecuter(conn, cmd)
 				assert.Equal(t, test.Output[idx], output)
 			}

@@ -54,7 +54,7 @@ func RunRespServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	wl, _ := wal.NewNullWAL()
 	testServer := resp.NewServer(shardManager, ioThreadManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, wl)
 
-	fmt.Println("Starting the test server on port", config.DiceConfig.RespServer.Port)
+	fmt.Println("Starting the test RESP server on the port", config.DiceConfig.RespServer.Port)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)

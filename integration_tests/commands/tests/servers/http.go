@@ -32,8 +32,6 @@ type HTTPCommandExecutor struct {
 	baseURL    string
 }
 
-
-
 func NewHTTPCommandExecutor() *HTTPCommandExecutor {
 	return &HTTPCommandExecutor{
 		baseURL: "http://localhost:8083",
@@ -112,7 +110,7 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	// Initialize the HTTPServer
 	testServer := server.NewHTTPServer(shardManager, nil)
 	// Inform the user that the server is starting
-	fmt.Println("Starting the test server on port", config.DiceConfig.HTTP.Port)
+	fmt.Println("Starting the test HTTP server on the port", config.DiceConfig.HTTP.Port)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)
 	go func() {
