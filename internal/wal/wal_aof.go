@@ -122,7 +122,12 @@ func (wal *WALAOF) Init(t time.Time) error {
 	wal.currentSegmentIndex = 0
 	wal.oldestSegmentIndex = 0
 	wal.byteOffset = 0
-	wal.currentSegmentFile, err = os.OpenFile(filepath.Join(wal.logDir, "seg-0"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	newFile, err := os.OpenFile(filepath.Join(wal.logDir, "seg-0"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	wal.currentSegmentFile = newFile
+
 	if _, err := wal.currentSegmentFile.Seek(0, io.SeekEnd); err != nil {
 		return err
 	}
