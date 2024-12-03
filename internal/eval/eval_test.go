@@ -1409,7 +1409,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  nil,
+				Error:  diceerrors.ErrKeyDoesNotExist,
 			},
 		},
 		"jsonobjlen root not object": {
