@@ -25,7 +25,7 @@ package object
 //     objects (e.g., strings, numbers, complex data structures like lists or maps).
 type Obj struct {
 	// Type holds the type of the object (e.g., string, int, complex structure)
-	Type uint8
+	Type ObjectType
 
 	// LastAccessedAt stores the last access timestamp of the object.
 	// It helps track when the object was last accessed and may be used for cache eviction or freshness tracking.
@@ -72,13 +72,21 @@ type InternalObj struct {
 	ExDuration int64
 }
 
-var ObjTypeString uint8 = 0
-var ObjTypeJSON uint8 = 3
-var ObjTypeByteArray uint8 = 4
-var ObjTypeInt uint8 = 5
-var ObjTypeSet uint8 = 6
-var ObjTypeHashMap uint8 = 7
-var ObjTypeSortedSet uint8 = 8
-var ObjTypeCountMinSketch uint8 = 9
-var ObjTypeBF uint8 = 10
-var ObjTypeDequeue uint8 = 11
+// ObjectType represents the type of a DiceDB object
+type ObjectType uint8
+
+// Define object types as constants
+const (
+	ObjTypeString ObjectType = iota
+	_                        // skip 1 and 2 to maintain compatibility
+	_
+	ObjTypeJSON
+	ObjTypeByteArray
+	ObjTypeInt
+	ObjTypeSet
+	ObjTypeHashMap
+	ObjTypeSortedSet
+	ObjTypeCountMinSketch
+	ObjTypeBF
+	ObjTypeDequeue
+)
