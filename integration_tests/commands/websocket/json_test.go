@@ -58,6 +58,8 @@ func runIntegrationTests(t *testing.T, exec *WebsocketCommandExecutor, conn *web
 					assert.True(t, result.(float64) <= out.(float64) && result.(float64) > 0, "Expected %v to be within 0 to %v", result, out)
 				case "json_equal":
 					assert.JSONEq(t, out.(string), result.(string))
+				case "deep_equal":
+					assert.True(t, testutils.ArraysArePermutations(result.([]interface{}), out.([]interface{})))
 				}
 			}
 		})
@@ -1350,26 +1352,26 @@ func TestJSONARRINDEX(t *testing.T) {
 		{
 			name:     "should return nil for non-array path and -1 for array path if value DNE",
 			commands: []string{"json.set key $ " + nestedArray2, "json.arrindex key $..a 2"},
-			expected: []interface{}{"OK", []interface{}{float64(-1), "(nil)"}},
+			expected: []interface{}{"OK", []interface{}{float64(-1), nil}},
 			assertType: []string{"equal", "deep_equal"},
 			cleanUp:    []string{"DEL key"},
 		},
 		{
 			name:     "should return nil for non-array path if value DNE and valid index for array path if value exists",
 			commands: []string{"json.set key $ " + nestedArray2, "json.arrindex key $..a 3"},
-			expected: []interface{}{"OK", []interface{}{float64(0), "(nil)"}},
+			expected: []interface{}{"OK", []interface{}{float64(0), nil}},
 			assertType: []string{"equal", "deep_equal"},
 			cleanUp:    []string{"DEL key"},
 		},
 		{
-			name:     "should handle stop index - 0 which should be last index",
+			name:     "should handle stop index - 0 which should be last index inclusive",
 			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 1 0", "json.arrindex key $..arr 3 2 0"},
 			expected: []interface{}{"OK", []interface{}{float64(2), float64(1), float64(-1)}, []interface{}{float64(2), float64(-1), float64(-1)}},
 			assertType: []string{"equal", "deep_equal", "deep_equal"},
 			cleanUp:    []string{"DEL key"},
 		},
 		{
-			name:     "should handle stop index - -1 which should be last index",
+			name:     "should handle stop index - -1 which should be last index exclusive",
 			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 1 -1", "json.arrindex key $..arr 3 2 -1"},
 			expected: []interface{}{"OK", []interface{}{float64(-1), float64(1), float64(-1)}, []interface{}{float64(-1), float64(-1), float64(-1)}},
 			assertType: []string{"equal", "deep_equal", "deep_equal"},
