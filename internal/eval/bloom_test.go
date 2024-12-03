@@ -100,19 +100,19 @@ func TestGetOrCreateBloomFilter(t *testing.T) {
 	opts := defaultBloomOpts()
 
 	// Should create a new filter under the key `key`.
-	bloom, err := getOrCreateBloomFilter(key, store, opts)
+	bloom, err := GetOrCreateBloomFilter(key, store, opts)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while creating new filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter (which was created above)
-	bloom, err = getOrCreateBloomFilter(key, store, opts)
+	bloom, err = GetOrCreateBloomFilter(key, store, opts)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter with nil opts
-	bloom, err = getOrCreateBloomFilter(key, store, nil)
+	bloom, err = GetOrCreateBloomFilter(key, store, nil)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
