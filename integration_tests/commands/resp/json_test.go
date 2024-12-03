@@ -1790,15 +1790,15 @@ func TestJSONARRINDEX(t *testing.T) {
 			assertType: []string{"equal", "deep_equal"},
 		},
 		{
-			name:     "should handle stop index - 0 which should be last index",
+			name:     "should handle stop index - 0 which should be last index inclusive",
 			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 1 0", "json.arrindex key $..arr 3 2 0"},
 			expected: []interface{}{"OK", []interface{}{int64(2), int64(1), int64(-1)}, []interface{}{int64(2), int64(-1), int64(-1)}},
 			assertType: []string{"equal", "deep_equal", "deep_equal"},
 		},
 		{
-			name:     "should handle stop index - -1 which should be last index",
+			name:     "should handle stop index - -1 which should be last index exclusive",
 			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 1 -1", "json.arrindex key $..arr 3 2 -1"},
-			expected: []interface{}{"OK", []interface{}{int64(2), int64(1), int64(-1)}, []interface{}{int64(2), int64(-1), int64(-1)}},
+			expected: []interface{}{"OK", []interface{}{int64(-1), int64(1), int64(-1)}, []interface{}{int64(-1), int64(-1), int64(-1)}},
 			assertType: []string{"equal", "deep_equal", "deep_equal"},
 		},
 		{

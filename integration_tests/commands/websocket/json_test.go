@@ -1371,7 +1371,7 @@ func TestJSONARRINDEX(t *testing.T) {
 		{
 			name:     "should handle stop index - -1 which should be last index",
 			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 1 -1", "json.arrindex key $..arr 3 2 -1"},
-			expected: []interface{}{"OK", []interface{}{float64(2), float64(1), float64(-1)}, []interface{}{float64(2), float64(-1), float64(-1)}},
+			expected: []interface{}{"OK", []interface{}{float64(-1), float64(1), float64(-1)}, []interface{}{float64(-1), float64(-1), float64(-1)}},
 			assertType: []string{"equal", "deep_equal", "deep_equal"},
 			cleanUp:    []string{"DEL key"},
 		},
