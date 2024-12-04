@@ -673,9 +673,10 @@ var (
 		Name: "JSON.ARRINDEX",
 		Info: `JSON.ARRINDEX key path value [start [stop]]
 		Search for the first occurrence of a JSON value in an array`,
-		Eval:     evalJSONARRINDEX,
+		NewEval:     evalJSONARRINDEX,
 		Arity:    -3,
 		KeySpecs: KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 
 	// Internal command used to spawn request across all shards (works internally with the KEYS command)

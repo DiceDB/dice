@@ -6774,9 +6774,9 @@ func evalCommandDocs(args []string) *EvalResponse {
 	return makeEvalResult(result)
 }
 
-func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
+func evalJSONARRINDEX(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 3 || len(args) > 5 {
-		return diceerrors.NewErrArity("JSONARRINDEX")
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("JSON.ARRINDEX"))
 	}
 
 	key := args[0]
@@ -6795,7 +6795,7 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 		value, err = strconv.ParseFloat(args[2], 64)
 
 		if err != nil {
-			return diceerrors.NewErrWithFormattedMessage("Couldn't parse as integer")
+			return makeEvalError(diceerrors.ErrGeneral("Couldn't parse as integer"))
 		}
 	}
 
@@ -6804,7 +6804,7 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 		var err error
 		start, err = strconv.Atoi(args[3])
 		if err != nil {
-			return diceerrors.NewErrWithMessage("Couldn't parse as integer")
+			return makeEvalError(diceerrors.ErrGeneral("Couldn't parse as integer"))
 		}
 	}
 
@@ -6813,27 +6813,32 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 		var err error
 		stop, err = strconv.Atoi(args[4])
 		if err != nil {
-			return diceerrors.NewErrWithMessage("Couldn't parse as integer")
+			return makeEvalError(diceerrors.ErrGeneral("Couldn't parse as integer"))
 		}
+	}
+
+	// Check if the path specified is valid
+	expr, err2 := jp.ParseString(path)
+	if err2 != nil {
+		return makeEvalError(diceerrors.ErrJSONPathNotFound(path))
 	}
 
 	obj := store.Get(key)
 	if obj == nil {
-		return diceerrors.NewErrWithMessage("object with key does not exist")
+		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
+	}
+
+	if err2 := object.AssertType(obj.Type, object.ObjTypeJSON); err2 != nil {
+		return makeEvalError(diceerrors.ErrGeneral("Existing key has wrong Dice type"))
 	}
 
 	jsonData := obj.Value
 
 	// Check if the value stored is JSON type
 	_, err = sonic.Marshal(jsonData)
-	if err != nil {
-		return diceerrors.NewErrWithMessage("existing key has wrong Dice type")
-	}
 
-	// Check if the path specified is valid
-	expr, err := jp.ParseString(path)
 	if err != nil {
-		return diceerrors.NewErrWithMessage("invalid JSONPath")
+		return makeEvalError(diceerrors.ErrGeneral("Existing key has wrong Dice type"))
 	}
 
 	results := expr.Get(jsonData)
@@ -6870,7 +6875,7 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) []byte {
 		}
 	}
 
-	return clientio.Encode(arrIndexList, false)
+	return makeEvalResult(arrIndexList)
 }
 
 // adjustIndices adjusts the start and stop indices for array traversal. 
@@ -6883,7 +6888,6 @@ func adjustIndices(start, stop, length int) (adjustedStart, adjustedStop int) {
 		start += length 
 	}
 
-	// 0 or -1 means the last element is included.
 	if stop <= 0  {
 		stop += length 
 	}

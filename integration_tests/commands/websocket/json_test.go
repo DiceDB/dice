@@ -1240,14 +1240,14 @@ func TestJSONARRINDEX(t *testing.T) {
 		{
 			name:     "should return error if key is not present",
 			commands: []string{"json.set key $ " + normalArray, "json.arrindex nonExistentKey $ 3"},
-			expected: []interface{}{"OK", "ERR object with key does not exist"},
+			expected: []interface{}{"OK", "ERR could not perform this operation on a key that doesn't exist"},
 			assertType: []string{"equal", "equal"},
 			cleanUp:    []string{"DEL key"},
 		},
 		{
 			name:     "should return error if json path is invalid",
 			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $invalid_path 3"},
-			expected: []interface{}{"OK", "ERR invalid JSONPath"},
+			expected: []interface{}{"OK", "ERR Path '$invalid_path' does not exist"},
 			assertType: []string{"equal", "equal"},
 			cleanUp:    []string{"DEL key"},
 		},
