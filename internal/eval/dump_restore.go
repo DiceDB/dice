@@ -24,10 +24,12 @@ func rdbDeserialize(data []byte) (*object.Obj, error) {
 	if err != nil {
 		return nil, err
 	}
-	objType, err := buf.ReadByte()
+	_oType, err := buf.ReadByte()
 	if err != nil {
 		return nil, err
 	}
+
+	objType := object.ObjectType(_oType)
 	switch objType {
 	case object.ObjTypeString:
 		value, err = readString(buf)
@@ -112,7 +114,7 @@ func readSet(buf *bytes.Reader) (interface{}, error) {
 func rdbSerialize(obj *object.Obj) ([]byte, error) {
 	var buf bytes.Buffer
 	buf.WriteByte(0x09)
-	buf.WriteByte(obj.Type)
+	buf.WriteByte(byte(obj.Type))
 	switch obj.Type {
 	case object.ObjTypeString:
 		str, ok := obj.Value.(string)
