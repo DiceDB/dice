@@ -165,16 +165,7 @@ func evalMSET(args []string, store *dstore.Store) []byte {
 	insertMap := make(map[string]*object.Obj, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
 		key, value := args[i], args[i+1]
-		oType := deduceType(value)
-		var storedValue interface{}
-		switch oType {
-		case object.ObjTypeInt:
-			storedValue, _ = strconv.ParseInt(value, 10, 64)
-		case object.ObjTypeString:
-			storedValue = value
-		default:
-			return clientio.Encode(fmt.Errorf("ERR unsupported type: %d", oType), false)
-		}
+		storedValue, oType := getRawStringOrInt(value)
 		insertMap[key] = store.NewObj(storedValue, exDurationMs, oType)
 	}
 
