@@ -2877,9 +2877,8 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalResult(clientio.OK)
 	} else if bf != nil { // bloom filter already exists
 		return makeEvalError(diceerrors.ErrKeyExists)
-	} else {
-		return makeEvalResult(clientio.OK)
 	}
+	return makeEvalResult(clientio.OK)
 }
 
 // evalBFADD evaluates the BF.ADD command responsible for adding an element to a bloom filter. If the filter does not
