@@ -2995,7 +2995,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 			name: "PFADD Incorrect type provided",
 			setup: func() {
 				key, value := "EXISTING_KEY", "VALUE"
-				oType := deduceType(value)
+				_, oType := getRawStringOrInt(value)
 				var exDurationMs int64 = -1
 				keepttl := false
 
@@ -4830,7 +4830,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: 89, Error: nil},
+			migratedOutput: EvalResponse{Result: 72, Error: nil},
 		},
 
 		"root path": {
@@ -4843,7 +4843,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$"},
-			migratedOutput: EvalResponse{Result: 89, Error: nil},
+			migratedOutput: EvalResponse{Result: 72, Error: nil},
 		},
 
 		"invalid path": {
@@ -6719,7 +6719,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: 3, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
-				oType := object.ExtractType(obj)
+				oType := obj.Type
 				if oType != object.ObjTypeInt {
 					t.Errorf("unexpected encoding")
 				}
@@ -6774,7 +6774,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: 2, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
-				oType := object.ExtractType(obj)
+				oType := obj.Type
 				if oType != object.ObjTypeString {
 					t.Errorf("unexpected encoding")
 				}
@@ -8107,13 +8107,7 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"INTEGER_KEY"},
 			migratedOutput: EvalResponse{
-				Result: base64.StdEncoding.EncodeToString([]byte{
-					0x09,
-					0xC0,
-					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A,
-					0xFF,
-					0x12, 0x77, 0xDE, 0x29, 0x53, 0xDB, 0x44, 0xC2,
-				}),
+				Result: "CQUAAAAAAAAACv9+l81XgsShqw==",
 				Error: nil,
 			},
 		},
@@ -9028,7 +9022,7 @@ func testEvalBFINFO(t *testing.T, store *dstore.Store) {
 		{
 			name:           "BF.INFO on non-existent filter",
 			input:          []string{"nonExistentFilter"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR not found")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrKeyNotFound},
 		},
 	}
 

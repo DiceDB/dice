@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +38,7 @@ func TestBFReserveAddInfoExists(t *testing.T) {
 		{
 			name:    "BF.RESERVE on existent filter returns error",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.RESERVE bf 0.01 1000"},
-			expect:  []interface{}{"OK", "ERR item exists"},
+			expect:  []interface{}{"OK", diceerrors.ErrKeyExists.Error()},
 			cleanUp: []string{"DEL bf"},
 		},
 	}
@@ -126,7 +127,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 		{
 			name:    "BF.INFO on a non-existent filter",
 			cmds:    []string{"BF.INFO bf"},
-			expect:  []interface{}{"ERR not found"},
+			expect:  []interface{}{diceerrors.ErrKeyNotFound.Error()},
 			delays:  []time.Duration{0},
 			cleanUp: []string{"del bf"},
 		},
@@ -161,7 +162,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 		{
 			name:    "BF.RESERVE with duplicate filter name",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.RESERVE bf 0.01 2000"},
-			expect:  []interface{}{"OK", "ERR item exists"},
+			expect:  []interface{}{"OK", diceerrors.ErrKeyExists.Error()},
 			delays:  []time.Duration{0, 0},
 			cleanUp: []string{"del bf"},
 		},

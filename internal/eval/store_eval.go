@@ -202,7 +202,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	var oldVal *interface{}
 
 	key, value = args[0], args[1]
-	oType := deduceType(value)
+	_, oType := getRawStringOrInt(value)
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
@@ -339,7 +339,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// Decode and return the value based on its encoding
-	switch oType := object.ExtractType(obj); oType {
+	switch oType := obj.Type; oType {
 	case object.ObjTypeInt:
 		// Value is stored as an int64, so use type assertion
 		if IsInt64(obj.Value) {
@@ -643,7 +643,7 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	var str string
-	switch oType := object.ExtractType(obj); oType {
+	switch oType := obj.Type; oType {
 	case object.ObjTypeString:
 		if val, ok := obj.Value.(string); ok {
 			str = val
@@ -1096,18 +1096,7 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 
 	// Key does not exist, create a new key
 	if obj == nil {
-		// Deduce type and encoding based on the value if no leading zeros
-		oType := deduceType(value)
-
-		// Transform the value based on the type and encoding
-		storedValue, err := storeValueWithType(value, oType)
-		if err != nil {
-			return &EvalResponse{
-				Result: nil,
-				Error:  err,
-			}
-		}
-
+		storedValue, oType := getRawStringOrInt(value)
 		store.Put(key, store.NewObj(storedValue, exDurationMs, oType))
 		return &EvalResponse{
 			Result: len(value),
@@ -1122,7 +1111,7 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
-	oType := object.ExtractType(obj)
+	oType := obj.Type
 
 	// Transform the value based on the current encoding
 	currentValue, err := convertValueToString(obj, oType)
@@ -2489,7 +2478,7 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 
 	if obj == nil {
 		strValue := formatFloat(incr, false)
-		oType := deduceType(strValue)
+		_, oType := getRawStringOrInt(strValue)
 		obj = store.NewObj(strValue, -1, oType)
 		store.Put(key, obj)
 		return &EvalResponse{
@@ -2523,7 +2512,7 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 	}
 	strValue := formatFloat(value, true)
 
-	oType := deduceType(strValue)
+	_, oType := getRawStringOrInt(strValue)
 
 	// Remove the trailing decimal for integer values
 	// to maintain consistency with redis
@@ -2631,6 +2620,7 @@ func evalDUMP(args []string, store *dstore.Store) *EvalResponse {
 
 	serializedValue, err := rdbSerialize(obj)
 	if err != nil {
+		fmt.Println("error", err)
 		return makeEvalError(diceerrors.ErrGeneral("serialization failed"))
 	}
 	encodedResult := base64.StdEncoding.EncodeToString(serializedValue)
@@ -2652,7 +2642,6 @@ func evalRestore(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return makeEvalError(diceerrors.ErrGeneral("failed to decode base64 value"))
 	}
-
 	obj, err := rdbDeserialize(serializedData)
 	if err != nil {
 		return makeEvalError(diceerrors.ErrGeneral("deserialization failed"))
@@ -2879,9 +2868,16 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(err)
 	}
 
-	_, err = CreateBloomFilter(args[0], store, opts)
-	if err != nil {
+	key := args[0]
+
+	bf, err := GetBloomFilter(key, store)
+	if err != nil && err != diceerrors.ErrKeyNotFound { // bloom filter does not exist
 		return makeEvalError(err)
+	} else if err != nil && err == diceerrors.ErrKeyNotFound { // key does not exists
+		CreateOrReplaceBloomFilter(key, opts, store)
+		return makeEvalResult(clientio.OK)
+	} else if bf != nil { // bloom filter already exists
+		return makeEvalError(diceerrors.ErrKeyExists)
 	}
 	return makeEvalResult(clientio.OK)
 }
@@ -2893,12 +2889,12 @@ func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.ADD"))
 	}
 
-	bloom, err := getOrCreateBloomFilter(args[0], store, nil)
+	bf, err := GetOrCreateBloomFilter(args[0], store, nil)
 	if err != nil {
 		return makeEvalError(err)
 	}
 
-	result, err := bloom.add(args[1])
+	result, err := bf.add(args[1])
 	if err != nil {
 		return makeEvalError(err)
 	}
@@ -2913,14 +2909,14 @@ func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.EXISTS"))
 	}
 
-	bloom, err := GetBloomFilter(args[0], store)
-	if err != nil {
+	bf, err := GetBloomFilter(args[0], store)
+	if err != nil && err != diceerrors.ErrKeyNotFound {
 		return makeEvalError(err)
-	}
-	if bloom == nil {
+	} else if err != nil && err == diceerrors.ErrKeyNotFound {
 		return makeEvalResult(clientio.IntegerZero)
 	}
-	result, err := bloom.exists(args[1])
+
+	result, err := bf.exists(args[1])
 	if err != nil {
 		return makeEvalError(err)
 	}
@@ -2934,25 +2930,20 @@ func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.INFO"))
 	}
 
-	bloom, err := GetBloomFilter(args[0], store)
-
+	bf, err := GetBloomFilter(args[0], store)
 	if err != nil {
 		return makeEvalError(err)
 	}
 
-	if bloom == nil {
-		return makeEvalError(diceerrors.ErrGeneral("not found"))
-	}
 	opt := ""
 	if len(args) == 2 {
 		opt = args[1]
 	}
-	result, err := bloom.info(opt)
 
+	result, err := bf.info(opt)
 	if err != nil {
 		return makeEvalError(err)
 	}
-
 	return makeEvalResult(result)
 }
 
@@ -4442,7 +4433,7 @@ func evalGETDEL(args []string, store *dstore.Store) *EvalResponse {
 	objVal := store.GetDel(key)
 
 	// Decode and return the value based on its encoding
-	switch oType := object.ExtractType(objVal); oType {
+	switch oType := objVal.Type; oType {
 	case object.ObjTypeInt:
 		// Value is stored as an int64, so use type assertion
 		if IsInt64(objVal.Value) {
@@ -5083,7 +5074,7 @@ func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
 		object.AssertType(obj.Type, object.ObjTypeString) == nil ||
 		object.AssertType(obj.Type, object.ObjTypeInt) == nil {
 		var byteArray *ByteArray
-		oType := object.ExtractType(obj)
+		oType := obj.Type
 
 		switch oType {
 		case object.ObjTypeByteArray:
@@ -5181,7 +5172,7 @@ func evalGETBIT(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	requiredByteArraySize := offset>>3 + 1
-	switch oType := object.ExtractType(obj); oType {
+	switch oType := obj.Type; oType {
 	case object.ObjTypeSet:
 		return &EvalResponse{
 			Result: nil,
@@ -5430,7 +5421,7 @@ func bitfieldEvalGeneric(args []string, store *dstore.Store, isReadOnly bool) *E
 	var value *ByteArray
 	var err error
 
-	switch oType := object.ExtractType(obj); oType {
+	switch oType := obj.Type; oType {
 	case object.ObjTypeByteArray:
 		value = obj.Value.(*ByteArray)
 	case object.ObjTypeString, object.ObjTypeInt:
@@ -6384,7 +6375,7 @@ func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	var typeStr string
-	switch oType := object.ExtractType(obj); oType {
+	switch oType := obj.Type; oType {
 	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
 		typeStr = "string"
 	case object.ObjTypeDequeue:
@@ -6431,7 +6422,7 @@ func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
 
 // 		var value []byte
 
-// 		switch oType, _ := object.ExtractType(obj); oType {
+// 		switch oType, _ := obj.Type; oType {
 // 		case object.ObjTypeByteArray:
 // 			byteArray := obj.Value.(*ByteArray)
 // 			byteArrayObject := *byteArray
@@ -6492,7 +6483,7 @@ func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
 // 			values[i] = make([]byte, 0)
 // 		} else {
 // 			// handle the case when it is byte array
-// 			switch oType, _ := object.ExtractType(obj); oType {
+// 			switch oType, _ := obj.Type; oType {
 // 			case object.ObjTypeByteArray:
 // 				byteArray := obj.Value.(*ByteArray)
 // 				byteArrayObject := *byteArray

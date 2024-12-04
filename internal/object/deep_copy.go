@@ -19,7 +19,7 @@ func (obj *Obj) DeepCopy() *Obj {
 		newObj.Value = copier.DeepCopy()
 	} else {
 		// Handle types that are not DeepCopyable
-		sourceType := ExtractType(obj)
+		sourceType := obj.Type
 		switch sourceType {
 		case ObjTypeString:
 			sourceValue := obj.Value.(string)

@@ -1,6 +1,8 @@
 package eval
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"hash"
 	"math"
@@ -50,6 +52,8 @@ type BloomOpts struct {
 	// is under the assumption that it's consumed at only 1 place at a time. Add
 	// a lock when multiple clients can be supported.
 	indexes []uint64
+
+	hashFnsSeeds []uint64 // seed for hash functions
 }
 
 type Bloom struct {
@@ -92,7 +96,7 @@ func newBloomOpts(args []string) (*BloomOpts, error) {
 
 // newBloomFilter creates and returns a new filter. It is responsible for initializing the
 // underlying bit array.
-func newBloomFilter(opts *BloomOpts) *Bloom {
+func NewBloomFilter(opts *BloomOpts) *Bloom {
 	// Calculate bits per element
 	// 		bpe = -log(errorRate)/ln(2)^2
 	num := -1 * math.Log(opts.errorRate)
@@ -102,10 +106,11 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 	// 		k = ceil(ln(2) * bpe)
 	k := math.Ceil(ln2 * opts.bpe)
 	opts.hashFns = make([]hash.Hash64, int(k))
-
+	opts.hashFnsSeeds = make([]uint64, int(k))
 	// Initialize hash functions with random seeds
 	for i := 0; i < int(k); i++ {
-		opts.hashFns[i] = murmur3.SeedNew64(rand.Uint64()) //nolint:gosec
+		opts.hashFnsSeeds[i] = rand.Uint64() //nolint:gosec
+		opts.hashFns[i] = murmur3.SeedNew64(opts.hashFnsSeeds[i])
 	}
 
 	// initialize the common slice for storing indexes of bits to be set
@@ -115,15 +120,15 @@ func newBloomFilter(opts *BloomOpts) *Bloom {
 	// 		bits = k * entries / ln(2)
 	//		bytes = bits * 8
 	bits := uint64(math.Ceil((k * float64(opts.capacity)) / ln2))
-	var bytes uint64
+	var bytesNeeded uint64
 	if bits%8 == 0 {
-		bytes = bits / 8
+		bytesNeeded = bits / 8
 	} else {
-		bytes = (bits / 8) + 1
+		bytesNeeded = (bits / 8) + 1
 	}
-	opts.bits = bytes * 8
+	opts.bits = bytesNeeded * 8
 
-	bitset := make([]byte, bytes)
+	bitset := make([]byte, bytesNeeded)
 
 	return &Bloom{opts, bitset, 0}
 }
@@ -278,25 +283,41 @@ func (opts *BloomOpts) updateIndexes(value string) error {
 	return nil
 }
 
-// getOrCreateBloomFilter attempts to fetch an existing bloom filter from
-// the kv store. If it does not exist, it tries to create one with
-// given `opts` and returns it.
-func getOrCreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom, error) {
-	bf, err := GetBloomFilter(key, store)
-	if err != nil {
-		return nil, err
+// CreateOrReplaceBloomFilter creates a new bloom filter with given `opts`
+// and stores it in the kv store. If the bloom filter already exists, it
+// replaces the existing one. If `opts` is nil, it uses the default options.
+func CreateOrReplaceBloomFilter(key string, opts *BloomOpts, store *dstore.Store) *Bloom {
+	if opts == nil {
+		opts = defaultBloomOpts()
 	}
-	if bf == nil {
-		bf, err = CreateBloomFilter(key, store, opts)
-	}
-	return bf, err
+	bf := NewBloomFilter(opts)
+	obj := store.NewObj(bf, -1, object.ObjTypeBF)
+	store.Put(key, obj)
+	return bf
 }
 
-// get the bloom filter
+// GetOrCreateBloomFilter fetches an existing bloom filter from
+// the kv store and returns the datastructure instance of it.
+// If it does not exist, it tries to create one with given `opts` and returns it.
+// Note: It also stores it in the kv store.
+func GetOrCreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom, error) {
+	bf, err := GetBloomFilter(key, store)
+	if err != nil && err != diceerrors.ErrKeyNotFound {
+		return nil, err
+	} else if err != nil && err == diceerrors.ErrKeyNotFound {
+		bf = CreateOrReplaceBloomFilter(key, opts, store)
+	}
+	return bf, nil
+}
+
+// GetBloomFilter fetches an existing bloom filter from
+// the kv store and returns the datastructure instance of it.
+// The function also returns diceerrors.ErrKeyNotFound if the key does not exist.
+// It also returns diceerrors.ErrWrongTypeOperation if the object is not a bloom filter.
 func GetBloomFilter(key string, store *dstore.Store) (*Bloom, error) {
 	obj := store.Get(key)
 	if obj == nil {
-		return nil, nil
+		return nil, diceerrors.ErrKeyNotFound
 	}
 	if err := object.AssertType(obj.Type, object.ObjTypeBF); err != nil {
 		return nil, diceerrors.ErrWrongTypeOperation
@@ -305,18 +326,98 @@ func GetBloomFilter(key string, store *dstore.Store) (*Bloom, error) {
 	return obj.Value.(*Bloom), nil
 }
 
-func CreateBloomFilter(key string, store *dstore.Store, opts *BloomOpts) (*Bloom, error) {
-	bf, err := GetBloomFilter(key, store)
-	if bf != nil {
-		return nil, diceerrors.ErrGeneral("item exists")
+func (b *Bloom) Serialize(buf *bytes.Buffer) error {
+	// Serialize the Bloom struct
+	if err := binary.Write(buf, binary.BigEndian, b.cnt); err != nil {
+		return err
 	}
-	if err != nil {
+	if err := binary.Write(buf, binary.BigEndian, b.opts.errorRate); err != nil {
+		return err
+	}
+	if err := binary.Write(buf, binary.BigEndian, b.opts.capacity); err != nil {
+		return err
+	}
+	if err := binary.Write(buf, binary.BigEndian, b.opts.bits); err != nil {
+		return err
+	}
+
+	// Serialize the number of seeds and the seeds themselves
+	numSeeds := uint64(len(b.opts.hashFnsSeeds))
+	if err := binary.Write(buf, binary.BigEndian, numSeeds); err != nil {
+		return err
+	}
+	if err := binary.Write(buf, binary.BigEndian, b.opts.hashFnsSeeds); err != nil {
+		return err
+	}
+
+	// Serialize the number of indexes and the indexes themselves
+	numIndexes := uint64(len(b.opts.indexes))
+	if err := binary.Write(buf, binary.BigEndian, numIndexes); err != nil {
+		return err
+	}
+	if err := binary.Write(buf, binary.BigEndian, b.opts.indexes); err != nil {
+		return err
+	}
+
+	// Serialize the bitset
+	if _, err := buf.Write(b.bitset); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeserializeBloom(buf *bytes.Reader) (*Bloom, error) {
+	bloom := &Bloom{
+		opts: &BloomOpts{}, // Initialize the opts field to prevent nil pointer dereference
+	}
+
+	// Deserialize the Bloom struct
+	if err := binary.Read(buf, binary.BigEndian, &bloom.cnt); err != nil {
 		return nil, err
 	}
-	if opts == nil {
-		opts = defaultBloomOpts()
+	if err := binary.Read(buf, binary.BigEndian, &bloom.opts.errorRate); err != nil {
+		return nil, err
 	}
-	obj := store.NewObj(newBloomFilter(opts), -1, object.ObjTypeBF)
-	store.Put(key, obj)
-	return obj.Value.(*Bloom), nil
+	if err := binary.Read(buf, binary.BigEndian, &bloom.opts.capacity); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.BigEndian, &bloom.opts.bits); err != nil {
+		return nil, err
+	}
+
+	// Deserialize hash function seeds
+	var numSeeds uint64
+	if err := binary.Read(buf, binary.BigEndian, &numSeeds); err != nil {
+		return nil, err
+	}
+	bloom.opts.hashFnsSeeds = make([]uint64, numSeeds)
+	if err := binary.Read(buf, binary.BigEndian, &bloom.opts.hashFnsSeeds); err != nil {
+		return nil, err
+	}
+
+	// Deserialize indexes
+	var numIndexes uint64
+	if err := binary.Read(buf, binary.BigEndian, &numIndexes); err != nil {
+		return nil, err
+	}
+	bloom.opts.indexes = make([]uint64, numIndexes)
+	if err := binary.Read(buf, binary.BigEndian, &bloom.opts.indexes); err != nil {
+		return nil, err
+	}
+
+	// Deserialize bitset
+	bloom.bitset = make([]byte, bloom.opts.bits)
+	if _, err := buf.Read(bloom.bitset); err != nil {
+		return nil, err
+	}
+
+	// Recalculate derived values
+	bloom.opts.bpe = -1 * math.Log(bloom.opts.errorRate) / math.Ln2
+	bloom.opts.hashFns = make([]hash.Hash64, len(bloom.opts.hashFnsSeeds))
+	for i := 0; i < len(bloom.opts.hashFnsSeeds); i++ {
+		bloom.opts.hashFns[i] = murmur3.SeedNew64(bloom.opts.hashFnsSeeds[i])
+	}
+
+	return bloom, nil
 }

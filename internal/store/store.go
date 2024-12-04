@@ -84,7 +84,7 @@ func ResetStore(store *Store) *Store {
 	return store
 }
 
-func (store *Store) NewObj(value interface{}, expDurationMs int64, oType uint8) *object.Obj {
+func (store *Store) NewObj(value interface{}, expDurationMs int64, oType object.ObjectType) *object.Obj {
 	obj := &object.Obj{
 		Value:          value,
 		Type:           oType,

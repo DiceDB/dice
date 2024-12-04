@@ -1,6 +1,8 @@
 package sortedset
 
 import (
+	"bytes"
+	"encoding/binary"
 	"strconv"
 	"strings"
 
@@ -250,4 +252,60 @@ func (ss *Set) CountInRange(minVal, maxVal float64) int {
 	})
 
 	return count
+}
+
+func (ss *Set) Serialize(buf *bytes.Buffer) error {
+	// Serialize the length of the memberMap
+	memberCount := uint64(len(ss.memberMap))
+	if err := binary.Write(buf, binary.BigEndian, memberCount); err != nil {
+		return err
+	}
+
+	// Serialize each member and its score
+	for member, score := range ss.memberMap {
+		memberLen := uint64(len(member))
+		if err := binary.Write(buf, binary.BigEndian, memberLen); err != nil {
+			return err
+		}
+		if _, err := buf.WriteString(member); err != nil {
+			return err
+		}
+		if err := binary.Write(buf, binary.BigEndian, score); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func DeserializeSortedSet(buf *bytes.Reader) (*Set, error) {
+	ss := New()
+
+	// Read the member count
+	var memberCount uint64
+	if err := binary.Read(buf, binary.BigEndian, &memberCount); err != nil {
+		return nil, err
+	}
+
+	// Read each member and its score
+	for i := uint64(0); i < memberCount; i++ {
+		var memberLen uint64
+		if err := binary.Read(buf, binary.BigEndian, &memberLen); err != nil {
+			return nil, err
+		}
+
+		member := make([]byte, memberLen)
+		if _, err := buf.Read(member); err != nil {
+			return nil, err
+		}
+
+		var score float64
+		if err := binary.Read(buf, binary.BigEndian, &score); err != nil {
+			return nil, err
+		}
+
+		// Add the member back to the set
+		ss.Upsert(score, string(member))
+	}
+
+	return ss, nil
 }
