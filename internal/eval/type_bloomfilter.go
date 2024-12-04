@@ -92,7 +92,7 @@ func newBloomOpts(args []string) (*BloomOpts, error) {
 
 // newBloomFilter creates and returns a new filter. It is responsible for initializing the
 // underlying bit array.
-func NewBloom(opts *BloomOpts) *Bloom {
+func NewBloomFilter(opts *BloomOpts) *Bloom {
 	// Calculate bits per element
 	// 		bpe = -log(errorRate)/ln(2)^2
 	num := -1 * math.Log(opts.errorRate)
@@ -285,7 +285,7 @@ func CreateOrReplaceBloomFilter(key string, opts *BloomOpts, store *dstore.Store
 	if opts == nil {
 		opts = defaultBloomOpts()
 	}
-	bf := NewBloom(opts)
+	bf := NewBloomFilter(opts)
 	obj := store.NewObj(bf, -1, object.ObjTypeBF)
 	store.Put(key, obj)
 	return bf

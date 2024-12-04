@@ -2869,13 +2869,15 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 
 	key := args[0]
 
-	_, err = GetBloomFilter(key, store)
+	bf, err := GetBloomFilter(key, store)
 	if err != nil && err != diceerrors.ErrKeyNotFound { // bloom filter does not exist
 		return makeEvalError(err)
 	} else if err != nil && err == diceerrors.ErrKeyNotFound { // key does not exists
 		CreateOrReplaceBloomFilter(key, opts, store)
 		return makeEvalResult(clientio.OK)
-	} else { // bloom filter already exists
+	} else if bf != nil { // bloom filter already exists
+		return makeEvalError(diceerrors.ErrKeyExists)
+	} else {
 		return makeEvalResult(clientio.OK)
 	}
 }

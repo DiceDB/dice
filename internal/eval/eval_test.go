@@ -9028,7 +9028,7 @@ func testEvalBFINFO(t *testing.T, store *dstore.Store) {
 		{
 			name:           "BF.INFO on non-existent filter",
 			input:          []string{"nonExistentFilter"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR not found")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrKeyNotFound},
 		},
 	}
 

@@ -3,6 +3,7 @@ package http
 import (
 	"testing"
 
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -82,7 +83,7 @@ func TestBloomFilter(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "values": []interface{}{0.01, 2000}},
 				},
 			},
-			expected: []interface{}{"OK", "ERR item exists"},
+			expected: []interface{}{"OK", diceerrors.ErrKeyExists},
 		},
 	}
 
@@ -199,7 +200,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf"},
 				},
 			},
-			expected: []interface{}{"ERR not found"},
+			expected: []interface{}{diceerrors.ErrKeyNotFound},
 		},
 		{
 			name: "BF.RESERVE with a very high error rate",
@@ -281,7 +282,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "values": []interface{}{0.01, 2000}},
 				},
 			},
-			expected: []interface{}{"OK", "ERR item exists"},
+			expected: []interface{}{"OK", diceerrors.ErrKeyExists},
 		},
 		{
 			name: "BF.INFO after multiple additions",
