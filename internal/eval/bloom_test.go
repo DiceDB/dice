@@ -122,7 +122,7 @@ func TestUpdateIndexes(t *testing.T) {
 	// Create a value, default opts and initialize all params of the filter
 	value := "hello"
 	opts := defaultBloomOpts()
-	bloom := NewBloom(opts)
+	bloom := NewBloomFilter(opts)
 
 	err := opts.updateIndexes(value)
 	if err != nil {
