@@ -6,18 +6,6 @@ import (
 	"github.com/dicedb/dice/integration_tests/commands/tests/servers"
 )
 
-func ParseResponse(response interface{}) interface{} {
-	// convert the output to the int64 if it is float64
-	switch response.(type) {
-	case float64:
-		return int64(response.(float64))
-	case nil:
-		return "(nil)"
-	default:
-		return response
-	}
-}
-
 func HttpCommandExecuter(exec *servers.HTTPCommandExecutor, cmd string) (interface{}, error) {
 	// convert the command to a HTTPCommand
 	// cmd starts with Command and Body is values after that

@@ -19,6 +19,9 @@ func TestMain(m *testing.M) {
 	httpOpts := servers.TestServerOptions{
 		Port: 8083,
 	}
+	wsOpts := servers.TestServerOptions{
+		Port: 8380,
+	}
 
 	wg.Add(1)
 	go func() {
@@ -33,6 +36,11 @@ func TestMain(m *testing.M) {
 	}()
 
 	//TODO: RunWebSocketServer
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		servers.RunWebsocketServer(ctx, &wg, wsOpts)
+	}()
 
 	// Wait for the server to start
 	time.Sleep(2 * time.Second)

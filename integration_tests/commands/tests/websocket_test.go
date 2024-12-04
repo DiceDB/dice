@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -18,38 +19,51 @@ func init() {
 	}
 }
 
-func TestRespCommands(t *testing.T) {
-	conn := servers.GetRespConn()
+func TestWebsocketCommands(t *testing.T) {
+	exec := servers.NewWebsocketCommandExecutor()
 	allTests := GetAllTests()
+
+	conn := exec.ConnectToServer()
+	if conn == nil {
+		t.Fatal("Failed to connect to the server")
+	}
 
 	for _, test := range allTests {
 		t.Run(test.Name, func(t *testing.T) {
 			if !Validate(&test) {
 				t.Fatal("Test progression failed...")
 			}
-
+			// Setup commands
 			if len(test.Setup) > 0 {
 				for _, setup := range test.Setup {
 					for idx, cmd := range setup.Input {
-						output := parsers.RespCommandExecuter(conn, cmd)
+						output, _ := parsers.FireWSCommandAndReadResponse(conn, cmd)
 						assert.Equal(t, setup.Output[idx], output)
 					}
 				}
 			}
-
 			for idx, cmd := range test.Input {
 				if len(test.Delays) > 0 {
 					time.Sleep(test.Delays[idx])
 				}
-
-				output := parsers.RespCommandExecuter(conn, cmd)
-				assert.Equal(t, test.Output[idx], output)
+				output, _ := parsers.FireWSCommandAndReadResponse(conn, cmd)
+				fmt.Println(cmd, output, test.Output[idx])
+				if len(test.Assert) > 0 {
+					SwitchAsserts(t, test.Assert[idx], test.Output[idx], output)
+				} else {
+					assert.Equal(t, test.Output[idx], output)
+				}
 			}
-			for _, key := range test.Cleanup {
-				cmd := "DEL " + key
-				_ = parsers.RespCommandExecuter(conn, cmd)
+			if len(test.Cleanup) > 0 {
+				// join all the keys to be cleaned up
+				keys := ""
+				for _, key := range test.Cleanup {
+					keys += key
+				}
+				exec.FireCommand(conn, `DEL `+keys)
 			}
 		})
 
 	}
+
 }

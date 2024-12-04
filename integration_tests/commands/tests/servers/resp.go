@@ -19,10 +19,6 @@ import (
 	"github.com/dicedb/dice/internal/watchmanager"
 )
 
-type TestServerOptions struct {
-	Port       int
-	MaxClients int32
-}
 
 func GetRespConn() net.Conn {
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.RespServer.Port))

@@ -22,11 +22,6 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-type CommandExecutor interface {
-	FireCommand(cmd string) interface{}
-	Name() string
-}
-
 type HTTPCommandExecutor struct {
 	httpClient *http.Client
 	baseURL    string

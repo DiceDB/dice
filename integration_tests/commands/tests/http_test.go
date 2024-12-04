@@ -49,15 +49,15 @@ func TestHttpCommands(t *testing.T) {
 					assert.Equal(t, test.Output[idx], output)
 				}
 			}
-		})
-		if len(test.Cleanup) > 0 {
-			// join all the keys to be cleaned up
-			keys := ""
-			for _, key := range test.Cleanup {
-				keys += key
+			if len(test.Cleanup) > 0 {
+				// join all the keys to be cleaned up
+				keys := ""
+				for _, key := range test.Cleanup {
+					keys += key
+				}
+				parsers.HttpCommandExecuter(exec, `DEL `+keys)
 			}
-			parsers.HttpCommandExecuter(exec, `DEL `+keys)
-		}
+		})
 
 	}
 }
