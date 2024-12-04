@@ -269,7 +269,7 @@ func GetDefaultParentDirPath() string {
 }
 
 func expandHomeDirDarwin(path string) string {
-	if len(path) > 0 && path[0] == '~' {
+	if path != "" && path[0] == '~' {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return path // Fallback if home directory can't be resolved
