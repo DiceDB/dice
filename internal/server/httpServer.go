@@ -27,8 +27,9 @@ import (
 )
 
 const (
-	Abort     = "ABORT"
-	stringNil = "(nil)"
+	Abort            = "ABORT"
+	stringNil        = "(nil)"
+	httpCmdHandlerID = "httpServer"
 )
 
 var unimplementedCommands = map[string]bool{
@@ -96,7 +97,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	httpCtx, cancelHTTP := context.WithCancel(ctx)
 	defer cancelHTTP()
 
-	s.shardManager.RegisterIOThread("httpServer", s.ioChan, nil)
+	s.shardManager.RegisterCommandHandler(httpCmdHandlerID, s.ioChan, nil)
 
 	wg.Add(1)
 	go func() {
@@ -167,10 +168,10 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 
 	// send request to Shard Manager
 	s.shardManager.GetShard(0).ReqChan <- &ops.StoreOp{
-		Cmd:        diceDBCmd,
-		IOThreadID: "httpServer",
-		ShardID:    0,
-		HTTPOp:     true,
+		Cmd:          diceDBCmd,
+		CmdHandlerID: httpCmdHandlerID,
+		ShardID:      0,
+		HTTPOp:       true,
 	}
 
 	// Wait for response
@@ -218,11 +219,11 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	qwatchClient := comm.NewHTTPQwatchClient(s.qwatchResponseChan, clientIdentifierID)
 	// Prepare the store operation
 	storeOp := &ops.StoreOp{
-		Cmd:        diceDBCmd,
-		IOThreadID: "httpServer",
-		ShardID:    0,
-		Client:     qwatchClient,
-		HTTPOp:     true,
+		Cmd:          diceDBCmd,
+		CmdHandlerID: httpCmdHandlerID,
+		ShardID:      0,
+		Client:       qwatchClient,
+		HTTPOp:       true,
 	}
 
 	slog.Info("Registered client for watching query", slog.Any("clientID", clientIdentifierID),

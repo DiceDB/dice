@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dicedb/dice/internal/commandhandler"
 	"github.com/dicedb/dice/internal/iothread"
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/wal"
@@ -196,10 +197,12 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec)
-	ioThreadManager := iothread.NewManager(20000, shardManager)
+	ioThreadManager := iothread.NewManager(20000)
+	cmdHandlerManager := commandhandler.NewManager(20000, shardManager)
+
 	// Initialize the RESP Server
 	wl, _ := wal.NewNullWAL()
-	testServer := resp.NewServer(shardManager, ioThreadManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, wl)
+	testServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, wl)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fmt.Println("Starting the test server on port", config.DiceConfig.RespServer.Port)

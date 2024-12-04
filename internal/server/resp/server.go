@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/internal/commandhandler"
+	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
 
@@ -21,13 +23,13 @@ import (
 	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
 	respparser "github.com/dicedb/dice/internal/clientio/requestparser/resp"
 	"github.com/dicedb/dice/internal/iothread"
-	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/shard"
 )
 
 var (
-	ioThreadCounter uint64
-	startTime       = time.Now().UnixNano() / int64(time.Millisecond)
+	ioThreadCounter   uint64
+	cmdHandlerCounter uint64
+	startTime         = time.Now().UnixNano() / int64(time.Millisecond)
 )
 
 var (
@@ -45,6 +47,7 @@ type Server struct {
 	serverFD                 int
 	connBacklogSize          int
 	ioThreadManager          *iothread.Manager
+	cmdHandlerManager        *commandhandler.Manager
 	shardManager             *shard.ShardManager
 	watchManager             *watchmanager.Manager
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
@@ -52,13 +55,15 @@ type Server struct {
 	wl                       wal.AbstractWAL
 }
 
-func NewServer(shardManager *shard.ShardManager, ioThreadManager *iothread.Manager,
-	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl wal.AbstractWAL) *Server {
+func NewServer(shardManager *shard.ShardManager, ioThreadManager *iothread.Manager, cmdHandlerManager *commandhandler.Manager,
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent,
+	globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
 		Host:                     config.DiceConfig.RespServer.Addr,
 		Port:                     config.DiceConfig.RespServer.Port,
 		connBacklogSize:          DefaultConnBacklogSize,
 		ioThreadManager:          ioThreadManager,
+		cmdHandlerManager:        cmdHandlerManager,
 		shardManager:             shardManager,
 		watchManager:             watchmanager.NewManager(cmdWatchSubscriptionChan, cmdWatchChan),
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
@@ -191,13 +196,21 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 				return err
 			}
 
-			parser := respparser.NewParser()
+			// create a new io-thread
+			ioThreadID := GenerateUniqueIOThreadID()
+			ioThreadReadChan := make(chan []byte)       // for sending data to the command handler from the io-thread
+			ioThreadWriteChan := make(chan interface{}) // for sending data to the io-thread from the command handler
+			thread := iothread.NewIOThread(ioThreadID, ioHandler, ioThreadReadChan, ioThreadWriteChan)
 
+			// For each io-thread, we create a dedicated command handler - 1:1 mapping
+			cmdHandlerID := GenerateUniqueCommandHandlerID()
+			parser := respparser.NewParser()
 			responseChan := make(chan *ops.StoreResponse)      // responseChan is used for handling common responses from shards
 			preprocessingChan := make(chan *ops.StoreResponse) // preprocessingChan is specifically for handling responses from shards for commands that require preprocessing
 
-			ioThreadID := GenerateUniqueIOThreadID()
-			thread := iothread.NewIOThread(ioThreadID, responseChan, preprocessingChan, s.cmdWatchSubscriptionChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.wl)
+			handler := commandhandler.NewCommandHandler(cmdHandlerID, responseChan, preprocessingChan,
+				s.cmdWatchSubscriptionChan, parser, s.shardManager,
+				s.globalErrorChan, ioThreadReadChan, ioThreadWriteChan, s.wl)
 
 			// Register the io-thread with the manager
 			err = s.ioThreadManager.RegisterIOThread(thread)
@@ -207,6 +220,15 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 
 			wg.Add(1)
 			go s.startIOThread(ctx, wg, thread)
+
+			// Register the command handler with the manager
+			err = s.cmdHandlerManager.RegisterCommandHandler(handler)
+			if err != nil {
+				return err
+			}
+
+			wg.Add(1)
+			go s.startCommandHandler(ctx, wg, handler)
 		}
 	}
 }
@@ -227,8 +249,30 @@ func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *
 	}
 }
 
+func (s *Server) startCommandHandler(ctx context.Context, wg *sync.WaitGroup, cmdHandler *commandhandler.BaseCommandHandler) {
+	wg.Done()
+	defer func(wm *commandhandler.Manager, id string) {
+		err := wm.UnregisterCommandHandler(id)
+		if err != nil {
+			slog.Warn("Failed to unregister command handler", slog.String("id", id), slog.Any("error", err))
+		}
+	}(s.cmdHandlerManager, cmdHandler.ID())
+	ctx2, cancel := context.WithCancel(ctx)
+	defer cancel()
+	err := cmdHandler.Start(ctx2)
+	if err != nil {
+		slog.Debug("CommandHandler stopped", slog.String("id", cmdHandler.ID()), slog.Any("error", err))
+	}
+}
+
 func GenerateUniqueIOThreadID() string {
 	count := atomic.AddUint64(&ioThreadCounter, 1)
+	timestamp := time.Now().UnixNano()/int64(time.Millisecond) - startTime
+	return fmt.Sprintf("W-%d-%d", timestamp, count)
+}
+
+func GenerateUniqueCommandHandlerID() string {
+	count := atomic.AddUint64(&cmdHandlerCounter, 1)
 	timestamp := time.Now().UnixNano()/int64(time.Millisecond) - startTime
 	return fmt.Sprintf("W-%d-%d", timestamp, count)
 }

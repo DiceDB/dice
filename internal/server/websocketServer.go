@@ -29,9 +29,12 @@ import (
 	"golang.org/x/exp/rand"
 )
 
-const Qwatch = "Q.WATCH"
-const Qunwatch = "Q.UNWATCH"
-const Subscribe = "SUBSCRIBE"
+const (
+	Qwatch         = "Q.WATCH"
+	Qunwatch       = "Q.UNWATCH"
+	Subscribe      = "SUBSCRIBE"
+	wsCmdHandlerID = "wsServer"
+)
 
 var unimplementedCommandsWebsocket = map[string]bool{
 	Qunwatch: true,
@@ -79,7 +82,7 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 	websocketCtx, cancelWebsocket := context.WithCancel(ctx)
 	defer cancelWebsocket()
 
-	s.shardManager.RegisterIOThread("wsServer", s.ioChan, nil)
+	s.shardManager.RegisterCommandHandler(wsCmdHandlerID, s.ioChan, nil)
 
 	wg.Add(1)
 	go func() {
@@ -168,10 +171,10 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 		// create request
 		sp := &ops.StoreOp{
-			Cmd:         diceDBCmd,
-			IOThreadID:  "wsServer",
-			ShardID:     0,
-			WebsocketOp: true,
+			Cmd:          diceDBCmd,
+			CmdHandlerID: wsCmdHandlerID,
+			ShardID:      0,
+			WebsocketOp:  true,
 		}
 
 		// handle q.watch commands

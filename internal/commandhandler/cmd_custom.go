@@ -1,4 +1,4 @@
-package iothread
+package commandhandler
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 
 // RespAuth returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
-func (t *BaseIOThread) RespAuth(args []string) interface{} {
+func (h *BaseCommandHandler) RespAuth(args []string) interface{} {
 	// Check for incorrect number of arguments (arity error).
 	if len(args) < 1 || len(args) > 2 {
 		return diceerrors.ErrWrongArgumentCount("AUTH")
@@ -31,7 +31,7 @@ func (t *BaseIOThread) RespAuth(args []string) interface{} {
 		username, password = args[0], args[1]
 	}
 
-	if err := t.Session.Validate(username, password); err != nil {
+	if err := h.Session.Validate(username, password); err != nil {
 		return err
 	}
 
