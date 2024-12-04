@@ -84,16 +84,16 @@ func (h *BaseCommandHandler) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case cmdReq := <-h.adhocReqChan:
-			h.handleCmdRequestWithTimeout(ctx, errChan, []*cmd.DiceDBCmd{cmdReq}, true, defaultRequestTimeout)
+			resp, err := h.handleCmdRequestWithTimeout(ctx, errChan, []*cmd.DiceDBCmd{cmdReq}, true, defaultRequestTimeout)
+			h.sendResponseToIOThread(resp, err)
 		case err := <-errChan:
 			return h.handleError(err)
 		case data := <-h.ioThreadReadChan:
 			resp, err := h.processCommand(ctx, &data, h.globalErrorChan)
+			h.sendResponseToIOThread(resp, err)
 			if err != nil {
-				h.sendResponseToIOThread(err)
 				return err
 			}
-			h.sendResponseToIOThread(resp)
 		}
 	}
 }
@@ -189,9 +189,8 @@ func (h *BaseCommandHandler) executeCommand(ctx context.Context, diceDBCmd *cmd.
 				var customErr *diceerrors.PreProcessError
 				if errors.As(err, &customErr) {
 					return nil, fmt.Errorf("%v", customErr.Result)
-				} else {
-					return nil, err
 				}
+				return nil, err
 			}
 
 		case Custom:
@@ -488,8 +487,12 @@ func (h *BaseCommandHandler) handleError(err error) error {
 	return fmt.Errorf("error writing response: %v", err)
 }
 
-func (h *BaseCommandHandler) sendResponseToIOThread(response interface{}) {
-	h.ioThreadWriteChan <- response
+func (h *BaseCommandHandler) sendResponseToIOThread(resp interface{}, err error) {
+	if err != nil {
+		h.ioThreadWriteChan <- err
+		return
+	}
+	h.ioThreadWriteChan <- resp
 }
 
 func (h *BaseCommandHandler) isAuthenticated(diceDBCmd *cmd.DiceDBCmd) error {

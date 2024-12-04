@@ -29,15 +29,16 @@ type CmdHandlerChannels struct {
 }
 
 type ShardThread struct {
-	id               ShardID                       // id is the unique identifier for the shard.
-	store            *dstore.Store                 // store that the shard is responsible for.
-	ReqChan          chan *ops.StoreOp             // ReqChan is this shard's channel for receiving requests.
-	cmdHandlerMap    map[string]CmdHandlerChannels // cmdHandlerMap maps each command handler id to its corresponding CommandHandlerChannels, containing both the common and preprocessing response channels.
-	mu               sync.RWMutex                  // mu is the cmdHandlerMap's mutex for thread safety.
-	globalErrorChan  chan error                    // globalErrorChan is the channel for sending system-level errors.
-	shardErrorChan   chan *ShardError              // ShardErrorChan is the channel for sending shard-level errors.
-	lastCronExecTime time.Time                     // lastCronExecTime is the last time the shard executed cron tasks.
-	cronFrequency    time.Duration                 // cronFrequency is the frequency at which the shard executes cron tasks.
+	id      ShardID           // id is the unique identifier for the shard.
+	store   *dstore.Store     // store that the shard is responsible for.
+	ReqChan chan *ops.StoreOp // ReqChan is this shard's channel for receiving requests.
+	// cmdHandlerMap maps each command handler id to its corresponding CommandHandlerChannels, containing both the common and preprocessing response channels.
+	cmdHandlerMap    map[string]CmdHandlerChannels
+	mu               sync.RWMutex     // mu is the cmdHandlerMap's mutex for thread safety.
+	globalErrorChan  chan error       // globalErrorChan is the channel for sending system-level errors.
+	shardErrorChan   chan *ShardError // ShardErrorChan is the channel for sending shard-level errors.
+	lastCronExecTime time.Time        // lastCronExecTime is the last time the shard executed cron tasks.
+	cronFrequency    time.Duration    // cronFrequency is the frequency at which the shard executes cron tasks.
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.

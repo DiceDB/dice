@@ -3,13 +3,10 @@ package iothread
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
 )
-
-const defaultRequestTimeout = 6 * time.Second
 
 // IOThread interface
 type IOThread interface {
