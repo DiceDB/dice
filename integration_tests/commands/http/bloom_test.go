@@ -83,7 +83,7 @@ func TestBloomFilter(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "values": []interface{}{0.01, 2000}},
 				},
 			},
-			expected: []interface{}{"OK", diceerrors.ErrKeyExists},
+			expected: []interface{}{"OK", diceerrors.ErrKeyExists.Error()},
 		},
 	}
 
@@ -200,7 +200,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf"},
 				},
 			},
-			expected: []interface{}{diceerrors.ErrKeyNotFound},
+			expected: []interface{}{diceerrors.ErrKeyNotFound.Error()},
 		},
 		{
 			name: "BF.RESERVE with a very high error rate",
@@ -282,7 +282,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "values": []interface{}{0.01, 2000}},
 				},
 			},
-			expected: []interface{}{"OK", diceerrors.ErrKeyExists},
+			expected: []interface{}{"OK", diceerrors.ErrKeyExists.Error()},
 		},
 		{
 			name: "BF.INFO after multiple additions",

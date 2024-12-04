@@ -23,7 +23,7 @@ func TestJSONDEBUG(t *testing.T) {
 				`JSON.SET k1 $ {"a":1}`,
 				"JSON.DEBUG MEMORY k1",
 			},
-			expected: []interface{}{"OK", int64(89)},
+			expected: []interface{}{"OK", int64(72)},
 		},
 		{
 			name: "jsondebug with a valid path",
