@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/dicedb/dice/internal/server/utils"
@@ -85,9 +86,13 @@ auth.password = ""
 # Network Configuration
 network.io_buffer_length = 512
 network.io_buffer_length_max = 51200`
+	linuxPath   = "/var/lib/dicedb"
+	darwinPath  = "~/Library/Application Support/dicedb"
+	windowsPath = "C:\\ProgramData\\dicedb"
 )
 
 var (
+	DefaultParentDir     = "."
 	CustomConfigFilePath = utils.EmptyStr
 	CustomConfigDirPath  = utils.EmptyStr
 )
@@ -227,6 +232,51 @@ func loadDiceConfig(configFilePath string) error {
 	}
 
 	return parser.Loadconfig(DiceConfig)
+}
+
+// ConfigureParentDirPaths Creates the default parent directory which can be used for logs and persistent data
+func ConfigureParentDirPaths() {
+	var err error
+	DefaultParentDir, err = createDefaultParentDir()
+	if err != nil {
+		slog.Warn("Failed to create default preferences directory", slog.String("error", err.Error()))
+	}
+}
+
+func createDefaultParentDir() (string, error) {
+	// Get the default directory path for the OS
+	prefDir := GetDefaultParentDirPath()
+	// Create the directory (MkdirAll handles "already exists" gracefully)
+	if err := os.MkdirAll(prefDir, os.ModePerm); err != nil {
+		return "", fmt.Errorf("failed to create preferences directory: %w", err)
+	}
+
+	return prefDir, nil
+}
+
+func GetDefaultParentDirPath() string {
+	switch runtime.GOOS {
+	case "linux":
+		return linuxPath
+	case "darwin":
+		return expandHomeDirDarwin(darwinPath)
+	case "windows":
+		return windowsPath
+	default:
+		slog.Warn("unsupported OS, defaulting to current directory")
+		return "."
+	}
+}
+
+func expandHomeDirDarwin(path string) string {
+	if len(path) > 0 && path[0] == '~' {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return path // Fallback if home directory can't be resolved
+		}
+		return filepath.Join(home, path[1:])
+	}
+	return path
 }
 
 func MergeFlags(flags *Config) {
