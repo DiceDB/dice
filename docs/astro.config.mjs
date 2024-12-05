@@ -33,10 +33,6 @@ export default defineConfig({
           label: "Get started",
           autogenerate: { directory: "get-started" },
         },
-        // {
-        // 	label: 'Tutorials',
-        // 	autogenerate: { directory: 'tutorials' }
-        // },
         {
           label: "SDK",
           autogenerate: { directory: "sdk" },
@@ -44,6 +40,10 @@ export default defineConfig({
         {
           label: "Connection Protocols",
           autogenerate: { directory: "protocols" },
+        },
+        {
+          label: 'Tutorials',
+          autogenerate: { directory: 'tutorials' }
         },
         {
           label: "Commands",
