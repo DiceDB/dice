@@ -22,16 +22,18 @@ type BaseIOThread struct {
 	Session           *auth.Session
 	ioThreadReadChan  chan []byte      // Channel to send data to the command handler
 	ioThreadWriteChan chan interface{} // Channel to receive data from the command handler
+	ioThreadErrChan   chan error       // Channel to receive errors from the ioHandler
 }
 
 func NewIOThread(id string, ioHandler iohandler.IOHandler,
-	ioThreadReadChan chan []byte, ioThreadWriteChan chan interface{}) *BaseIOThread {
+	ioThreadReadChan chan []byte, ioThreadWriteChan chan interface{}, ioThreadErrChan chan error) *BaseIOThread {
 	return &BaseIOThread{
 		id:                id,
 		ioHandler:         ioHandler,
 		Session:           auth.NewSession(),
 		ioThreadReadChan:  ioThreadReadChan,
 		ioThreadWriteChan: ioThreadWriteChan,
+		ioThreadErrChan:   ioThreadErrChan,
 	}
 }
 

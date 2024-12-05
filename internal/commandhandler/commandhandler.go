@@ -45,6 +45,7 @@ type BaseCommandHandler struct {
 	globalErrorChan          chan error
 	ioThreadReadChan         chan []byte             // Channel to receive data from io-thread
 	ioThreadWriteChan        chan interface{}        // Channel to send data to io-thread
+	ioThreadErrChan          chan error              // Channel to receive errors from io-thread
 	responseChan             chan *ops.StoreResponse // Channel to communicate with shard
 	preprocessingChan        chan *ops.StoreResponse // Channel to communicate with shard
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
@@ -54,7 +55,7 @@ type BaseCommandHandler struct {
 func NewCommandHandler(id string, responseChan, preprocessingChan chan *ops.StoreResponse,
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription,
 	parser requestparser.Parser, shardManager *shard.ShardManager, gec chan error,
-	ioThreadReadChan chan []byte, ioThreadWriteChan chan interface{},
+	ioThreadReadChan chan []byte, ioThreadWriteChan chan interface{}, ioThreadErrChan chan error,
 	wl wal.AbstractWAL) *BaseCommandHandler {
 	return &BaseCommandHandler{
 		id:                       id,
@@ -65,6 +66,7 @@ func NewCommandHandler(id string, responseChan, preprocessingChan chan *ops.Stor
 		globalErrorChan:          gec,
 		ioThreadReadChan:         ioThreadReadChan,
 		ioThreadWriteChan:        ioThreadWriteChan,
+		ioThreadErrChan:          ioThreadErrChan,
 		responseChan:             responseChan,
 		preprocessingChan:        preprocessingChan,
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
@@ -83,6 +85,8 @@ func (h *BaseCommandHandler) Start(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case err := <-h.ioThreadErrChan:
+			return err
 		case cmdReq := <-h.adhocReqChan:
 			resp, err := h.handleCmdRequestWithTimeout(ctx, errChan, []*cmd.DiceDBCmd{cmdReq}, true, defaultRequestTimeout)
 			h.sendResponseToIOThread(resp, err)

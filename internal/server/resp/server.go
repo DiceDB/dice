@@ -200,7 +200,8 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			ioThreadID := GenerateUniqueIOThreadID()
 			ioThreadReadChan := make(chan []byte)       // for sending data to the command handler from the io-thread
 			ioThreadWriteChan := make(chan interface{}) // for sending data to the io-thread from the command handler
-			thread := iothread.NewIOThread(ioThreadID, ioHandler, ioThreadReadChan, ioThreadWriteChan)
+			ioThreadErrChan := make(chan error, 1)      // for receiving errors from the io-thread
+			thread := iothread.NewIOThread(ioThreadID, ioHandler, ioThreadReadChan, ioThreadWriteChan, ioThreadErrChan)
 
 			// For each io-thread, we create a dedicated command handler - 1:1 mapping
 			cmdHandlerID := GenerateUniqueCommandHandlerID()
@@ -209,8 +210,8 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			preprocessingChan := make(chan *ops.StoreResponse) // preprocessingChan is specifically for handling responses from shards for commands that require preprocessing
 
 			handler := commandhandler.NewCommandHandler(cmdHandlerID, responseChan, preprocessingChan,
-				s.cmdWatchSubscriptionChan, parser, s.shardManager,
-				s.globalErrorChan, ioThreadReadChan, ioThreadWriteChan, s.wl)
+				s.cmdWatchSubscriptionChan, parser, s.shardManager, s.globalErrorChan,
+				ioThreadReadChan, ioThreadWriteChan, ioThreadErrChan, s.wl)
 
 			// Register the io-thread with the manager
 			err = s.ioThreadManager.RegisterIOThread(thread)
