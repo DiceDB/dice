@@ -45,9 +45,14 @@ func TestRespCommands(t *testing.T) {
 				output := parsers.RespCommandExecuter(conn, cmd)
 				assert.Equal(t, test.Output[idx], output)
 			}
-			for _, key := range test.Cleanup {
-				cmd := "DEL " + key
-				_ = parsers.RespCommandExecuter(conn, cmd)
+
+			if len(test.Cleanup) > 0 {
+				// join all the keys to be cleaned up
+				keys := ""
+				for _, key := range test.Cleanup {
+					keys += key + " "
+				}
+				parsers.RespCommandExecuter(conn, `DEL `+keys)
 			}
 		})
 

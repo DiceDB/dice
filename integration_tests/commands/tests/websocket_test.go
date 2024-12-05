@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -47,7 +46,6 @@ func TestWebsocketCommands(t *testing.T) {
 					time.Sleep(test.Delays[idx])
 				}
 				output, _ := parsers.FireWSCommandAndReadResponse(conn, cmd)
-				fmt.Println(cmd, output, test.Output[idx])
 				if len(test.Assert) > 0 {
 					SwitchAsserts(t, test.Assert[idx], test.Output[idx], output)
 				} else {
@@ -58,9 +56,9 @@ func TestWebsocketCommands(t *testing.T) {
 				// join all the keys to be cleaned up
 				keys := ""
 				for _, key := range test.Cleanup {
-					keys += key
+					keys += key + " "
 				}
-				exec.FireCommand(conn, `DEL `+keys)
+				parsers.FireWSCommandAndReadResponse(conn, `DEL `+keys)
 			}
 		})
 

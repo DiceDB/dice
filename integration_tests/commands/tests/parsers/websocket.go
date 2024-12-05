@@ -24,9 +24,7 @@ func FireWSCommandAndReadResponse(conn *websocket.Conn, cmd string) (interface{}
 	if err = json.Unmarshal(resp, &respJSON); err != nil {
 		return nil, fmt.Errorf("error unmarshaling response")
 	}
-	fmt.Println("Response: ", respJSON)
 	respJSON = ParseResponse(respJSON)
-
 	return respJSON, nil
 }
 

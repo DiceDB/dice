@@ -53,7 +53,7 @@ func TestHttpCommands(t *testing.T) {
 				// join all the keys to be cleaned up
 				keys := ""
 				for _, key := range test.Cleanup {
-					keys += key
+					keys += key + " "
 				}
 				parsers.HttpCommandExecuter(exec, `DEL `+keys)
 			}

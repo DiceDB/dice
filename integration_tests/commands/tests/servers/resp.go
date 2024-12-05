@@ -19,7 +19,6 @@ import (
 	"github.com/dicedb/dice/internal/watchmanager"
 )
 
-
 func GetRespConn() net.Conn {
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.RespServer.Port))
 	if err != nil {
@@ -78,7 +77,7 @@ func RunRespServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 			if err != nil && errors.Is(err, derrors.ErrAborted) {
 				// if either the AsyncServer/RESPServer or the HTTPServer received an abort command,
 				// cancel the context, helping gracefully exiting all servers
-				ctx.Err()
+				_ = ctx.Err()
 			}
 		}
 	}()

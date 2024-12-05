@@ -6,7 +6,7 @@ import (
 	"github.com/dicedb/dice/integration_tests/commands/tests/servers"
 )
 
-func HttpCommandExecuter(exec *servers.HTTPCommandExecutor, cmd string) (interface{}, error) {
+func HTTPCommandExecuter(exec *servers.HTTPCommandExecutor, cmd string) (interface{}, error) {
 	// convert the command to a HTTPCommand
 	// cmd starts with Command and Body is values after that
 	tokens := strings.Split(cmd, " ")
@@ -22,11 +22,11 @@ func HttpCommandExecuter(exec *servers.HTTPCommandExecutor, cmd string) (interfa
 	} else {
 		body["values"] = []interface{}{}
 	}
-	diceHttpCmd := servers.HTTPCommand{
+	diceHTTPCmd := servers.HTTPCommand{
 		Command: strings.ToLower(command),
 		Body:    body,
 	}
-	res, err := exec.FireCommand(diceHttpCmd)
+	res, err := exec.FireCommand(diceHTTPCmd)
 	if err != nil {
 		return nil, err
 	}

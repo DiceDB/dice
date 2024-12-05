@@ -55,7 +55,7 @@ func GetAllTests() []Meta {
 	return allTests
 }
 
-func SwitchAsserts(t *testing.T, kind string, expected interface{}, actual interface{}) {
+func SwitchAsserts(t *testing.T, kind string, expected, actual interface{}) {
 	switch kind {
 	case EQUAL:
 		assert.Equal(t, expected, actual)
