@@ -19,7 +19,7 @@ func TestZPOPMIN(t *testing.T) {
 		{
 			name:     "ZPOPMIN with wrong type of key with/without count argument",
 			commands: []string{"SET stringkey string_value", "ZPOPMIN stringkey", "DEL stringkey"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value", int64(1)},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error(), int64(1)},
 		},
 		{
 			name:     "ZPOPMIN on existing key (without count argument)",

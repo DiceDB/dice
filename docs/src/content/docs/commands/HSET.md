@@ -1,9 +1,9 @@
 ---
 title: HSET
-description: The `HSET` command in DiceDB is used to set the value of a field in a hash. If the hash does not exist, a new hash is created. If the field already exists in the hash, the value is updated. This command is useful for managing and storing key-value pairs within a hash data structure.
+description: The `HSET` command in DiceDB is used to set the value of a field in a hash table. If the hash table does not exist, a new hash is created. If the field already exists in the hash table, the value is updated. This command is useful for managing and storing key-value pairs within a hash data structure.
 ---
 
-The `HSET` command in DiceDB is used to set the value of a field in a hash. If the hash does not exist, a new hash is created. If the field already exists in the hash, the value is updated. This command is useful for managing and storing key-value pairs within a hash data structure.
+The `HSET` command in DiceDB is used to set the value of a field in a hash table. If the hash table does not exist, a new hash is created. If the field already exists in the hash table, the value is updated. This command is useful for managing and storing key-value pairs within a hash data structure.
 
 ## Syntax
 
@@ -22,12 +22,14 @@ HSET key field value [field value ...]
 
 ## Return Values
 
+The number of fields that were added.
+
 | Condition                | Return Value                                                                |
 | ------------------------ | --------------------------------------------------------------------------- |
 | A new field added        | `1`                                                                         |
 | Existing field updated   | `0`                                                                         |
 | Multiple fields added    | `Integer` (count of new fields)                                             |
-| Wrong data type          | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
+| HSET on different type   | `(error) WRONGTYPE Operation against a key holding the wrong kind of value` |
 | Incorrect Argument Count | `(error) ERR wrong number of arguments for 'hset' command`                  |
 
 ## Behaviour

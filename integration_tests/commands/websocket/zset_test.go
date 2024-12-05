@@ -18,7 +18,7 @@ func TestZPOPMIN(t *testing.T) {
 		{
 			name:     "ZPOPMIN with wrong type of key with/without count argument",
 			commands: []string{"SET stringkey string_value", "ZPOPMIN stringkey", "DEL stringkey"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value", float64(1)},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error(), float64(1)},
 		},
 		{
 			name:     "ZPOPMIN on existing key (without count argument)",
@@ -88,7 +88,7 @@ func TestZCOUNT(t *testing.T) {
 		{
 			name:     "ZCOUNT on key with wrong type",
 			commands: []string{"SET stringkey string_value", "ZCOUNT stringkey 0 10", "DEL stringkey"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value", float64(1)},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error(), float64(1)},
 		},
 		{
 			name:     "ZCOUNT on existing key with valid range",

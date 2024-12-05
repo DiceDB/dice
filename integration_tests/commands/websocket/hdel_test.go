@@ -80,7 +80,7 @@ func TestHDEL(t *testing.T) {
 				"SET string_key value",
 				"HDEL string_key field",
 			},
-			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			delays: []time.Duration{0, 0},
 		},
 	}

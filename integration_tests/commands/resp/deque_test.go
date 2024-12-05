@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -468,7 +469,7 @@ func TestLInsert(t *testing.T) {
 		{
 			name:   "LINSERT wrong type",
 			cmds:   []string{"SET k1 val1", "LINSERT k1 before val1 val2"},
-			expect: []any{"OK", "-WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []any{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 	}
 
@@ -512,7 +513,7 @@ func TestLRange(t *testing.T) {
 		{
 			name:   "LRANGE wrong type",
 			cmds:   []string{"SET k1 val1", "LRANGE k1 0 100"},
-			expect: []any{"OK", "-WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []any{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 	}
 

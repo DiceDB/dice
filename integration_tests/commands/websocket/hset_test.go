@@ -68,7 +68,7 @@ func TestHSET(t *testing.T) {
 				"SET string_key value",
 				"HSET string_key field value",
 			},
-			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			delays: []time.Duration{0, 0},
 		},
 	}

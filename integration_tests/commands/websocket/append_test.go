@@ -36,7 +36,7 @@ func TestAppend(t *testing.T) {
 		{
 			name:       "APPEND to key created using LPUSH",
 			commands:   []string{"LPUSH z bhima", "APPEND z shankar"},
-			expected:   []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:   []interface{}{float64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			cleanupKey: "z",
 		},
 		{
@@ -48,7 +48,7 @@ func TestAppend(t *testing.T) {
 		{
 			name:       "APPEND to key created using ZADD",
 			commands:   []string{"ZADD key 1 one", "APPEND key two"},
-			expected:   []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:   []interface{}{float64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			cleanupKey: "key",
 		},
 		{
@@ -86,10 +86,10 @@ func TestAppend(t *testing.T) {
 				float64(0),
 				float64(1),
 				float64(1),
-				"WRONGTYPE Operation against a key holding the wrong kind of value",
+				diceerrors.ErrWrongTypeOperation.Error(),
 				float64(6),
-				"WRONGTYPE Operation against a key holding the wrong kind of value",
-				"WRONGTYPE Operation against a key holding the wrong kind of value",
+				diceerrors.ErrWrongTypeOperation.Error(),
+				diceerrors.ErrWrongTypeOperation.Error(),
 			},
 			cleanupKey: "listKey",
 		},

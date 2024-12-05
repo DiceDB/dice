@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -63,7 +64,7 @@ func TestHSet(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "string_key", "value": "value"}},
 				{Command: "HSET", Body: map[string]interface{}{"key": "string_key", "field": "field", "value": "value"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			delays:   []time.Duration{0, 0},
 		},
 	}

@@ -328,7 +328,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "values": []interface{}{0.01, 1000}},
 				},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "BF.ADD on a key holding a list",
@@ -342,7 +342,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf", "value": "item2"},
 				},
 			},
-			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{float64(1), diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "BF.INFO on a key holding a hash",
@@ -356,7 +356,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 					Body:    map[string]interface{}{"key": "bf"},
 				},
 			},
-			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{float64(1), diceerrors.ErrWrongTypeOperation.Error()},
 		},
 	}
 	for _, tc := range testCases {

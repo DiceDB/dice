@@ -44,7 +44,7 @@ func TestAPPEND(t *testing.T) {
 		{
 			name:     "APPEND to key created using LPUSH",
 			commands: []string{"LPUSH m bhima", "APPEND m shankar"},
-			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{int64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			cleanup:  []string{"DEL m"},
 		},
 		{
@@ -56,13 +56,13 @@ func TestAPPEND(t *testing.T) {
 		{
 			name:     "APPEND to key created using SADD",
 			commands: []string{"SADD key apple", "APPEND key banana"},
-			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{int64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			cleanup:  []string{"DEL key"},
 		},
 		{
 			name:     "APPEND to key created using ZADD",
 			commands: []string{"ZADD key 1 one", "APPEND key two"},
-			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{int64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			cleanup:  []string{"DEL key"},
 		},
 		{
@@ -94,10 +94,10 @@ func TestAPPEND(t *testing.T) {
 				int64(0),
 				int64(1),
 				int64(1),
-				"WRONGTYPE Operation against a key holding the wrong kind of value",
+				diceerrors.ErrWrongTypeOperation.Error(),
 				int64(6),
-				"WRONGTYPE Operation against a key holding the wrong kind of value",
-				"WRONGTYPE Operation against a key holding the wrong kind of value",
+				diceerrors.ErrWrongTypeOperation.Error(),
+				diceerrors.ErrWrongTypeOperation.Error(),
 			},
 			cleanup: []string{"DEL listKey", "DEL bitKey", "DEL hashKey", "DEL setKey"},
 		},
@@ -123,7 +123,7 @@ func TestAPPEND(t *testing.T) {
 		})
 	}
 
-	setErrorMsg := "WRONGTYPE Operation against a key holding the wrong kind of value"
+	setErrorMsg := diceerrors.ErrWrongTypeOperation.Error()
 	ttlTolerance := int64(2) // Set tolerance in seconds for the TTL checks
 	ttlTestCases := []struct {
 		name     string

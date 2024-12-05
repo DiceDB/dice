@@ -146,10 +146,10 @@ func TestEval(t *testing.T) {
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"nil value":            {input: nil, output: []byte("+PONG\r\n")},
-		"empty args":           {input: []string{}, output: []byte("+PONG\r\n")},
-		"one value":            {input: []string{"HEY"}, output: []byte("$3\r\nHEY\r\n")},
-		"more than one values": {input: []string{"HEY", "HELLO"}, output: []byte("-ERR wrong number of arguments for 'ping' command\r\n")},
+		"PING: nil value":            {input: nil, output: []byte("+PONG\r\n")},
+		"PING: empty args":           {input: []string{}, output: []byte("+PONG\r\n")},
+		"PING: one value":            {input: []string{"HEY"}, output: []byte("$3\r\nHEY\r\n")},
+		"PING: more than one values": {input: []string{"HEY", "HELLO"}, output: []byte(diceerrors.ErrWrongArgumentCount("ping").Error())},
 	}
 
 	runEvalTests(t, tests, evalPING, store)
@@ -157,10 +157,10 @@ func testEvalPING(t *testing.T, store *dstore.Store) {
 
 func testEvalECHO(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"nil value":            {input: nil, output: []byte("-ERR wrong number of arguments for 'echo' command\r\n")},
-		"empty args":           {input: []string{}, output: []byte("-ERR wrong number of arguments for 'echo' command\r\n")},
-		"one value":            {input: []string{"HEY"}, output: []byte("$3\r\nHEY\r\n")},
-		"more than one values": {input: []string{"HEY", "HELLO"}, output: []byte("-ERR wrong number of arguments for 'echo' command\r\n")},
+		"ECHO: nil value":            {input: nil, output: []byte(diceerrors.ErrWrongArgumentCount("echo").Error())},
+		"ECHO: empty args":           {input: []string{}, output: []byte(diceerrors.ErrWrongArgumentCount("echo").Error())},
+		"ECHO: one value":            {input: []string{"HEY"}, output: []byte("$3\r\nHEY\r\n")},
+		"ECHO: more than one values": {input: []string{"HEY", "HELLO"}, output: []byte(diceerrors.ErrWrongArgumentCount("echo").Error())},
 	}
 
 	runEvalTests(t, tests, evalECHO, store)
@@ -178,10 +178,10 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 	}
 
 	tests := map[string]evalTestCase{
-		"nil value":            {input: nil, output: clientio.Encode(resp, false)},
-		"empty args":           {input: []string{}, output: clientio.Encode(resp, false)},
-		"one value":            {input: []string{"HEY"}, output: clientio.Encode(resp, false)},
-		"more than one values": {input: []string{"HEY", "HELLO"}, output: []byte("-ERR wrong number of arguments for 'hello' command\r\n")},
+		"HELLO: nil value":            {input: nil, output: clientio.Encode(resp, false)},
+		"HELLO: empty args":           {input: []string{}, output: clientio.Encode(resp, false)},
+		"HELLO: one value":            {input: []string{"HEY"}, output: clientio.Encode(resp, false)},
+		"HELLO: more than one values": {input: []string{"HEY", "HELLO"}, output: []byte(diceerrors.ErrWrongArgumentCount("hello").Error())},
 	}
 
 	runEvalTests(t, tests, evalHELLO, store)
@@ -2900,7 +2900,7 @@ func testEvalDbsize(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"DBSIZE command with invalid no of args": {
 			input:  []string{"INVALID_ARG"},
-			output: []byte("-ERR wrong number of arguments for 'dbsize' command\r\n"),
+			output: []byte(diceerrors.ErrWrongArgumentCount("dbsize").Error()),
 		},
 		"no key in db": {
 			input:  nil,
@@ -3949,12 +3949,12 @@ func testEvalLPUSH(t *testing.T, store *dstore.Store) {
 			input:          []string{"KEY1"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'lpush' command")},
 		},
-		"key with different type": {
+		"LPUSH: key with different type": {
 			setup: func() {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY", "value_1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"key does not exist": {
 			input:          []string{"NONEXISTENT_KEY", "value_1"},
@@ -3984,12 +3984,12 @@ func testEvalRPUSH(t *testing.T, store *dstore.Store) {
 			input:          []string{"KEY1"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'rpush' command")},
 		},
-		"key with different type": {
+		"RPUSH: key with different type": {
 			setup: func() {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY", "value_1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"key does not exist": {
 			input:          []string{"NONEXISTENT_KEY", "value_1"},
@@ -4027,12 +4027,12 @@ func testEvalLPOP(t *testing.T, store *dstore.Store) {
 			input:          []string{"k", "-1"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
-		"key with different type": {
+		"LPOP: key with different type": {
 			setup: func() {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"key does not exist": {
 			input:          []string{"NONEXISTENT_KEY"},
@@ -4104,7 +4104,7 @@ func testEvalRPOP(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		"key does not exist": {
 			input:          []string{"NONEXISTENT_KEY"},
@@ -4159,7 +4159,7 @@ func testEvalLLEN(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 	}
 
@@ -4345,7 +4345,7 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 			if tc.validator != nil {
 				tc.validator(output)
 			} else {
-				assert.Equal(t, string(tc.output), string(output))
+				assert.Equal(t, strings.TrimSpace(string(tc.output)), strings.TrimSpace(string(output)))
 			}
 		})
 	}
@@ -4638,7 +4638,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"string_key", "string_value"}, store)
 			},
 			input:          []string{"string_key"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR -WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		{
 			name: "HKEYS key exists and is a hash",
@@ -8108,7 +8108,7 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 			input: []string{"INTEGER_KEY"},
 			migratedOutput: EvalResponse{
 				Result: "CQUAAAAAAAAACv9+l81XgsShqw==",
-				Error: nil,
+				Error:  nil,
 			},
 		},
 		"dump expired key": {
@@ -8328,7 +8328,7 @@ func testEvalGEODIST(t *testing.T, store *dstore.Store) {
 
 func testEvalSINTER(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"intersection of two sets": {
+		"SINTER: intersection of two sets": {
 			setup: func() {
 				evalSADD([]string{"set1", "a", "b", "c"}, store)
 				evalSADD([]string{"set2", "c", "d", "e"}, store)
@@ -8336,7 +8336,7 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 			input:  []string{"set1", "set2"},
 			output: clientio.Encode([]string{"c"}, false),
 		},
-		"intersection of three sets": {
+		"SINTER: intersection of three sets": {
 			setup: func() {
 				evalSADD([]string{"set1", "a", "b", "c"}, store)
 				evalSADD([]string{"set2", "b", "c", "d"}, store)
@@ -8345,29 +8345,29 @@ func testEvalSINTER(t *testing.T, store *dstore.Store) {
 			input:  []string{"set1", "set2", "set3"},
 			output: clientio.Encode([]string{"c"}, false),
 		},
-		"intersection with single set": {
+		"SINTER: intersection with single set": {
 			setup: func() {
 				evalSADD([]string{"set1", "a"}, store)
 			},
 			input:  []string{"set1"},
 			output: clientio.Encode([]string{"a"}, false),
 		},
-		"intersection with a non-existent key": {
+		"SINTER: intersection with a non-existent key": {
 			setup: func() {
 				evalSADD([]string{"set1", "a", "b", "c"}, store)
 			},
 			input:  []string{"set1", "nonexistent"},
 			output: clientio.Encode([]string{}, false),
 		},
-		"intersection with wrong type": {
+		"SINTER: intersection with wrong type": {
 			setup: func() {
 				evalSADD([]string{"set1", "a", "b", "c"}, store)
 				store.Put("string", &object.Obj{Value: "string", Type: object.ObjTypeString})
 			},
 			input:  []string{"set1", "string"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			output: clientio.Encode(diceerrors.ErrWrongTypeOperation, false),
 		},
-		"no arguments": {
+		"SINTER: no arguments": {
 			input:  []string{},
 			output: diceerrors.NewErrArity("SINTER"),
 		},
@@ -8651,7 +8651,7 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 				evalSADD([]string{"SET1", "1", "2", "3"}, store)
 			},
 			input:          []string{"SET1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		{
 			name: "INCR key holding MAP type",
@@ -8659,7 +8659,7 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
 			},
 			input:          []string{"MAP1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		{
 			name:           "INCR More than one args passed",
@@ -8738,7 +8738,7 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 				evalSADD([]string{"SET1", "1", "2", "3"}, store)
 			},
 			input:          []string{"SET1", "2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		{
 			name: "INCRBY key holding MAP type",
@@ -8746,7 +8746,7 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
 			},
 			input:          []string{"MAP1", "2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		{
 			name:           "INCRBY Wrong number of args passed",
@@ -8825,7 +8825,7 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 				evalSADD([]string{"SET1", "1", "2", "3"}, store)
 			},
 			input:          []string{"SET1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		{
 			name: "DECR key holding MAP type",
@@ -8833,7 +8833,7 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
 			},
 			input:          []string{"MAP1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		{
 			name:           "DECR More than one args passed",
@@ -8912,7 +8912,7 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 				evalSADD([]string{"SET1", "1", "2", "3"}, store)
 			},
 			input:          []string{"SET1", "2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		{
 			name: "DECRBY key holding MAP type",
@@ -8920,7 +8920,7 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 				evalHSET([]string{"MAP1", "a", "1", "b", "2", "c", "3"}, store)
 			},
 			input:          []string{"MAP1", "2"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 		{
 			name:           "DECRBY Wrong number of args passed",
@@ -9171,7 +9171,7 @@ func testEvalLINSERT(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY", "before", "mock_value", "element"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 	}
 	runMigratedEvalTests(t, tests, evalLINSERT, store)
@@ -9212,12 +9212,12 @@ func testEvalLRANGE(t *testing.T, store *dstore.Store) {
 			input:          []string{"EXISTING_KEY", "0", "5"},
 			migratedOutput: EvalResponse{Result: []string{"before_value", "pivot_value", "after_value"}, Error: nil},
 		},
-		"key with different type": {
+		"LRANGE key with different type": {
 			setup: func() {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY", "0", "4"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
 		},
 	}
 	runMigratedEvalTests(t, tests, evalLRANGE, store)

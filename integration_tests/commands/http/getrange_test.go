@@ -67,7 +67,7 @@ func TestGETRANGE(t *testing.T) {
 				{Command: "LPUSH", Body: map[string]interface{}{"key": "test3", "value": "shankar"}},
 				{Command: "GETRANGE", Body: map[string]interface{}{"key": "test3", "values": []interface{}{0, 7}}},
 			},
-			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{float64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			cleanup: []HTTPCommand{
 				{Command: "del", Body: map[string]interface{}{"key": "test3"}},
 			},

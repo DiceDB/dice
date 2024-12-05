@@ -42,7 +42,7 @@ func TestHINCRBY(t *testing.T) {
 		{
 			name:   "HINCRBY on non-hashmap key",
 			cmds:   []string{"SET key value", "HINCRBY key value 10"},
-			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			delays: []time.Duration{0, 0, 0},
 		},
 		{

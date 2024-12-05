@@ -22,7 +22,7 @@ func TestZPOPMAX(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "sortedSet", "value": "testString"}},
 				{Command: "ZPOPMAX", Body: map[string]interface{}{"key": "sortedSet"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "ZPOPMAX on existing key (without count argument)",

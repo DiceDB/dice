@@ -64,7 +64,7 @@ func TestAPPEND(t *testing.T) {
 				{Command: "LPUSH", Body: map[string]interface{}{"key": "m", "value": "bhima"}},
 				{Command: "APPEND", Body: map[string]interface{}{"key": "m", "value": "shankar"}},
 			},
-			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{float64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			cleanup: []HTTPCommand{
 				{Command: "del", Body: map[string]interface{}{"key": "m"}},
 			},
@@ -89,7 +89,7 @@ func TestAPPEND(t *testing.T) {
 				{Command: "SADD", Body: map[string]interface{}{"key": "key", "value": "apple"}},
 				{Command: "APPEND", Body: map[string]interface{}{"key": "key", "value": "banana"}},
 			},
-			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{float64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			cleanup: []HTTPCommand{
 				{Command: "del", Body: map[string]interface{}{"key": "key"}},
 			},
@@ -100,7 +100,7 @@ func TestAPPEND(t *testing.T) {
 				{Command: "ZADD", Body: map[string]interface{}{"key": "myzset", "values": []string{"1", "one"}}},
 				{Command: "APPEND", Body: map[string]interface{}{"key": "myzset", "value": "two"}},
 			},
-			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{float64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			cleanup: []HTTPCommand{
 				{Command: "del", Body: map[string]interface{}{"key": "myzset"}},
 			},
@@ -185,10 +185,10 @@ func TestAPPEND(t *testing.T) {
 				float64(0),
 				float64(1),
 				float64(1),
-				"WRONGTYPE Operation against a key holding the wrong kind of value",
+				diceerrors.ErrWrongTypeOperation.Error(),
 				float64(6),
-				"WRONGTYPE Operation against a key holding the wrong kind of value",
-				"WRONGTYPE Operation against a key holding the wrong kind of value",
+				diceerrors.ErrWrongTypeOperation.Error(),
+				diceerrors.ErrWrongTypeOperation.Error(),
 			},
 			cleanup: []HTTPCommand{
 				{Command: "del", Body: map[string]interface{}{"key": "listKey"}},

@@ -3,6 +3,7 @@ package resp
 import (
 	"testing"
 
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,7 +25,7 @@ func TestHVals(t *testing.T) {
 		{
 			name:     "HVALS on wrong key type",
 			commands: []string{"SET hvalsKey02 field", "HVALS hvalsKey02"},
-			expected: []interface{}{"OK", "ERR -WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name:     "HVALS with wrong number of arguments",

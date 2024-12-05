@@ -12,7 +12,7 @@ func TestErrorsForSetData(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 
-	setErrorMsg := "WRONGTYPE Operation against a key holding the wrong kind of value"
+	setErrorMsg := diceerrors.ErrWrongTypeOperation.Error()
 	testCases := []struct {
 		name       string
 		cmd        []string

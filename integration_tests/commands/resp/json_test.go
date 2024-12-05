@@ -148,7 +148,7 @@ func TestJSONOperations(t *testing.T) {
 			name:     "Set Non-JSON Value",
 			setCmd:   `SET nonJson "not a json"`,
 			getCmd:   `JSON.GET nonJson`,
-			expected: "WRONGTYPE Operation against a key holding the wrong kind of value",
+			expected: diceerrors.ErrWrongTypeOperation.Error(),
 		},
 		{
 			name:     "Set Empty JSON Object",
@@ -1231,7 +1231,7 @@ func TestJsonObjLen(t *testing.T) {
 		{
 			name:     "JSON.OBJLEN with legacy path - inner existent path with nonJSON object",
 			commands: []string{"json.set obj $ " + c, "json.objlen obj .name"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name:     "JSON.OBJLEN with legacy path - inner existent path recursive object",

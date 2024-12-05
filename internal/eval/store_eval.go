@@ -541,7 +541,7 @@ func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
 	if obj != nil {
 		if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
 			return &EvalResponse{
-				Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
+				Error:  diceerrors.ErrWrongTypeOperation,
 				Result: nil,
 			}
 		}

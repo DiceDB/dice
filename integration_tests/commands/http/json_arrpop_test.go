@@ -143,7 +143,7 @@ func TestJSONARRPOP(t *testing.T) {
 					Body:    map[string]interface{}{"key": "doc_new"},
 				},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "nil response for arr pop",
