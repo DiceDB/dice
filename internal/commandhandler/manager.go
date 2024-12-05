@@ -57,9 +57,9 @@ func (m *Manager) CommandHandlerCount() int32 {
 
 func (m *Manager) UnregisterCommandHandler(id string) error {
 	m.ShardManager.UnregisterCommandHandler(id)
-	if client, loaded := m.activeCmdHandlers.LoadAndDelete(id); loaded {
-		w := client.(BaseCommandHandler)
-		if err := w.Stop(); err != nil {
+	if cmdHandler, loaded := m.activeCmdHandlers.LoadAndDelete(id); loaded {
+		ch := cmdHandler.(*BaseCommandHandler)
+		if err := ch.Stop(); err != nil {
 			return err
 		}
 	} else {
