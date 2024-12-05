@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -76,7 +77,8 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 
 		if len(body) > 0 {
 			var jsonBody map[string]interface{}
-			if err := json.Unmarshal(body, &jsonBody); err != nil {
+			if err := unmarshalRequestBody(body, &jsonBody); err != nil {
+				fmt.Println("Error unmarshaling body:", err)
 				return nil, err
 			}
 
@@ -252,4 +254,56 @@ func isBase64Encoded(s string) bool {
 		return true
 	}
 	return false
+}
+
+func unmarshalRequestBody(data []byte, v *map[string]interface{}) error {
+	var rawMap map[string]interface{}
+	if err := json.Unmarshal(data, &rawMap); err != nil {
+		return err
+	}
+	for key, val := range rawMap {
+		switch val := val.(type) {
+		case float64:
+			// force check whether the float64 value is a big integer
+			// if it is, typecast it and set the value for the key in the rawMap
+			if val == float64(int64(val)) {
+				rawMap[key] = json.Number(strconv.FormatInt(int64(val), 10))
+			}
+		case map[string]interface{}:
+			jsonValue, err := json.Marshal(val)
+			if err != nil {
+				return err
+			}
+			// recursively unmarshal nested JSON body
+			var nestedMap map[string]interface{}
+			if err := unmarshalRequestBody(jsonValue, &nestedMap); err != nil {
+				return err
+			}
+			rawMap[key] = nestedMap
+		case []interface{}:
+			for i, item := range val {
+				if nestedMap, ok := item.(map[string]interface{}); ok {
+					jsonValue, err := json.Marshal(nestedMap)
+					if err != nil {
+						return err
+					}
+					// recursively unmarshal nested JSON body
+					var nestedNestedMap map[string]interface{}
+					if err := unmarshalRequestBody(jsonValue, &nestedNestedMap); err != nil {
+						return err
+					}
+					val[i] = nestedNestedMap
+				}
+			}
+		}
+	}
+
+	jsonBytes, err := json.Marshal(rawMap)
+	if err != nil {
+		return err
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(jsonBytes))
+	decoder.UseNumber() // Ensures all numbers are kept as json.Number
+	return decoder.Decode(&v)
 }
