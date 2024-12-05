@@ -64,6 +64,7 @@ func (t *BaseIOThread) Start(ctx context.Context) error {
 			t.ioThreadReadChan <- data
 		case err := <-readErrChan:
 			slog.Debug("Read error in io-thread, connection closed possibly", slog.String("id", t.id), slog.Any("error", err))
+			t.ioThreadErrChan <- err
 			return err
 		case resp := <-t.ioThreadWriteChan:
 			err := t.ioHandler.Write(ctx, resp)
