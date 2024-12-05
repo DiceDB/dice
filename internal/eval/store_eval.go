@@ -2619,6 +2619,7 @@ func evalDUMP(args []string, store *dstore.Store) *EvalResponse {
 
 	serializedValue, err := rdbSerialize(obj)
 	if err != nil {
+		fmt.Println("error", err)
 		return makeEvalError(diceerrors.ErrGeneral("serialization failed"))
 	}
 	encodedResult := base64.StdEncoding.EncodeToString(serializedValue)
@@ -2640,7 +2641,6 @@ func evalRestore(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return makeEvalError(diceerrors.ErrGeneral("failed to decode base64 value"))
 	}
-
 	obj, err := rdbDeserialize(serializedData)
 	if err != nil {
 		return makeEvalError(diceerrors.ErrGeneral("deserialization failed"))
