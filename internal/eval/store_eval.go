@@ -6395,6 +6395,22 @@ func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+func evalGEOSEARCH(args []string, store *dstore.Store) *EvalResponse {
+	if (len(args) < 6 || len(args) > 15){
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEOSEARCH"),
+		}
+	}
+
+	//TODO: add implementation for GEOSEARCH
+
+	return &EvalResponse{
+		Result: "geosearch implementation",
+		Error: nil,
+	}
+}
+
 // // BITOP <AND | OR | XOR | NOT> destkey key [key ...]
 // func evalBITOP(args []string, store *dstore.Store) *EvalResponse {
 // 	operation, destKey := args[0], args[1]
