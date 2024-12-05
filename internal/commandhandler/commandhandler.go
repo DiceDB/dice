@@ -91,9 +91,6 @@ func (h *BaseCommandHandler) Start(ctx context.Context) error {
 		case data := <-h.ioThreadReadChan:
 			resp, err := h.processCommand(ctx, &data, h.globalErrorChan)
 			h.sendResponseToIOThread(resp, err)
-			if err != nil {
-				return err
-			}
 		}
 	}
 }
