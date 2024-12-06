@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
@@ -54,8 +55,9 @@ func main() {
 
 	wl, _ = wal.NewNullWAL()
 	if config.DiceConfig.Persistence.Enabled {
+		WALDir := filepath.Join(config.DefaultParentDir, config.DiceConfig.Persistence.WALDir)
 		if config.DiceConfig.Persistence.WALEngine == "sqlite" {
-			_wl, err := wal.NewSQLiteWAL(config.DiceConfig.Persistence.WALDir)
+			_wl, err := wal.NewSQLiteWAL(WALDir)
 			if err != nil {
 				slog.Warn("could not create WAL with", slog.String("wal-engine", config.DiceConfig.Persistence.WALEngine), slog.Any("error", err))
 				sigs <- syscall.SIGKILL
@@ -63,7 +65,7 @@ func main() {
 			}
 			wl = _wl
 		} else if config.DiceConfig.Persistence.WALEngine == "aof" {
-			_wl, err := wal.NewAOFWAL(config.DiceConfig.Persistence.WALDir)
+			_wl, err := wal.NewAOFWAL(WALDir)
 			if err != nil {
 				slog.Warn("could not create WAL with", slog.String("wal-engine", config.DiceConfig.Persistence.WALEngine), slog.Any("error", err))
 				sigs <- syscall.SIGKILL
