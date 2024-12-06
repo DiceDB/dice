@@ -693,7 +693,7 @@ func evalSINTER(args []string, store *dstore.Store) []byte {
 
 		// If the object exists, check if it is a set object.
 		if err := object.AssertType(obj.Type, object.ObjTypeSet); err != nil {
-			return diceerrors.NewErrWithFormattedMessage(diceerrors.WrongTypeErr)
+			return clientio.Encode(diceerrors.ErrWrongTypeOperation, false)
 		}
 
 		// Get the set object.

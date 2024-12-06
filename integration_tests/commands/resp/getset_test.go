@@ -38,7 +38,7 @@ func TestGetSet(t *testing.T) {
 		{
 			name:   "GETSET error when key exists but does not hold a string value",
 			cmds:   []string{"LPUSH k1 \"somevalue\"", "GETSET k1 \"v1\""},
-			expect: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []interface{}{int64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			delays: []time.Duration{0, 0, 0},
 		},
 	}

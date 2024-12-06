@@ -1,14 +1,12 @@
 package object
 
 import (
-	"errors"
-
 	diceerrors "github.com/dicedb/dice/internal/errors"
 )
 
 func AssertTypeWithError(te, t ObjectType) error {
 	if te != t {
-		return errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
+		return diceerrors.ErrWrongTypeOperation
 	}
 	return nil
 }

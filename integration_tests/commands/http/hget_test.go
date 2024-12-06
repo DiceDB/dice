@@ -64,7 +64,7 @@ func TestHGet(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "string_key", "value": "value"}},
 				{Command: "HGET", Body: map[string]interface{}{"key": "string_key", "field": "field"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			delays:   []time.Duration{0, 0},
 		},
 	}

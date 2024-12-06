@@ -22,7 +22,7 @@ func TestZPOPMIN(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "stringkey", "value": "string_value"}},
 				{Command: "ZPOPMIN", Body: map[string]interface{}{"key": "stringkey"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value", float64(1)},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error(), float64(1)},
 		},
 		{
 			name: "ZPOPMIN on existing key (without count argument)",

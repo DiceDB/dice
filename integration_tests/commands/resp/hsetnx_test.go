@@ -25,7 +25,7 @@ func TestHSETNX(t *testing.T) {
 		},
 		{
 			commands: []string{"SET key_nx_t4 v", "HSETNX key_nx_t4 f v"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 	}
 

@@ -19,7 +19,7 @@ func TestZPOPMax(t *testing.T) {
 		{
 			name:     "ZPOPMAX with wrong type of key with/without count argument",
 			commands: []string{"SET stringkey string_value", "ZPOPMAX stringkey"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name:     "ZPOPMAX on existing key (without count argument)",

@@ -33,7 +33,7 @@ func TestHSET(t *testing.T) {
 		},
 		{
 			commands: []string{"SET k v", "HSET k f v"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 	}
 

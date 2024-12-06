@@ -62,7 +62,7 @@ func TestGETRANGE(t *testing.T) {
 		{
 			name:     "Get range on wrong key type",
 			commands: []string{"LPUSH test3 shankar", "GETRANGE test3 0 7"},
-			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{int64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			cleanup:  []string{"del test3"},
 		},
 		{

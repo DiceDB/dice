@@ -1,8 +1,9 @@
 package resp
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHMSET(t *testing.T) {
@@ -32,7 +33,7 @@ func TestHMSET(t *testing.T) {
 		},
 		{
 			commands: []string{"SET k v", "HMSET k f v"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 	}
 

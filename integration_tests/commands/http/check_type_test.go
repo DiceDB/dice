@@ -10,7 +10,7 @@ import (
 // This file may contain test cases for checking error messages across all commands
 func TestErrorsForSetData(t *testing.T) {
 	exec := NewHTTPCommandExecutor()
-	setErrorMsg := "WRONGTYPE Operation against a key holding the wrong kind of value"
+	setErrorMsg := diceerrors.ErrWrongTypeOperation.Error()
 	testCases := []struct {
 		name       string
 		commands   []HTTPCommand

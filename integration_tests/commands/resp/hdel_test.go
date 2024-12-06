@@ -29,7 +29,7 @@ func TestHDEL(t *testing.T) {
 		},
 		{
 			commands: []string{"SET k v", "HDEL k f"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 	}
 

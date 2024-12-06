@@ -35,7 +35,7 @@ func TestHSCAN(t *testing.T) {
 			cmds: []string{"SET string_key string_value",
 				"HSCAN string_key 0"},
 			expect: []interface{}{"OK",
-				"WRONGTYPE Operation against a key holding the wrong kind of value"},
+				diceerrors.ErrWrongTypeOperation.Error()},
 			delays: []time.Duration{0, 0},
 		},
 		{

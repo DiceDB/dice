@@ -62,7 +62,7 @@ func TestSetDataCommand(t *testing.T) {
 		{
 			name:       "SADD Wrong Key Value Type",
 			cmd:        []string{"SET foo bar", "SADD foo baz"},
-			expected:   []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:   []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
 		},
@@ -91,7 +91,7 @@ func TestSetDataCommand(t *testing.T) {
 		{
 			name:       "SADD & SCARD with wrong key type",
 			cmd:        []string{"SET foo bar", "SCARD foo"},
-			expected:   []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:   []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
 		},
@@ -113,7 +113,7 @@ func TestSetDataCommand(t *testing.T) {
 		{
 			name:       "SADD & SMEMBERS with wrong key type",
 			cmd:        []string{"SET foo bar", "SMEMBERS foo"},
-			expected:   []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:   []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
 		},
@@ -135,7 +135,7 @@ func TestSetDataCommand(t *testing.T) {
 		{
 			name:       "SADD & SREM with wrong key type",
 			cmd:        []string{"SET foo bar", "SREM foo bar"},
-			expected:   []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:   []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			assertType: []string{"equal", "equal"},
 			delay:      []time.Duration{0, 0},
 		},

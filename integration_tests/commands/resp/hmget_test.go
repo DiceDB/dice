@@ -35,7 +35,7 @@ func TestHMGET(t *testing.T) {
 		{
 			name:     "hmget with wrongtype",
 			commands: []string{"SET key_hmGet1 field", "HMGET key_hmGet1 field"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name:     "wrong number of arguments",

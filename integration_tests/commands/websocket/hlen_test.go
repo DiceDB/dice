@@ -37,7 +37,7 @@ func TestHLEN(t *testing.T) {
 		{
 			name:   "HLEN with non-hash",
 			cmds:   []string{"SET string_key string_value", "HLEN string_key"},
-			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			delays: []time.Duration{0, 0},
 		},
 		{

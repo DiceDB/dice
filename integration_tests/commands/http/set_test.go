@@ -209,7 +209,7 @@ func TestSetWithOptions(t *testing.T) {
 				{Command: "SADD", Body: map[string]interface{}{"key": "k", "value": "b"}},
 				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v", "get": true}},
 			},
-			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{float64(1), diceerrors.ErrWrongTypeOperation.Error()},
 		},
 	}
 

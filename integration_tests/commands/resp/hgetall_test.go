@@ -23,7 +23,7 @@ func TestHGETALL(t *testing.T) {
 		},
 		{
 			commands: []string{"SET key_hGetAll02 field", "HGETALL key_hGetAll02"},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			commands: []string{"HGETALL key_hGetAll03 x", "HGETALL"},

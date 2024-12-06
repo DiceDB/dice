@@ -28,7 +28,7 @@ func TestZREM(t *testing.T) {
 			name: "ZREM with wrong type of key",
 			cmds: []string{"SET string_key string_value", "ZREM string_key string_value"},
 			expect: []interface{}{"OK",
-				"WRONGTYPE Operation against a key holding the wrong kind of value"},
+				diceerrors.ErrWrongTypeOperation.Error()},
 			delays: []time.Duration{0, 0},
 		},
 		{

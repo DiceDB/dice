@@ -51,7 +51,7 @@ func TestSetDataCmd(t *testing.T) {
 				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
 			},
 			assert_type: []string{"equal", "equal"},
-			expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:    []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "SADD multiple add and multiple kind of values",
@@ -91,7 +91,7 @@ func TestSetDataCmd(t *testing.T) {
 				{Command: "SCARD", Body: map[string]interface{}{"key": "foo"}},
 			},
 			assert_type: []string{"equal", "equal"},
-			expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:    []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "SADD & SMEMBERS",
@@ -118,7 +118,7 @@ func TestSetDataCmd(t *testing.T) {
 				{Command: "SMEMBERS", Body: map[string]interface{}{"key": "foo"}},
 			},
 			assert_type: []string{"equal", "equal"},
-			expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:    []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "SADD & SREM",
@@ -146,7 +146,7 @@ func TestSetDataCmd(t *testing.T) {
 				{Command: "SREM", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
 			},
 			assert_type: []string{"equal", "equal"},
-			expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:    []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "SADD & SREM with non-existing value",
@@ -188,7 +188,7 @@ func TestSetDataCmd(t *testing.T) {
 				{Command: "SDIFF", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
 			},
 			assert_type: []string{"equal", "equal"},
-			expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:    []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "SADD & SDIFF with subsequent key of wrong type",
@@ -199,7 +199,7 @@ func TestSetDataCmd(t *testing.T) {
 				{Command: "SDIFF", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
 			},
 			assert_type: []string{"equal", "equal", "equal", "equal"},
-			expected:    []interface{}{float64(1), float64(1), "OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:    []interface{}{float64(1), float64(1), "OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "SADD & SDIFF with non-existing first key",
@@ -250,7 +250,7 @@ func TestSetDataCmd(t *testing.T) {
 				{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
 			},
 			assert_type: []string{"equal", "equal"},
-			expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:    []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "SADD & SINTER with subsequent key of wrong type",
@@ -261,7 +261,7 @@ func TestSetDataCmd(t *testing.T) {
 				{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
 			},
 			assert_type: []string{"equal", "equal", "equal", "equal"},
-			expected:    []interface{}{float64(1), float64(1), "OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected:    []interface{}{float64(1), float64(1), "OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "SADD & SINTER with single key",

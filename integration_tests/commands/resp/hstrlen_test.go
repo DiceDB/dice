@@ -53,7 +53,7 @@ func TestHSTRLEN(t *testing.T) {
 		{
 			name:   "HSTRLEN with non-hash",
 			cmds:   []string{"SET string_key string_value", "HSTRLEN string_key field"},
-			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 			delays: []time.Duration{0, 0},
 		},
 	}

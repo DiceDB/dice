@@ -157,7 +157,7 @@ func TestJSONOperations(t *testing.T) {
 				{Command: "SET", Body: map[string]interface{}{"key": "k1", "value": "1"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k1"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "Set Empty JSON Object",
@@ -1286,7 +1286,7 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "json.objlen", Body: map[string]interface{}{"key": "c", "path": ".name"}},
 			},
-			expected: []interface{}{"WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{diceerrors.ErrWrongTypeOperation.Error()},
 		},
 		{
 			name: "JSON.OBJLEN with legacy path - inner existent path recursive object",

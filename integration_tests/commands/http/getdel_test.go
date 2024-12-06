@@ -73,7 +73,7 @@ func TestGetDel(t *testing.T) {
 				{Command: "SADD", Body: map[string]interface{}{"key": "myset", "member": "member1"}},
 				{Command: "GETDEL", Body: map[string]interface{}{"key": "myset"}},
 			},
-			expected: []interface{}{float64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{float64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			delays:   []time.Duration{0, 0},
 		},
 		{
@@ -83,7 +83,7 @@ func TestGetDel(t *testing.T) {
 				{Command: "GETDEL", Body: map[string]interface{}{"key": "k"}},
 				{Command: "JSON.GET", Body: map[string]interface{}{"key": "k"}},
 			},
-			expected: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value", "1"},
+			expected: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error(), "1"},
 			delays:   []time.Duration{0, 0, 0},
 		},
 	}

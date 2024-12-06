@@ -133,7 +133,7 @@ func TestSetWithOptions(t *testing.T) {
 		{
 			name:     "GET with wrong type of value",
 			commands: []string{"sadd k v", "SET k vv GET"},
-			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expected: []interface{}{int64(1), diceerrors.ErrWrongTypeOperation.Error()},
 		},
 	}
 

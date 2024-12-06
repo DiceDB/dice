@@ -52,13 +52,13 @@ func TestGetDel(t *testing.T) {
 		{
 			name:   "GetDel with Set object should return wrong type error",
 			cmds:   []string{"SADD myset member1", "GETDEL myset"},
-			expect: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []interface{}{int64(1), diceerrors.ErrWrongTypeOperation.Error()},
 			delays: []time.Duration{0, 0},
 		},
 		{
 			name:   "GetDel with JSON object should return wrong type error",
 			cmds:   []string{"JSON.SET k $ 1", "GETDEL k", "JSON.GET k"},
-			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value", "1"},
+			expect: []interface{}{"OK", diceerrors.ErrWrongTypeOperation.Error(), "1"},
 			delays: []time.Duration{0, 0, 0},
 		},
 	}
