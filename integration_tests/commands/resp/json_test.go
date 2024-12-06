@@ -1706,7 +1706,7 @@ func TestJSONARRINDEX(t *testing.T) {
 			assertType: []string{"equal", "equal"},
 		},
 		{
-			name:     "should return empty list if invalid stop index provided",
+			name:     "should return error if invalid stop index provided",
 			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 4 abc"},
 			expected: []interface{}{"OK", "ERR Couldn't parse as integer"},
 			assertType: []string{"equal", "equal"},

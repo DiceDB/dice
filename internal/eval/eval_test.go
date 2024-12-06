@@ -142,6 +142,7 @@ func TestEval(t *testing.T) {
 	testEvalBFINFO(t, store)
 	testEvalBFEXISTS(t, store)
 	testEvalBFADD(t, store)
+	testEvalJSONARRINDEX(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -9221,4 +9222,91 @@ func testEvalLRANGE(t *testing.T, store *dstore.Store) {
 		},
 	}
 	runMigratedEvalTests(t, tests, evalLRANGE, store)
+}
+
+func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
+	normalArray  := `[0,1,2,3,4,3]`
+	tests := []evalTestCase{
+		{
+			name:  "nil value",
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRINDEX"),
+			},
+		},
+		{
+			name:  "empty args",
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRINDEX"),
+			},
+		},
+		{
+			name: "start index is invalid",
+			setup: func() {
+				key := "EXISTING_KEY"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(normalArray), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY", "$", "3", "abc"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error: errors.New("ERR Couldn't parse as integer"),
+			},
+		},
+		{
+			name: "stop index is invalid",
+			setup: func() {
+				key := "EXISTING_KEY"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(normalArray), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY", "$", "3", "4", "abc"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error: errors.New("ERR Couldn't parse as integer"),
+			},
+		},
+		{
+			name: "start and stop optional param valid",
+			setup: func() {
+				key := "EXISTING_KEY"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(normalArray), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY", "$", "4", "4", "5"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{4},
+				Error: nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalJSONARRINDEX(tt.input, store)
+			assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			if tt.migratedOutput.Error != nil {
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				assert.NoError(t, response.Error)
+			}
+		})
+	}
 }
