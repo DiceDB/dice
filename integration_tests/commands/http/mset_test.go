@@ -1,3 +1,7 @@
+//go:build ignore
+// +build ignore
+
+// Ignored as multishard commands not supported by HTTP
 package http
 
 import (

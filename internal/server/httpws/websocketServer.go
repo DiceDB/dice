@@ -1,4 +1,4 @@
-package server
+package httpws
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/iothread"
 	"log/slog"
 	"net"
 	"net/http"
@@ -23,7 +24,6 @@ import (
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
-	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
 	"github.com/gorilla/websocket"
 	"golang.org/x/exp/rand"
@@ -143,11 +143,18 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		}
 
 		// parse message to dice command
-		diceDBCmd, err := utils.ParseWebsocketMessage(msg)
+		diceDBCmd, err := ParseWebsocketMessage(msg)
 		if errors.Is(err, diceerrors.ErrEmptyCommand) {
 			continue
 		} else if err != nil {
 			if err := WriteResponseWithRetries(conn, []byte("error: parsing failed"), maxRetries); err != nil {
+				slog.Debug(fmt.Sprintf("Error writing message: %v", err))
+			}
+			continue
+		}
+
+		if iothread.CommandsMeta[diceDBCmd.Cmd].CmdType == iothread.MultiShard {
+			if err := WriteResponseWithRetries(conn, []byte("error: unsupported command"), maxRetries); err != nil {
 				slog.Debug(fmt.Sprintf("Error writing message: %v", err))
 			}
 			continue
@@ -271,7 +278,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	var responseValue interface{}
 	// Check if the command is migrated, if it is we use EvalResponse values
 	// else we use RESPParser to decode the response
-	_, ok := CmdMetaMap[diceDBCmd.Cmd]
+	_, ok := iothread.CommandsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		responseValue, err = DecodeEvalResponse(response.EvalResponse)

@@ -43,7 +43,7 @@ func TestCommandGetKeys(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "COMMAND/GETKEYS", Body: map[string]interface{}{"key": "MSET", "keys": []interface{}{"key1 key2"}, "values": []interface{}{" val1 val2"}}},
 			},
-			expected: []interface{}{[]interface{}{"key1 key2"}},
+			expected: []interface{}{"ERR invalid command specified"},
 		},
 		{
 			name: "Expire command",

@@ -6,18 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/httpws"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/internal/server/utils"
-
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/querymanager"
-	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -88,7 +86,7 @@ func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) 
 	defer resp.Body.Close()
 
 	if cmd.Command != "Q.WATCH" {
-		var result utils.HTTPResponse
+		var result httpws.HTTPResponse
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
 			return nil, err
@@ -119,7 +117,7 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	queryWatcherLocal := querymanager.NewQueryManager()
 	config.DiceConfig.HTTP.Port = opt.Port
 	// Initialize the HTTPServer
-	testServer := server.NewHTTPServer(shardManager, nil)
+	testServer := httpws.NewHTTPServer(shardManager, nil)
 	// Inform the user that the server is starting
 	fmt.Println("Starting the test server on port", config.DiceConfig.HTTP.Port)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)

@@ -111,55 +111,6 @@ var (
 // their implementation for HTTP and WebSocket protocols is still pending.
 // As a result, their Eval functions remained intact.
 var (
-	msetCmdMeta = DiceCmdMeta{
-		Name: "MSET",
-		Info: `MSET sets multiple keys to multiple values in the db
-		args should contain an even number of elements
-		each pair of elements will be treated as <key, value> pair
-		Returns encoded error response if the number of arguments is not even
-		Returns encoded OK RESP once all entries are added`,
-		Eval:     evalMSET,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2, LastKey: -1},
-	}
-
-	jsonMGetCmdMeta = DiceCmdMeta{
-		Name: "JSON.MGET",
-		Info: `JSON.MGET key..key [path]
-		Returns the encoded RESP value of the key, if present
-		Null reply: If the key doesn't exist or has expired.
-		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:     evalJSONMGET,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
-
-	keysCmdMeta = DiceCmdMeta{
-		Name:  "KEYS",
-		Info:  "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
-		Eval:  evalKeys,
-		Arity: 1,
-	}
-
-	MGetCmdMeta = DiceCmdMeta{
-		Name: "MGET",
-		Info: `The MGET command returns an array of RESP values corresponding to the provided keys.
-		For each key, if the key is expired or does not exist, the response will be RespNIL;
-		otherwise, the response will be the RESP value of the key.
-		`,
-		Eval:     evalMGET,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
-	}
-
-	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
-	copyCmdMeta = DiceCmdMeta{
-		Name:  "COPY",
-		Info:  `COPY command copies the value stored at the source key to the destination key.`,
-		Eval:  evalCOPY,
-		Arity: -2,
-	}
-
 	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
 	objectCopyCmdMeta = DiceCmdMeta{
 		Name:            "OBJECTCOPY",
@@ -167,39 +118,6 @@ var (
 		StoreObjectEval: evalCOPYObject,
 		IsMigrated:      true,
 		Arity:           -2,
-	}
-	touchCmdMeta = DiceCmdMeta{
-		Name: "TOUCH",
-		Info: `TOUCH key1 key2 ... key_N
-		Alters the last access time of a key(s).
-		A key is ignored if it does not exist.`,
-		Eval:     evalTOUCH,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
-	sdiffCmdMeta = DiceCmdMeta{
-		Name: "SDIFF",
-		Info: `SDIFF key1 [key2 ... key_N]
-		Returns the members of the set resulting from the difference between the first set and all the successive sets.
-		Non existing keys are treated as empty sets.`,
-		Eval:     evalSDIFF,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
-	sinterCmdMeta = DiceCmdMeta{
-		Name: "SINTER",
-		Info: `SINTER key1 [key2 ... key_N]
-		Returns the members of the set resulting from the intersection of all the given sets.
-		Non existing keys are treated as empty sets.`,
-		Eval:     evalSINTER,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
-	dbSizeCmdMeta = DiceCmdMeta{
-		Name:  "DBSIZE",
-		Info:  `DBSIZE Return the number of keys in the database`,
-		Eval:  evalDBSIZE,
-		Arity: 1,
 	}
 )
 
@@ -715,12 +633,6 @@ var (
 		Return value is the number of keys existing.`,
 		IsMigrated: true,
 		NewEval:    evalEXISTS,
-	}
-	renameCmdMeta = DiceCmdMeta{
-		Name:  "RENAME",
-		Info:  "Renames a key and overwrites the destination",
-		Eval:  evalRename,
-		Arity: 3,
 	}
 	getexCmdMeta = DiceCmdMeta{
 		Name: "GETEX",
@@ -1429,9 +1341,7 @@ func init() {
 	DiceCmds["COMMAND|INFO"] = commandInfoCmdMeta
 	DiceCmds["COMMAND|DOCS"] = commandDocsCmdMeta
 	DiceCmds["COMMAND|GETKEYSANDFLAGS"] = commandGetKeysAndFlagsCmdMeta
-	DiceCmds["COPY"] = copyCmdMeta
 	DiceCmds["OBJECTCOPY"] = objectCopyCmdMeta
-	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["DECR"] = decrCmdMeta
 	DiceCmds["DECRBY"] = decrByCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
@@ -1481,7 +1391,6 @@ func init() {
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.GET"] = jsongetCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
-	DiceCmds["JSON.MGET"] = jsonMGetCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
 	DiceCmds["JSON.OBJKEYS"] = jsonobjkeysCmdMeta
@@ -1491,13 +1400,10 @@ func init() {
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
 	DiceCmds["JSON.TOGGLE"] = jsontoggleCmdMeta
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
-	DiceCmds["KEYS"] = keysCmdMeta
 	DiceCmds["LATENCY"] = latencyCmdMeta
 	DiceCmds["LLEN"] = llenCmdMeta
 	DiceCmds["LPOP"] = lpopCmdMeta
 	DiceCmds["LPUSH"] = lpushCmdMeta
-	DiceCmds["MGET"] = MGetCmdMeta
-	DiceCmds["MSET"] = msetCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["PERSIST"] = persistCmdMeta
 	DiceCmds["PFADD"] = pfAddCmdMeta
@@ -1505,21 +1411,17 @@ func init() {
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
-	DiceCmds["RENAME"] = renameCmdMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta
 	DiceCmds["RPUSH"] = rpushCmdMeta
 	DiceCmds["SADD"] = saddCmdMeta
 	DiceCmds["SCARD"] = scardCmdMeta
-	DiceCmds["SDIFF"] = sdiffCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["SETBIT"] = setBitCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
-	DiceCmds["SINTER"] = sinterCmdMeta
 	DiceCmds["SLEEP"] = sleepCmdMeta
 	DiceCmds["SMEMBERS"] = smembersCmdMeta
 	DiceCmds["SREM"] = sremCmdMeta
-	DiceCmds["TOUCH"] = touchCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta

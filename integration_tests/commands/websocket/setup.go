@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/server/httpws"
 	"log"
 	"log/slog"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/querymanager"
-	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/gorilla/websocket"
@@ -117,7 +117,7 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel)
 	queryWatcherLocal := querymanager.NewQueryManager()
 	config.DiceConfig.WebSocket.Port = opt.Port
-	testServer := server.NewWebSocketServer(shardManager, testPort1, nil)
+	testServer := httpws.NewWebSocketServer(shardManager, testPort1, nil)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 
 	// run shard manager

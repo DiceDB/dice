@@ -1,11 +1,11 @@
-package utils
+package httpws
 
 import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-
+	"github.com/dicedb/dice/internal/server/utils"
 	"io"
 	"net/http"
 	"regexp"
@@ -64,7 +64,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 	queryParams := r.URL.Query()
 	keyPrefix := queryParams.Get(KeyPrefix)
 
-	if keyPrefix != "" && command == JSONIngest {
+	if keyPrefix != "" && command == utils.JSONIngest {
 		args = append(args, keyPrefix)
 	}
 	// Step 1: Handle JSON body if present
@@ -173,7 +173,7 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 
 	// if key prefix is empty for JSON.INGEST command
 	// add "" to cmdArr
-	if command == JSONIngest && len(cmdArr) == 2 {
+	if command == utils.JSONIngest && len(cmdArr) == 2 {
 		cmdArr = append([]string{""}, cmdArr...)
 	}
 
