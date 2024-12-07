@@ -6261,8 +6261,22 @@ func evalKEYS(args []string, store *dstore.Store) *EvalResponse {
 }
 
 // TODO: Placeholder to support monitoring
-func evalCLIENT(args []string, store *dstore.Store) *EvalResponse {
-	return makeEvalResult(clientio.OK)
+func evalCLIENT(args []string, _ *dstore.Store) *EvalResponse {
+	if len(args) == 0 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("CLIENT"))
+	}
+
+	subcommand := strings.ToUpper(args[0])
+	switch subcommand {
+	case List:
+		o := make([]string, 0, len(GetClients()))
+		for _, client := range GetClients() {
+			o = append(o, client.String())
+		}
+		return makeEvalResult(clientio.Encode(strings.Join(o, "\n"), false))
+	default:
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("CLIENT"))
+	}
 }
 
 // TODO: Placeholder to support monitoring
