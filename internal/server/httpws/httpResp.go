@@ -1,4 +1,4 @@
-package utils
+package httpws
 
 const (
 	HTTPStatusSuccess string = "success"

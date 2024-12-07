@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/internal/server/httpws"
+
 	"github.com/dicedb/dice/internal/cli"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
@@ -25,7 +27,6 @@ import (
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/iothread"
 	"github.com/dicedb/dice/internal/observability"
-	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -140,13 +141,13 @@ func main() {
 	go runServer(ctx, &serverWg, respServer, serverErrCh)
 
 	if config.DiceConfig.HTTP.Enabled {
-		httpServer := server.NewHTTPServer(shardManager, wl)
+		httpServer := httpws.NewHTTPServer(shardManager, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, httpServer, serverErrCh)
 	}
 
 	if config.DiceConfig.WebSocket.Enabled {
-		websocketServer := server.NewWebSocketServer(shardManager, config.DiceConfig.WebSocket.Port, wl)
+		websocketServer := httpws.NewWebSocketServer(shardManager, config.DiceConfig.WebSocket.Port, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
 	}

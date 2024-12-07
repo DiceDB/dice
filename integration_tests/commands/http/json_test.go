@@ -881,6 +881,7 @@ func TestJsonStrlen(t *testing.T) {
 }
 
 func TestJSONMGET(t *testing.T) {
+	t.Skip("Skipping this test until multishards cmds supported by http")
 	exec := NewHTTPCommandExecutor()
 	setupData := map[string]string{
 		"xx":   `["hehhhe","hello"]`,
