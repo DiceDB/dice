@@ -1,10 +1,8 @@
 package eval
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dicedb/dice/internal/object"
@@ -16,7 +14,6 @@ import (
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/querymanager"
-	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -143,98 +140,6 @@ func EvalAUTH(args []string, c *comm.Client) []byte {
 	return clientio.RespOK
 }
 
-// trimElementAndUpdateArray trim the array between the given start and stop index
-// Returns trimmed array
-func trimElementAndUpdateArray(arr []any, start, stop int) []any {
-	updatedArray := make([]any, 0)
-	length := len(arr)
-	if len(arr) == 0 {
-		return updatedArray
-	}
-	var startIdx, stopIdx int
-
-	if start >= length {
-		return updatedArray
-	}
-
-	startIdx = adjustIndex(start, arr)
-	stopIdx = adjustIndex(stop, arr)
-
-	if startIdx > stopIdx {
-		return updatedArray
-	}
-
-	updatedArray = arr[startIdx : stopIdx+1]
-	return updatedArray
-}
-
-// insertElementAndUpdateArray add an element at the given index
-// Returns remaining array and error
-func insertElementAndUpdateArray(arr []any, index int, elements []interface{}) (updatedArray []any, err error) {
-	length := len(arr)
-	var idx int
-	if index >= -length && index <= length {
-		idx = adjustIndex(index, arr)
-	} else {
-		return nil, errors.New("index out of bounds")
-	}
-	before := arr[:idx]
-	after := arr[idx:]
-
-	elements = append(elements, after...)
-	before = append(before, elements...)
-	updatedArray = append(updatedArray, before...)
-	return updatedArray, nil
-}
-
-// adjustIndex will bound the array between 0 and len(arr) - 1
-// It also handles negative indexes
-func adjustIndex(idx int, arr []any) int {
-	// if index is positive and out of bound, limit it to the last index
-	if idx > len(arr) {
-		idx = len(arr) - 1
-	}
-
-	// if index is negative, change it to equivalent positive index
-	if idx < 0 {
-		// if index is out of bound then limit it to the first index
-		if idx < -len(arr) {
-			idx = 0
-		} else {
-			idx = len(arr) + idx
-		}
-	}
-	return idx
-}
-
-// ReverseSlice takes a slice of any type and returns a new slice with the elements reversed.
-func ReverseSlice[T any](slice []T) []T {
-	reversed := make([]T, len(slice))
-	for i, v := range slice {
-		reversed[len(slice)-1-i] = v
-	}
-	return reversed
-}
-
-// Parses and returns the input string as an int64 or float64
-func parseFloatInt(input string) (result interface{}, err error) {
-	// Try to parse as an integer
-	if intValue, parseErr := strconv.ParseInt(input, 10, 64); parseErr == nil {
-		result = intValue
-		return
-	}
-
-	// Try to parse as a float
-	if floatValue, parseErr := strconv.ParseFloat(input, 64); parseErr == nil {
-		result = floatValue
-		return
-	}
-
-	// If neither parsing succeeds, return an error
-	err = errors.New("invalid input: not a valid int or float")
-	return
-}
-
 func evalHELLO(args []string, store *dstore.Store) []byte {
 	if len(args) > 1 {
 		return diceerrors.NewErrArity("HELLO")
@@ -354,45 +259,4 @@ func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
 	}
 
 	return clientio.RespOK
-}
-
-// formatFloat formats float64 as string.
-// Optionally appends a decimal (.0) for whole numbers,
-// if b is true.
-func formatFloat(f float64, b bool) string {
-	formatted := strconv.FormatFloat(f, 'f', -1, 64)
-	if b {
-		parts := strings.Split(formatted, ".")
-		if len(parts) == 1 {
-			formatted += ".0"
-		}
-	}
-	return formatted
-}
-
-// This method executes each operation, contained in ops array, based on commands used.
-func executeBitfieldOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} {
-	overflowType := WRAP
-	var result []interface{}
-	for _, op := range ops {
-		switch op.Kind {
-		case GET:
-			res := value.getBits(int(op.Offset), int(op.EVal), op.EType == SIGNED)
-			result = append(result, res)
-		case SET:
-			prevValue := value.getBits(int(op.Offset), int(op.EVal), op.EType == SIGNED)
-			value.setBits(int(op.Offset), int(op.EVal), op.Value)
-			result = append(result, prevValue)
-		case INCRBY:
-			res, err := value.incrByBits(int(op.Offset), int(op.EVal), op.Value, overflowType, op.EType == SIGNED)
-			if err != nil {
-				result = append(result, nil)
-			} else {
-				result = append(result, res)
-			}
-		case OVERFLOW:
-			overflowType = op.EType
-		}
-	}
-	return result
 }
