@@ -3,10 +3,11 @@ package eval
 import (
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/object"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/dicedb/dice/internal/sql"
 

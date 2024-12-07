@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/httpws"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,6 +14,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/internal/server/httpws"
 
 	"github.com/dicedb/dice/internal/cli"
 	"github.com/dicedb/dice/internal/logger"

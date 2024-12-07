@@ -159,6 +159,7 @@ func TestSetDataCmd(t *testing.T) {
 			assert_type: []string{"equal", "array", "equal", "array"},
 			expected:    []interface{}{float64(3), []any{string("bar"), string("baz"), string("bax")}, float64(0), []any{string("bar"), string("baz"), string("bax")}},
 		},
+		// Skipping these tests until multishards cmds supported by http
 		//{
 		//	name: "SADD & SDIFF",
 		//	commands: []HTTPCommand{

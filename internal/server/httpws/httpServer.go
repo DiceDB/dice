@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dicedb/dice/internal/iothread"
 	"hash/crc32"
 	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dicedb/dice/internal/iothread"
 
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/server/abstractserver"
@@ -386,7 +387,7 @@ func writeJSONResponse(writer http.ResponseWriter, response HTTPResponse, status
 	}
 }
 
-func writeErrorResponse(writer http.ResponseWriter, status int, message string, logMessage string, logFields ...any) {
+func writeErrorResponse(writer http.ResponseWriter, status int, message, logMessage string, logFields ...any) {
 	responseJSON, _ := json.Marshal(HTTPResponse{Status: HTTPStatusError, Data: message})
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(status)

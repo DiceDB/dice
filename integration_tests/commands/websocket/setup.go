@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/server/httpws"
 	"log"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/dicedb/dice/internal/server/httpws"
 
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
