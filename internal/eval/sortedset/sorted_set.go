@@ -106,7 +106,7 @@ func (ss *Set) Remove(member string) bool {
 	return true
 }
 
-// GetRange returns a slice of members with scores between min and max, inclusive.
+// GetRange returns a slice of members with indices between min and max, inclusive.
 // it returns the members in ascending order if reverse is false, and descending order if reverse is true.
 // If withScores is true, the members will be returned with their scores.
 func (ss *Set) GetRange(
@@ -308,4 +308,30 @@ func DeserializeSortedSet(buf *bytes.Reader) (*Set, error) {
 	}
 
 	return ss, nil
+}
+
+// GetScoreRange returns a slice of members with scores between min and max, inclusive.
+// If withScores is true, the members will be returned with their scores.
+func (ss *Set) GetMemberScoresInRange(minScore, maxScore float64, count, maxCount int) (members []string, scores []float64) {
+	iterFunc := func(item btree.Item) bool {
+		ssi := item.(*Item)
+		if ssi.Score < minScore {
+			return true
+		}
+		if ssi.Score >= maxScore {
+			return false
+		}
+		members = append(members, ssi.Member)
+		scores = append(scores, ssi.Score)
+		count++
+
+		if maxCount > 0 && count >= maxCount {
+			return false
+		}
+
+		return true
+	}
+
+	ss.tree.Ascend(iterFunc)
+	return members, scores
 }
