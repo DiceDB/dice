@@ -9430,7 +9430,7 @@ func testEvalGEORADIUSBYMEMBER(t *testing.T, store *dstore.Store) {
 		},
 		"GEORADIUSBYMEMBER wrong type operation": {
 			setup: func() {
-				store.Put("wrongtype", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("wrongtype", store.NewObj("string_value", -1, object.ObjTypeString))
 			},
 			input: []string{"wrongtype", "wtc one", "7", "km"},
 			migratedOutput: EvalResponse{

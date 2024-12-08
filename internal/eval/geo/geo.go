@@ -235,7 +235,7 @@ func Area(centerHash, radius float64) (result [9]uint64, steps uint8) {
 	steps = geohashEstimateStepsByRadius(radius, centerLat)
 	centerRadiusHash := encodeHash(centerLon, centerLat, steps)
 
-	neighbors := geohashNeighbors(uint64(centerRadiusHash), steps)
+	neighbors := geohashNeighbors(centerRadiusHash, steps)
 	area := areaBySteps(centerRadiusHash, steps)
 
 	/* Check if the step is enough at the limits of the covered area.
@@ -297,7 +297,7 @@ func Area(centerHash, radius float64) (result [9]uint64, steps uint8) {
 
 // HashMinMax returns the min and max hashes for a given hash and steps. This can be used to get the range of hashes
 // that a given hash and a radius (steps) will cover.
-func HashMinMax(hash uint64, steps uint8) (minHash uint64, maxHash uint64) {
+func HashMinMax(hash uint64, steps uint8) (minHash, maxHash uint64) {
 	minHash = align52Bits(hash, steps)
 	hash++
 	maxHash = align52Bits(hash, steps)

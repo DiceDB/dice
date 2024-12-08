@@ -6149,7 +6149,7 @@ func evalGEOADD(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		hash := geo.EncodeInt(latitude, longitude)
+		hash := geo.EncodeHash(latitude, longitude)
 
 		wasInserted := ss.Upsert(hash, member)
 		if wasInserted {
@@ -6214,8 +6214,8 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	lat1, lon1 := geo.DecodeInt(score1)
-	lat2, lon2 := geo.DecodeInt(score2)
+	lat1, lon1 := geo.DecodeHash(score1)
+	lat2, lon2 := geo.DecodeHash(score2)
 
 	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
 
@@ -6271,7 +6271,7 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		lat, lon := geo.DecodeInt(hash)
+		lat, lon := geo.DecodeHash(hash)
 
 		latFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lat), 64)
 		lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
@@ -6321,8 +6321,8 @@ func evalGEOHASH(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		lat, lon := geo.DecodeInt(entry)
-		result = append(result, geo.EncodeString(lat, lon))
+		lat, lon := geo.DecodeHash(entry)
+		result = append(result, geo.EncodeHash(lat, lon)) // TODO 10 bit precision?
 	}
 
 	return &EvalResponse{

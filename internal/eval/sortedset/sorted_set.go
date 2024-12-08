@@ -316,7 +316,6 @@ func DeserializeSortedSet(buf *bytes.Reader) (*Set, error) {
 // GetScoreRange returns a slice of members with scores between min and max, inclusive.
 // If withScores is true, the members will be returned with their scores.
 func (ss *Set) GetMemberScoresInRange(minScore, maxScore float64, count, maxCount int) (members []string, scores []float64) {
-
 	iterFunc := func(item btree.Item) bool {
 		ssi := item.(*Item)
 		if ssi.Score < minScore {
