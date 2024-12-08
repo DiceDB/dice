@@ -506,6 +506,10 @@ var (
 		Cmd:  "COMMAND|GETKEYSANDFLAGS",
 		Type: SingleShard,
 	}
+	jsonarrindexCmdMeta = CmdMeta{
+		Cmd:  "JSON.ARRINDEX",
+		Type: SingleShard,
+	}
 
 	// Metadata for multishard commands would go here.
 	// These commands require both breakup and gather logic.
@@ -649,4 +653,5 @@ func init() {
 	CmdMetaMap["COMMAND|DOCS"] = CmdCommandDocs
 	CmdMetaMap["COMMAND|GETKEYS"] = CmdCommandGetKeys
 	CmdMetaMap["COMMAND|GETKEYSANDFLAGS"] = CmdCommandGetKeysFlags
+	CmdMetaMap["JSON.ARRINDEX"] = jsonarrindexCmdMeta
 }
