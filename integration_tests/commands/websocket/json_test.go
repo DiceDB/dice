@@ -59,7 +59,7 @@ func runIntegrationTests(t *testing.T, exec *WebsocketCommandExecutor, conn *web
 				case "json_equal":
 					assert.JSONEq(t, out.(string), result.(string))
 				case "deep_equal":
-					assert.True(t, testutils.ArraysArePermutations(result.([]interface{}), out.([]interface{})))
+					assert.ElementsMatch(t, result.([]interface{}), out.([]interface{}))
 				}
 			}
 		})
