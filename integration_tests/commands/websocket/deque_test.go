@@ -505,3 +505,53 @@ func TestLPOPCount(t *testing.T) {
 		})
 	}
 }
+
+func TestRPOPCount(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+
+	testCases := []struct {
+		name       string
+		commands   []string
+		expected   []interface{}
+		cleanupKey string
+	}{
+		{
+			name: "RPOP with count argument - valid, invalid, and edge cases",
+			commands: []string{
+				"RPUSH k v1",
+				"RPUSH k v2",
+				"RPUSH k v3",
+				"RPUSH k v4",
+				"RPOP k 2",
+				"RPOP k 2",
+				"RPOP k -1",
+				"RPOP k abc",
+				"LLEN k",
+			},
+			expected: []interface{}{
+				float64(1),
+				float64(2),
+				float64(3),
+				float64(4),
+				[]interface{}{"v3", "v4"},
+				[]interface{}{"v1", "v2"},
+				"ERR value is not an integer or out of range",
+				"ERR value is not an integer or a float",
+				float64(0),
+			},
+			cleanupKey: "k",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			conn := exec.ConnectToServer()
+
+			for i, cmd := range tc.commands {
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
+				assert.DeepEqual(t, tc.expected[i], result)
+			}
+			DeleteKey(t, conn, exec, tc.cleanupKey)
+		})
+	}
+}

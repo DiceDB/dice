@@ -3280,11 +3280,37 @@ func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
 //
 // Usage: RPOP key
 func evalRPOP(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) != 1 {
+	popNumber := 1
+
+	if len(args) <= 1 || len(args) > 2 {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongArgumentCount("RPOP"),
 		}
+	}
+
+	if len(args) == 2 {
+		nos, err := strconv.Atoi(args[1])
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidNumberFormat,
+			}
+		}
+		if nos == 0 {
+			return &EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			}
+		}
+
+		if nos < 0 {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+		popNumber = nos
 	}
 
 	obj := store.Get(args[0])
@@ -3303,18 +3329,36 @@ func evalRPOP(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	deq := obj.Value.(*Deque)
-	x, err := deq.RPop()
-	if err != nil {
-		if errors.Is(err, ErrDequeEmpty) {
-			return &EvalResponse{
-				Result: clientio.NIL,
-				Error:  nil,
+
+	var elements []string
+	for iter := 0; iter < popNumber; iter++ {
+		x, err := deq.RPop()
+		if err != nil {
+			if errors.Is(err, ErrDequeEmpty) {
+				break
 			}
+		}
+		elements = append(elements, x)
+	}
+
+	if len(elements) == 0 {
+
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+
+	}
+
+	if len(elements) == 1 {
+		return &EvalResponse{
+			Result: elements[0],
+			Error:  nil,
 		}
 	}
 
 	return &EvalResponse{
-		Result: x,
+		Result: elements,
 		Error:  nil,
 	}
 }

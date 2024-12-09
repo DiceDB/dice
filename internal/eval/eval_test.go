@@ -4031,9 +4031,17 @@ func testEvalRPOP(t *testing.T, store *dstore.Store) {
 			input:          []string{},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'rpop' command")},
 		},
-		"wrong number of args": {
-			input:          []string{"KEY1", "KEY2"},
+		"more than 2 args": {
+			input:          []string{"k", "2", "3"},
 			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'rpop' command")},
+		},
+		"non-integer count": {
+			input:          []string{"k", "abc"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or a float")},
+		},
+		"negative count": {
+			input:          []string{"k", "-1"},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
 		},
 		"key with different type": {
 			setup: func() {
@@ -4060,6 +4068,35 @@ func testEvalRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:          []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{Result: "value_4", Error: nil},
+		},
+		"pop one element": {
+			setup: func() {
+				evalRPUSH([]string{"k", "v1", "v2", "v3", "v4"}, store)
+			},
+			input:          []string{"k"},
+			migratedOutput: EvalResponse{Result: "v4", Error: nil},
+		},
+		"pop two elements": {
+			setup: func() {
+				evalRPUSH([]string{"k", "v1", "v2", "v3", "v4"}, store)
+			},
+			input:          []string{"k", "2"},
+			migratedOutput: EvalResponse{Result: []string{"v3", "v4"}, Error: nil},
+		},
+		"pop more elements than available": {
+			setup: func() {
+				evalRPUSH([]string{"k", "v1", "v2"}, store)
+			},
+			input:          []string{"k", "5"},
+			migratedOutput: EvalResponse{Result: []string{"v1", "v2"}, Error: nil},
+		},
+		"pop 0 elements": {
+
+			setup: func() {
+				evalRPUSH([]string{"k", "v1", "v2"}, store)
+			},
+			input:          []string{"k", "0"},
+			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
 		},
 	}
 	runMigratedEvalTests(t, tests, evalRPOP, store)
