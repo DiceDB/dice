@@ -1,4 +1,4 @@
-package utils
+package httpws
 
 import (
 	"net/http/httptest"

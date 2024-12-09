@@ -129,10 +129,14 @@ const (
 	CmdGetDel              = "GETDEL"
 	CmdLrange              = "LRANGE"
 	CmdLinsert             = "LINSERT"
+	CmdJSONArrInsert       = "JSON.ARRINSERT"
+	CmdJSONArrTrim         = "JSON.ARRTRIM"
 	CmdJSONArrAppend       = "JSON.ARRAPPEND"
 	CmdJSONArrLen          = "JSON.ARRLEN"
 	CmdJSONArrPop          = "JSON.ARRPOP"
 	CmdJSONClear           = "JSON.CLEAR"
+	CmdJSONSet             = "JSON.SET"
+	CmdJSONObjKeys         = "JSON.OBJKEYS"
 	CmdJSONDel             = "JSON.DEL"
 	CmdJSONForget          = "JSON.FORGET"
 	CmdJSONGet             = "JSON.GET"
@@ -267,6 +271,12 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdJSONArrAppend: {
 		CmdType: SingleShard,
 	},
+	CmdJSONArrInsert: {
+		CmdType: SingleShard,
+	},
+	CmdJSONArrTrim: {
+		CmdType: SingleShard,
+	},
 	CmdJSONArrLen: {
 		CmdType: SingleShard,
 	},
@@ -274,6 +284,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONClear: {
+		CmdType: SingleShard,
+	},
+	CmdJSONSet: {
+		CmdType: SingleShard,
+	},
+	CmdJSONObjKeys: {
 		CmdType: SingleShard,
 	},
 	CmdJSONDel: {
