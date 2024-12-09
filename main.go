@@ -55,15 +55,7 @@ func main() {
 
 	wl, _ = wal.NewNullWAL()
 	if config.DiceConfig.Persistence.Enabled {
-		if config.DiceConfig.Persistence.WALEngine == "sqlite" {
-			_wl, err := wal.NewSQLiteWAL(config.DiceConfig.Persistence.WALDir)
-			if err != nil {
-				slog.Warn("could not create WAL with", slog.String("wal-engine", config.DiceConfig.Persistence.WALEngine), slog.Any("error", err))
-				sigs <- syscall.SIGKILL
-				return
-			}
-			wl = _wl
-		} else if config.DiceConfig.Persistence.WALEngine == "aof" {
+		if config.DiceConfig.Persistence.WALEngine == "aof" {
 			_wl, err := wal.NewAOFWAL(config.DiceConfig.Persistence.WALDir)
 			if err != nil {
 				slog.Warn("could not create WAL with", slog.String("wal-engine", config.DiceConfig.Persistence.WALEngine), slog.Any("error", err))
