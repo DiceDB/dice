@@ -1819,7 +1819,7 @@ func TestJSONARRINDEX(t *testing.T) {
 				if tc.assertType[i] == "equal" {
 					assert.Equal(t, result, expected)
 				} else if tc.assertType[i] == "deep_equal" {
-					assert.True(t, testutils.ArraysArePermutations(result.([]interface{}), expected.([]interface{})))
+					assert.ElementsMatch(t, result.([]interface{}), expected.([]interface{}))
 				}
 			}
 		})

@@ -66,7 +66,7 @@ func runIntegrationTests(t *testing.T, exec *HTTPCommandExecutor, testCases []In
 					// fmt.Println("hi actual :", result)
 					assert.JSONEq(t, out.(string), result.(string))
 				case "deep_equal":
-					assert.True(t, testutils.ArraysArePermutations(result.([]interface{}), out.([]interface{})))
+					assert.ElementsMatch(t, result.([]interface{}), out.([]interface{}))
 				}
 			}
 		})
