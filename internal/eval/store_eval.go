@@ -6222,6 +6222,58 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEOPOS"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	ss, err := sortedset.FromObject(obj)
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	results := make([]interface{}, len(args)-1)
+
+	for index := 1; index < len(args); index++ {
+		member := args[index]
+		hash, ok := ss.Get(member)
+
+		if !ok {
+			results[index-1] = (nil)
+			continue
+		}
+
+		lat, lon := geo.DecodeHash(hash)
+
+		latFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lat), 64)
+		lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
+
+		results[index-1] = []interface{}{lonFloat, latFloat}
+	}
+
+	return &EvalResponse{
+		Result: results,
+		Error:  nil,
+	}
+}
+
 func evalTouch(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("TOUCH"))
