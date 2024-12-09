@@ -36,7 +36,7 @@ func NewByteArrayFromObj(obj *object.Obj) (*ByteArray, error) {
 }
 
 func getValueAsByteSlice(obj *object.Obj) ([]byte, error) {
-	oType := object.ExtractType(obj)
+	oType := obj.Type
 	switch oType {
 	case object.ObjTypeInt:
 		return []byte(strconv.FormatInt(obj.Value.(int64), 10)), nil
@@ -81,7 +81,7 @@ func getByteArrayValueAsByteSlice(obj *object.Obj) ([]byte, error) {
 }
 
 // ByteSliceToObj converts a byte slice to an Obj of the specified type and encoding
-func ByteSliceToObj(store *dstore.Store, oldObj *object.Obj, b []byte, objType uint8) (*object.Obj, error) {
+func ByteSliceToObj(store *dstore.Store, oldObj *object.Obj, b []byte, objType object.ObjectType) (*object.Obj, error) {
 	switch objType {
 	case object.ObjTypeInt:
 		return ByteSliceToIntObj(store, oldObj, b)
@@ -98,7 +98,7 @@ func ByteSliceToObj(store *dstore.Store, oldObj *object.Obj, b []byte, objType u
 func ByteSliceToIntObj(store *dstore.Store, oldObj *object.Obj, b []byte) (*object.Obj, error) {
 	intVal, err := strconv.ParseInt(string(b), 10, 64)
 	if err != nil {
-		return store.NewObj(string(b), -1, object.ObjTypeString, object.ObjEncodingEmbStr), nil
+		return store.NewObj(string(b), -1, object.ObjTypeString), nil
 	}
 	return store.NewObj(intVal, -1, object.ObjTypeInt), nil
 }
