@@ -17,13 +17,14 @@ import (
 	"github.com/dicedb/dice/internal/sql"
 
 	"github.com/dicedb/dice/internal/clientio"
+	ds "github.com/dicedb/dice/internal/datastructures"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
 type (
-	CacheStore[T dstore.DSInterface] common.ITable[string, *T]
+	CacheStore[T ds.DSInterface] common.ITable[string, *T]
 	// QuerySubscription represents a subscription to watch a query.
-	QuerySubscription[T dstore.DSInterface] struct {
+	QuerySubscription[T ds.DSInterface] struct {
 		Subscribe bool          // true for subscribe, false for unsubscribe
 		Query     sql.DSQLQuery // query to watch
 		ClientFD  int           // client file descriptor
@@ -36,20 +37,20 @@ type (
 	}
 
 	// AdhocQueryResult represents the result of an adhoc query.
-	AdhocQueryResult[T dstore.DSInterface] struct {
+	AdhocQueryResult[T ds.DSInterface] struct {
 		Result      *[]sql.QueryResultRow[T]
 		Fingerprint string
 		Err         error
 	}
 
 	// AdhocQuery represents an adhoc query request.
-	AdhocQuery[T dstore.DSInterface] struct {
+	AdhocQuery[T ds.DSInterface] struct {
 		Query        sql.DSQLQuery
 		ResponseChan chan AdhocQueryResult[T]
 	}
 
 	// Manager watches for changes in keys and notifies clients.
-	Manager[T dstore.DSInterface] struct {
+	Manager[T ds.DSInterface] struct {
 		WatchList    sync.Map                             // WatchList is a map of query string to their respective clients, type: map[string]*sync.Map[int]struct{}
 		QueryCache   common.ITable[string, CacheStore[T]] // QueryCache is a map of fingerprints to their respective data caches
 		QueryCacheMu sync.RWMutex
@@ -69,10 +70,10 @@ type (
 
 var (
 	// QuerySubscriptionChan is the channel to receive updates about query subscriptions.
-	QuerySubscriptionChan chan QuerySubscription[dstore.DSInterface]
+	QuerySubscriptionChan chan QuerySubscription[ds.DSInterface]
 
 	// AdhocQueryChan is the channel to receive adhoc queries.
-	AdhocQueryChan chan AdhocQuery[dstore.DSInterface]
+	AdhocQueryChan chan AdhocQuery[ds.DSInterface]
 )
 
 func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) ClientIdentifier {
@@ -82,30 +83,30 @@ func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) ClientIdenti
 	}
 }
 
-func NewQueryCacheStoreRegMap[T dstore.DSInterface]() common.ITable[string, CacheStore[T]] {
+func NewQueryCacheStoreRegMap[T ds.DSInterface]() common.ITable[string, CacheStore[T]] {
 	return &common.RegMap[string, CacheStore[T]]{
 		M: make(map[string]CacheStore[T]),
 	}
 }
 
-func NewQueryCacheStore[T dstore.DSInterface]() common.ITable[string, CacheStore[T]] {
+func NewQueryCacheStore[T ds.DSInterface]() common.ITable[string, CacheStore[T]] {
 	return NewQueryCacheStoreRegMap[T]()
 }
 
-func NewCacheStoreRegMap[T dstore.DSInterface]() CacheStore[T] {
+func NewCacheStoreRegMap[T ds.DSInterface]() CacheStore[T] {
 	return &common.RegMap[string, *T]{
 		M: make(map[string]*T),
 	}
 }
 
-func NewCacheStore[T dstore.DSInterface]() CacheStore[T] {
+func NewCacheStore[T ds.DSInterface]() CacheStore[T] {
 	return NewCacheStoreRegMap[T]()
 }
 
 // NewQueryManager initializes a new Manager.
-func NewQueryManager[T dstore.DSInterface]() *Manager[T] {
-	QuerySubscriptionChan = make(chan QuerySubscription[dstore.DSInterface])
-	AdhocQueryChan = make(chan AdhocQuery[dstore.DSInterface], 1000)
+func NewQueryManager[T ds.DSInterface]() *Manager[T] {
+	QuerySubscriptionChan = make(chan QuerySubscription[ds.DSInterface])
+	AdhocQueryChan = make(chan AdhocQuery[ds.DSInterface], 1000)
 	return &Manager[T]{
 		WatchList:  sync.Map{},
 		QueryCache: NewQueryCacheStore[T](),
@@ -296,7 +297,7 @@ func (m *Manager[T]) serveAdhocQueries(ctx context.Context) {
 		select {
 		case query := <-AdhocQueryChan:
 			result, err := m.runQuery(&query.Query)
-			query.ResponseChan <- AdhocQueryResult[dstore.DSInterface]{
+			query.ResponseChan <- AdhocQueryResult[ds.DSInterface]{
 				Result:      result,
 				Fingerprint: query.Query.Fingerprint,
 				Err:         err,
