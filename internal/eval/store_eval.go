@@ -3182,21 +3182,14 @@ func evalRPUSH(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-// evalLPOP pops the element at the head of the list and returns it
-//
-// # Returns the element at the head of the list
-//
-// Usage: LPOP key
-func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
-	// By default we pop only 1
+// Pop[s] elements either from the left or right based on direction
+func popElements(args []string, store *dstore.Store, direction string) *EvalResponse {
 	popNumber := 1
-
-	// LPOP accepts 1 or 2 arguments only - LPOP key [count]
 
 	if len(args) < 1 || len(args) > 2 {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("LPOP"),
+			Error:  diceerrors.ErrWrongArgumentCount(direction),
 		}
 	}
 
@@ -3209,14 +3202,12 @@ func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 		if nos == 0 {
-			// returns empty string if count given is 0
 			return &EvalResponse{
 				Result: clientio.NIL,
 				Error:  nil,
 			}
 		}
 		if nos < 0 {
-			// returns an out of range err if count is negetive
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrIntegerOutOfRange,
@@ -3242,10 +3233,15 @@ func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
 
 	deq := obj.Value.(*Deque)
 
-	// holds the elements popped
 	var elements []string
+	var err error
 	for iter := 0; iter < popNumber; iter++ {
-		x, err := deq.LPop()
+		var x string
+		if direction == "LPOP" {
+			x, err = deq.LPop()
+		} else {
+			x, err = deq.RPop()
+		}
 		if err != nil {
 			if errors.Is(err, ErrDequeEmpty) {
 				break
@@ -3274,91 +3270,22 @@ func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+// evalLPOP pops the element at the head of the list and returns it
+//
+// # Returns the element at the head of the list
+//
+// Usage: LPOP key
+func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
+	return popElements(args, store, "LPOP")
+}
+
 // evalRPOP pops the element at the tail of the list and returns it
 //
 // # Returns the element at the tail of the list
 //
 // Usage: RPOP key
 func evalRPOP(args []string, store *dstore.Store) *EvalResponse {
-	popNumber := 1
-
-	if len(args) <= 1 || len(args) > 2 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("RPOP"),
-		}
-	}
-
-	if len(args) == 2 {
-		nos, err := strconv.Atoi(args[1])
-		if err != nil {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrInvalidNumberFormat,
-			}
-		}
-		if nos == 0 {
-			return &EvalResponse{
-				Result: clientio.NIL,
-				Error:  nil,
-			}
-		}
-
-		if nos < 0 {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrIntegerOutOfRange,
-			}
-		}
-		popNumber = nos
-	}
-
-	obj := store.Get(args[0])
-	if obj == nil {
-		return &EvalResponse{
-			Result: clientio.NIL,
-			Error:  nil,
-		}
-	}
-
-	if err := object.AssertType(obj.Type, object.ObjTypeDequeue); err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
-		}
-	}
-
-	deq := obj.Value.(*Deque)
-
-	var elements []string
-	for iter := 0; iter < popNumber; iter++ {
-		x, err := deq.RPop()
-		if err != nil {
-			if errors.Is(err, ErrDequeEmpty) {
-				break
-			}
-		}
-		elements = append(elements, x)
-	}
-
-	if len(elements) == 0 {
-		return &EvalResponse{
-			Result: clientio.NIL,
-			Error:  nil,
-		}
-	}
-
-	if len(elements) == 1 {
-		return &EvalResponse{
-			Result: elements[0],
-			Error:  nil,
-		}
-	}
-
-	return &EvalResponse{
-		Result: elements,
-		Error:  nil,
-	}
+	return popElements(args, store, "RPOP")
 }
 
 // evalLLEN returns the number of elements in the list
