@@ -4,7 +4,7 @@ import (
 	"container/heap"
 	"math"
 
-	"github.com/dicedb/dice/internal/object"
+	ds "github.com/dicedb/dice/internal/datastructures"
 )
 
 // evictionItemHeap is a max-heap of evictionItems based on lastAccessed.
@@ -41,20 +41,20 @@ func (h *evictionItemHeap) pop() evictionItem {
 }
 
 // BatchEvictionLRU implements batch eviction of least recently used keys
-type BatchEvictionLRU struct {
+type BatchEvictionLRU[T ds.DSInterface] struct {
 	BaseEvictionStrategy
 	maxKeys       int
 	evictionRatio float64
 }
 
-func NewBatchEvictionLRU(maxKeys int, evictionRatio float64) *BatchEvictionLRU {
-	return &BatchEvictionLRU{
+func NewBatchEvictionLRU[T ds.DSInterface](maxKeys int, evictionRatio float64) *BatchEvictionLRU[T] {
+	return &BatchEvictionLRU[T]{
 		maxKeys:       maxKeys,
 		evictionRatio: evictionRatio,
 	}
 }
 
-func (e *BatchEvictionLRU) ShouldEvict(store *Store) int {
+func (e *BatchEvictionLRU[T]) ShouldEvict(store *Store[T]) int {
 	currentKeyCount := store.GetKeyCount()
 
 	// Check if eviction is necessary only till the number of keys remains less than maxKeys
@@ -75,7 +75,7 @@ func (e *BatchEvictionLRU) ShouldEvict(store *Store) int {
 }
 
 // EvictVictims deletes keys with the lowest LastAccessedAt values from the store.
-func (e *BatchEvictionLRU) EvictVictims(store *Store, toEvict int) {
+func (e *BatchEvictionLRU[T]) EvictVictims(store *Store[T], toEvict int) {
 	if toEvict <= 0 {
 		return
 	}
@@ -83,10 +83,10 @@ func (e *BatchEvictionLRU) EvictVictims(store *Store, toEvict int) {
 	h := make(evictionItemHeap, 0, toEvict)
 	heap.Init(&h)
 
-	store.GetStore().All(func(k string, obj *object.Obj) bool {
+	store.GetStore().All(func(k string, obj *T) bool {
 		item := evictionItem{
 			key:          k,
-			lastAccessed: obj.LastAccessedAt,
+			lastAccessed: (*obj).GetLastAccessedAt(),
 		}
 		if h.Len() < toEvict {
 			h.push(item)
@@ -108,6 +108,6 @@ func (e *BatchEvictionLRU) EvictVictims(store *Store, toEvict int) {
 	e.stats.recordEviction(int64(toEvict))
 }
 
-func (e *BatchEvictionLRU) OnAccess(key string, obj *object.Obj, accessType AccessType) {
+func (e *BatchEvictionLRU[T]) OnAccess(key string, obj *T, accessType AccessType) {
 	// Nothing to do for LRU batch eviction
 }

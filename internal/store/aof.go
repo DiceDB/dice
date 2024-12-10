@@ -10,9 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dicedb/dice/internal/object"
-
 	"github.com/dicedb/dice/config"
+	ds "github.com/dicedb/dice/internal/datastructures"
 )
 
 type AOF struct {
@@ -98,14 +97,14 @@ func encode(strs []string) []byte {
 // TODO: Support Expiration
 // TODO: Support non-kv data structures
 // TODO: Support sync write
-func dumpKey(aof *AOF, key string, obj *object.Obj) (err error) {
-	cmd := fmt.Sprintf("SET %s %s", key, obj.Value)
+func dumpKey[T ds.DSInterface](aof *AOF, key string, obj *T) (err error) {
+	cmd := fmt.Sprintf("SET %s %s", key, (*obj).Serialize())
 	tokens := strings.Split(cmd, " ")
 	return aof.Write(string(encode(tokens)))
 }
 
 // DumpAllAOF dumps all keys in the store to the AOF file
-func DumpAllAOF(store *Store) error {
+func DumpAllAOF[T ds.DSInterface](store *Store[T]) error {
 	var (
 		aof *AOF
 		err error
@@ -117,7 +116,7 @@ func DumpAllAOF(store *Store) error {
 
 	log.Println("rewriting AOF file at", config.DiceConfig.Persistence.AOFFile)
 
-	store.store.All(func(k string, obj *object.Obj) bool {
+	store.store.All(func(k string, obj *T) bool {
 		err = dumpKey(aof, k, obj)
 		// continue if no error
 		return err == nil

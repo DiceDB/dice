@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/internal/object"
+	dstore "github.com/dicedb/dice/internal/store"
 
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/common"
@@ -20,24 +21,26 @@ import (
 var ErrNoResultsFound = errors.New("ERR No results found")
 var ErrInvalidJSONPath = errors.New("ERR invalid JSONPath")
 
-type QueryResultRow struct {
+var _ dstore.DSInterface = &dstore.TestSDS{}
+
+type QueryResultRow[T dstore.DSInterface] struct {
 	Key   string
-	Value object.Obj // Use pointer to avoid copying
+	Value T // Use pointer to avoid copying
 }
 
-type QueryResultRowWithOrder struct {
-	Row          QueryResultRow
+type QueryResultRowWithOrder[T dstore.DSInterface] struct {
+	Row          QueryResultRow[T]
 	OrderByValue interface{}
 	OrderByType  string
 }
 
-func ExecuteQuery(query *DSQLQuery, store common.ITable[string, *object.Obj]) ([]QueryResultRow, error) {
-	var result []QueryResultRow
+func ExecuteQuery[T dstore.DSInterface](query *DSQLQuery, store common.ITable[string, *T]) ([]QueryResultRow[T], error) {
+	var result []QueryResultRow[T]
 	var err error
 	jsonPathCache := make(map[string]jp.Expr) // Cache for parsed JSON paths
 
-	store.All(func(key string, value *object.Obj) bool {
-		row := QueryResultRow{
+	store.All(func(key string, value *T) bool {
+		row := QueryResultRow[T]{
 			Key:   key,
 			Value: *value, // Use pointer to avoid copying
 		}
@@ -107,7 +110,9 @@ func ExecuteQuery(query *DSQLQuery, store common.ITable[string, *object.Obj]) ([
 
 	if !query.Selection.ValueSelection {
 		for i := range result {
-			result[i].Value = object.Obj{}
+			var val dstore.DSInterface
+			val = &dstore.TestSDS{}
+			result[i].Value = val
 		}
 	}
 

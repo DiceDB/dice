@@ -275,20 +275,20 @@ func Encode(value interface{}, isSimple bool) []byte {
 	// Handle error type by formatting it as a RESP error.
 	case error:
 		return []byte(fmt.Sprintf("-%s\r\n", v))
-	case dstore.QueryWatchEvent:
+	case dstore.QueryWatchEvent[dstore.DSInterface]:
 		var b []byte
 		buf := bytes.NewBuffer(b)
-		we := value.(dstore.QueryWatchEvent)
+		we := value.(dstore.QueryWatchEvent[dstore.DSInterface])
 		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
 		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
 		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
-	case []sql.QueryResultRow:
+	case []sql.QueryResultRow[dstore.DSInterface]:
 		var b []byte
 		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded rows.
-		for _, row := range value.([]sql.QueryResultRow) {
-			buf.WriteString("*2\r\n")                 // Start a new array for each row.
-			buf.Write(Encode(row.Key, false))         // Encode the row key.
-			buf.Write(Encode(row.Value.Value, false)) // Encode the row value.
+		for _, row := range value.([]sql.QueryResultRow[dstore.DSInterface]) {
+			buf.WriteString("*2\r\n")           // Start a new array for each row.
+			buf.Write(Encode(row.Key, false))   // Encode the row key.
+			buf.Write(Encode(row.Value, false)) // Encode the row value.
 		}
 		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
 

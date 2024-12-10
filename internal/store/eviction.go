@@ -5,6 +5,8 @@ import (
 
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
+
+	ds "github.com/dicedb/dice/internal/datastructures"
 )
 
 // EvictionStats tracks common statistics for all eviction strategies
@@ -44,13 +46,13 @@ type evictionItem struct {
 }
 
 // EvictionStrategy defines the interface for different eviction strategies
-type EvictionStrategy interface {
+type EvictionStrategy[T ds.DSInterface] interface {
 	// ShouldEvict checks if eviction should be triggered based on the current store state
 	// Returns the number of items that should be evicted, or 0 if no eviction is needed
-	ShouldEvict(store *Store) int
+	ShouldEvict(store *Store[T]) int
 
 	// EvictVictims evicts items from the store based on the eviction strategy
-	EvictVictims(store *Store, toEvict int)
+	EvictVictims(store *Store[T], toEvict int)
 
 	// AfterEviction is called after victims have been evicted from the store
 	// This allows strategies to update their internal state if needed
@@ -58,7 +60,7 @@ type EvictionStrategy interface {
 
 	// OnAccess is called when an item is accessed (get/set)
 	// This allows strategies to update access patterns/statistics
-	OnAccess(key string, obj *object.Obj, accessType AccessType)
+	OnAccess(key string, obj *T, accessType AccessType)
 }
 
 // BaseEvictionStrategy provides common functionality for all eviction strategies

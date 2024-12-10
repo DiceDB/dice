@@ -20,6 +20,7 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
+	ds "github.com/dicedb/dice/internal/datastructures"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -35,9 +36,9 @@ var unimplementedCommands = map[string]bool{
 	"Q.UNWATCH": true,
 }
 
-type HTTPServer struct {
+type HTTPServer[T ds.DSInterface] struct {
 	abstractserver.AbstractServer
-	shardManager       *shard.ShardManager
+	shardManager       *shard.ShardManager[T]
 	ioChan             chan *ops.StoreResponse
 	httpServer         *http.Server
 	qwatchResponseChan chan comm.QwatchResponse
@@ -61,7 +62,7 @@ func (cim *CaseInsensitiveMux) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	cim.mux.ServeHTTP(w, r)
 }
 
-func NewHTTPServer(shardManager *shard.ShardManager, wl wal.AbstractWAL) *HTTPServer {
+func NewHTTPServer[T ds.DSInterface](shardManager *shard.ShardManager[T], wl wal.AbstractWAL) *HTTPServer[T] {
 	mux := http.NewServeMux()
 	caseInsensitiveMux := &CaseInsensitiveMux{mux: mux}
 	srv := &http.Server{
@@ -70,7 +71,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, wl wal.AbstractWAL) *HTTPSe
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	httpServer := &HTTPServer{
+	httpServer := &HTTPServer[T]{
 		shardManager:       shardManager,
 		ioChan:             make(chan *ops.StoreResponse, 1000),
 		httpServer:         srv,
@@ -89,7 +90,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, wl wal.AbstractWAL) *HTTPSe
 	return httpServer
 }
 
-func (s *HTTPServer) Run(ctx context.Context) error {
+func (s *HTTPServer[T]) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	var shutdownErr, listenErr error
 
@@ -131,7 +132,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 	return listenErr
 }
 
-func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
+func (s *HTTPServer[T]) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
 	diceDBCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
@@ -179,7 +180,7 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	s.writeResponse(writer, resp, diceDBCmd)
 }
 
-func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
+func (s *HTTPServer[T]) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
 	diceDBCmd, err := utils.ParseHTTPRequest(request)
 	if err != nil {
@@ -260,7 +261,7 @@ func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *
 	}
 }
 
-func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response interface{}) {
+func (s *HTTPServer[T]) writeQWatchResponse(writer http.ResponseWriter, response interface{}) {
 	var result interface{}
 	var err error
 
@@ -332,7 +333,7 @@ func (s *HTTPServer) writeQWatchResponse(writer http.ResponseWriter, response in
 	flusher.Flush() // Flush the response to send it to the client
 }
 
-func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, diceDBCmd *cmd.DiceDBCmd) {
+func (s *HTTPServer[T]) writeResponse(writer http.ResponseWriter, result *ops.StoreResponse, diceDBCmd *cmd.DiceDBCmd) {
 	var (
 		responseValue interface{}
 		err           error

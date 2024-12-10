@@ -1,10 +1,7 @@
 package server
 
 import (
-	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/comm"
 	"github.com/dicedb/dice/internal/eval"
-	"github.com/dicedb/dice/internal/shard"
 )
 
 // Type defines the type of DiceDB command based on how it interacts with shards.
@@ -25,11 +22,10 @@ const (
 // Type indicates how the command should be handled, while Breakup and Gather provide logic
 // for breaking up multishard commands and gathering their responses.
 type CmdMeta struct {
-	Cmd          string                                                                                  // Command name.
-	Breakup      func(mgr *shard.ShardManager, DiceDBCmd *cmd.DiceDBCmd, c *comm.Client) []cmd.DiceDBCmd // Function to break up multishard commands.
-	Gather       func(responses ...eval.EvalResponse) []byte                                             // Function to gather responses from shards.
-	RespNoShards func(args []string) []byte                                                              // Function for commands that don't interact with shards.
-	Type                                                                                                 // Enum indicating the command type.
+	Cmd          string                                      // Command name.
+	Gather       func(responses ...eval.EvalResponse) []byte // Function to gather responses from shards.
+	RespNoShards func(args []string) []byte                  // Function for commands that don't interact with shards.
+	Type                                                     // Enum indicating the command type.
 }
 
 // CmdMetaMap is a map that associates command names with their corresponding metadata.

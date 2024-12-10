@@ -11,17 +11,8 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-type Eval struct {
-	cmd                   *cmd.DiceDBCmd
-	client                *comm.Client
-	store                 *dstore.Store
-	isHTTPOperation       bool
-	isWebSocketOperation  bool
-	isPreprocessOperation bool
-}
-
-func NewEval(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, httpOp, websocketOp, preProcessing bool) *Eval {
-	return &Eval{
+func NewEval[T dstore.DSInterface](c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store[T], httpOp, websocketOp, preProcessing bool) *Eval[T] {
+	return &Eval[T]{
 		cmd:                   c,
 		client:                client,
 		store:                 store,
@@ -31,17 +22,17 @@ func NewEval(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, httpOp,
 	}
 }
 
-func (e *Eval) PreProcessCommand() *EvalResponse {
+func (e *Eval[T]) PreProcessCommand() *EvalResponse[T] {
 	if f, ok := PreProcessing[e.cmd.Cmd]; ok {
 		return f(e.cmd.Args, e.store)
 	}
 	return &EvalResponse{Result: nil, Error: diceerrors.ErrInternalServer}
 }
 
-func (e *Eval) ExecuteCommand() *EvalResponse {
+func (e *Eval[T]) ExecuteCommand() *EvalResponse[T] {
 	diceCmd, ok := DiceCmds[e.cmd.Cmd]
 	if !ok {
-		return &EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", e.cmd.Cmd, strings.Join(e.cmd.Args, " ")), Error: nil}
+		return &EvalResponse[dstore.DSInterface]{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", e.cmd.Cmd, strings.Join(e.cmd.Args, " ")), Error: nil}
 	}
 
 	// Temporary logic till we move all commands to new eval logic.

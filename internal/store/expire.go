@@ -4,8 +4,9 @@ import (
 	"strings"
 
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
+
+	ds "github.com/dicedb/dice/internal/datastructures"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 	LT string = "LT"
 )
 
-func hasExpired(obj *object.Obj, store *Store) bool {
+func hasExpired[T ds.DSInterface](obj *T, store *Store[T]) bool {
 	exp, ok := store.expires.Get(obj)
 	if !ok {
 		return false
@@ -23,27 +24,27 @@ func hasExpired(obj *object.Obj, store *Store) bool {
 	return exp <= uint64(utils.GetCurrentTime().UnixMilli())
 }
 
-func GetExpiry(obj *object.Obj, store *Store) (uint64, bool) {
+func GetExpiry[T ds.DSInterface](obj *T, store *Store[T]) (uint64, bool) {
 	exp, ok := store.expires.Get(obj)
 	return exp, ok
 }
 
-func DelExpiry(obj *object.Obj, store *Store) {
+func DelExpiry[T ds.DSInterface](obj *T, store *Store[T]) {
 	store.expires.Delete(obj)
 }
 
 // TODO: Optimize
 //   - Sampling
 //   - Unnecessary iteration
-func expireSample(store *Store) float32 {
+func expireSample[T ds.DSInterface](store *Store[T]) float32 {
 	var limit = 20
 	var expiredCount = 0
 	var keysToDelete []string
 
 	// Collect keys to be deleted
-	store.store.All(func(keyPtr string, obj *object.Obj) bool {
+	store.store.All(func(keyPtr string, obj *T) bool {
 		limit--
-		if hasExpired(obj, store) {
+		if hasExpired(&obj, store) {
 			keysToDelete = append(keysToDelete, keyPtr)
 			expiredCount++
 		}
@@ -62,7 +63,7 @@ func expireSample(store *Store) float32 {
 
 // DeleteExpiredKeys deletes all the expired keys - the active way
 // Sampling approach: https://redis.io/commands/expire/
-func DeleteExpiredKeys(store *Store) {
+func DeleteExpiredKeys[T ds.DSInterface](store *Store[T]) {
 	for {
 		frac := expireSample(store)
 		// if the sample had less than 25% keys expired
@@ -80,8 +81,8 @@ func DeleteExpiredKeys(store *Store) {
 // Returns Boolean True and error nil if expiry was set on the key successfully.
 // Returns Boolean False and error nil if conditions didn't met.
 // Returns Boolean False and error not-nil if invalid combination of subCommands or if subCommand is invalid
-func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
-	store *Store) (shouldSetExpiry bool, err error) {
+func EvaluateAndSetExpiry[T ds.DSInterface](subCommands []string, newExpiry int64, key string,
+	store *Store[T]) (shouldSetExpiry bool, err error) {
 	var newExpInMilli = newExpiry * 1000
 	var prevExpiry *uint64 = nil
 	var nxCmd, xxCmd, gtCmd, ltCmd bool

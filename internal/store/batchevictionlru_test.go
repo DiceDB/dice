@@ -1,25 +1,27 @@
 package store
 
 import (
-	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
-	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
 	"time"
+
+	ds "github.com/dicedb/dice/internal/datastructures"
+	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEvictVictims_BelowMaxKeys(t *testing.T) {
-	eviction := NewBatchEvictionLRU(5, 0.2)
+	eviction := NewBatchEvictionLRU[ds.DSInterface](5, 0.2)
 	s := NewStore(nil, nil, eviction)
 
 	// Add 3 keys (below maxKeys of 5)
 	for i := 1; i <= 3; i++ {
 		key := "key" + strconv.Itoa(i)
-		obj := &object.Obj{
-			LastAccessedAt: getCurrentClock() + uint32(i),
+		var obj ds.DSInterface
+		obj = &TestSDS{
+			value: i,
 		}
-		s.Put(key, obj)
+		s.Put(key, &obj)
 	}
 
 	initialKeyCount := s.GetKeyCount()
@@ -33,17 +35,18 @@ func TestEvictVictims_BelowMaxKeys(t *testing.T) {
 func TestEvictVictims_ExceedsMaxKeys(t *testing.T) {
 	maxKeys := 5
 	evictionRatio := 0.4
-	eviction := NewBatchEvictionLRU(maxKeys, evictionRatio)
+	eviction := NewBatchEvictionLRU[ds.DSInterface](maxKeys, evictionRatio)
 	s := NewStore(nil, nil, eviction)
 
 	// Add 10 keys, exceeding maxKeys of 5
 	for i := 1; i <= 10; i++ {
 		key := "key" + strconv.Itoa(i)
-		obj := &object.Obj{
-			LastAccessedAt: getCurrentClock() + uint32(i),
+		var obj ds.DSInterface
+		obj = &TestSDS{
+			value: i,
 		}
 
-		s.Put(key, obj)
+		s.Put(key, &obj)
 	}
 
 	// Ensure number of keys are equal to or below maxKeys after eviction
@@ -55,7 +58,7 @@ func TestEvictVictims_EvictsLRU(t *testing.T) {
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
 
-	eviction := NewBatchEvictionLRU(10, 0.4)
+	eviction := NewBatchEvictionLRU[ds.DSInterface](10, 0.4)
 	s := NewStore(nil, nil, eviction)
 
 	// Add keys with varying LastAccessedAt
@@ -63,9 +66,12 @@ func TestEvictVictims_EvictsLRU(t *testing.T) {
 	for _, id := range keyIDs {
 		// Ensure LastAccessedAt is unique
 		key := "key" + strconv.Itoa(id)
-		obj := &object.Obj{}
+		var obj ds.DSInterface
+		obj = &TestSDS{
+			value: id,
+		}
 		mockTime.SetTime(mockTime.GetTime().Add(5 * time.Second))
-		s.Put(key, obj)
+		s.Put(key, &obj)
 	}
 
 	// Expected to evict 4 keys with lowest LastAccessedAt, i.e. the first 4 keys added to the store
@@ -85,15 +91,18 @@ func TestEvictVictims_IdenticalLastAccessedAt(t *testing.T) {
 	currentTime := time.Now()
 	mockTime := &utils.MockClock{CurrTime: currentTime}
 	utils.CurrentTime = mockTime
-	eviction := NewBatchEvictionLRU(10, 0.5)
+	eviction := NewBatchEvictionLRU[ds.DSInterface](10, 0.5)
 	s := NewStore(nil, nil, eviction)
 
 	// Add 10 keys with identical LastAccessedAt
 	for i := 0; i <= 10; i++ {
 		key := "key" + strconv.Itoa(i)
-		obj := &object.Obj{}
+		var obj ds.DSInterface
+		obj = &TestSDS{
+			value: i,
+		}
 		mockTime.SetTime(currentTime) // Not needed, added explicitly for better clarity
-		s.Put(key, obj)
+		s.Put(key, &obj)
 	}
 
 	expectedRemainingKeys := 6 // 5(Post Eviction) + 1 (key added after eviction)
@@ -101,14 +110,17 @@ func TestEvictVictims_IdenticalLastAccessedAt(t *testing.T) {
 }
 
 func TestEvictVictims_EvictsAtLeastOne(t *testing.T) {
-	eviction := NewBatchEvictionLRU(10, 0.000) // 0% eviction rate
+	eviction := NewBatchEvictionLRU[ds.DSInterface](10, 0.5)
 	s := NewStore(nil, nil, eviction)
 
 	// Add 10 keys (equals maxKeys)
 	for i := 0; i < 10; i++ {
 		key := "key" + strconv.Itoa(i)
-		obj := &object.Obj{}
-		s.Put(key, obj)
+		var obj ds.DSInterface
+		obj = &TestSDS{
+			value: i,
+		}
+		s.Put(key, &obj)
 	}
 
 	toEvict := eviction.ShouldEvict(s)
@@ -116,7 +128,7 @@ func TestEvictVictims_EvictsAtLeastOne(t *testing.T) {
 }
 
 func TestEvictVictims_EmptyStore(t *testing.T) { // Handles Empty Store Gracefully
-	eviction := NewBatchEvictionLRU(5, 0.2)
+	eviction := NewBatchEvictionLRU[ds.DSInterface](10, 0.5)
 	s := NewStore(nil, nil, eviction)
 
 	toEvict := eviction.ShouldEvict(s)
@@ -130,14 +142,17 @@ func TestEvictVictims_LastAccessedAtUpdated(t *testing.T) {
 	currentTime := time.Now()
 	mockTime := &utils.MockClock{CurrTime: currentTime}
 	utils.CurrentTime = mockTime
-	eviction := NewBatchEvictionLRU(10, 0.4)
+	eviction := NewBatchEvictionLRU[ds.DSInterface](10, 0.5)
 	s := NewStore(nil, nil, eviction)
 
 	// Add keys with initial LastAccessedAt
 	for i := 1; i <= 10; i++ {
 		key := "key" + strconv.Itoa(i)
-		obj := &object.Obj{}
-		s.Put(key, obj)
+		var obj ds.DSInterface
+		obj = &TestSDS{
+			value: i,
+		}
+		s.Put(key, &obj)
 	}
 
 	// Simulate access to some keys, updating LastAccessedAt
@@ -154,7 +169,8 @@ func TestEvictVictims_LastAccessedAtUpdated(t *testing.T) {
 		assert.NotNil(t, obj, "Key %s should remain after eviction", key)
 	}
 
-	s.Put("key11", &object.Obj{}) // Trigger eviction
+	obj := ds.DSInterface(&TestSDS{value: 1})
+	s.Put("key11", &obj) // Trigger eviction
 
 	// Verify that unaccessed keys were evicted
 	unaccessedKeys := []string{"key1", "key9"}
