@@ -3342,12 +3342,10 @@ func evalRPOP(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	if len(elements) == 0 {
-
 		return &EvalResponse{
 			Result: clientio.NIL,
 			Error:  nil,
 		}
-
 	}
 
 	if len(elements) == 1 {
