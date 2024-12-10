@@ -236,12 +236,12 @@ func TestLPushRPop(t *testing.T) {
 		{
 			name:   "LPUSH RPOP normal values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqNormalValues, " ")}, getPops(deqNormalValues)...),
-			expect: append(append([]any{int64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
+			expect: append(append([]any{int64(len(deqNormalValues))}, getPopExpects(deqNormalValues)...), "(nil)"),
 		},
 		{
 			name:   "LPUSH RPOP edge values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqEdgeValues, " ")}, getPops(deqEdgeValues)...),
-			expect: append(append([]any{int64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
+			expect: append(append([]any{int64(len(deqEdgeValues))}, getPopExpects(deqEdgeValues)...), "(nil)"),
 		},
 	}
 
