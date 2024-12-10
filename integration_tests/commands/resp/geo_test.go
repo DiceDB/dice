@@ -122,6 +122,17 @@ func TestGeoPos(t *testing.T) {
 			},
 			expect: []interface{}{"(nil)"},
 		},
+		{
+            name: "GEOPOS for a key not used for setting geospatial values",
+            cmds: []string{
+				"SET k v",                
+				"GEOPOS k v",            
+			},
+            expect: []interface{}{
+				"OK",
+				"WRONGTYPE Operation against a key holding the wrong kind of value",
+			},
+        },
 	}
 
 	for _, tc := range testCases {

@@ -118,6 +118,17 @@ func TestGeoPos(t *testing.T) {
             },
             expected: []interface{}{nil},
         },
+		{
+            name: "GEOPOS for a key not used for setting geospatial values",
+            commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "k", "value": "v"}},                
+				{Command: "GEOPOS", Body: map[string]interface{}{"key": "k", "values": []interface{}{"v"}}},            
+			},
+            expected: []interface{}{
+				"OK",
+				"WRONGTYPE Operation against a key holding the wrong kind of value",
+			},
+        },
     }
 
     for _, tc := range testCases {

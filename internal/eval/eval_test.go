@@ -8323,6 +8323,16 @@ func testEvalGEOPOS(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrWrongArgumentCount("GEOPOS"),
 			},
 		},
+        "GEOPOS for a key not used for setting geospatial values": {
+			setup: func() {
+				evalSET([]string{"k", "v"}, store)
+			},
+			input: []string{"k", "v"},
+            migratedOutput: EvalResponse{
+				Result: nil, 
+				Error:  errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"),
+			},
+		},
 	}
 
 	runMigratedEvalTests(t, tests, evalGEOPOS, store)
