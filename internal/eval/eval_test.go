@@ -43,7 +43,6 @@ func setupTest(store *dstore.Store) *dstore.Store {
 func TestEval(t *testing.T) {
 	store := dstore.NewStore(nil, nil, nil)
 
-	testEvalMSET(t, store)
 	testEvalECHO(t, store)
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
@@ -72,7 +71,6 @@ func TestEval(t *testing.T) {
 	testEvalEXPIRE(t, store)
 	testEvalEXPIRETIME(t, store)
 	testEvalEXPIREAT(t, store)
-	testEvalDbsize(t, store)
 	testEvalGETSET(t, store)
 	testEvalHSET(t, store)
 	testEvalHMSET(t, store)
@@ -132,7 +130,6 @@ func TestEval(t *testing.T) {
 	testEvalBitFieldRO(t, store)
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
-	testEvalSINTER(t, store)
 	testEvalJSONSTRAPPEND(t, store)
 	testEvalINCR(t, store)
 	testEvalINCRBY(t, store)
@@ -463,19 +460,6 @@ func testEvalGETDEL(t *testing.T, store *dstore.Store) {
 	}
 
 	runMigratedEvalTests(t, tests, evalGETDEL, store)
-}
-
-func testEvalMSET(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value":         {input: nil, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"empty array":       {input: []string{}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"one value":         {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"key val pair":      {input: []string{"KEY", "VAL"}, output: clientio.RespOK},
-		"odd key val pair":  {input: []string{"KEY", "VAL", "KEY2"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"even key val pair": {input: []string{"KEY", "VAL", "KEY2", "VAL2"}, output: clientio.RespOK},
-	}
-
-	runEvalTests(t, tests, evalMSET, store)
 }
 
 func testEvalGET(t *testing.T, store *dstore.Store) {
@@ -2897,54 +2881,6 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 	runMigratedEvalTests(t, tests, evalPERSIST, store)
 }
 
-func testEvalDbsize(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"DBSIZE command with invalid no of args": {
-			input:  []string{"INVALID_ARG"},
-			output: []byte("-ERR wrong number of arguments for 'dbsize' command\r\n"),
-		},
-		"no key in db": {
-			input:  nil,
-			output: []byte(":0\r\n"),
-		},
-		"one key exists in db": {
-			setup: func() {
-				evalSET([]string{"key", "val"}, store)
-			},
-			input:  nil,
-			output: []byte(":1\r\n"),
-		},
-		"two keys exist in db": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-			},
-			input:  nil,
-			output: []byte(":2\r\n"),
-		},
-		"repeating keys shall result in same dbsize": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-			},
-			input:  nil,
-			output: []byte(":2\r\n"),
-		},
-		"deleted keys shall be reflected in dbsize": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-				evalDEL([]string{"key2"}, store)
-			},
-			input:  nil,
-			output: []byte(":1\r\n"),
-		},
-	}
-
-	runEvalTests(t, tests, evalDBSIZE, store)
-}
-
 func testEvalPFADD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"PFADD nil value": {
@@ -4398,14 +4334,6 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 	}
 }
 
-func BenchmarkEvalMSET(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		store := dstore.NewStore(nil, nil, nil)
-		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
-	}
-}
-
 func BenchmarkEvalHSET(b *testing.B) {
 	store := dstore.NewStore(nil, nil, nil)
 	for i := 0; i < b.N; i++ {
@@ -5513,7 +5441,7 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 			},
 		},
 		"command getkeys with an invalid number of arguments for a command": {
-			input: []string{"GETKEYS", "MSET", "key1"},
+			input: []string{"GETKEYS", "SET", "key1"},
 			migratedOutput: EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrGeneral("invalid number of arguments specified for command"),
@@ -6097,13 +6025,6 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 	}
 
 	runMigratedEvalTests(t, tests, evalHSETNX, store)
-}
-func TestMSETConsistency(t *testing.T) {
-	store := dstore.NewStore(nil, nil, nil)
-	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
-
-	assert.Equal(t, "VAL", store.Get("KEY").Value)
-	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
 }
 
 func BenchmarkEvalHINCRBY(b *testing.B) {
@@ -8109,7 +8030,7 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 			input: []string{"INTEGER_KEY"},
 			migratedOutput: EvalResponse{
 				Result: "CQUAAAAAAAAACv9+l81XgsShqw==",
-				Error: nil,
+				Error:  nil,
 			},
 		},
 		"dump expired key": {
@@ -8325,56 +8246,6 @@ func testEvalGEODIST(t *testing.T, store *dstore.Store) {
 	}
 
 	runMigratedEvalTests(t, tests, evalGEODIST, store)
-}
-
-func testEvalSINTER(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"intersection of two sets": {
-			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-				evalSADD([]string{"set2", "c", "d", "e"}, store)
-			},
-			input:  []string{"set1", "set2"},
-			output: clientio.Encode([]string{"c"}, false),
-		},
-		"intersection of three sets": {
-			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-				evalSADD([]string{"set2", "b", "c", "d"}, store)
-				evalSADD([]string{"set3", "c", "d", "e"}, store)
-			},
-			input:  []string{"set1", "set2", "set3"},
-			output: clientio.Encode([]string{"c"}, false),
-		},
-		"intersection with single set": {
-			setup: func() {
-				evalSADD([]string{"set1", "a"}, store)
-			},
-			input:  []string{"set1"},
-			output: clientio.Encode([]string{"a"}, false),
-		},
-		"intersection with a non-existent key": {
-			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-			},
-			input:  []string{"set1", "nonexistent"},
-			output: clientio.Encode([]string{}, false),
-		},
-		"intersection with wrong type": {
-			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-				store.Put("string", &object.Obj{Value: "string", Type: object.ObjTypeString})
-			},
-			input:  []string{"set1", "string"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
-		},
-		"no arguments": {
-			input:  []string{},
-			output: diceerrors.NewErrArity("SINTER"),
-		},
-	}
-
-	runEvalTests(t, tests, evalSINTER, store)
 }
 
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {

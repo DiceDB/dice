@@ -1,4 +1,4 @@
-package server
+package httpws
 
 import (
 	"bytes"
@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/internal/iothread"
+
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
@@ -22,7 +24,6 @@ import (
 	"github.com/dicedb/dice/internal/comm"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
-	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
 )
 
@@ -133,16 +134,16 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 
 func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
-	diceDBCmd, err := utils.ParseHTTPRequest(request)
+	diceDBCmd, err := ParseHTTPRequest(request)
 	if err != nil {
-		responseJSON, _ := json.Marshal(utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Invalid HTTP request format"})
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest) // Set HTTP status code to 500
-		_, err = writer.Write(responseJSON)
-		if err != nil {
-			slog.Error("Error writing response", "error", err)
-		}
-		slog.Error("Error parsing HTTP request", slog.Any("error", err))
+		writeErrorResponse(writer, http.StatusBadRequest, "Invalid HTTP request format",
+			"Error parsing HTTP request", slog.Any("error", err))
+		return
+	}
+
+	if iothread.CommandsMeta[diceDBCmd.Cmd].CmdType == iothread.MultiShard {
+		writeErrorResponse(writer, http.StatusBadRequest, "unsupported command",
+			"Unsupported command received", slog.String("cmd", diceDBCmd.Cmd))
 		return
 	}
 
@@ -154,14 +155,9 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 	}
 
 	if unimplementedCommands[diceDBCmd.Cmd] {
-		responseJSON, _ := json.Marshal(utils.HTTPResponse{Status: utils.HTTPStatusError, Data: fmt.Sprintf("Command %s is not implemented with HTTP", diceDBCmd.Cmd)})
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest) // Set HTTP status code to 500
-		_, err = writer.Write(responseJSON)
-		if err != nil {
-			slog.Error("Error writing response", "error", err)
-		}
-		slog.Error("Command %s is not implemented", slog.String("cmd", diceDBCmd.Cmd))
+		writeErrorResponse(writer, http.StatusBadRequest,
+			fmt.Sprintf("Command %s is not implemented with HTTP", diceDBCmd.Cmd),
+			"Command is not implemented", slog.String("cmd", diceDBCmd.Cmd))
 		return
 	}
 
@@ -181,7 +177,7 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 
 func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
 	// convert to REDIS cmd
-	diceDBCmd, err := utils.ParseHTTPRequest(request)
+	diceDBCmd, err := ParseHTTPRequest(request)
 	if err != nil {
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)
 		slog.Error("Error parsing HTTP request", slog.Any("error", err))
@@ -336,19 +332,19 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 	var (
 		responseValue interface{}
 		err           error
-		httpResponse  utils.HTTPResponse
+		httpResponse  HTTPResponse
 		isDiceErr     bool
 	)
 
 	// Check if the command is migrated, if it is we use EvalResponse values
 	// else we use RESPParser to decode the response
-	_, ok := CmdMetaMap[diceDBCmd.Cmd]
+	_, ok := iothread.CommandsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
-	if !ok {
+	if !ok || iothread.CommandsMeta[diceDBCmd.Cmd].CmdType == iothread.Custom {
 		responseValue, err = DecodeEvalResponse(result.EvalResponse)
 		if err != nil {
 			slog.Error("Error decoding response", "error", err)
-			httpResponse = utils.HTTPResponse{Status: utils.HTTPStatusError, Data: "Internal Server Error"}
+			httpResponse = HTTPResponse{Status: HTTPStatusError, Data: "Internal Server Error"}
 			writeJSONResponse(writer, httpResponse, http.StatusInternalServerError)
 			return
 		}
@@ -362,11 +358,11 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 	}
 
 	// Create the HTTP response
-	httpResponse = utils.HTTPResponse{Data: ResponseParser(responseValue)}
+	httpResponse = HTTPResponse{Data: ResponseParser(responseValue)}
 	if isDiceErr {
-		httpResponse.Status = utils.HTTPStatusError
+		httpResponse.Status = HTTPStatusError
 	} else {
-		httpResponse.Status = utils.HTTPStatusSuccess
+		httpResponse.Status = HTTPStatusSuccess
 	}
 
 	// Write the response back to the client
@@ -374,7 +370,7 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 }
 
 // Helper function to write the JSON response
-func writeJSONResponse(writer http.ResponseWriter, response utils.HTTPResponse, statusCode int) {
+func writeJSONResponse(writer http.ResponseWriter, response HTTPResponse, statusCode int) {
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(statusCode)
 
@@ -388,6 +384,18 @@ func writeJSONResponse(writer http.ResponseWriter, response utils.HTTPResponse, 
 	_, err = writer.Write(responseJSON)
 	if err != nil {
 		slog.Error("Error writing response", "error", err)
+	}
+}
+
+func writeErrorResponse(writer http.ResponseWriter, status int, message, logMessage string, logFields ...any) {
+	responseJSON, _ := json.Marshal(HTTPResponse{Status: HTTPStatusError, Data: message})
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(status)
+	if _, err := writer.Write(responseJSON); err != nil {
+		slog.Error("HTTP-WS Error writing response", "error", err)
+	}
+	if logMessage != "" {
+		slog.Error(logMessage, logFields...)
 	}
 }
 
