@@ -105,3 +105,7 @@ release: ## build and push the Docker image to Docker Hub with the latest tag an
 	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:$(VERSION) .
 	docker push dicedb/dicedb:$(VERSION)
 	docker push dicedb/dicedb:latest
+
+push-binary-remote:
+	$(MAKE) build
+	scp -i ${SSH_PEM_PATH} ./dicedb ubuntu@${REMOTE_HOST}:.
