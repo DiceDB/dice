@@ -113,6 +113,7 @@ const (
 	CmdGeoAdd              = "GEOADD"
 	CmdGeoDist             = "GEODIST"
 	CmdGeoPos              = "GEOPOS"
+	CmdGeoHash             = "GEOHASH"
 	CmdClient              = "CLIENT"
 	CmdLatency             = "LATENCY"
 	CmdDel                 = "DEL"
@@ -519,6 +520,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGeoPos: {
+		CmdType: SingleShard,
+	},
+	CmdGeoHash: {
 		CmdType: SingleShard,
 	},
 	CmdClient: {
