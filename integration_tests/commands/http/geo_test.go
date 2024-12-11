@@ -152,7 +152,7 @@ func TestGeoHash(t *testing.T) {
 		{
 			name: "GEOHASH with wrong number of arguments",
 			commands: []HTTPCommand{
-				{Command: "GEOHASH", Body: map[string]interface{}{"key": "points"}},
+				{Command: "GEOHASH", Body: map[string]interface{}{"key": "geopoints"}},
 			},
 			expected: []interface{}{"ERR wrong number of arguments for 'geohash' command"},
 		},
@@ -166,8 +166,8 @@ func TestGeoHash(t *testing.T) {
 		{
 			name: "GEOHASH with existing key but missing member",
 			commands: []HTTPCommand{
-				{Command: "GEOADD", Body: map[string]interface{}{"key": "points", "values": []interface{}{"13.361389", "38.115556", "Palermo"}}},
-				{Command: "GEOHASH", Body: map[string]interface{}{"key": "points", "values": []interface{}{"NonExistentMember"}}},
+				{Command: "GEOADD", Body: map[string]interface{}{"key": "geopoints", "values": []interface{}{"13.361389", "38.115556", "Palermo"}}},
+				{Command: "GEOHASH", Body: map[string]interface{}{"key": "geopoints", "values": []interface{}{"NonExistentMember"}}},
 			},
 			expected: []interface{}{float64(1), []interface{}{(nil)}},
 		},
@@ -182,23 +182,23 @@ func TestGeoHash(t *testing.T) {
 		{
 			name: "GEOHASH with a single member",
 			commands: []HTTPCommand{
-				{Command: "GEOADD", Body: map[string]interface{}{"key": "points", "values": []interface{}{"-74.0060", "40.7128", "NewYork"}}},
-				{Command: "GEOHASH", Body: map[string]interface{}{"key": "points", "values": []interface{}{"NewYork"}}},
+				{Command: "GEOADD", Body: map[string]interface{}{"key": "geopoints", "values": []interface{}{"-74.0060", "40.7128", "NewYork"}}},
+				{Command: "GEOHASH", Body: map[string]interface{}{"key": "geopoints", "values": []interface{}{"NewYork"}}},
 			},
 			expected: []interface{}{float64(1), []interface{}{"dr5regw3pp"}},
 		},
 		{
 			name: "GEOHASH with multiple members",
 			commands: []HTTPCommand{
-				{Command: "GEOADD", Body: map[string]interface{}{"key": "points", "values": []interface{}{"-73.935242", "40.730610", "Brooklyn"}}},
-				{Command: "GEOHASH", Body: map[string]interface{}{"key": "points", "values": []interface{}{"NewYork", "Brooklyn"}}},
+				{Command: "GEOADD", Body: map[string]interface{}{"key": "geopoints", "values": []interface{}{"-73.935242", "40.730610", "Brooklyn"}}},
+				{Command: "GEOHASH", Body: map[string]interface{}{"key": "geopoints", "values": []interface{}{"NewYork", "Brooklyn"}}},
 			},
 			expected: []interface{}{float64(1), []interface{}{"dr5regw3pp", "dr5rtwccpb"}},
 		},
 		{
 			name: "GEOHASH with a non-existent member",
 			commands: []HTTPCommand{
-				{Command: "GEOHASH", Body: map[string]interface{}{"key": "points", "values": []interface{}{"NonExistent"}}},
+				{Command: "GEOHASH", Body: map[string]interface{}{"key": "geopoints", "values": []interface{}{"NonExistent"}}},
 			},
 			expected: []interface{}{[]interface{}{(nil)}},
 		},

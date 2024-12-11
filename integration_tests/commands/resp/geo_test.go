@@ -172,7 +172,7 @@ func TestGeoHash(t *testing.T) {
 		{
 			name: "GEOHASH with non-existent key",
 			cmds: []string{
-				"GEOHASH points NonExistent",
+				"GEOHASH geopoints NonExistent",
 			},
 			expect: []interface{}{"ERR no such key"},
 		},
