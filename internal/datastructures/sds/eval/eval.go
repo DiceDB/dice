@@ -4,10 +4,15 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	ds "github.com/dicedb/dice/internal/datastructures"
+	"github.com/dicedb/dice/internal/datastructures/sds"
+	eval "github.com/dicedb/dice/internal/eval"
+	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/store"
+	dstore "github.com/dicedb/dice/internal/store"
 )
 
 const (
@@ -30,69 +35,73 @@ const (
 )
 
 type Eval struct {
-	store *store.Store[ds.DSInterface]
-	op    *ops.Operation
+	store *store.Store
+	op    *cmd.DiceDBCmd
 }
 
-func NewEval(store *store.Store[ds.DSInterface], op *ops.Operation) *Eval {
+func NewEval(store *store.Store, op *cmd.DiceDBCmd) *Eval {
 	return &Eval{
 		store: store,
 		op:    op,
 	}
 }
 
-func (e *Eval) Evaluate() []byte {
+func (e *Eval) Evaluate() *eval.EvalResponse {
 	switch e.op.Cmd {
 	case "SET":
-		return e.set()
+		return e.evalSET()
 	case "GET":
-		return e.get()
-	case "INCR":
-		return e.incrementBy()
-	case "INCRBY":
-		return e.increment()
+		return e.evalGET()
 	case "DECR":
-		return e.decrement()
+		return e.evalDECR()
 	case "DECRBY":
-		return e.decrementBy()
+		return e.evalDECRBY()
+	case "INCR":
+		return e.evalINCR()
+	case "INCRBY":
+		return e.evalINCRBY()
 	default:
 		return nil
 	}
 }
 
-func (e *Eval) set() []byte {
-	// Ensure the number of arguments is correct
-	if len(e.op.Args) <= 1 {
-		return diceerrors.NewErrArity("GET")
+func (e *Eval) evalSET() *eval.EvalResponse {
+	args := e.op.Args
+	if len(args) <= 1 {
+		return eval.MakeEvalError(ds.ErrWrongArgumentCount("SET"))
 	}
 
-	state := Uninitialized
-	var exDurationMs int64 = -1
-	args := e.op.Args
-	//var keepttl bool = false
 	key := e.op.Args[0]
 	value := e.op.Args[1]
-	_, exists := e.store.Get(key)
+	var exDurationMs int64 = -1
+	var state exDurationState = Uninitialized
+	var keepttl bool = false
+	var oldVal *interface{}
+
+	key, value = args[0], args[1]
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
 		case Ex, Px:
 			if state != Uninitialized {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+				return eval.MakeEvalError(ds.ErrSyntax)
+			}
+			if keepttl {
+				return eval.MakeEvalError(ds.ErrSyntax)
 			}
 			i++
 			if i == len(args) {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+				return eval.MakeEvalError(ds.ErrSyntax)
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+				return eval.MakeEvalError(ds.ErrIntegerOutOfRange)
 			}
 
-			if exDuration <= 0 {
-				return diceerrors.NewErrExpireTime("SET")
+			if exDuration <= 0 || exDuration >= ds.MaxExDuration {
+				return eval.MakeEvalError(ds.ErrInvalidExpireTime("SET"))
 			}
 
 			// converting seconds to milliseconds
@@ -104,25 +113,28 @@ func (e *Eval) set() []byte {
 
 		case Pxat, Exat:
 			if state != Uninitialized {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+				return eval.MakeEvalError(ds.ErrSyntax)
+			}
+			if keepttl {
+				return eval.MakeEvalError(ds.ErrSyntax)
 			}
 			i++
 			if i == len(args) {
-				return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+				return eval.MakeEvalError(ds.ErrSyntax)
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+				return eval.MakeEvalError(ds.ErrIntegerOutOfRange)
 			}
 
 			if exDuration < 0 {
-				return diceerrors.NewErrExpireTime("SET")
+				return eval.MakeEvalError(ds.ErrInvalidExpireTime("SET"))
 			}
 
 			if arg == Exat {
 				exDuration *= 1000
 			}
-			exDurationMs = exDuration - time.Now().UnixMilli()
+			exDurationMs = exDuration - utils.GetCurrentTime().UnixMilli()
 			// If the expiry time is in the past, set exDurationMs to 0
 			// This will be used to signal immediate expiration
 			if exDurationMs < 0 {
@@ -130,115 +142,130 @@ func (e *Eval) set() []byte {
 			}
 			state = Initialized
 
-		case XX, NX:
+		case XX:
+			// Get the key from the hash table
+			obj := e.store.Get(key)
+
 			// if key does not exist, return RESP encoded nil
-			if !exists {
-				return eval.RespNIL
+			if obj == nil {
+				return eval.MakeEvalResult(clientio.NIL)
 			}
-		case KEEPTTL:
-			//keepttl = true
+		case NX:
+			obj := e.store.Get(key)
+			if obj != nil {
+				return eval.MakeEvalResult(clientio.NIL)
+			}
+		case ds.KeepTTL:
+			if state != Uninitialized {
+				return eval.MakeEvalError(ds.ErrSyntax)
+			}
+			keepttl = true
+		case ds.GET:
+			getResult := e.evalGET()
+			if getResult.Error != nil {
+				return eval.MakeEvalError(ds.ErrWrongTypeOperation)
+			}
+			oldVal = &getResult.Result
 		default:
-			return diceerrors.NewErrWithMessage(diceerrors.SyntaxErr)
+			return eval.MakeEvalError(ds.ErrSyntax)
 		}
 	}
 
-	// Cast the value properly based on the encoding type
-	e.store.Put(key, NewString(value), exDurationMs)
+	// putting the k and value in a Hash Table
+	e.store.Put(key, sds.NewString(value), dstore.WithKeepTTL(keepttl))
 
-	return eval.RespOK
+	if oldVal != nil {
+		return eval.MakeEvalResult(*oldVal)
+	}
+	return eval.MakeEvalResult(clientio.OK)
 }
 
-func (e *Eval) get() []byte {
+func (e *Eval) evalGET() *eval.EvalResponse {
 	args := e.op.Args
 	if len(args) != 1 {
-		return diceerrors.NewErrArity("GET")
+		return eval.MakeEvalError(ds.ErrWrongArgumentCount("GET"))
 	}
 
-	var key = args[0]
+	key := args[0]
 
-	obj, ok := e.store.Get(key)
+	obj := e.store.Get(key)
 
 	// if key does not exist, return RESP encoded nil
-	if !ok {
-		return eval.RespNIL
+	if obj == nil {
+		return eval.MakeEvalResult(clientio.NIL)
 	}
 
-	// Decode and return the value based on its encoding
-	if sds, ok := getIfTypeSDS(obj); ok {
-		return []byte(eval.Encode(sds.Get(), false))
+	if sds, ok := sds.GetIfTypeSDS(obj); ok {
+		return eval.MakeEvalResult(sds.Get())
 	}
-
-	return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	return eval.MakeEvalError(ds.ErrWrongTypeOperation)
 }
 
-func (e *Eval) decrement() []byte {
+func (e *Eval) evalDECR() *eval.EvalResponse {
 	if len(e.op.Args) != 1 {
-		return diceerrors.NewErrArity("DECR")
+		return eval.MakeEvalError(ds.ErrWrongArgumentCount("DECR"))
 	}
 
 	return e.incrDecrCmd(-1)
 }
 
-func (e *Eval) decrementBy() []byte {
+func (e *Eval) evalDECRBY() *eval.EvalResponse {
 	args := e.op.Args
 	if len(args) != 2 {
-		return diceerrors.NewErrArity("DECRBY")
+		return eval.MakeEvalError(ds.ErrWrongArgumentCount("DECRBY"))
 	}
 	decrementAmount, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+		return eval.MakeEvalError(ds.ErrIntegerOutOfRange)
 	}
 	return e.incrDecrCmd(-decrementAmount)
 }
 
-func (e *Eval) increment() []byte {
+func (e *Eval) evalINCR() *eval.EvalResponse {
 	if len(e.op.Args) != 1 {
-		return diceerrors.NewErrArity("DECR")
+		return eval.MakeEvalError(ds.ErrWrongArgumentCount("INCR"))
 	}
 
 	return e.incrDecrCmd(1)
 }
 
-func (e *Eval) incrementBy() []byte {
+func (e *Eval) evalINCRBY() *eval.EvalResponse {
 	args := e.op.Args
 	if len(args) != 2 {
-		return diceerrors.NewErrArity("INCRBY")
+		return eval.MakeEvalError(ds.ErrWrongArgumentCount("INCRBY"))
 	}
 	incrAmount, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
+		return eval.MakeEvalError(ds.ErrIntegerOutOfRange)
 	}
 	return e.incrDecrCmd(incrAmount)
 }
 
-func (e *Eval) incrDecrCmd(incr int64) []byte {
+func (e *Eval) incrDecrCmd(incr int64) *eval.EvalResponse {
 	key := e.op.Args[0]
-	obj, ok := e.store.Get(key)
-	if !ok {
-		e.store.Put(key, NewString("1"), defaultExpiry)
+	obj := e.store.Get(key)
+	if obj == nil {
+		e.store.Put(key, sds.NewString("1"), dstore.WithKeepTTL(false))
 	}
 
 	// increment the value if it is an integer
-	var sds SDSInterface
-	if sds, ok = getIfTypeSDS(obj); !ok {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+	var sdsObj sds.SDSInterface
+	var ok bool
+	if sdsObj, ok = sds.GetIfTypeSDS(obj); !ok {
+		return eval.MakeEvalError(ds.ErrWrongTypeOperation)
 	}
-	i, err := strconv.ParseInt(sds.Get(), 10, 64)
+	i, err := strconv.ParseInt(sdsObj.Get(), 10, 64)
 	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongTypeErr)
+		return eval.MakeEvalError(ds.ErrWrongTypeOperation)
 	}
 
 	// check overflow
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
-		return diceerrors.NewErrWithMessage(diceerrors.ValOutOfRangeErr)
+		return eval.MakeEvalError(ds.ErrOverflow)
 	}
 
 	i += incr
-	err = sds.Set(strconv.FormatInt(i, 10))
-	if err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.ValOutOfRangeErr)
-	}
-
-	return eval.Encode(i, false)
+	err = sdsObj.Set(strconv.FormatInt(i, 10))
+	return eval.MakeEvalResult(i)
 }

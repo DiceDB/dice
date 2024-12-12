@@ -11,10 +11,9 @@ import (
 
 	"github.com/dicedb/dice/internal/comm"
 	"github.com/dicedb/dice/internal/common"
+	"github.com/dicedb/dice/internal/sql"
 
 	"github.com/ohler55/ojg/jp"
-
-	"github.com/dicedb/dice/internal/sql"
 
 	"github.com/dicedb/dice/internal/clientio"
 	ds "github.com/dicedb/dice/internal/datastructures"

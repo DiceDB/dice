@@ -26,7 +26,7 @@ type SDSInterface interface {
 	Get() string
 }
 
-func getIfTypeSDS(ds ds.DSInterface) (SDSInterface, bool) {
+func GetIfTypeSDS(ds ds.DSInterface) (SDSInterface, bool) {
 	sds, ok := ds.(SDSInterface)
 	return sds, ok
 }
