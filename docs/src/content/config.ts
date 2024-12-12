@@ -31,9 +31,23 @@ const releases = defineCollection({
   }),
 });
 
+const team = defineCollection({
+    type: "data",
+    schema: z.object({
+      name: z.string(),
+      avatar_url: z.string(),
+      roles: z.array(z.string()),
+      x: z.string(),
+      linkedin: z.string(),
+      github: z.string(),
+      website: z.string(),
+    }),
+});
+
 export const collections = {
   blog,
   authors,
   releases,
+  team,
   docs: defineCollection({ schema: docsSchema() }),
 };
