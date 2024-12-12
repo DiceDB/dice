@@ -1,0 +1,116 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import membersData from "../../content/members/members.json";
+
+const title = "Community Members";
+const description = "Meet the DiceDB community members including the Project Management Committee (PMC) and Committers.";
+---
+
+<Layout {title} {description}>
+    <div class="hero is-medium">
+        <div class="hero-body">
+            <div class="columns is-multiline">
+                <div class="column is-12">
+                    <h1 class="title is-size-1">Community Members</h1>
+                    <p class="subtitle is-size-5">Meet the people who build and support DiceDB.</p>
+                </div>
+
+                <!-- PMC Section -->
+                <div class="column is-12">
+                    <h2 class="title is-size-3 has-text-primary">Project Management Committee (PMC)</h2>
+                    <div class="columns is-multiline">
+                        {membersData.communityMembers.pmc.map((member) => (
+                                <div class="column is-4" style="margin-bottom: 1em;">
+                                    <div class="box has-text-centered">
+                                        {member.avatar && (
+                                                <figure class="mb-4">
+                                                    <img
+                                                            class="is-rounded"
+                                                            src={member.avatar}
+                                                            alt={`Avatar of ${member.name}`}
+                                                            style="width: 128px; height: 128px; object-fit: cover; border-radius: 50%;"
+                                                    />
+                                                </figure>
+                                        )}
+                                        <h3 class="title is-size-5">{member.name}</h3>
+                                        <p class="is-size-6">{member.description}</p>
+                                        <div class="buttons is-centered pt-4">
+                                            {member.socials?.X && (
+                                                    <a class="button is-small is-primary" href={member.socials.X} target="_blank">
+                                                <span class="icon">
+                                                    <i class="fab fa-x-twitter"></i>
+                                                </span>
+                                                    </a>
+                                            )}
+                                            {member.socials?.linkedin && (
+                                                    <a class="button is-small is-primary" href={member.socials.linkedin} target="_blank">
+                                                <span class="icon">
+                                                    <i class="fab fa-linkedin"></i>
+                                                </span>
+                                                    </a>
+                                            )}
+                                            {member.socials?.github && (
+                                                    <a class="button is-small is-primary" href={member.socials.github} target="_blank">
+                                                <span class="icon">
+                                                    <i class="fab fa-github"></i>
+                                                </span>
+                                                    </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                        ))}
+                    </div>
+                </div>
+
+                <!-- Committers Section -->
+                <div class="column is-12">
+                    <h2 class="title is-size-3 has-text-primary">Committers</h2>
+                    <div class="columns is-multiline">
+                        {membersData.communityMembers.committers.map((member) => (
+                                <div class="column is-4" style="margin-bottom: 1em;">
+                                    <div class="box has-text-centered">
+                                        {member.avatar && (
+                                                <figure class="mb-4">
+                                                    <img
+                                                            class="is-rounded"
+                                                            src={member.avatar}
+                                                            alt={`Avatar of ${member.name}`}
+                                                            style="width: 128px; height: 128px; object-fit: cover; border-radius: 50%;"
+                                                    />
+                                                </figure>
+                                        )}
+                                        <h3 class="title is-size-5">{member.name}</h3>
+                                        <p class="is-size-6">{member.description}</p>
+                                        <div class="buttons is-centered pt-4">
+                                            {member.socials?.X && (
+                                                    <a class="button is-small is-primary" href={member.socials.X} target="_blank">
+                                                <span class="icon">
+                                                    <i class="fab fa-x-twitter"></i>
+                                                </span>
+                                                    </a>
+                                            )}
+                                            {member.socials?.linkedin && (
+                                                    <a class="button is-small is-primary" href={member.socials.linkedin} target="_blank">
+                                                <span class="icon">
+                                                    <i class="fab fa-linkedin"></i>
+                                                </span>
+                                                    </a>
+                                            )}
+                                            {member.socials?.github && (
+                                                    <a class="button is-small is-primary" href={member.socials.github} target="_blank">
+                                                <span class="icon">
+                                                    <i class="fab fa-github"></i>
+                                                </span>
+                                                    </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</Layout>
