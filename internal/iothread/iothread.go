@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -15,9 +16,12 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
+	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
 	"github.com/dicedb/dice/internal/clientio/requestparser"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/eval"
+	"github.com/dicedb/dice/internal/global"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/shard"
@@ -31,15 +35,11 @@ const defaultRequestTimeout = 6 * time.Second
 var requestCounter uint32
 
 // IOThread interface
-type IOThread interface {
-	ID() string
-	Start(context.Context) error
-	Stop() error
-}
 
 type BaseIOThread struct {
-	IOThread
+	global.IOThread
 	id                       string
+	Name                     string
 	ioHandler                iohandler.IOHandler
 	parser                   requestparser.Parser
 	shardManager             *shard.ShardManager
@@ -50,13 +50,14 @@ type BaseIOThread struct {
 	preprocessingChan        chan *ops.StoreResponse
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
 	wl                       wal.AbstractWAL
+	lastCmd                  *cmd.DiceDBCmd
 }
 
 func NewIOThread(wid string, responseChan, preprocessingChan chan *ops.StoreResponse,
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription,
 	ioHandler iohandler.IOHandler, parser requestparser.Parser,
 	shardManager *shard.ShardManager, gec chan error, wl wal.AbstractWAL) *BaseIOThread {
-	return &BaseIOThread{
+	thread := &BaseIOThread{
 		id:                       wid,
 		ioHandler:                ioHandler,
 		parser:                   parser,
@@ -69,10 +70,103 @@ func NewIOThread(wid string, responseChan, preprocessingChan chan *ops.StoreResp
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
 		wl:                       wl,
 	}
+	eval.AddClient(thread)
+	return thread
 }
 
 func (t *BaseIOThread) ID() string {
 	return t.id
+}
+
+func addr(fd int) (addr, laddr string, err error) {
+	// addr
+	sa, err := syscall.Getpeername(fd)
+	if err != nil {
+		return "", "", err
+	}
+	switch v := sa.(type) {
+	case *syscall.SockaddrInet4:
+		addr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
+	case *syscall.SockaddrInet6:
+		addr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
+	}
+
+	// laddr
+	sa, err = syscall.Getsockname(fd)
+	if err != nil {
+		return "", "", err
+	}
+	switch v := sa.(type) {
+	case *syscall.SockaddrInet4:
+		laddr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
+	case *syscall.SockaddrInet6:
+		laddr = net.IP(v.Addr[:]).String() + ":" + strconv.Itoa(v.Port)
+	}
+
+	return addr, laddr, nil
+}
+
+func (t *BaseIOThread) String() string {
+	var s strings.Builder
+
+	// id
+	s.WriteString("id=")
+	s.WriteString(t.id)
+	s.WriteString(" ")
+
+	// addr and laddr
+	switch hndlr := t.ioHandler.(type) {
+	case *netconn.IOHandler:
+		addr, laddr, _ := addr(hndlr.FileDescriptor())
+		s.WriteString("addr=")
+		s.WriteString(addr)
+		s.WriteString(" ")
+
+		s.WriteString("laddr=")
+		s.WriteString(laddr)
+		s.WriteString(" ")
+
+		s.WriteString("fd=")
+		s.WriteString(strconv.FormatInt(int64(hndlr.FileDescriptor()), 10))
+		s.WriteString(" ")
+	}
+
+	// name
+	s.WriteString("name=")
+	s.WriteString(t.Name)
+	s.WriteString(" ")
+
+	// age
+	s.WriteString("age=")
+	s.WriteString(strconv.FormatFloat(time.Since(t.Session.CreatedAt).Seconds(), 'f', 0, 64))
+	s.WriteString(" ")
+
+	// idle
+	s.WriteString("idle=")
+	s.WriteString(strconv.FormatFloat(time.Since(t.Session.LastAccessedAt).Seconds(), 'f', 0, 64))
+	s.WriteString(" ")
+
+	// // flags
+	// s.WriteString("flags=")
+	// s.WriteString("")
+	// s.WriteString(" ")
+
+	// argv-mem
+	// s.WriteString("argv-mem=")
+	// s.WriteString(strconv.FormatInt(int64(c.ArgLenSum), 10))
+	// s.WriteString(" ")
+
+	// cmd
+	s.WriteString("cmd=")
+	// todo: handle `CLIENT ID` as "client|id" and `SET k 1` as "set"
+	if t.lastCmd == nil {
+		s.WriteString("NULL")
+	} else {
+		s.WriteString(strings.ToLower(t.lastCmd.Cmd))
+	}
+	s.WriteString(" ")
+
+	return s.String()
 }
 
 func (t *BaseIOThread) Start(ctx context.Context) error {
@@ -603,6 +697,7 @@ func (t *BaseIOThread) isAuthenticated(diceDBCmd *cmd.DiceDBCmd) error {
 func (t *BaseIOThread) Stop() error {
 	slog.Info("Stopping io-thread", slog.String("id", t.id))
 	t.Session.Expire()
+	eval.RemoveClientByID(t.id)
 	return nil
 }
 

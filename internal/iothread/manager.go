@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/dicedb/dice/internal/global"
 	"github.com/dicedb/dice/internal/shard"
 )
 
@@ -28,7 +29,7 @@ func NewManager(maxClients int32, sm *shard.ShardManager) *Manager {
 	}
 }
 
-func (m *Manager) RegisterIOThread(ioThread IOThread) error {
+func (m *Manager) RegisterIOThread(ioThread global.IOThread) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -54,17 +55,17 @@ func (m *Manager) IOThreadCount() int32 {
 	return m.numIOThreads.Load()
 }
 
-func (m *Manager) GetIOThread(id string) (IOThread, bool) {
+func (m *Manager) GetIOThread(id string) (global.IOThread, bool) {
 	client, ok := m.connectedClients.Load(id)
 	if !ok {
 		return nil, false
 	}
-	return client.(IOThread), true
+	return client.(global.IOThread), true
 }
 
 func (m *Manager) UnregisterIOThread(id string) error {
 	if client, loaded := m.connectedClients.LoadAndDelete(id); loaded {
-		w := client.(IOThread)
+		w := client.(global.IOThread)
 		if err := w.Stop(); err != nil {
 			return err
 		}
