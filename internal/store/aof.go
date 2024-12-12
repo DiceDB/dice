@@ -97,14 +97,14 @@ func encode(strs []string) []byte {
 // TODO: Support Expiration
 // TODO: Support non-kv data structures
 // TODO: Support sync write
-func dumpKey[T ds.DSInterface](aof *AOF, key string, obj *T) (err error) {
-	cmd := fmt.Sprintf("SET %s %s", key, (*obj).Serialize())
+func dumpKey(aof *AOF, key string, obj ds.DSInterface) (err error) {
+	cmd := fmt.Sprintf("SET %s %s", key, obj.Serialize())
 	tokens := strings.Split(cmd, " ")
 	return aof.Write(string(encode(tokens)))
 }
 
 // DumpAllAOF dumps all keys in the store to the AOF file
-func DumpAllAOF[T ds.DSInterface](store *Store[T]) error {
+func DumpAllAOF(store *Store) error {
 	var (
 		aof *AOF
 		err error
@@ -116,7 +116,7 @@ func DumpAllAOF[T ds.DSInterface](store *Store[T]) error {
 
 	log.Println("rewriting AOF file at", config.DiceConfig.Persistence.AOFFile)
 
-	store.store.All(func(k string, obj *T) bool {
+	store.store.All(func(k string, obj ds.DSInterface) bool {
 		err = dumpKey(aof, k, obj)
 		// continue if no error
 		return err == nil

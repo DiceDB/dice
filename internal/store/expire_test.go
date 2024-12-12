@@ -7,10 +7,10 @@ import (
 )
 
 func TestDelExpiry(t *testing.T) {
-	store := NewStore[ds.DSInterface](nil, nil, nil)
+	store := NewStore(nil, nil, nil)
 	// Initialize the test environment
-	store.store = NewStoreMap[ds.DSInterface]()
-	store.expires = NewExpireMap[ds.DSInterface]()
+	store.store = NewStoreMap()
+	store.expires = NewExpireMap()
 
 	// Define test cases
 	tests := []struct {

@@ -41,20 +41,20 @@ func (h *evictionItemHeap) pop() evictionItem {
 }
 
 // BatchEvictionLRU implements batch eviction of least recently used keys
-type BatchEvictionLRU[T ds.DSInterface] struct {
+type BatchEvictionLRU struct {
 	BaseEvictionStrategy
 	maxKeys       int
 	evictionRatio float64
 }
 
-func NewBatchEvictionLRU[T ds.DSInterface](maxKeys int, evictionRatio float64) *BatchEvictionLRU[T] {
-	return &BatchEvictionLRU[T]{
+func NewBatchEvictionLRU(maxKeys int, evictionRatio float64) *BatchEvictionLRU {
+	return &BatchEvictionLRU{
 		maxKeys:       maxKeys,
 		evictionRatio: evictionRatio,
 	}
 }
 
-func (e *BatchEvictionLRU[T]) ShouldEvict(store *Store[T]) int {
+func (e *BatchEvictionLRU) ShouldEvict(store *Store) int {
 	currentKeyCount := store.GetKeyCount()
 
 	// Check if eviction is necessary only till the number of keys remains less than maxKeys
@@ -75,7 +75,7 @@ func (e *BatchEvictionLRU[T]) ShouldEvict(store *Store[T]) int {
 }
 
 // EvictVictims deletes keys with the lowest LastAccessedAt values from the store.
-func (e *BatchEvictionLRU[T]) EvictVictims(store *Store[T], toEvict int) {
+func (e *BatchEvictionLRU) EvictVictims(store *Store, toEvict int) {
 	if toEvict <= 0 {
 		return
 	}
@@ -83,10 +83,10 @@ func (e *BatchEvictionLRU[T]) EvictVictims(store *Store[T], toEvict int) {
 	h := make(evictionItemHeap, 0, toEvict)
 	heap.Init(&h)
 
-	store.GetStore().All(func(k string, obj *T) bool {
+	store.GetStore().All(func(k string, obj ds.DSInterface) bool {
 		item := evictionItem{
 			key:          k,
-			lastAccessed: (*obj).GetLastAccessedAt(),
+			lastAccessed: obj.GetLastAccessedAt(),
 		}
 		if h.Len() < toEvict {
 			h.push(item)
@@ -108,6 +108,6 @@ func (e *BatchEvictionLRU[T]) EvictVictims(store *Store[T], toEvict int) {
 	e.stats.recordEviction(int64(toEvict))
 }
 
-func (e *BatchEvictionLRU[T]) OnAccess(key string, obj *T, accessType AccessType) {
+func (e *BatchEvictionLRU) OnAccess(key string, obj *ds.DSInterface, accessType AccessType) {
 	// Nothing to do for LRU batch eviction
 }

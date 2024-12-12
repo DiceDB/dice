@@ -11,7 +11,7 @@ import (
 )
 
 func TestEvictVictims_BelowMaxKeys(t *testing.T) {
-	eviction := NewBatchEvictionLRU[ds.DSInterface](5, 0.2)
+	eviction := NewBatchEvictionLRU(5, 0.2)
 	s := NewStore(nil, nil, eviction)
 
 	// Add 3 keys (below maxKeys of 5)
@@ -21,7 +21,7 @@ func TestEvictVictims_BelowMaxKeys(t *testing.T) {
 		obj = &TestSDS{
 			value: i,
 		}
-		s.Put(key, &obj)
+		s.Put(key, obj)
 	}
 
 	initialKeyCount := s.GetKeyCount()
@@ -35,7 +35,7 @@ func TestEvictVictims_BelowMaxKeys(t *testing.T) {
 func TestEvictVictims_ExceedsMaxKeys(t *testing.T) {
 	maxKeys := 5
 	evictionRatio := 0.4
-	eviction := NewBatchEvictionLRU[ds.DSInterface](maxKeys, evictionRatio)
+	eviction := NewBatchEvictionLRU(maxKeys, evictionRatio)
 	s := NewStore(nil, nil, eviction)
 
 	// Add 10 keys, exceeding maxKeys of 5
@@ -46,7 +46,7 @@ func TestEvictVictims_ExceedsMaxKeys(t *testing.T) {
 			value: i,
 		}
 
-		s.Put(key, &obj)
+		s.Put(key, obj)
 	}
 
 	// Ensure number of keys are equal to or below maxKeys after eviction
@@ -58,7 +58,7 @@ func TestEvictVictims_EvictsLRU(t *testing.T) {
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
 
-	eviction := NewBatchEvictionLRU[ds.DSInterface](10, 0.4)
+	eviction := NewBatchEvictionLRU(10, 0.4)
 	s := NewStore(nil, nil, eviction)
 
 	// Add keys with varying LastAccessedAt
@@ -71,7 +71,7 @@ func TestEvictVictims_EvictsLRU(t *testing.T) {
 			value: id,
 		}
 		mockTime.SetTime(mockTime.GetTime().Add(5 * time.Second))
-		s.Put(key, &obj)
+		s.Put(key, obj)
 	}
 
 	// Expected to evict 4 keys with lowest LastAccessedAt, i.e. the first 4 keys added to the store
@@ -91,7 +91,7 @@ func TestEvictVictims_IdenticalLastAccessedAt(t *testing.T) {
 	currentTime := time.Now()
 	mockTime := &utils.MockClock{CurrTime: currentTime}
 	utils.CurrentTime = mockTime
-	eviction := NewBatchEvictionLRU[ds.DSInterface](10, 0.5)
+	eviction := NewBatchEvictionLRU(10, 0.5)
 	s := NewStore(nil, nil, eviction)
 
 	// Add 10 keys with identical LastAccessedAt
@@ -102,7 +102,7 @@ func TestEvictVictims_IdenticalLastAccessedAt(t *testing.T) {
 			value: i,
 		}
 		mockTime.SetTime(currentTime) // Not needed, added explicitly for better clarity
-		s.Put(key, &obj)
+		s.Put(key, obj)
 	}
 
 	expectedRemainingKeys := 6 // 5(Post Eviction) + 1 (key added after eviction)
@@ -110,7 +110,7 @@ func TestEvictVictims_IdenticalLastAccessedAt(t *testing.T) {
 }
 
 func TestEvictVictims_EvictsAtLeastOne(t *testing.T) {
-	eviction := NewBatchEvictionLRU[ds.DSInterface](10, 0.5)
+	eviction := NewBatchEvictionLRU(10, 0.5)
 	s := NewStore(nil, nil, eviction)
 
 	// Add 10 keys (equals maxKeys)
@@ -120,7 +120,7 @@ func TestEvictVictims_EvictsAtLeastOne(t *testing.T) {
 		obj = &TestSDS{
 			value: i,
 		}
-		s.Put(key, &obj)
+		s.Put(key, obj)
 	}
 
 	toEvict := eviction.ShouldEvict(s)
@@ -128,7 +128,7 @@ func TestEvictVictims_EvictsAtLeastOne(t *testing.T) {
 }
 
 func TestEvictVictims_EmptyStore(t *testing.T) { // Handles Empty Store Gracefully
-	eviction := NewBatchEvictionLRU[ds.DSInterface](10, 0.5)
+	eviction := NewBatchEvictionLRU(10, 0.5)
 	s := NewStore(nil, nil, eviction)
 
 	toEvict := eviction.ShouldEvict(s)
@@ -142,7 +142,7 @@ func TestEvictVictims_LastAccessedAtUpdated(t *testing.T) {
 	currentTime := time.Now()
 	mockTime := &utils.MockClock{CurrTime: currentTime}
 	utils.CurrentTime = mockTime
-	eviction := NewBatchEvictionLRU[ds.DSInterface](10, 0.5)
+	eviction := NewBatchEvictionLRU(10, 0.5)
 	s := NewStore(nil, nil, eviction)
 
 	// Add keys with initial LastAccessedAt
@@ -152,7 +152,7 @@ func TestEvictVictims_LastAccessedAtUpdated(t *testing.T) {
 		obj = &TestSDS{
 			value: i,
 		}
-		s.Put(key, &obj)
+		s.Put(key, obj)
 	}
 
 	// Simulate access to some keys, updating LastAccessedAt
@@ -170,7 +170,7 @@ func TestEvictVictims_LastAccessedAtUpdated(t *testing.T) {
 	}
 
 	obj := ds.DSInterface(&TestSDS{value: 1})
-	s.Put("key11", &obj) // Trigger eviction
+	s.Put("key11", obj) // Trigger eviction
 
 	// Verify that unaccessed keys were evicted
 	unaccessedKeys := []string{"key1", "key9"}

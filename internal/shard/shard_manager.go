@@ -10,16 +10,15 @@ import (
 	"github.com/dicedb/dice/config"
 
 	"github.com/cespare/xxhash/v2"
-	ds "github.com/dicedb/dice/internal/datastructures"
 	"github.com/dicedb/dice/internal/ops"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-type ShardManager[T ds.DSInterface] struct {
+type ShardManager struct {
 	// shards is a constant slice of all Shards managed by this manager, indexed by ShardID. The shards slice is
 	// instantiated during ShardManager creation, and never modified after wards. Therefore, it can be accessed
 	// concurrently without synchronization.
-	shards          []*ShardThread[T]
+	shards          []*ShardThread
 	shardReqMap     map[ShardID]chan *ops.StoreOp // shardReqMap is a map of shard id to its respective request channel
 	globalErrorChan chan error                    // globalErrorChan is the common global error channel for all Shards
 	ShardErrorChan  chan *ShardError              // ShardErrorChan is the channel for sending shard-level errors
@@ -28,21 +27,21 @@ type ShardManager[T ds.DSInterface] struct {
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
-func NewShardManager[T ds.DSInterface](shardCount uint8, queryWatchChan chan dstore.QueryWatchEvent[T], cmdWatchChan chan dstore.CmdWatchEvent, globalErrorChan chan error) *ShardManager[T] {
-	shards := make([]*ShardThread[T], shardCount)
+func NewShardManager(shardCount uint8, queryWatchChan chan dstore.QueryWatchEvent, cmdWatchChan chan dstore.CmdWatchEvent, globalErrorChan chan error) *ShardManager {
+	shards := make([]*ShardThread, shardCount)
 	shardReqMap := make(map[ShardID]chan *ops.StoreOp)
 	shardErrorChan := make(chan *ShardError)
 
 	maxKeysPerShard := config.DiceConfig.Memory.KeysLimit / int(shardCount)
 	for i := uint8(0); i < shardCount; i++ {
-		evictionStrategy := dstore.NewBatchEvictionLRU[T](maxKeysPerShard, config.DiceConfig.Memory.EvictionRatio)
+		evictionStrategy := dstore.NewBatchEvictionLRU(maxKeysPerShard, config.DiceConfig.Memory.EvictionRatio)
 		// Shards are numbered from 0 to shardCount-1
 		shard := NewShardThread(i, globalErrorChan, shardErrorChan, queryWatchChan, cmdWatchChan, evictionStrategy)
 		shards[i] = shard
 		shardReqMap[i] = shard.ReqChan
 	}
 
-	return &ShardManager[T]{
+	return &ShardManager{
 		shards:          shards,
 		shardReqMap:     shardReqMap,
 		globalErrorChan: globalErrorChan,
@@ -53,7 +52,7 @@ func NewShardManager[T ds.DSInterface](shardCount uint8, queryWatchChan chan dst
 }
 
 // Run starts the ShardManager, manages its lifecycle, and listens for errors.
-func (manager *ShardManager[T]) Run(ctx context.Context) {
+func (manager *ShardManager) Run(ctx context.Context) {
 	signal.Notify(manager.sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	var wg sync.WaitGroup
@@ -74,7 +73,7 @@ func (manager *ShardManager[T]) Run(ctx context.Context) {
 }
 
 // start initializes and starts the shard threads.
-func (manager *ShardManager[T]) start(ctx context.Context, wg *sync.WaitGroup) {
+func (manager *ShardManager) start(ctx context.Context, wg *sync.WaitGroup) {
 	for _, shard := range manager.shards {
 		shard := shard
 
@@ -86,19 +85,19 @@ func (manager *ShardManager[T]) start(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (manager *ShardManager[T]) GetShardInfo(key string) (id ShardID, c chan *ops.StoreOp) {
+func (manager *ShardManager) GetShardInfo(key string) (id ShardID, c chan *ops.StoreOp) {
 	hash := xxhash.Sum64String(key)
 	id = ShardID(hash % uint64(manager.GetShardCount()))
 	return id, manager.GetShard(id).ReqChan
 }
 
 // GetShardCount returns the number of shards managed by this ShardManager.
-func (manager *ShardManager[T]) GetShardCount() int8 {
+func (manager *ShardManager) GetShardCount() int8 {
 	return int8(len(manager.shards))
 }
 
 // GetShard returns the ShardThread for the given ShardID.
-func (manager *ShardManager[T]) GetShard(id ShardID) *ShardThread[T] {
+func (manager *ShardManager) GetShard(id ShardID) *ShardThread {
 	if int(id) < len(manager.shards) {
 		return manager.shards[id]
 	}
@@ -106,13 +105,13 @@ func (manager *ShardManager[T]) GetShard(id ShardID) *ShardThread[T] {
 }
 
 // RegisterIOThread registers a io-thread with all Shards present in the ShardManager.
-func (manager *ShardManager[T]) RegisterIOThread(id string, request, processing chan *ops.StoreResponse) {
+func (manager *ShardManager) RegisterIOThread(id string, request, processing chan *ops.StoreResponse) {
 	for _, shard := range manager.shards {
 		shard.registerIOThread(id, request, processing)
 	}
 }
 
-func (manager *ShardManager[T]) UnregisterIOThread(id string) {
+func (manager *ShardManager) UnregisterIOThread(id string) {
 	for _, shard := range manager.shards {
 		shard.unregisterIOThread(id)
 	}

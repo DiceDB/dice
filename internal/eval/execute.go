@@ -11,8 +11,8 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-func NewEval[T dstore.DSInterface](c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store[T], httpOp, websocketOp, preProcessing bool) *Eval[T] {
-	return &Eval[T]{
+func NewEval(c *cmd.DiceDBCmd, client *comm.Client, store *dstore.Store, httpOp, websocketOp, preProcessing bool) *Eval {
+	return &Eval{
 		cmd:                   c,
 		client:                client,
 		store:                 store,
@@ -22,17 +22,17 @@ func NewEval[T dstore.DSInterface](c *cmd.DiceDBCmd, client *comm.Client, store 
 	}
 }
 
-func (e *Eval[T]) PreProcessCommand() *EvalResponse[T] {
+func (e *Eval) PreProcessCommand() *EvalResponse {
 	if f, ok := PreProcessing[e.cmd.Cmd]; ok {
 		return f(e.cmd.Args, e.store)
 	}
 	return &EvalResponse{Result: nil, Error: diceerrors.ErrInternalServer}
 }
 
-func (e *Eval[T]) ExecuteCommand() *EvalResponse[T] {
+func (e *Eval) ExecuteCommand() *EvalResponse {
 	diceCmd, ok := DiceCmds[e.cmd.Cmd]
 	if !ok {
-		return &EvalResponse[dstore.DSInterface]{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", e.cmd.Cmd, strings.Join(e.cmd.Args, " ")), Error: nil}
+		return &EvalResponse{Result: diceerrors.NewErrWithFormattedMessage("unknown command '%s', with args beginning with: %s", e.cmd.Cmd, strings.Join(e.cmd.Args, " ")), Error: nil}
 	}
 
 	// Temporary logic till we move all commands to new eval logic.

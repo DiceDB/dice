@@ -22,37 +22,37 @@ import (
 )
 
 type (
-	CacheStore[T ds.DSInterface] common.ITable[string, *T]
+	CacheStore common.ITable[string, ds.DSInterface]
 	// QuerySubscription represents a subscription to watch a query.
-	QuerySubscription[T ds.DSInterface] struct {
+	QuerySubscription struct {
 		Subscribe bool          // true for subscribe, false for unsubscribe
 		Query     sql.DSQLQuery // query to watch
 		ClientFD  int           // client file descriptor
 		CacheChan chan *[]struct {
 			Key   string
-			Value *T
+			Value ds.DSInterface
 		} // channel to receive cache data for this query
 		QwatchClientChan   chan comm.QwatchResponse // Generic channel for HTTP/Websockets etc.
 		ClientIdentifierID uint32                   // Helps identify qwatch client on httpserver side
 	}
 
 	// AdhocQueryResult represents the result of an adhoc query.
-	AdhocQueryResult[T ds.DSInterface] struct {
-		Result      *[]sql.QueryResultRow[T]
+	AdhocQueryResult struct {
+		Result      *[]sql.QueryResultRow
 		Fingerprint string
 		Err         error
 	}
 
 	// AdhocQuery represents an adhoc query request.
-	AdhocQuery[T ds.DSInterface] struct {
+	AdhocQuery struct {
 		Query        sql.DSQLQuery
-		ResponseChan chan AdhocQueryResult[T]
+		ResponseChan chan AdhocQueryResult
 	}
 
 	// Manager watches for changes in keys and notifies clients.
-	Manager[T ds.DSInterface] struct {
-		WatchList    sync.Map                             // WatchList is a map of query string to their respective clients, type: map[string]*sync.Map[int]struct{}
-		QueryCache   common.ITable[string, CacheStore[T]] // QueryCache is a map of fingerprints to their respective data caches
+	Manager struct {
+		WatchList    sync.Map                          // WatchList is a map of query string to their respective clients, type: map[string]*sync.Map[int]struct{}
+		QueryCache   common.ITable[string, CacheStore] // QueryCache is a map of fingerprints to their respective data caches
 		QueryCacheMu sync.RWMutex
 	}
 
@@ -70,10 +70,10 @@ type (
 
 var (
 	// QuerySubscriptionChan is the channel to receive updates about query subscriptions.
-	QuerySubscriptionChan chan QuerySubscription[ds.DSInterface]
+	QuerySubscriptionChan chan QuerySubscription
 
 	// AdhocQueryChan is the channel to receive adhoc queries.
-	AdhocQueryChan chan AdhocQuery[ds.DSInterface]
+	AdhocQueryChan chan AdhocQuery
 )
 
 func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) ClientIdentifier {
@@ -83,38 +83,38 @@ func NewClientIdentifier(clientIdentifierID int, isHTTPClient bool) ClientIdenti
 	}
 }
 
-func NewQueryCacheStoreRegMap[T ds.DSInterface]() common.ITable[string, CacheStore[T]] {
-	return &common.RegMap[string, CacheStore[T]]{
-		M: make(map[string]CacheStore[T]),
+func NewQueryCacheStoreRegMap() common.ITable[string, CacheStore] {
+	return &common.RegMap[string, CacheStore]{
+		M: make(map[string]CacheStore),
 	}
 }
 
-func NewQueryCacheStore[T ds.DSInterface]() common.ITable[string, CacheStore[T]] {
-	return NewQueryCacheStoreRegMap[T]()
+func NewQueryCacheStore() common.ITable[string, CacheStore] {
+	return NewQueryCacheStoreRegMap()
 }
 
-func NewCacheStoreRegMap[T ds.DSInterface]() CacheStore[T] {
-	return &common.RegMap[string, *T]{
-		M: make(map[string]*T),
+func NewCacheStoreRegMap() CacheStore {
+	return &common.RegMap[string, ds.DSInterface]{
+		M: make(map[string]ds.DSInterface),
 	}
 }
 
-func NewCacheStore[T ds.DSInterface]() CacheStore[T] {
-	return NewCacheStoreRegMap[T]()
+func NewCacheStore() CacheStore {
+	return NewCacheStoreRegMap()
 }
 
 // NewQueryManager initializes a new Manager.
-func NewQueryManager[T ds.DSInterface]() *Manager[T] {
-	QuerySubscriptionChan = make(chan QuerySubscription[ds.DSInterface])
-	AdhocQueryChan = make(chan AdhocQuery[ds.DSInterface], 1000)
-	return &Manager[T]{
+func NewQueryManager() *Manager {
+	QuerySubscriptionChan = make(chan QuerySubscription)
+	AdhocQueryChan = make(chan AdhocQuery, 1000)
+	return &Manager{
 		WatchList:  sync.Map{},
-		QueryCache: NewQueryCacheStore[T](),
+		QueryCache: NewQueryCacheStore(),
 	}
 }
 
 // Run starts the Manager's main loops.
-func (m *Manager[T]) Run(ctx context.Context, watchChan <-chan dstore.QueryWatchEvent[T]) {
+func (m *Manager) Run(ctx context.Context, watchChan <-chan dstore.QueryWatchEvent) {
 	var wg sync.WaitGroup
 
 	wg.Add(3)
@@ -138,7 +138,7 @@ func (m *Manager[T]) Run(ctx context.Context, watchChan <-chan dstore.QueryWatch
 }
 
 // listenForSubscriptions listens for query subscriptions and unsubscriptions.
-func (m *Manager[T]) listenForSubscriptions(ctx context.Context) {
+func (m *Manager) listenForSubscriptions(ctx context.Context) {
 	for {
 		select {
 		case event := <-QuerySubscriptionChan:
@@ -161,7 +161,7 @@ func (m *Manager[T]) listenForSubscriptions(ctx context.Context) {
 }
 
 // watchKeys watches for changes in keys and notifies clients.
-func (m *Manager[T]) watchKeys(ctx context.Context, watchChan <-chan dstore.QueryWatchEvent[T]) {
+func (m *Manager) watchKeys(ctx context.Context, watchChan <-chan dstore.QueryWatchEvent) {
 	for {
 		select {
 		case event := <-watchChan:
@@ -173,7 +173,7 @@ func (m *Manager[T]) watchKeys(ctx context.Context, watchChan <-chan dstore.Quer
 }
 
 // processWatchEvent processes a single watch event.
-func (m *Manager[T]) processWatchEvent(event dstore.QueryWatchEvent[T]) {
+func (m *Manager) processWatchEvent(event dstore.QueryWatchEvent) {
 	// Iterate over the watchlist to go through the query string
 	// and the corresponding client connections to that query string
 	m.WatchList.Range(func(key, value interface{}) bool {
@@ -191,7 +191,7 @@ func (m *Manager[T]) processWatchEvent(event dstore.QueryWatchEvent[T]) {
 
 		// Check if the key matches the regex
 		if query.Where != nil {
-			matches, err := sql.EvaluateWhereClause(query.Where, sql.QueryResultRow[T]{Key: event.Key, Value: event.Value}, make(map[string]jp.Expr))
+			matches, err := sql.EvaluateWhereClause(query.Where, sql.QueryResultRow{Key: event.Key, Value: event.Value}, make(map[string]jp.Expr))
 			if err != nil || !matches {
 				return true
 			}
@@ -211,7 +211,7 @@ func (m *Manager[T]) processWatchEvent(event dstore.QueryWatchEvent[T]) {
 }
 
 // updateQueryCache updates the query cache based on the watch event.
-func (m *Manager[T]) updateQueryCache(queryFingerprint string, event dstore.QueryWatchEvent[T]) {
+func (m *Manager) updateQueryCache(queryFingerprint string, event dstore.QueryWatchEvent) {
 	m.QueryCacheMu.Lock()
 	defer m.QueryCacheMu.Unlock()
 
@@ -223,7 +223,7 @@ func (m *Manager[T]) updateQueryCache(queryFingerprint string, event dstore.Quer
 
 	switch event.Operation {
 	case dstore.Set:
-		store.Put(event.Key, &event.Value)
+		store.Put(event.Key, event.Value)
 	case dstore.Del:
 		store.Delete(event.Key)
 	default:
@@ -231,7 +231,7 @@ func (m *Manager[T]) updateQueryCache(queryFingerprint string, event dstore.Quer
 	}
 }
 
-func (m *Manager[T]) notifyClients(query *sql.DSQLQuery, clients *sync.Map, queryResult *[]sql.QueryResultRow[T]) {
+func (m *Manager) notifyClients(query *sql.DSQLQuery, clients *sync.Map, queryResult *[]sql.QueryResultRow) {
 	encodedResult := clientio.Encode(GenericWatchResponse(sql.Qwatch, query.String(), *queryResult), false)
 
 	clients.Range(func(clientKey, clientVal interface{}) bool {
@@ -265,7 +265,7 @@ func (m *Manager[T]) notifyClients(query *sql.DSQLQuery, clients *sync.Map, quer
 }
 
 // sendWithRetry writes data to a client file descriptor with retries. It writes with an exponential backoff.
-func (m *Manager[T]) sendWithRetry(query *sql.DSQLQuery, clientFD int, data []byte) {
+func (m *Manager) sendWithRetry(query *sql.DSQLQuery, clientFD int, data []byte) {
 	maxRetries := 20
 	retryDelay := 20 * time.Millisecond
 
@@ -292,12 +292,12 @@ func (m *Manager[T]) sendWithRetry(query *sql.DSQLQuery, clientFD int, data []by
 }
 
 // serveAdhocQueries listens for adhoc queries, executes them, and sends the result back to the client.
-func (m *Manager[T]) serveAdhocQueries(ctx context.Context) {
+func (m *Manager) serveAdhocQueries(ctx context.Context) {
 	for {
 		select {
 		case query := <-AdhocQueryChan:
 			result, err := m.runQuery(&query.Query)
-			query.ResponseChan <- AdhocQueryResult[ds.DSInterface]{
+			query.ResponseChan <- AdhocQueryResult{
 				Result:      result,
 				Fingerprint: query.Query.Fingerprint,
 				Err:         err,
@@ -309,10 +309,10 @@ func (m *Manager[T]) serveAdhocQueries(ctx context.Context) {
 }
 
 // addWatcher adds a client as a watcher to a query.
-func (m *Manager[T]) addWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdentifier,
+func (m *Manager) addWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdentifier,
 	qwatchClientChan chan comm.QwatchResponse, cacheChan chan *[]struct {
 		Key   string
-		Value *T
+		Value ds.DSInterface
 	}) {
 	queryString := query.String()
 
@@ -326,7 +326,7 @@ func (m *Manager[T]) addWatcher(query *sql.DSQLQuery, clientIdentifier ClientIde
 	m.QueryCacheMu.Lock()
 	defer m.QueryCacheMu.Unlock()
 
-	cache := NewCacheStore[T]()
+	cache := NewCacheStore()
 	// Hydrate the cache with data from all shards.
 	// TODO: We need to ensure we receive cache data from all shards once we have multithreading in place.
 	//  For now we only expect one update.
@@ -339,7 +339,7 @@ func (m *Manager[T]) addWatcher(query *sql.DSQLQuery, clientIdentifier ClientIde
 }
 
 // removeWatcher removes a client from the watchlist for a query.
-func (m *Manager[T]) removeWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdentifier,
+func (m *Manager) removeWatcher(query *sql.DSQLQuery, clientIdentifier ClientIdentifier,
 	qwatchClientChan chan comm.QwatchResponse) {
 	queryString := query.String()
 	if clients, ok := m.WatchList.Load(queryString); ok {
@@ -370,7 +370,7 @@ func (m *Manager[T]) removeWatcher(query *sql.DSQLQuery, clientIdentifier Client
 }
 
 // clientCount returns the number of clients watching a query.
-func (m *Manager[T]) clientCount(clients *sync.Map) int {
+func (m *Manager) clientCount(clients *sync.Map) int {
 	count := 0
 	clients.Range(func(_, _ interface{}) bool {
 		count++
@@ -380,7 +380,7 @@ func (m *Manager[T]) clientCount(clients *sync.Map) int {
 }
 
 // runQuery executes a query on its respective cache.
-func (m *Manager[T]) runQuery(query *sql.DSQLQuery) (*[]sql.QueryResultRow[T], error) {
+func (m *Manager) runQuery(query *sql.DSQLQuery) (*[]sql.QueryResultRow, error) {
 	m.QueryCacheMu.RLock()
 	defer m.QueryCacheMu.RUnlock()
 

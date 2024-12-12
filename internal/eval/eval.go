@@ -25,8 +25,8 @@ func MakeEvalResult(result interface{}) *EvalResponse {
 	}
 }
 
-type Eval[T store.DSInterface] struct {
-	store                 *store.Store[T]
+type Eval struct {
+	store                 *store.Store
 	cmd                   *cmd.DiceDBCmd
 	client                *comm.Client
 	isHTTPOperation       bool

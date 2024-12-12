@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
-	ds "github.com/dicedb/dice/internal/datastructures"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
@@ -29,9 +28,9 @@ type IOChannels struct {
 	PreProcessingResponseChan chan *ops.StoreResponse // PreProcessingResponseChan is used to send responses related to preprocessing operations.
 }
 
-type ShardThread[T ds.DSInterface] struct {
+type ShardThread struct {
 	id               ShardID               // id is the unique identifier for the shard.
-	store            *dstore.Store[T]      // store that the shard is responsible for.
+	store            *dstore.Store         // store that the shard is responsible for.
 	ReqChan          chan *ops.StoreOp     // ReqChan is this shard's channel for receiving requests.
 	ioThreadMap      map[string]IOChannels // ioThreadMap maps each io-thread id to its corresponding IOChannels, containing both the common and preprocessing response channels.
 	mu               sync.RWMutex          // mu is the ioThreadMap's mutex for thread safety.
@@ -42,11 +41,11 @@ type ShardThread[T ds.DSInterface] struct {
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.
-func NewShardThread[T ds.DSInterface](id ShardID, gec chan error, sec chan *ShardError, queryWatchChan chan dstore.QueryWatchEvent[T],
-	cmdWatchChan chan dstore.CmdWatchEvent, evictionStrategy dstore.EvictionStrategy[T]) *ShardThread[T] {
-	return &ShardThread[T]{
+func NewShardThread(id ShardID, gec chan error, sec chan *ShardError, queryWatchChan chan dstore.QueryWatchEvent,
+	cmdWatchChan chan dstore.CmdWatchEvent, evictionStrategy dstore.EvictionStrategy) *ShardThread {
+	return &ShardThread{
 		id:               id,
-		store:            dstore.NewStore[T](queryWatchChan, cmdWatchChan, evictionStrategy),
+		store:            dstore.NewStore(queryWatchChan, cmdWatchChan, evictionStrategy),
 		ReqChan:          make(chan *ops.StoreOp, 1000),
 		ioThreadMap:      make(map[string]IOChannels),
 		globalErrorChan:  gec,
@@ -57,7 +56,7 @@ func NewShardThread[T ds.DSInterface](id ShardID, gec chan error, sec chan *Shar
 }
 
 // Start starts the shard thread, listening for incoming requests.
-func (shard *ShardThread[T]) Start(ctx context.Context) {
+func (shard *ShardThread) Start(ctx context.Context) {
 	ticker := time.NewTicker(shard.cronFrequency)
 	defer ticker.Stop()
 
@@ -75,12 +74,12 @@ func (shard *ShardThread[T]) Start(ctx context.Context) {
 }
 
 // runCronTasks runs the cron tasks for the shard. This includes deleting expired keys.
-func (shard *ShardThread[T]) runCronTasks() {
+func (shard *ShardThread) runCronTasks() {
 	dstore.DeleteExpiredKeys(shard.store)
 	shard.lastCronExecTime = utils.GetCurrentTime()
 }
 
-func (shard *ShardThread[T]) registerIOThread(id string, responseChan, preprocessingChan chan *ops.StoreResponse) {
+func (shard *ShardThread) registerIOThread(id string, responseChan, preprocessingChan chan *ops.StoreResponse) {
 	shard.mu.Lock()
 	shard.ioThreadMap[id] = IOChannels{
 		CommonResponseChan:        responseChan,
@@ -90,14 +89,14 @@ func (shard *ShardThread[T]) registerIOThread(id string, responseChan, preproces
 	shard.mu.Unlock()
 }
 
-func (shard *ShardThread[T]) unregisterIOThread(id string) {
+func (shard *ShardThread) unregisterIOThread(id string) {
 	shard.mu.Lock()
 	delete(shard.ioThreadMap, id)
 	shard.mu.Unlock()
 }
 
 // processRequest processes a Store operation for the shard.
-func (shard *ShardThread[T]) processRequest(op *ops.StoreOp) {
+func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 	shard.mu.RLock()
 	ioChannels, ok := shard.ioThreadMap[op.IOThreadID]
 	shard.mu.RUnlock()
@@ -133,7 +132,7 @@ func (shard *ShardThread[T]) processRequest(op *ops.StoreOp) {
 }
 
 // cleanup handles cleanup logic when the shard stops.
-func (shard *ShardThread[T]) cleanup() {
+func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
 	if !config.DiceConfig.Persistence.Enabled || !config.DiceConfig.Persistence.WriteAOFOnCleanup {
 		return

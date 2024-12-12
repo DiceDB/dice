@@ -46,13 +46,13 @@ type evictionItem struct {
 }
 
 // EvictionStrategy defines the interface for different eviction strategies
-type EvictionStrategy[T ds.DSInterface] interface {
+type EvictionStrategy interface {
 	// ShouldEvict checks if eviction should be triggered based on the current store state
 	// Returns the number of items that should be evicted, or 0 if no eviction is needed
-	ShouldEvict(store *Store[T]) int
+	ShouldEvict(store *Store) int
 
 	// EvictVictims evicts items from the store based on the eviction strategy
-	EvictVictims(store *Store[T], toEvict int)
+	EvictVictims(store *Store, toEvict int)
 
 	// AfterEviction is called after victims have been evicted from the store
 	// This allows strategies to update their internal state if needed
@@ -60,7 +60,7 @@ type EvictionStrategy[T ds.DSInterface] interface {
 
 	// OnAccess is called when an item is accessed (get/set)
 	// This allows strategies to update access patterns/statistics
-	OnAccess(key string, obj *T, accessType AccessType)
+	OnAccess(key string, obj *ds.DSInterface, accessType AccessType)
 }
 
 // BaseEvictionStrategy provides common functionality for all eviction strategies

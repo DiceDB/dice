@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/internal/object"
-	dstore "github.com/dicedb/dice/internal/store"
 
-	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/internal/common"
+	ds "github.com/dicedb/dice/internal/datastructures"
 	"github.com/dicedb/dice/internal/regex"
 	"github.com/dicedb/dice/internal/server/utils"
+	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/ohler55/ojg/jp"
 	"github.com/xwb1989/sqlparser"
 )
@@ -21,28 +21,26 @@ import (
 var ErrNoResultsFound = errors.New("ERR No results found")
 var ErrInvalidJSONPath = errors.New("ERR invalid JSONPath")
 
-var _ dstore.DSInterface = &dstore.TestSDS{}
-
-type QueryResultRow[T dstore.DSInterface] struct {
+type QueryResultRow struct {
 	Key   string
-	Value T // Use pointer to avoid copying
+	Value ds.DSInterface // Use pointer to avoid copying
 }
 
-type QueryResultRowWithOrder[T dstore.DSInterface] struct {
-	Row          QueryResultRow[T]
+type QueryResultRowWithOrder struct {
+	Row          QueryResultRow
 	OrderByValue interface{}
 	OrderByType  string
 }
 
-func ExecuteQuery[T dstore.DSInterface](query *DSQLQuery, store common.ITable[string, *T]) ([]QueryResultRow[T], error) {
-	var result []QueryResultRow[T]
+func ExecuteQuery(query *DSQLQuery, store common.ITable[string, ds.DSInterface]) ([]QueryResultRow, error) {
+	var result []QueryResultRow
 	var err error
 	jsonPathCache := make(map[string]jp.Expr) // Cache for parsed JSON paths
 
-	store.All(func(key string, value *T) bool {
-		row := QueryResultRow[T]{
+	store.All(func(key string, value ds.DSInterface) bool {
+		row := QueryResultRow{
 			Key:   key,
-			Value: *value, // Use pointer to avoid copying
+			Value: value, // Use pointer to avoid copying
 		}
 
 		if query.Where != nil {
@@ -110,8 +108,8 @@ func ExecuteQuery[T dstore.DSInterface](query *DSQLQuery, store common.ITable[st
 
 	if !query.Selection.ValueSelection {
 		for i := range result {
-			var val dstore.DSInterface
-			val = &dstore.TestSDS{}
+			var val ds.DSInterface
+			val = dstore.TestSDS{}
 			result[i].Value = val
 		}
 	}
@@ -119,19 +117,20 @@ func ExecuteQuery[T dstore.DSInterface](query *DSQLQuery, store common.ITable[st
 	return result, nil
 }
 
-func MarshalResultIfJSON(row *QueryResultRow) error {
-	// if the row contains JSON field then convert the json object into string representation so it can be encoded
-	// before being returned to the client
-	if row.Value.Type == object.ObjTypeJSON {
-		marshaledData, err := sonic.MarshalString(row.Value.Value)
-		if err != nil {
-			return err
-		}
+// TODO: when defining json data type
+// func MarshalResultIfJSON(row *QueryResultRow) error {
+// 	// if the row contains JSON field then convert the json object into string representation so it can be encoded
+// 	// before being returned to the client
+// 	if row.Value.GetType() == ds.ObjTypeJSON {
+// 		marshaledData, err := sonic.MarshalString(row.Value)
+// 		if err != nil {
+// 			return err
+// 		}
 
-		row.Value.Value = marshaledData
-	}
-	return nil
-}
+// 		row.Value.Value = marshaledData
+// 	}
+// 	return nil
+// }
 
 func precomputeOrderByValues(query *DSQLQuery, result []QueryResultRow, jsonPathCache map[string]jp.Expr) ([]QueryResultRowWithOrder, error) {
 	resultWithOrder := make([]QueryResultRowWithOrder, len(result))
@@ -415,7 +414,7 @@ func isInt64(f float64) bool {
 }
 
 // getValueAndType returns the type-casted value and type of the object
-func getValueAndType(obj *object.Obj) (val interface{}, s string, e error) {
+func getValueAndType(obj *ds.DSInterface) (val interface{}, s string, e error) {
 	switch v := obj.Value.(type) {
 	case string:
 		return v, String, nil

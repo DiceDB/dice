@@ -10,38 +10,38 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
-func NewStoreRegMap[T ds.DSInterface]() common.ITable[string, *T] {
-	return &common.RegMap[string, *T]{
-		M: make(map[string]*T),
+func NewStoreRegMap() common.ITable[string, ds.DSInterface] {
+	return &common.RegMap[string, ds.DSInterface]{
+		M: make(map[string]ds.DSInterface),
 	}
 }
 
-func NewExpireRegMap[T ds.DSInterface]() common.ITable[*T, uint64] {
-	return &common.RegMap[*T, uint64]{
-		M: make(map[*T]uint64),
+func NewExpireRegMap() common.ITable[*ds.DSInterface, uint64] {
+	return &common.RegMap[*ds.DSInterface, uint64]{
+		M: make(map[*ds.DSInterface]uint64),
 	}
 }
 
-func NewStoreMap[T ds.DSInterface]() common.ITable[string, *T] {
-	return NewStoreRegMap[T]()
+func NewStoreMap() common.ITable[string, ds.DSInterface] {
+	return NewStoreRegMap()
 }
 
-func NewExpireMap[T ds.DSInterface]() common.ITable[*T, uint64] {
-	return NewExpireRegMap[T]()
+func NewExpireMap() common.ITable[*ds.DSInterface, uint64] {
+	return NewExpireRegMap()
 }
 
-func NewDefaultEviction[T ds.DSInterface]() EvictionStrategy[T] {
-	return &BatchEvictionLRU[T]{
+func NewDefaultEviction() EvictionStrategy {
+	return &BatchEvictionLRU{
 		maxKeys:       config.DefaultKeysLimit,
 		evictionRatio: config.DefaultEvictionRatio,
 	}
 }
 
 // QueryWatchEvent represents a change in a watched key.
-type QueryWatchEvent[T ds.DSInterface] struct {
+type QueryWatchEvent struct {
 	Key       string
 	Operation string
-	Value     T
+	Value     ds.DSInterface
 }
 
 type CmdWatchEvent struct {
@@ -49,84 +49,91 @@ type CmdWatchEvent struct {
 	AffectedKey string
 }
 
-type Store[T ds.DSInterface] struct {
-	store            common.ITable[string, *T]
-	expires          common.ITable[*T, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+type Store struct {
+	store            common.ITable[string, ds.DSInterface]
+	expires          common.ITable[*ds.DSInterface, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
 	numKeys          int
-	queryWatchChan   chan QueryWatchEvent[T]
+	queryWatchChan   chan QueryWatchEvent
 	cmdWatchChan     chan CmdWatchEvent
-	evictionStrategy EvictionStrategy[T]
+	evictionStrategy EvictionStrategy
 }
 
-func NewStore[T ds.DSInterface](queryWatchChan chan QueryWatchEvent[T], cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy[T]) *Store[T] {
-	store := &Store[T]{
-		store:            NewStoreRegMap[T](),
-		expires:          NewExpireRegMap[T](),
+func NewStore(queryWatchChan chan QueryWatchEvent, cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy) *Store {
+	store := &Store{
+		store:            NewStoreRegMap(),
+		expires:          NewExpireRegMap(),
 		queryWatchChan:   queryWatchChan,
 		cmdWatchChan:     cmdWatchChan,
 		evictionStrategy: evictionStrategy,
 	}
 	if evictionStrategy == nil {
-		store.evictionStrategy = NewDefaultEviction[T]()
+		store.evictionStrategy = NewDefaultEviction()
 	}
 
 	return store
 }
 
-func ResetStore[T ds.DSInterface](store *Store[T]) *Store[T] {
+func ResetStore(store *Store) *Store {
 	store.numKeys = 0
-	store.store = NewStoreMap[T]()
-	store.expires = NewExpireMap[T]()
+	store.store = NewStoreMap()
+	store.expires = NewExpireMap()
 
 	return store
 }
 
-func (store *Store[T]) ResetStore() {
+func (store *Store) ResetStore() {
 	store.numKeys = 0
-	store.store = NewStoreMap[T]()
-	store.expires = NewExpireMap[T]()
+	store.store = NewStoreMap()
+	store.expires = NewExpireMap()
 }
 
-func (store *Store[T]) Put(k string, obj *T, opts ...PutOption) {
+func (store *Store) NewObj(value ds.DSInterface, exDurationMs int64) ds.DSInterface {
+	if exDurationMs > 0 {
+		store.SetExpiry(&value, exDurationMs)
+	}
+	return value
+}
+
+func (store *Store) Put(k string, obj ds.DSInterface, opts ...PutOption) {
 	store.putHelper(k, obj, opts...)
 }
 
-func (store *Store[T]) GetKeyCount() int {
+func (store *Store) GetKeyCount() int {
 	return store.numKeys
 }
 
-func (store *Store[T]) IncrementKeyCount() {
+func (store *Store) IncrementKeyCount() {
 	store.numKeys++
 }
 
-func (store *Store[T]) PutAll(data map[string]*T) {
+func (store *Store) PutAll(data map[string]ds.DSInterface) {
 	for k, obj := range data {
 		store.putHelper(k, obj)
 	}
 }
 
-func (store *Store[T]) GetNoTouch(k string) *T {
+func (store *Store) GetNoTouch(k string) ds.DSInterface {
 	return store.getHelper(k, false)
 }
 
-func (store *Store[T]) putHelper(k string, obj *T, opts ...PutOption) {
+func (store *Store) putHelper(k string, obj ds.DSInterface, opts ...PutOption) {
 	options := getDefaultPutOptions()
 
 	for _, optApplier := range opts {
 		optApplier(options)
 	}
 
-	(*obj).UpdateLastAccessedAt()
+	obj.UpdateLastAccessedAt()
 	currentObject, ok := store.store.Get(k)
 	if ok {
-		v, ok1 := store.expires.Get(currentObject)
+		v, ok1 := store.expires.Get(&currentObject)
 		if ok1 && options.KeepTTL && v > 0 {
-			v1, ok2 := store.expires.Get(currentObject)
+			v1, ok2 := store.expires.Get(&currentObject)
 			if ok2 {
-				store.expires.Put(obj, v1)
+				store.expires.Put(&obj, v1)
 			}
 		}
-		store.expires.Delete(currentObject)
+		store.expires.Delete(&currentObject)
 	} else {
 		// TODO: Inform all the io-threads and shards about the eviction.
 		// TODO: Start the eviction only when all the io-thread and shards have acknowledged the eviction.
@@ -138,7 +145,7 @@ func (store *Store[T]) putHelper(k string, obj *T, opts ...PutOption) {
 	}
 
 	store.store.Put(k, obj)
-	store.evictionStrategy.OnAccess(k, obj, AccessSet)
+	store.evictionStrategy.OnAccess(k, &obj, AccessSet)
 
 	// if store.queryWatchChan != nil {
 	// 	store.notifyQueryManager(k, Set, *obj)
@@ -149,31 +156,30 @@ func (store *Store[T]) putHelper(k string, obj *T, opts ...PutOption) {
 }
 
 // getHelper is a helper function to get the object from the store. It also updates the last accessed time if touch is true.
-func (store *Store[T]) getHelper(k string, touch bool) *T {
-	var obj *T
-	obj, _ = store.store.Get(k)
+func (store *Store) getHelper(k string, touch bool) ds.DSInterface {
+	obj, _ := store.store.Get(k)
 	if obj != nil {
-		if hasExpired(obj, store) {
+		if hasExpired(&obj, store) {
 			store.deleteKey(k, obj)
 			obj = nil
 		} else if touch {
-			(*obj).UpdateLastAccessedAt()
-			store.evictionStrategy.OnAccess(k, obj, AccessGet)
+			obj.UpdateLastAccessedAt()
+			store.evictionStrategy.OnAccess(k, &obj, AccessGet)
 		}
 	}
 	return obj
 }
 
-func (store *Store[T]) GetAll(keys []string) []*T {
-	response := make([]*T, 0, len(keys))
+func (store *Store) GetAll(keys []string) []ds.DSInterface {
+	response := make([]ds.DSInterface, 0, len(keys))
 	for _, k := range keys {
 		v, _ := store.store.Get(k)
 		if v != nil {
-			if hasExpired(v, store) {
+			if hasExpired(&v, store) {
 				store.deleteKey(k, v)
 				response = append(response, nil)
 			} else {
-				(*v).UpdateLastAccessedAt()
+				v.UpdateLastAccessedAt()
 				response = append(response, v)
 			}
 		} else {
@@ -183,7 +189,7 @@ func (store *Store[T]) GetAll(keys []string) []*T {
 	return response
 }
 
-func (store *Store[T]) Del(k string, opts ...DelOption) bool {
+func (store *Store) Del(k string, opts ...DelOption) bool {
 	v, ok := store.store.Get(k)
 	if ok {
 		return store.deleteKey(k, v, opts...)
@@ -191,17 +197,17 @@ func (store *Store[T]) Del(k string, opts ...DelOption) bool {
 	return false
 }
 
-func (store *Store[T]) DelByPtr(ptr string, opts ...DelOption) bool {
+func (store *Store) DelByPtr(ptr string, opts ...DelOption) bool {
 	return store.delByPtr(ptr, opts...)
 }
 
-func (store *Store[T]) Keys(p string) ([]string, error) {
+func (store *Store) Keys(p string) ([]string, error) {
 	var keys []string
 	var err error
 
 	keys = make([]string, 0, store.store.Len())
 
-	store.store.All(func(k string, _ *T) bool {
+	store.store.All(func(k string, _ ds.DSInterface) bool {
 		if found, e := path.Match(p, k); e != nil {
 			err = e
 			// stop iteration if any error
@@ -217,19 +223,19 @@ func (store *Store[T]) Keys(p string) ([]string, error) {
 }
 
 // GetDBSize returns number of keys present in the database
-func (store *Store[T]) GetDBSize() uint64 {
+func (store *Store) GetDBSize() uint64 {
 	return uint64(store.store.Len())
 }
 
 // Rename function to implement RENAME functionality using existing helpers
-func (store *Store[T]) Rename(sourceKey, destKey string) bool {
+func (store *Store) Rename(sourceKey, destKey string) bool {
 	// If source and destination are the same, do nothing and return true
 	if sourceKey == destKey {
 		return true
 	}
 
 	sourceObj, _ := store.store.Get(sourceKey)
-	if sourceObj == nil || hasExpired(sourceObj, store) {
+	if sourceObj == nil || hasExpired(&sourceObj, store) {
 		if sourceObj != nil {
 			store.deleteKey(sourceKey, sourceObj, WithDelCmd(Rename))
 		}
@@ -254,15 +260,14 @@ func (store *Store[T]) Rename(sourceKey, destKey string) bool {
 	return true
 }
 
-func (store *Store[T]) Get(k string) *T {
+func (store *Store) Get(k string) ds.DSInterface {
 	return store.getHelper(k, true)
 }
 
-func (store *Store[T]) GetDel(k string, opts ...DelOption) *T {
-	var v *T
-	v, _ = store.store.Get(k)
+func (store *Store) GetDel(k string, opts ...DelOption) ds.DSInterface {
+	v, _ := store.store.Get(k)
 	if v != nil {
-		expired := hasExpired(v, store)
+		expired := hasExpired(&v, store)
 		store.deleteKey(k, v, opts...)
 		if expired {
 			v = nil
@@ -273,18 +278,18 @@ func (store *Store[T]) GetDel(k string, opts ...DelOption) *T {
 
 // SetExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
-func (store *Store[T]) SetExpiry(obj *T, expDurationMs int64) {
+func (store *Store) SetExpiry(obj *ds.DSInterface, expDurationMs int64) {
 	store.expires.Put(obj, uint64(utils.GetCurrentTime().UnixMilli())+uint64(expDurationMs))
 }
 
 // SetUnixTimeExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
-func (store *Store[T]) SetUnixTimeExpiry(obj *T, exUnixTimeSec int64) {
+func (store *Store) SetUnixTimeExpiry(obj *ds.DSInterface, exUnixTimeSec int64) {
 	// convert unix-time-seconds to unix-time-milliseconds
 	store.expires.Put(obj, uint64(exUnixTimeSec*1000))
 }
 
-func (store *Store[T]) deleteKey(k string, obj *T, opts ...DelOption) bool {
+func (store *Store) deleteKey(k string, obj ds.DSInterface, opts ...DelOption) bool {
 	options := getDefaultDelOptions()
 
 	for _, optApplier := range opts {
@@ -293,10 +298,10 @@ func (store *Store[T]) deleteKey(k string, obj *T, opts ...DelOption) bool {
 
 	if obj != nil {
 		store.store.Delete(k)
-		store.expires.Delete(obj)
+		store.expires.Delete(&obj)
 		store.numKeys--
 
-		store.evictionStrategy.OnAccess(k, obj, AccessDel)
+		store.evictionStrategy.OnAccess(k, &obj, AccessDel)
 
 		// if store.queryWatchChan != nil {
 		// 	store.notifyQueryManager(k, Del, *obj)
@@ -311,7 +316,7 @@ func (store *Store[T]) deleteKey(k string, obj *T, opts ...DelOption) bool {
 	return false
 }
 
-func (store *Store[T]) delByPtr(ptr string, opts ...DelOption) bool {
+func (store *Store) delByPtr(ptr string, opts ...DelOption) bool {
 	if obj, ok := store.store.Get(ptr); ok {
 		key := ptr
 		return store.deleteKey(key, obj, opts...)
@@ -320,21 +325,21 @@ func (store *Store[T]) delByPtr(ptr string, opts ...DelOption) bool {
 }
 
 // notifyQueryManager notifies the query manager about a key change, so that it can update the query cache if needed.
-// func (store *Store[T]) notifyQueryManager(k, operation string, obj T) {
+// func (store *Store) notifyQueryManager(k, operation string, obj T) {
 // 	store.queryWatchChan <- QueryWatchEvent{k, operation, obj}
 // }
 
-// func (store *Store[T]) notifyWatchManager(cmd, affectedKey string) {
+// func (store *Store) notifyWatchManager(cmd, affectedKey string) {
 // 	store.cmdWatchChan <- CmdWatchEvent{cmd, affectedKey}
 // }
 
-func (store *Store[T]) GetStore() common.ITable[string, *T] {
+func (store *Store) GetStore() common.ITable[string, ds.DSInterface] {
 	return store.store
 }
 
 // CacheKeysForQuery scans the store for keys that match the given where clause and sends them to the cache channel.
 // This allows the query manager to cache the existing keys that match the query.
-// func (store *Store[T]) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel chan *[]struct {
+// func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel chan *[]struct {
 // 	Key   string
 // 	Value *object.Obj
 // }) {
@@ -358,7 +363,7 @@ func (store *Store[T]) GetStore() common.ITable[string, *T] {
 // 	cacheChannel <- &shardCache
 // }
 
-func (store *Store[T]) evict(evictCount int) bool {
+func (store *Store) evict(evictCount int) bool {
 	store.evictionStrategy.EvictVictims(store, evictCount)
 	return true
 }

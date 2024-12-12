@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	ds "github.com/dicedb/dice/internal/datastructures"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
 
@@ -38,9 +37,9 @@ var unimplementedCommandsWebsocket = map[string]bool{
 	Qunwatch: true,
 }
 
-type WebsocketServer[T ds.DSInterface] struct {
+type WebsocketServer struct {
 	abstractserver.AbstractServer
-	shardManager       *shard.ShardManager[T]
+	shardManager       *shard.ShardManager
 	ioChan             chan *ops.StoreResponse
 	websocketServer    *http.Server
 	upgrader           websocket.Upgrader
@@ -48,7 +47,7 @@ type WebsocketServer[T ds.DSInterface] struct {
 	shutdownChan       chan struct{}
 }
 
-func NewWebSocketServer[T ds.DSInterface](shardManager *shard.ShardManager[T], port int, wl wal.AbstractWAL) *WebsocketServer[T] {
+func NewWebSocketServer(shardManager *shard.ShardManager, port int, wl wal.AbstractWAL) *WebsocketServer {
 	mux := http.NewServeMux()
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),
@@ -60,7 +59,7 @@ func NewWebSocketServer[T ds.DSInterface](shardManager *shard.ShardManager[T], p
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
 
-	websocketServer := &WebsocketServer[T]{
+	websocketServer := &WebsocketServer{
 		shardManager:       shardManager,
 		ioChan:             make(chan *ops.StoreResponse, 1000),
 		websocketServer:    srv,
@@ -73,7 +72,7 @@ func NewWebSocketServer[T ds.DSInterface](shardManager *shard.ShardManager[T], p
 	return websocketServer
 }
 
-func (s *WebsocketServer[T]) Run(ctx context.Context) error {
+func (s *WebsocketServer) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	var err error
 
@@ -113,7 +112,7 @@ func (s *WebsocketServer[T]) Run(ctx context.Context) error {
 	return err
 }
 
-func (s *WebsocketServer[T]) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
+func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	// upgrade http connection to websocket
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -192,7 +191,7 @@ func (s *WebsocketServer[T]) WebsocketHandler(w http.ResponseWriter, r *http.Req
 	}
 }
 
-func (s *WebsocketServer[T]) processQwatchUpdates(clientIdentifierID uint32, conn *websocket.Conn) {
+func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *websocket.Conn) {
 	for {
 		select {
 		case resp := <-s.qwatchResponseChan:
@@ -208,7 +207,7 @@ func (s *WebsocketServer[T]) processQwatchUpdates(clientIdentifierID uint32, con
 	}
 }
 
-func (s *WebsocketServer[T]) processQwatchResponse(conn *websocket.Conn, response interface{}) error {
+func (s *WebsocketServer) processQwatchResponse(conn *websocket.Conn, response interface{}) error {
 	var result interface{}
 	var err error
 	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
@@ -265,7 +264,7 @@ func (s *WebsocketServer[T]) processQwatchResponse(conn *websocket.Conn, respons
 	return nil
 }
 
-func (s *WebsocketServer[T]) processResponse(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, response *ops.StoreResponse) error {
+func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, response *ops.StoreResponse) error {
 	var err error
 	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
 

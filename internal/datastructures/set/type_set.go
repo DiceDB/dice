@@ -36,6 +36,11 @@ type TypedSetInterface[T constraint] interface {
 	Contains(item T) bool
 }
 
+func GetIfTypeTypedSet[T constraint](ds ds.DSInterface) (TypedSetInterface[T], bool) {
+	sds, ok := ds.(TypedSetInterface[T])
+	return sds, ok
+}
+
 type TypedSet[T constraint] struct {
 	ds.BaseDataStructure[ds.DSInterface]
 	value map[T]struct{}

@@ -16,7 +16,7 @@ const (
 	LT string = "LT"
 )
 
-func hasExpired[T ds.DSInterface](obj *T, store *Store[T]) bool {
+func hasExpired(obj *ds.DSInterface, store *Store) bool {
 	exp, ok := store.expires.Get(obj)
 	if !ok {
 		return false
@@ -24,25 +24,25 @@ func hasExpired[T ds.DSInterface](obj *T, store *Store[T]) bool {
 	return exp <= uint64(utils.GetCurrentTime().UnixMilli())
 }
 
-func GetExpiry[T ds.DSInterface](obj *T, store *Store[T]) (uint64, bool) {
+func GetExpiry(obj *ds.DSInterface, store *Store) (uint64, bool) {
 	exp, ok := store.expires.Get(obj)
 	return exp, ok
 }
 
-func DelExpiry[T ds.DSInterface](obj *T, store *Store[T]) {
+func DelExpiry(obj *ds.DSInterface, store *Store) {
 	store.expires.Delete(obj)
 }
 
 // TODO: Optimize
 //   - Sampling
 //   - Unnecessary iteration
-func expireSample[T ds.DSInterface](store *Store[T]) float32 {
+func expireSample(store *Store) float32 {
 	var limit = 20
 	var expiredCount = 0
 	var keysToDelete []string
 
 	// Collect keys to be deleted
-	store.store.All(func(keyPtr string, obj *T) bool {
+	store.store.All(func(keyPtr string, obj ds.DSInterface) bool {
 		limit--
 		if hasExpired(&obj, store) {
 			keysToDelete = append(keysToDelete, keyPtr)
@@ -63,7 +63,7 @@ func expireSample[T ds.DSInterface](store *Store[T]) float32 {
 
 // DeleteExpiredKeys deletes all the expired keys - the active way
 // Sampling approach: https://redis.io/commands/expire/
-func DeleteExpiredKeys[T ds.DSInterface](store *Store[T]) {
+func DeleteExpiredKeys(store *Store) {
 	for {
 		frac := expireSample(store)
 		// if the sample had less than 25% keys expired
@@ -81,8 +81,8 @@ func DeleteExpiredKeys[T ds.DSInterface](store *Store[T]) {
 // Returns Boolean True and error nil if expiry was set on the key successfully.
 // Returns Boolean False and error nil if conditions didn't met.
 // Returns Boolean False and error not-nil if invalid combination of subCommands or if subCommand is invalid
-func EvaluateAndSetExpiry[T ds.DSInterface](subCommands []string, newExpiry int64, key string,
-	store *Store[T]) (shouldSetExpiry bool, err error) {
+func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
+	store *Store) (shouldSetExpiry bool, err error) {
 	var newExpInMilli = newExpiry * 1000
 	var prevExpiry *uint64 = nil
 	var nxCmd, xxCmd, gtCmd, ltCmd bool
@@ -95,11 +95,11 @@ func EvaluateAndSetExpiry[T ds.DSInterface](subCommands []string, newExpiry int6
 	shouldSetExpiry = true
 	// if no condition exists
 	if len(subCommands) == 0 {
-		store.SetUnixTimeExpiry(obj, newExpiry)
+		store.SetUnixTimeExpiry(&obj, newExpiry)
 		return shouldSetExpiry, nil
 	}
 
-	expireTime, ok := GetExpiry(obj, store)
+	expireTime, ok := GetExpiry(&obj, store)
 	if ok {
 		prevExpiry = &expireTime
 	}
@@ -143,7 +143,7 @@ func EvaluateAndSetExpiry[T ds.DSInterface](subCommands []string, newExpiry int6
 	}
 
 	if shouldSetExpiry {
-		store.SetUnixTimeExpiry(obj, newExpiry)
+		store.SetUnixTimeExpiry(&obj, newExpiry)
 	}
 	return shouldSetExpiry, nil
 }
