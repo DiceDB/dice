@@ -72,7 +72,6 @@ func NewAOFWAL(directory string) (*AOF, error) {
 }
 
 func (wal *AOF) Init(t time.Time) error {
-
 	// TODO - Restore existing checkpoints to memory
 
 	// Create the directory if it doesn't exist
