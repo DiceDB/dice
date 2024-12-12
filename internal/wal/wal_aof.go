@@ -8,6 +8,7 @@ import (
 	"hash/crc32"
 	"io"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	sync "sync"
@@ -18,24 +19,19 @@ import (
 )
 
 const (
-	segmentPrefix           = "seg-"
-	defaultVersion          = "v0.0.1"
-	versionTagSize          = 1 // Tag for "version" field
-	versionLengthPrefixSize = 1 // Length prefix for "version"
-	versionSize             = 6 // Fixed size for "v0.0.1"
-	logSequenceNumberSize   = 8
-	dataTagSize             = 1 // Tag for "data" field
-	dataLengthPrefixSize    = 1 // Length prefix for "data"
-	CRCSize                 = 4
-	timestampSize           = 8
+	segmentPrefix     = "seg-"
+	defaultVersion    = "v0.0.1"
+	RotationModeTime  = "time"
+	RetentionModeTime = "time"
+	WALModeUnbuffered = "unbuffered"
 )
 
-type WALAOF struct {
+type AOF struct {
 	logDir                 string
 	currentSegmentFile     *os.File
 	walMode                string
 	writeMode              string
-	maxSegmentSize         int64
+	maxSegmentSize         int
 	maxSegmentCount        int
 	currentSegmentIndex    int
 	oldestSegmentIndex     int
@@ -49,20 +45,20 @@ type WALAOF struct {
 	bufferSyncTicker       *time.Ticker
 	segmentRotationTicker  *time.Ticker
 	segmentRetentionTicker *time.Ticker
-	lock                   sync.Mutex
+	mu                     sync.Mutex
 	ctx                    context.Context
 	cancel                 context.CancelFunc
 }
 
-func NewAOFWAL(directory string) (*WALAOF, error) {
+func NewAOFWAL(directory string) (*AOF, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	return &WALAOF{
+	return &AOF{
 		logDir:                 directory,
 		walMode:                config.DiceConfig.WAL.WalMode,
 		bufferSyncTicker:       time.NewTicker(config.DiceConfig.WAL.BufferSyncInterval),
-		segmentRotationTicker:  time.NewTicker(config.DiceConfig.WAL.SegmentRotationTime),
-		segmentRetentionTicker: time.NewTicker(config.DiceConfig.WAL.SegmentRetentionDuration),
+		segmentRotationTicker:  time.NewTicker(config.DiceConfig.WAL.MaxSegmentRotationTime),
+		segmentRetentionTicker: time.NewTicker(config.DiceConfig.WAL.MaxSegmentRetentionDuration),
 		writeMode:              config.DiceConfig.WAL.WriteMode,
 		maxSegmentSize:         config.DiceConfig.WAL.MaxSegmentSizeMB * 1024 * 1024,
 		maxSegmentCount:        config.DiceConfig.WAL.MaxSegmentCount,
@@ -75,10 +71,7 @@ func NewAOFWAL(directory string) (*WALAOF, error) {
 	}, nil
 }
 
-func (wal *WALAOF) Init(t time.Time) error {
-	if err := wal.validateConfig(); err != nil {
-		return err
-	}
+func (wal *AOF) Init(t time.Time) error {
 
 	// TODO - Restore existing checkpoints to memory
 
@@ -94,29 +87,9 @@ func (wal *WALAOF) Init(t time.Time) error {
 	}
 
 	if len(files) > 0 {
-		fmt.Println("Found existing log segments:", files)
+		slog.Info("Found existing log segments", slog.Any("files", files))
 		// TODO - Check if we have newer WAL entries after the last checkpoint and simultaneously replay and checkpoint them
 	}
-
-	var wg sync.WaitGroup
-	errCh := make(chan error, wal.maxSegmentCount)
-
-	for i := 0; i < wal.maxSegmentCount; i++ {
-		wg.Add(1)
-		go func(index int) {
-			defer wg.Done()
-			filePath := filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("-%d", index))
-			file, err := os.Create(filePath)
-			if err != nil {
-				errCh <- fmt.Errorf("error creating segment file %s: %v", filePath, err)
-				return
-			}
-			defer file.Close()
-		}(i)
-	}
-
-	wg.Wait()
-	close(errCh)
 
 	wal.lastSequenceNo = 0
 	wal.currentSegmentIndex = 0
@@ -135,11 +108,11 @@ func (wal *WALAOF) Init(t time.Time) error {
 
 	go wal.keepSyncingBuffer()
 
-	if wal.rotationMode == "time" { //nolint:goconst
+	if wal.rotationMode == RotationModeTime {
 		go wal.rotateSegmentPeriodically()
 	}
 
-	if wal.retentionMode == "time" { //nolint:goconst
+	if wal.retentionMode == RetentionModeTime {
 		go wal.deleteSegmentPeriodically()
 	}
 
@@ -147,20 +120,20 @@ func (wal *WALAOF) Init(t time.Time) error {
 }
 
 // WriteEntry writes an entry to the WAL.
-func (wal *WALAOF) LogCommand(data []byte) error {
+func (wal *AOF) LogCommand(data []byte) error {
 	return wal.writeEntry(data)
 }
 
-func (wal *WALAOF) writeEntry(data []byte) error {
-	wal.lock.Lock()
-	defer wal.lock.Unlock()
+func (wal *AOF) writeEntry(data []byte) error {
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
 
 	wal.lastSequenceNo++
-	entry := &WAL_Entry{
+	entry := &WALEntry{
 		Version:           defaultVersion,
 		LogSequenceNumber: wal.lastSequenceNo,
 		Data:              data,
-		CRC:               crc32.ChecksumIEEE(append(data, byte(wal.lastSequenceNo))),
+		Crc32:             crc32.ChecksumIEEE(append(data, byte(wal.lastSequenceNo))),
 		Timestamp:         time.Now().UnixNano(),
 	}
 
@@ -176,7 +149,7 @@ func (wal *WALAOF) writeEntry(data []byte) error {
 	}
 
 	// if wal-mode unbuffered immediately sync to disk
-	if wal.walMode == "unbuffered" { //nolint:goconst
+	if wal.walMode == WALModeUnbuffered { //nolint:goconst
 		if err := wal.Sync(); err != nil {
 			return err
 		}
@@ -185,7 +158,7 @@ func (wal *WALAOF) writeEntry(data []byte) error {
 	return nil
 }
 
-func (wal *WALAOF) writeEntryToBuffer(entry *WAL_Entry) error {
+func (wal *AOF) writeEntryToBuffer(entry *WALEntry) error {
 	marshaledEntry := MustMarshal(entry)
 
 	size := int32(len(marshaledEntry))
@@ -198,8 +171,8 @@ func (wal *WALAOF) writeEntryToBuffer(entry *WAL_Entry) error {
 }
 
 // rotateLogIfNeeded is not thread safe
-func (wal *WALAOF) rotateLogIfNeeded(entrySize int) error {
-	if int64(wal.byteOffset+entrySize) > wal.maxSegmentSize {
+func (wal *AOF) rotateLogIfNeeded(entrySize int) error {
+	if wal.byteOffset+entrySize > wal.maxSegmentSize {
 		if err := wal.rotateLog(); err != nil {
 			return err
 		}
@@ -208,7 +181,7 @@ func (wal *WALAOF) rotateLogIfNeeded(entrySize int) error {
 }
 
 // rotateLog is not thread safe
-func (wal *WALAOF) rotateLog() error {
+func (wal *AOF) rotateLog() error {
 	if err := wal.Sync(); err != nil {
 		return err
 	}
@@ -226,7 +199,7 @@ func (wal *WALAOF) rotateLog() error {
 		wal.oldestSegmentIndex++
 	}
 
-	newFile, err := os.OpenFile(filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("-%d", wal.currentSegmentIndex)), os.O_RDWR|os.O_CREATE, 0644)
+	newFile, err := os.OpenFile(filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("-%d", wal.currentSegmentIndex)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("failed opening file: %s", err)
 	}
@@ -239,7 +212,7 @@ func (wal *WALAOF) rotateLog() error {
 	return nil
 }
 
-func (wal *WALAOF) deleteOldestSegment() error {
+func (wal *AOF) deleteOldestSegment() error {
 	oldestSegmentFilePath := filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("%d", wal.oldestSegmentIndex))
 
 	// TODO: checkpoint before deleting the file
@@ -253,7 +226,7 @@ func (wal *WALAOF) deleteOldestSegment() error {
 }
 
 // Close the WAL file. It also calls Sync() on the WAL.
-func (wal *WALAOF) Close() error {
+func (wal *AOF) Close() error {
 	wal.cancel()
 	if err := wal.Sync(); err != nil {
 		return err
@@ -263,7 +236,7 @@ func (wal *WALAOF) Close() error {
 
 // Writes out any data in the WAL's in-memory buffer to the segment file. If
 // fsync is enabled, it also calls fsync on the segment file.
-func (wal *WALAOF) Sync() error {
+func (wal *AOF) Sync() error {
 	if err := wal.bufWriter.Flush(); err != nil {
 		return err
 	}
@@ -276,14 +249,14 @@ func (wal *WALAOF) Sync() error {
 	return nil
 }
 
-func (wal *WALAOF) keepSyncingBuffer() {
+func (wal *AOF) keepSyncingBuffer() {
 	for {
 		select {
 		case <-wal.bufferSyncTicker.C:
 
-			wal.lock.Lock()
+			wal.mu.Lock()
 			err := wal.Sync()
-			wal.lock.Unlock()
+			wal.mu.Unlock()
 
 			if err != nil {
 				log.Printf("Error while performing sync: %v", err)
@@ -295,14 +268,14 @@ func (wal *WALAOF) keepSyncingBuffer() {
 	}
 }
 
-func (wal *WALAOF) rotateSegmentPeriodically() {
+func (wal *AOF) rotateSegmentPeriodically() {
 	for {
 		select {
 		case <-wal.segmentRotationTicker.C:
 
-			wal.lock.Lock()
+			wal.mu.Lock()
 			err := wal.rotateLog()
-			wal.lock.Unlock()
+			wal.mu.Unlock()
 			if err != nil {
 				log.Printf("Error while performing sync: %v", err)
 			}
@@ -313,14 +286,14 @@ func (wal *WALAOF) rotateSegmentPeriodically() {
 	}
 }
 
-func (wal *WALAOF) deleteSegmentPeriodically() {
+func (wal *AOF) deleteSegmentPeriodically() {
 	for {
 		select {
 		case <-wal.segmentRetentionTicker.C:
 
-			wal.lock.Lock()
+			wal.mu.Lock()
 			err := wal.deleteOldestSegment()
-			wal.lock.Unlock()
+			wal.mu.Unlock()
 			if err != nil {
 				log.Printf("Error while deleting segment: %v", err)
 			}
@@ -330,7 +303,7 @@ func (wal *WALAOF) deleteSegmentPeriodically() {
 	}
 }
 
-func (wal *WALAOF) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
+func (wal *AOF) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
 	// TODO: implement this method
 	return nil
 }
