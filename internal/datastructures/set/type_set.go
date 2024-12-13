@@ -26,14 +26,27 @@ type constraint interface {
 	cmp.Ordered
 }
 
+type SetInterface interface {
+	ds.DSInterface
+	Size() int
+	Serialize() []byte
+	All() []string
+	GetEncoding() int
+}
+
 type TypedSetInterface[T constraint] interface {
 	ds.DSInterface
-	All() []T
+	All() []string
 	Serialize() []byte
 	Size() int
 	Add(item T) bool
 	Remove(item T)
 	Contains(item T) bool
+}
+
+func GetIfTypeSet(ds ds.DSInterface) (SetInterface, bool) {
+	sds, ok := ds.(SetInterface)
+	return sds, ok
 }
 
 func GetIfTypeTypedSet[T constraint](ds ds.DSInterface) (TypedSetInterface[T], bool) {
@@ -43,22 +56,25 @@ func GetIfTypeTypedSet[T constraint](ds ds.DSInterface) (TypedSetInterface[T], b
 
 type TypedSet[T constraint] struct {
 	ds.BaseDataStructure[ds.DSInterface]
-	value map[T]struct{}
+	value    map[T]struct{}
+	encoding int
 }
 
 func NewTypedSet[T constraint](encoding int) ds.DSInterface {
 	return &TypedSet[T]{
-		value: make(map[T]struct{}),
-		BaseDataStructure: ds.BaseDataStructure[ds.DSInterface]{
-			Encoding: encoding,
-		},
+		value:    make(map[T]struct{}),
+		encoding: encoding,
 	}
 }
 
-func (s *TypedSet[T]) All() []T {
-	result := make([]T, 0, len(s.value))
+func (s *TypedSet[T]) GetEncoding() int {
+	return s.encoding
+}
+
+func (s *TypedSet[T]) All() []string {
+	result := make([]string, 0, len(s.value))
 	for key := range s.value {
-		result = append(result, key)
+		result = append(result, ds.ToString(key))
 	}
 	return result
 }
@@ -164,7 +180,7 @@ func NewTypedSetFromEncoding(encoding int) ds.DSInterface {
 	}
 }
 
-func NewTypedSetFromEncodingAndItems(items []string, encoding int) (ds.DSInterface, int) {
+func NewTypedSetFromEncodingAndItems(items []string, encoding int) ds.DSInterface {
 	set := NewTypedSetFromEncoding(encoding)
 	switch encoding {
 	case EncodingInt8:
@@ -202,7 +218,7 @@ func NewTypedSetFromEncodingAndItems(items []string, encoding int) (ds.DSInterfa
 			set.(*TypedSet[string]).Add(item)
 		}
 	}
-	return set, encoding
+	return set
 }
 
 func EncodingFromItems(items []string) int {
@@ -217,7 +233,7 @@ func EncodingFromItems(items []string) int {
 	return DeduceEncodingFromItems(et)
 }
 
-func NewTypedSetFromItems(items []string) (ds.DSInterface, int) {
+func NewTypedSetFromItems(items []string) ds.DSInterface {
 	encoding := EncodingFromItems(items)
 	return NewTypedSetFromEncodingAndItems(items, encoding)
 }

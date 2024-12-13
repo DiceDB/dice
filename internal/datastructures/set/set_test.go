@@ -77,13 +77,10 @@ func TestEncodingFromItems(t *testing.T) {
 func TestNewTypedSetFromItems(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			dsObject, encoding := NewTypedSetFromItems(test.items)
-			if encoding != test.result {
-				t.Errorf("expected %v, got %v", test.result, encoding)
-			}
+			dsObject := NewTypedSetFromItems(test.items)
 			// check all items
 			for _, item := range test.items {
-				switch encoding {
+				switch test.result {
 				case EncodingInt8:
 					i, _ := strconv.ParseInt(item, 10, 8)
 					if !dsObject.(*TypedSet[int8]).Contains(int8(i)) {

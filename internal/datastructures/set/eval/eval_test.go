@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	ds "github.com/dicedb/dice/internal/datastructures"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
 func BenchmarkEvalSadd(b *testing.B) {
-	store := dstore.NewStore[ds.DSInterface](nil, nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 
 	for i := 0; i < b.N; i++ {
 		evalSADD([]string{"key", fmt.Sprintf("%d", i)}, store)
@@ -18,7 +17,7 @@ func BenchmarkEvalSadd(b *testing.B) {
 }
 
 func BenchmarkEvalSaddIntWithExistingSet(b *testing.B) {
-	store := dstore.NewStore[ds.DSInterface](nil, nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	key_values := make([]string, 1001)
 	key_values = append(key_values, "key")
 	for i := 0; i < 1000; i++ {
@@ -33,7 +32,7 @@ func BenchmarkEvalSaddIntWithExistingSet(b *testing.B) {
 }
 
 func BenchmarkEvalSaddWithExistingSet(b *testing.B) {
-	store := dstore.NewStore[ds.DSInterface](nil, nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	key_values := make([]string, 1001)
 	key_values = append(key_values, "key")
 	for i := 0; i < 1000; i++ {
@@ -48,7 +47,7 @@ func BenchmarkEvalSaddWithExistingSet(b *testing.B) {
 }
 
 func BenchmarkEvalSMemberInt(b *testing.B) {
-	store := dstore.NewStore[ds.DSInterface](nil, nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	for i := 0; i < 1000; i++ {
 		evalSADD([]string{"key", fmt.Sprintf("%d", i)}, store)
 	}
@@ -60,7 +59,7 @@ func BenchmarkEvalSMemberInt(b *testing.B) {
 }
 
 func BenchmarkEvalSMembersStr(b *testing.B) {
-	store := dstore.NewStore[ds.DSInterface](nil, nil, nil)
+	store := dstore.NewStore(nil, nil, nil)
 	for i := 0; i < 1000; i++ {
 		evalSADD([]string{"key", fmt.Sprintf("value%d", i)}, store)
 	}

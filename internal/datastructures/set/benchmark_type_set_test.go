@@ -5,21 +5,34 @@ import (
 	"testing"
 )
 
+func newInt8BaseSetFromItems(items []int8) map[int8]struct{} {
+	set := map[int8]struct{}{}
+	for _, item := range items {
+		set[item] = struct{}{}
+	}
+	return set
+}
+
+func newStringBaseSetFromItems(items []string) map[string]struct{} {
+	set := map[string]struct{}{}
+	for _, item := range items {
+		set[item] = struct{}{}
+	}
+	return set
+}
 func BenchmarkBaseInt8Set(b *testing.B) {
 	items := []int8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	b.ResetTimer()
-	set := map[int8]struct{}{}
 	for i := 0; i < b.N; i++ {
-		for _, item := range items {
-			set[item] = struct{}{}
-		}
+		newInt8BaseSetFromItems(items)
 	}
 }
 
 func BenchmarkBaseOnlyStringSet(b *testing.B) {
-	set := map[string]struct{}{}
+	items := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		set[fmt.Sprintf("%d", i)] = struct{}{}
+		newStringBaseSetFromItems(items)
 	}
 }
 
@@ -49,7 +62,7 @@ func BenchmarkNewStringSet(b *testing.B) {
 
 func BenchmarkAddInt8Set(b *testing.B) {
 	items := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}
-	set, _ := NewTypedSetFromItems(items)
+	set := NewTypedSetFromItems(items)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		set.(*TypedSet[int8]).Add(int8(i))
@@ -58,7 +71,7 @@ func BenchmarkAddInt8Set(b *testing.B) {
 
 func BenchmarkAddInt16Set(b *testing.B) {
 	items := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "257"}
-	set, _ := NewTypedSetFromItems(items)
+	set := NewTypedSetFromItems(items)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		set.(*TypedSet[int16]).Add(int16(i))
@@ -67,7 +80,7 @@ func BenchmarkAddInt16Set(b *testing.B) {
 
 func BenchmarkAddStringSet(b *testing.B) {
 	items := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"}
-	set, _ := NewTypedSetFromItems(items)
+	set := NewTypedSetFromItems(items)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		set.(*TypedSet[string]).Add(fmt.Sprintf("%d", i))

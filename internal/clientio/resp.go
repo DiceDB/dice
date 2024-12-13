@@ -8,8 +8,6 @@ import (
 
 	"github.com/dicedb/dice/internal/object"
 
-	"github.com/dicedb/dice/internal/sql"
-
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -282,15 +280,6 @@ func Encode(value interface{}, isSimple bool) []byte {
 		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
 		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
 		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
-	case []sql.QueryResultRow:
-		var b []byte
-		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded rows.
-		for _, row := range value.([]sql.QueryResultRow) {
-			buf.WriteString("*2\r\n")           // Start a new array for each row.
-			buf.Write(Encode(row.Key, false))   // Encode the row key.
-			buf.Write(Encode(row.Value, false)) // Encode the row value.
-		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
 
 	// Handle map[string]bool and return a nil response indicating unsupported types.
 	case map[string]bool:
