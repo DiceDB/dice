@@ -31,6 +31,14 @@ const releases = defineCollection({
   }),
 });
 
+const updates = defineCollection({
+    type: "content",
+    schema: z.object({
+      title: z.string(),
+      published_at: z.coerce.date(),
+    }),
+});
+
 const team = defineCollection({
     type: "data",
     schema: z.object({
@@ -49,5 +57,6 @@ export const collections = {
   authors,
   releases,
   team,
+  updates,
   docs: defineCollection({ schema: docsSchema() }),
 };
