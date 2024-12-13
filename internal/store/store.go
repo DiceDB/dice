@@ -24,9 +24,6 @@ import (
 	"github.com/dicedb/dice/internal/common"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
-	"github.com/dicedb/dice/internal/sql"
-	"github.com/ohler55/ojg/jp"
-	"github.com/xwb1989/sqlparser"
 )
 
 func NewStoreRegMap() common.ITable[string, *object.Obj] {
@@ -361,32 +358,6 @@ func (store *Store) notifyWatchManager(cmd, affectedKey string) {
 
 func (store *Store) GetStore() common.ITable[string, *object.Obj] {
 	return store.store
-}
-
-// CacheKeysForQuery scans the store for keys that match the given where clause and sends them to the cache channel.
-// This allows the query manager to cache the existing keys that match the query.
-func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel chan *[]struct {
-	Key   string
-	Value *object.Obj
-}) {
-	shardCache := make([]struct {
-		Key   string
-		Value *object.Obj
-	}, 0)
-	store.store.All(func(k string, v *object.Obj) bool {
-		matches, err := sql.EvaluateWhereClause(whereClause, sql.QueryResultRow{Key: k, Value: *v}, make(map[string]jp.Expr))
-		if err != nil || !matches {
-			return true
-		}
-
-		shardCache = append(shardCache, struct {
-			Key   string
-			Value *object.Obj
-		}{Key: k, Value: v})
-
-		return true
-	})
-	cacheChannel <- &shardCache
 }
 
 func (store *Store) evict(evictCount int) bool {
