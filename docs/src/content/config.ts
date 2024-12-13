@@ -33,10 +33,7 @@ const releases = defineCollection({
 
 const updates = defineCollection({
   type: "content",
-  schema: z.object({
-    title: z.string(),
-    published_at: z.coerce.date(),
-  }),
+  schema: z.object({}),
 });
 
 const team = defineCollection({

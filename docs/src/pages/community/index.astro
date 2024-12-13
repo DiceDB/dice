@@ -4,6 +4,7 @@ import { getCollection } from "astro:content";
 import { Video } from "lucide-astro";
 
 const updates = await getCollection("updates");
+updates.reverse();
 
 const title = "Community";
 const description = "";
@@ -57,7 +58,7 @@ const callLink = "https://meet.google.com/qdf-pfkb-ckm";
           {
             updates.map((update) => (
               <li>
-                <a href={`/updates/${update.slug}`}>{update.data.title}</a>
+                <a href={`/updates/${update.slug}`}>{update.slug}</a>
               </li>
             ))
           }
