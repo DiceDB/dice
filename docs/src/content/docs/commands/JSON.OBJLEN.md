@@ -22,13 +22,13 @@ JSON.OBJLEN key [path]
 
 ## Return values
 
-| Condition                       | Return Value                                                                                |
-| ------------------------------- | ------------------------------------------------------------------------------------------- |
-| Command is successful           | `Integer` denoting the number of keys length of the list at the specified key.              |
-| Wrong number of arguments       | Error: `(error) ERR wrong number of arguments for JSON.OBJLEN command`                      |
-| Key does not exist              | Error: `(error) ERR could not perform this operation on a key that doesn't exist`           |
-| Key is not for a JSON object    | Error: `(error) ERR WRONGTYPE Operation against a key holding the wrong kind of value`      |
-| Path malformed or doesn't exist | Error: `(error) ERR Path 'foo' does not exist`                                              |
+| Condition                       | Return Value                                                                           |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| Command is successful           | `Integer` denoting the number of keys length of the list at the specified key.         |
+| Wrong number of arguments       | Error: `(error) ERR wrong number of arguments for JSON.OBJLEN command`                 |
+| Key does not exist              | Error: `(error) ERR could not perform this operation on a key that doesn't exist`      |
+| Key is not for a JSON object    | Error: `(error) ERR WRONGTYPE Operation against a key holding the wrong kind of value` |
+| Path malformed or doesn't exist | Error: `(error) ERR Path 'foo' does not exist`                                         |
 
 ## Behaviour
 
@@ -70,14 +70,15 @@ Get number of keys in the Root JSON Object. You can specify the JSON root using 
 127.0.0.1:7379> JSON.OBJLEN a $
 1) 3
 ```
+
 It returns 3, because there are three root keys in the root JSON object: `name`, `age`, and `address`.
 
 Or, if you don't want to specify a JSON path, it may be omitted. The path defaults to the root, and the result is given as a scalar:
+
 ```bash
 127.0.0.1:7379> JSON.OBJLEN a
 3
 ```
-
 
 ### Keys inside nested object
 
@@ -89,6 +90,7 @@ To count the number of keys inside a nested object, specify a JSON Path. The roo
 127.0.0.1:7379> JSON.OBJLEN b $.address
 1) 3
 ```
+
 Here, it returns 3 because it's counting the three keys inside the `$.address` JSON object: `city`, `state`, and `zipcode`.
 
 ### When path is not a JSON object
