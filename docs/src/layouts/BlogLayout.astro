@@ -76,35 +76,39 @@ const JSONLD = {
             >
               {blog.data.title}
             </h1>
-            {author && <div class="media">
-              <div class="media-left">
-                <figure class="image is-48x48">
-                  <img class="is-rounded" src={author.data.avatar_url} />
-                </figure>
-              </div>
-              <div class="media-content">
-                <p class="title is-5">
-                  <a class="has-text-black" href={author.data.url}
-                    >{author.data.name}</a
-                  >
-                </p>
-                <p class="subtitle is-6">
-                  {author.data.bio}
-                </p>
-              </div>
-            </div>}
+            {
+              author && (
+                <div class="media">
+                  <div class="media-left">
+                    <figure class="image is-48x48">
+                      <img class="is-rounded" src={author.data.avatar_url} />
+                    </figure>
+                  </div>
+                  <div class="media-content">
+                    <p class="title is-5">
+                      <a class="has-text-black" href={author.data.url}>
+                        {author.data.name}
+                      </a>
+                    </p>
+                    <p class="subtitle is-6">{author.data.bio}</p>
+                  </div>
+                </div>
+              )
+            }
           </div>
           <br />
           <div class="content blog-content">
-            { type !== "update" && <p class="is-family-monospace">
-              {
-                blog.data.published_at.toLocaleString("en-us", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })
-              }
-            </p>}
+            {
+              type !== "update" && (
+                <p class="is-family-monospace">
+                  {blog.data.published_at.toLocaleString("en-us", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </p>
+              )
+            }
             <slot />
           </div>
         </div>

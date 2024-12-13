@@ -7,9 +7,9 @@ import SocialHandlesIcons from "./SocialHandlesIcons.astro";
 
 <div>
   <nav
-      class="navbar container is-fixed-top"
-      role="navigation"
-      aria-label="main navigation"
+    class="navbar container is-fixed-top"
+    role="navigation"
+    aria-label="main navigation"
   >
     <div class="navbar-brand">
       <a href="/" class="navbar-item">
@@ -18,12 +18,12 @@ import SocialHandlesIcons from "./SocialHandlesIcons.astro";
         </div>
       </a>
       <a
-          role="button"
-          class="navbar-burger burger"
-          aria-label="menu"
-          aria-expanded="false"
-          data-target="menu"
-          onclick="document.querySelector('.navbar-menu').classList.toggle('is-active');"
+        role="button"
+        class="navbar-burger burger"
+        aria-label="menu"
+        aria-expanded="false"
+        data-target="menu"
+        onclick="document.querySelector('.navbar-menu').classList.toggle('is-active');"
       >
         <span aria-hidden="true"></span>
         <span aria-hidden="true"></span>
@@ -34,32 +34,32 @@ import SocialHandlesIcons from "./SocialHandlesIcons.astro";
       <div class="navbar-start"></div>
       <div class="navbar-end">
         <a
-            class={`navbar-item ${currentPage === "benchmarks" && "is-active"}`}
-            href="/benchmarks"
+          class={`navbar-item ${currentPage === "benchmarks" && "is-active"}`}
+          href="/benchmarks"
         >
           <span class="has-text-weight-bold"> Benchmarks</span>
         </a>
         <a
-            class={`navbar-item ${currentPage === "docs" && "is-active"}`}
-            href="/get-started/installation/"
+          class={`navbar-item ${currentPage === "docs" && "is-active"}`}
+          href="/get-started/installation/"
         >
           <span class="has-text-weight-bold"> Docs</span>
         </a>
         <a
-            class={`navbar-item ${currentPage === "blogs" && "is-active"}`}
-            href="/blog"
+          class={`navbar-item ${currentPage === "blogs" && "is-active"}`}
+          href="/blog"
         >
           <span class="has-text-weight-bold"> Blog</span>
         </a>
         <a
-            class={`navbar-item ${currentPage === "community" && "is-active"}`}
-            href="/community"
+          class={`navbar-item ${currentPage === "community" && "is-active"}`}
+          href="/community"
         >
           <span class="has-text-weight-bold"> Community</span>
         </a>
         <a
-            class={`navbar-item ${currentPage === "team" && "is-active"}`}
-            href="/team"
+          class={`navbar-item ${currentPage === "team" && "is-active"}`}
+          href="/team"
         >
           <span class="has-text-weight-bold"> Team</span>
         </a>

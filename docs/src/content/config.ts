@@ -32,24 +32,24 @@ const releases = defineCollection({
 });
 
 const updates = defineCollection({
-    type: "content",
-    schema: z.object({
-      title: z.string(),
-      published_at: z.coerce.date(),
-    }),
+  type: "content",
+  schema: z.object({
+    title: z.string(),
+    published_at: z.coerce.date(),
+  }),
 });
 
 const team = defineCollection({
-    type: "data",
-    schema: z.object({
-      name: z.string(),
-      avatar_url: z.string(),
-      roles: z.array(z.string()),
-      x: z.string(),
-      linkedin: z.string(),
-      github: z.string(),
-      website: z.string(),
-    }),
+  type: "data",
+  schema: z.object({
+    name: z.string(),
+    avatar_url: z.string(),
+    roles: z.array(z.string()),
+    x: z.string(),
+    linkedin: z.string(),
+    github: z.string(),
+    website: z.string(),
+  }),
 });
 
 export const collections = {

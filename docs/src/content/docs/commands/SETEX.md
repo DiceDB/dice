@@ -17,18 +17,18 @@ SETEX key seconds value
 
 ## Parameters
 
-| Parameter | Description                                                               | Type    | Required |
-| --------- | ------------------------------------------------------------------------- | ------- | -------- |
-| `key`     | The name of the key to be set.                                            | String  | Yes      |
-| `seconds` | Expiration time for the key in seconds.                                   | Integer | Yes      |
-| `value`   | The value to be set for the key.                                          | Integer | No       |
+| Parameter | Description                             | Type    | Required |
+| --------- | --------------------------------------- | ------- | -------- |
+| `key`     | The name of the key to be set.          | String  | Yes      |
+| `seconds` | Expiration time for the key in seconds. | Integer | Yes      |
+| `value`   | The value to be set for the key.        | Integer | No       |
 
 ## Return values
 
-| Condition                                   | Return Value                                    |
-| ------------------------------------------- | ----------------------------------------------- |
-| Command is successful                       | `OK`                                            |
-| Syntax or specified constraints are invalid | error                                           |
+| Condition                                   | Return Value |
+| ------------------------------------------- | ------------ |
+| Command is successful                       | `OK`         |
+| Syntax or specified constraints are invalid | error        |
 
 ## Behaviour
 
@@ -78,10 +78,12 @@ Setting a key with an invalid expiration time will result in an error:
 ```
 
 Attempting to use the command with missing arguments will result in an error:
+
 ```bash
 127.0.0.1:7379> SETEX foo 10
 (error) ERROR wrong number of arguments for 'setex' command
 ```
 
 ### Notes:
+
 `SETEX` can be replaced via [`SET`](/commands/set) with `EX` option.
