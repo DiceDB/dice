@@ -54,12 +54,14 @@ together. Every line of code written to build DiceDB is open for inspection, lea
 ## A Glimpse Into the Future
 
 This license switch isn't just a symbolic move; it's a strategic decision. Our roadmap
-includes multi-tenancy, horizontal scalability, infra abstraction, reactivity,
-observability, easy cluster management, and a capable control plane with high observability.
+includes multi-tenancy, horizontal scalability, infrastructure abstraction, reactivity,
+observability, persistence, fault tolerance, seamless cluster management, and a
+robust control plane with high observability.  
 
-We're also advancing persistence, fault tolerance, query capabilities, and data structure support.
-Additionally, lightning-fast replica creations will extend DiceDB's capabilities to handle production-grade workloads
-with resumability and reliability.
+We are also enhancing query capabilities and data structure support to meet
+the demands of AI-first applications—an approach poised to become the standard
+in the coming decade. Furthermore, lightning-fast replica creation will reinforce
+DiceDB's ability to handle production-grade workloads with exceptional reliability and resumability.
 
 By going fully open-source under AGPL 3.0, we're inviting the
 community to join us in building the caching backbone that powers the next generation of
