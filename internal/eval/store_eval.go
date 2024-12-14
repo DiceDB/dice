@@ -217,7 +217,11 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	var oldVal *interface{}
 
 	key, value = args[0], args[1]
-	_, oType := getRawStringOrInt(value)
+	storedValue, oType := getRawStringOrInt(value)
+
+	if oType != object.ObjTypeInt && oType != object.ObjTypeString {
+		return makeEvalError(diceerrors.ErrUnsupportedEncoding(int(oType)))
+	}
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
@@ -308,17 +312,6 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		default:
 			return makeEvalError(diceerrors.ErrSyntax)
 		}
-	}
-
-	// Cast the value properly based on the encoding type
-	var storedValue interface{}
-	switch oType {
-	case object.ObjTypeInt:
-		storedValue, _ = strconv.ParseInt(value, 10, 64)
-	case object.ObjTypeString:
-		storedValue = value
-	default:
-		return makeEvalError(diceerrors.ErrUnsupportedEncoding(int(oType)))
 	}
 
 	// putting the k and value in a Hash Table
