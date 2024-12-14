@@ -9,7 +9,6 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	ds "github.com/dicedb/dice/internal/datastructures"
 	"github.com/dicedb/dice/internal/datastructures/sds"
-	eval "github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/store"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -39,6 +38,25 @@ type Eval struct {
 	op    *cmd.DiceDBCmd
 }
 
+type EvalResponse struct {
+	Error  error
+	Result interface{}
+}
+
+func MakeEvalError(err error) *EvalResponse {
+	return &EvalResponse{
+		Result: nil,
+		Error:  err,
+	}
+}
+
+func MakeEvalResult(result interface{}) *EvalResponse {
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
 func NewEval(store *store.Store, op *cmd.DiceDBCmd) *Eval {
 	return &Eval{
 		store: store,
@@ -46,7 +64,7 @@ func NewEval(store *store.Store, op *cmd.DiceDBCmd) *Eval {
 	}
 }
 
-func (e *Eval) Evaluate() *eval.EvalResponse {
+func (e *Eval) Evaluate() *EvalResponse {
 	switch e.op.Cmd {
 	case "SET":
 		return e.evalSET()
@@ -65,10 +83,10 @@ func (e *Eval) Evaluate() *eval.EvalResponse {
 	}
 }
 
-func (e *Eval) evalSET() *eval.EvalResponse {
+func (e *Eval) evalSET() *EvalResponse {
 	args := e.op.Args
 	if len(args) <= 1 {
-		return eval.MakeEvalError(ds.ErrWrongArgumentCount("SET"))
+		return MakeEvalError(ds.ErrWrongArgumentCount("SET"))
 	}
 
 	key := e.op.Args[0]
@@ -85,23 +103,23 @@ func (e *Eval) evalSET() *eval.EvalResponse {
 		switch arg {
 		case Ex, Px:
 			if state != Uninitialized {
-				return eval.MakeEvalError(ds.ErrSyntax)
+				return MakeEvalError(ds.ErrSyntax)
 			}
 			if keepttl {
-				return eval.MakeEvalError(ds.ErrSyntax)
+				return MakeEvalError(ds.ErrSyntax)
 			}
 			i++
 			if i == len(args) {
-				return eval.MakeEvalError(ds.ErrSyntax)
+				return MakeEvalError(ds.ErrSyntax)
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return eval.MakeEvalError(ds.ErrIntegerOutOfRange)
+				return MakeEvalError(ds.ErrIntegerOutOfRange)
 			}
 
 			if exDuration <= 0 || exDuration >= ds.MaxExDuration {
-				return eval.MakeEvalError(ds.ErrInvalidExpireTime("SET"))
+				return MakeEvalError(ds.ErrInvalidExpireTime("SET"))
 			}
 
 			// converting seconds to milliseconds
@@ -113,22 +131,22 @@ func (e *Eval) evalSET() *eval.EvalResponse {
 
 		case Pxat, Exat:
 			if state != Uninitialized {
-				return eval.MakeEvalError(ds.ErrSyntax)
+				return MakeEvalError(ds.ErrSyntax)
 			}
 			if keepttl {
-				return eval.MakeEvalError(ds.ErrSyntax)
+				return MakeEvalError(ds.ErrSyntax)
 			}
 			i++
 			if i == len(args) {
-				return eval.MakeEvalError(ds.ErrSyntax)
+				return MakeEvalError(ds.ErrSyntax)
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
-				return eval.MakeEvalError(ds.ErrIntegerOutOfRange)
+				return MakeEvalError(ds.ErrIntegerOutOfRange)
 			}
 
 			if exDuration < 0 {
-				return eval.MakeEvalError(ds.ErrInvalidExpireTime("SET"))
+				return MakeEvalError(ds.ErrInvalidExpireTime("SET"))
 			}
 
 			if arg == Exat {
@@ -148,26 +166,26 @@ func (e *Eval) evalSET() *eval.EvalResponse {
 
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
-				return eval.MakeEvalResult(clientio.NIL)
+				return MakeEvalResult(clientio.NIL)
 			}
 		case NX:
 			obj := e.store.Get(key)
 			if obj != nil {
-				return eval.MakeEvalResult(clientio.NIL)
+				return MakeEvalResult(clientio.NIL)
 			}
 		case ds.KeepTTL:
 			if state != Uninitialized {
-				return eval.MakeEvalError(ds.ErrSyntax)
+				return MakeEvalError(ds.ErrSyntax)
 			}
 			keepttl = true
 		case ds.GET:
 			getResult := e.evalGET()
 			if getResult.Error != nil {
-				return eval.MakeEvalError(ds.ErrWrongTypeOperation)
+				return MakeEvalError(ds.ErrWrongTypeOperation)
 			}
 			oldVal = &getResult.Result
 		default:
-			return eval.MakeEvalError(ds.ErrSyntax)
+			return MakeEvalError(ds.ErrSyntax)
 		}
 	}
 
@@ -175,15 +193,15 @@ func (e *Eval) evalSET() *eval.EvalResponse {
 	e.store.Put(key, sds.NewString(value), dstore.WithKeepTTL(keepttl))
 
 	if oldVal != nil {
-		return eval.MakeEvalResult(*oldVal)
+		return MakeEvalResult(*oldVal)
 	}
-	return eval.MakeEvalResult(clientio.OK)
+	return MakeEvalResult(clientio.OK)
 }
 
-func (e *Eval) evalGET() *eval.EvalResponse {
+func (e *Eval) evalGET() *EvalResponse {
 	args := e.op.Args
 	if len(args) != 1 {
-		return eval.MakeEvalError(ds.ErrWrongArgumentCount("GET"))
+		return MakeEvalError(ds.ErrWrongArgumentCount("GET"))
 	}
 
 	key := args[0]
@@ -192,56 +210,56 @@ func (e *Eval) evalGET() *eval.EvalResponse {
 
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
-		return eval.MakeEvalResult(clientio.NIL)
+		return MakeEvalResult(clientio.NIL)
 	}
 
 	if sds, ok := sds.GetIfTypeSDS(obj); ok {
-		return eval.MakeEvalResult(sds.Get())
+		return MakeEvalResult(sds.Get())
 	}
-	return eval.MakeEvalError(ds.ErrWrongTypeOperation)
+	return MakeEvalError(ds.ErrWrongTypeOperation)
 }
 
-func (e *Eval) evalDECR() *eval.EvalResponse {
+func (e *Eval) evalDECR() *EvalResponse {
 	if len(e.op.Args) != 1 {
-		return eval.MakeEvalError(ds.ErrWrongArgumentCount("DECR"))
+		return MakeEvalError(ds.ErrWrongArgumentCount("DECR"))
 	}
 
 	return e.incrDecrCmd(-1)
 }
 
-func (e *Eval) evalDECRBY() *eval.EvalResponse {
+func (e *Eval) evalDECRBY() *EvalResponse {
 	args := e.op.Args
 	if len(args) != 2 {
-		return eval.MakeEvalError(ds.ErrWrongArgumentCount("DECRBY"))
+		return MakeEvalError(ds.ErrWrongArgumentCount("DECRBY"))
 	}
 	decrementAmount, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return eval.MakeEvalError(ds.ErrIntegerOutOfRange)
+		return MakeEvalError(ds.ErrIntegerOutOfRange)
 	}
 	return e.incrDecrCmd(-decrementAmount)
 }
 
-func (e *Eval) evalINCR() *eval.EvalResponse {
+func (e *Eval) evalINCR() *EvalResponse {
 	if len(e.op.Args) != 1 {
-		return eval.MakeEvalError(ds.ErrWrongArgumentCount("INCR"))
+		return MakeEvalError(ds.ErrWrongArgumentCount("INCR"))
 	}
 
 	return e.incrDecrCmd(1)
 }
 
-func (e *Eval) evalINCRBY() *eval.EvalResponse {
+func (e *Eval) evalINCRBY() *EvalResponse {
 	args := e.op.Args
 	if len(args) != 2 {
-		return eval.MakeEvalError(ds.ErrWrongArgumentCount("INCRBY"))
+		return MakeEvalError(ds.ErrWrongArgumentCount("INCRBY"))
 	}
 	incrAmount, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		return eval.MakeEvalError(ds.ErrIntegerOutOfRange)
+		return MakeEvalError(ds.ErrIntegerOutOfRange)
 	}
 	return e.incrDecrCmd(incrAmount)
 }
 
-func (e *Eval) incrDecrCmd(incr int64) *eval.EvalResponse {
+func (e *Eval) incrDecrCmd(incr int64) *EvalResponse {
 	key := e.op.Args[0]
 	obj := e.store.Get(key)
 	if obj == nil {
@@ -252,20 +270,20 @@ func (e *Eval) incrDecrCmd(incr int64) *eval.EvalResponse {
 	var sdsObj sds.SDSInterface
 	var ok bool
 	if sdsObj, ok = sds.GetIfTypeSDS(obj); !ok {
-		return eval.MakeEvalError(ds.ErrWrongTypeOperation)
+		return MakeEvalError(ds.ErrWrongTypeOperation)
 	}
 	i, err := strconv.ParseInt(sdsObj.Get(), 10, 64)
 	if err != nil {
-		return eval.MakeEvalError(ds.ErrWrongTypeOperation)
+		return MakeEvalError(ds.ErrWrongTypeOperation)
 	}
 
 	// check overflow
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
-		return eval.MakeEvalError(ds.ErrOverflow)
+		return MakeEvalError(ds.ErrOverflow)
 	}
 
 	i += incr
 	err = sdsObj.Set(strconv.FormatInt(i, 10))
-	return eval.MakeEvalResult(i)
+	return MakeEvalResult(i)
 }

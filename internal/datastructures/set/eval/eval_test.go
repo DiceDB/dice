@@ -31,6 +31,22 @@ func BenchmarkEvalSaddIntWithExistingSet(b *testing.B) {
 	b.ReportAllocs()
 }
 
+func BenchmarkEvalSADDWithInt32ExistingSet(b *testing.B) {
+	store := dstore.NewStore(nil, nil, nil)
+	key_values := make([]string, 1002)
+	key_values = append(key_values, "key")
+	for i := 0; i < 1000; i++ {
+		key_values = append(key_values, fmt.Sprintf("%d", i))
+	}
+	key_values = append(key_values, "2147483647")
+	evalSADD(key_values, store)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		evalSADD([]string{"key", fmt.Sprintf("%d", i)}, store)
+	}
+	b.ReportAllocs()
+}
+
 func BenchmarkEvalSaddWithExistingSet(b *testing.B) {
 	store := dstore.NewStore(nil, nil, nil)
 	key_values := make([]string, 1001)

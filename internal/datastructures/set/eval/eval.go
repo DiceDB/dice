@@ -3,11 +3,42 @@ package eval
 import (
 	"strconv"
 
+	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/internal/comm"
 	ds "github.com/dicedb/dice/internal/datastructures"
 	set "github.com/dicedb/dice/internal/datastructures/set"
-	"github.com/dicedb/dice/internal/eval" // Ensure this package contains the definition for Object
+	"github.com/dicedb/dice/internal/store"
 	dstore "github.com/dicedb/dice/internal/store"
 )
+
+type EvalResponse struct {
+	Error  error
+	Result interface{}
+}
+
+func MakeEvalError(err error) *EvalResponse {
+	return &EvalResponse{
+		Result: nil,
+		Error:  err,
+	}
+}
+
+func MakeEvalResult(result interface{}) *EvalResponse {
+	return &EvalResponse{
+		Result: result,
+		Error:  nil,
+	}
+}
+
+type Eval struct {
+	store                 *store.Store
+	cmd                   *cmd.DiceDBCmd
+	client                *comm.Client
+	isHTTPOperation       bool
+	isWebSocketOperation  bool
+	isPreprocessOperation bool
+	_                     [5]byte
+}
 
 // deduce new encoding from the set of encodings
 // creates a new set with the new encoding
@@ -194,9 +225,51 @@ func addToSetObj(obj ds.DSInterface, encoding int, item string) bool {
 	}
 }
 
-func evalSADD(args []string, store *dstore.Store) *eval.EvalResponse {
+func tryAndAddToSet2(obj ds.DSInterface, item string) bool {
+	switch any(obj).(type) {
+	case *set.TypedSet[int8]:
+		i, ok := strconv.ParseInt(item, 10, 8)
+		if ok != nil {
+			return createNewSetAndAdd(obj, ds.EncodingInt8, item)
+		}
+		return obj.(*set.TypedSet[int8]).Add(int8(i))
+	case *set.TypedSet[int16]:
+		i, ok := strconv.ParseInt(item, 10, 16)
+		if ok != nil {
+			return createNewSetAndAdd(obj, ds.EncodingInt16, item)
+		}
+		return obj.(*set.TypedSet[int16]).Add(int16(i))
+	case *set.TypedSet[int32]:
+		i, ok := strconv.ParseInt(item, 10, 32)
+		if ok != nil {
+			return createNewSetAndAdd(obj, ds.EncodingInt32, item)
+		}
+		return obj.(*set.TypedSet[int32]).Add(int32(i))
+	case *set.TypedSet[int64]:
+		i, ok := strconv.ParseInt(item, 10, 64)
+		if ok != nil {
+			return createNewSetAndAdd(obj, ds.EncodingInt64, item)
+		}
+		return obj.(*set.TypedSet[int64]).Add(int64(i))
+	case *set.TypedSet[float32]:
+		i, ok := strconv.ParseFloat(item, 32)
+		if ok != nil {
+			return createNewSetAndAdd(obj, ds.EncodingFloat32, item)
+		}
+		return obj.(*set.TypedSet[float32]).Add(float32(i))
+	case *set.TypedSet[float64]:
+		i, ok := strconv.ParseFloat(item, 64)
+		if ok != nil {
+			return createNewSetAndAdd(obj, ds.EncodingFloat64, item)
+		}
+		return obj.(*set.TypedSet[float64]).Add(float64(i))
+	default:
+		return obj.(*set.TypedSet[string]).Add(item)
+	}
+}
+func evalSADD(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 2 {
-		return eval.MakeEvalError(ErrWrongArgumentCount("sadd"))
+		return MakeEvalError(ErrWrongArgumentCount("sadd"))
 	}
 	key := args[0]
 
@@ -212,12 +285,12 @@ func evalSADD(args []string, store *dstore.Store) *eval.EvalResponse {
 		// Create a new object.
 		obj = store.NewObj(value, exDurationMs)
 		store.Put(key, obj, dstore.WithKeepTTL(keepttl))
-		return eval.MakeEvalResult(len(args) - 1)
+		return MakeEvalResult(len(args) - 1)
 	}
 
 	_, ok := set.GetIfTypeSet(obj)
 	if !ok {
-		return eval.MakeEvalError(ErrWrongTypeOperation)
+		return MakeEvalError(ErrWrongTypeOperation)
 	}
 
 	for _, arg := range args[1:] {
@@ -226,12 +299,12 @@ func evalSADD(args []string, store *dstore.Store) *eval.EvalResponse {
 		}
 	}
 
-	return eval.MakeEvalResult(count)
+	return MakeEvalResult(count)
 }
 
-func evalSCARD(args []string, store *dstore.Store) *eval.EvalResponse {
+func evalSCARD(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
-		return eval.MakeEvalError(ErrWrongArgumentCount("scard"))
+		return MakeEvalError(ErrWrongArgumentCount("scard"))
 	}
 	key := args[0]
 
@@ -239,63 +312,63 @@ func evalSCARD(args []string, store *dstore.Store) *eval.EvalResponse {
 	obj := store.Get(key)
 
 	if obj == nil {
-		return eval.MakeEvalResult(0)
+		return MakeEvalResult(0)
 	}
 
 	setObj, ok := set.GetIfTypeSet(obj)
 	if !ok {
-		return eval.MakeEvalError(ErrWrongTypeOperation)
+		return MakeEvalError(ErrWrongTypeOperation)
 	}
 
 	switch setObj.GetEncoding() {
 	case ds.EncodingInt8:
 		set, ok := set.GetIfTypeTypedSet[int8](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.Size())
+		return MakeEvalResult(set.Size())
 	case ds.EncodingInt16:
 		set, ok := set.GetIfTypeTypedSet[int16](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.Size())
+		return MakeEvalResult(set.Size())
 	case ds.EncodingInt32:
 		set, ok := set.GetIfTypeTypedSet[int32](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.Size())
+		return MakeEvalResult(set.Size())
 	case ds.EncodingInt64:
 		set, ok := set.GetIfTypeTypedSet[int64](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.Size())
+		return MakeEvalResult(set.Size())
 	case ds.EncodingFloat32:
 		set, ok := set.GetIfTypeTypedSet[float32](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.Size())
+		return MakeEvalResult(set.Size())
 	case ds.EncodingFloat64:
 		set, ok := set.GetIfTypeTypedSet[float64](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.Size())
+		return MakeEvalResult(set.Size())
 	default:
 		set, ok := set.GetIfTypeTypedSet[string](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.Size())
+		return MakeEvalResult(set.Size())
 	}
 }
 
-func evalSMEMBERS(args []string, store *dstore.Store) *eval.EvalResponse {
+func evalSMEMBERS(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
-		return eval.MakeEvalError(ErrWrongArgumentCount("smembers"))
+		return MakeEvalError(ErrWrongArgumentCount("smembers"))
 	}
 	key := args[0]
 
@@ -303,56 +376,56 @@ func evalSMEMBERS(args []string, store *dstore.Store) *eval.EvalResponse {
 	obj := store.Get(key)
 
 	if obj == nil {
-		return eval.MakeEvalResult([]string{})
+		return MakeEvalResult([]string{})
 	}
 
 	setObj, ok := set.GetIfTypeSet(obj)
 	if !ok {
-		return eval.MakeEvalError(ErrWrongTypeOperation)
+		return MakeEvalError(ErrWrongTypeOperation)
 	}
 
 	switch setObj.GetEncoding() {
 	case ds.EncodingInt8:
 		set, ok := set.GetIfTypeTypedSet[int8](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.All())
+		return MakeEvalResult(set.All())
 	case ds.EncodingInt16:
 		set, ok := set.GetIfTypeTypedSet[int16](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.All())
+		return MakeEvalResult(set.All())
 	case ds.EncodingInt32:
 		set, ok := set.GetIfTypeTypedSet[int32](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.All())
+		return MakeEvalResult(set.All())
 	case ds.EncodingInt64:
 		set, ok := set.GetIfTypeTypedSet[int64](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.All())
+		return MakeEvalResult(set.All())
 	case ds.EncodingFloat32:
 		set, ok := set.GetIfTypeTypedSet[float32](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.All())
+		return MakeEvalResult(set.All())
 	case ds.EncodingFloat64:
 		set, ok := set.GetIfTypeTypedSet[float64](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.All())
+		return MakeEvalResult(set.All())
 	default:
 		set, ok := set.GetIfTypeTypedSet[string](obj)
 		if !ok {
-			return eval.MakeEvalError(ErrWrongTypeOperation)
+			return MakeEvalError(ErrWrongTypeOperation)
 		}
-		return eval.MakeEvalResult(set.All())
+		return MakeEvalResult(set.All())
 	}
 }
