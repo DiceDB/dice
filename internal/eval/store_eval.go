@@ -203,6 +203,10 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	key, value = args[0], args[1]
 	storedValue, oType := getRawStringOrInt(value)
 
+	if oType != object.ObjTypeInt && oType != object.ObjTypeString {
+		return makeEvalError(diceerrors.ErrUnsupportedEncoding(int(oType)))
+	}
+
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
 		switch arg {
@@ -292,10 +296,6 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		default:
 			return makeEvalError(diceerrors.ErrSyntax)
 		}
-	}
-
-	if oType != object.ObjTypeInt && oType != object.ObjTypeString {
-		return makeEvalError(diceerrors.ErrUnsupportedEncoding(int(oType)))
 	}
 
 	// putting the k and value in a Hash Table
