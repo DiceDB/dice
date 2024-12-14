@@ -36,10 +36,10 @@ const description =
         highly available, unified cache optimized for modern hardware.
       </p>
       <br />
-      <div class="columns is-multiline">
+      <div class="columns is-multiline is-mobile">
         {
           pmc.map((member) => (
-            <div class="column is-3">
+            <div class="column is-3-desktop is-6-mobile">
               <img src={member.data.avatar_url} alt={member.data.name} />
               <h2 style="margin-top: 0.5em !important;">
                 {member.data.name.split(" ").map((char) => (
@@ -63,10 +63,10 @@ const description =
         quality of the codebase along with working on critical features and
         improvements.
       </p>
-      <div class="columns is-multiline">
+      <div class="columns is-multiline is-mobile">
         {
           committers.map((member) => (
-            <div class="column is-4">
+            <div class="column is-3-desktop is-6-mobile">
               <img src={member.data.avatar_url} alt={member.data.name} />
               <h3>{member.data.name}</h3>
               <UserSocialHandles
