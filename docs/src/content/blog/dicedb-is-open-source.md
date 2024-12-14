@@ -12,7 +12,7 @@ building a high-performance caching backbone for modern architecture. Today, we 
 is now open source under the [GNU Affero General Public License (AGPL) 3.0](https://github.com/dicedb/dice?tab=AGPL-3.0-1-ov-file#readme).
 This marks a significant milestone in our journey - one that reflects both our technical clarity and our commitment to the open-source ethos.
 
-## Why We Switched from BSL to GNU AGPL 3.0
+## Why we switched
 
 In the early days of DiceDB, we explored a [Business Source License (BSL)](https://en.wikipedia.org/wiki/Business_Source_License)
 to balance monetization and community engagement. However, as our product evolved,
@@ -44,14 +44,14 @@ With the AGPL, any modifications made while running DiceDB as a
 service must also be shared under the same license. This keeps the playing
 field level, ensuring that innovation remains a collaborative effort rather than being siloed.
 
-## What This Means for Developers
+## What this means for developers
 
 Developers now have the freedom to innovate with DiceDB. You
 can freely use DiceDB, modify it, and build applications tailored to your specific needs.
 By sharing improvements under the AGPL, you're contributing to a broader ecosystem that evolves
 together. Every line of code written to build DiceDB is open for inspection, learning, and improvement.
 
-## A Glimpse Into the Future
+## A glimpse into the future
 
 This license switch isn't just a symbolic move; it's a strategic decision. Our roadmap
 includes multi-tenancy, horizontal scalability, infrastructure abstraction, reactivity,
