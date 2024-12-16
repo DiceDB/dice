@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/internal/iothread"
+	"github.com/dicedb/dice/internal/commandhandler"
 
 	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/server/abstractserver"
@@ -158,7 +158,7 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	if iothread.CommandsMeta[diceDBCmd.Cmd].CmdType == iothread.MultiShard {
+	if commandhandler.CommandsMeta[diceDBCmd.Cmd].CmdType == commandhandler.MultiShard {
 		writeErrorResponse(writer, http.StatusBadRequest, "unsupported command",
 			"Unsupported command received", slog.String("cmd", diceDBCmd.Cmd))
 		return
@@ -355,9 +355,9 @@ func (s *HTTPServer) writeResponse(writer http.ResponseWriter, result *ops.Store
 
 	// Check if the command is migrated, if it is we use EvalResponse values
 	// else we use RESPParser to decode the response
-	_, ok := iothread.CommandsMeta[diceDBCmd.Cmd]
+	_, ok := commandhandler.CommandsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
-	if !ok || iothread.CommandsMeta[diceDBCmd.Cmd].CmdType == iothread.Custom {
+	if !ok || commandhandler.CommandsMeta[diceDBCmd.Cmd].CmdType == commandhandler.Custom {
 		responseValue, err = DecodeEvalResponse(result.EvalResponse)
 		if err != nil {
 			slog.Error("Error decoding response", "error", err)
