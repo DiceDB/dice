@@ -65,7 +65,7 @@ func BenchmarkAddInt8Set(b *testing.B) {
 	set := NewTypedSetFromItems(items)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		set.(*TypedSet[int8]).Add(int8(i))
+		set.(*TypedSet[int8]).Value[int8(i)] = struct{}{}
 	}
 }
 
@@ -74,7 +74,7 @@ func BenchmarkAddInt16Set(b *testing.B) {
 	set := NewTypedSetFromItems(items)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		set.(*TypedSet[int16]).Add(int16(i))
+		set.(*TypedSet[int16]).Value[int16(i)] = struct{}{}
 	}
 }
 
@@ -83,6 +83,6 @@ func BenchmarkAddStringSet(b *testing.B) {
 	set := NewTypedSetFromItems(items)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		set.(*TypedSet[string]).Add(fmt.Sprintf("%d", i))
+		set.(*TypedSet[string]).Value[fmt.Sprintf("%d", i)] = struct{}{}
 	}
 }

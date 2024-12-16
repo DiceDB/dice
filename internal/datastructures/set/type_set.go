@@ -26,64 +26,38 @@ type constraint interface {
 	cmp.Ordered
 }
 
-type SetInterface interface {
-	ds.DSInterface
-	Size() int
-	Serialize() []byte
-	All() []string
-	GetEncoding() int
-}
-
-type TypedSetInterface[T constraint] interface {
-	ds.DSInterface
-	All() []string
-	Serialize() []byte
-	Size() int
-	Add(item T) bool
-	Remove(item T)
-	Contains(item T) bool
-}
-
-func GetIfTypeSet(ds ds.DSInterface) (SetInterface, bool) {
-	sds, ok := ds.(SetInterface)
-	return sds, ok
-}
-
-func GetIfTypeTypedSet[T constraint](ds ds.DSInterface) (TypedSetInterface[T], bool) {
-	sds, ok := ds.(TypedSetInterface[T])
-	return sds, ok
-}
+var _ ds.DSInterface = &TypedSet[int8]{}
+var _ ds.DSInterface = &TypedSet[int16]{}
+var _ ds.DSInterface = &TypedSet[int32]{}
+var _ ds.DSInterface = &TypedSet[int64]{}
+var _ ds.DSInterface = &TypedSet[float32]{}
+var _ ds.DSInterface = &TypedSet[float64]{}
+var _ ds.DSInterface = &TypedSet[string]{}
 
 type TypedSet[T constraint] struct {
 	ds.BaseDataStructure[ds.DSInterface]
-	value    map[T]struct{}
-	encoding int
+	Value map[T]struct{}
 }
 
+func IsTypeTypedSet(obj ds.DSInterface) bool {
+	switch any(obj).(type) {
+	case *TypedSet[int8], *TypedSet[int16], *TypedSet[int32], *TypedSet[int64], *TypedSet[float32], *TypedSet[float64], *TypedSet[string]:
+		return true
+	default:
+		return false
+	}
+}
 func NewTypedSet[T constraint](encoding int) ds.DSInterface {
 	return &TypedSet[T]{
-		value:    make(map[T]struct{}),
-		encoding: encoding,
+		Value: make(map[T]struct{}),
 	}
-}
-
-func (s *TypedSet[T]) GetEncoding() int {
-	return s.encoding
-}
-
-func (s *TypedSet[T]) All() []string {
-	result := make([]string, 0, len(s.value))
-	for key := range s.value {
-		result = append(result, ds.ToString(key))
-	}
-	return result
 }
 
 func (s *TypedSet[T]) Serialize() []byte {
 	// add length of the set
 	b := make([]byte, 0)
-	b = append(b, byte(len(s.value)))
-	for key := range s.value {
+	b = append(b, byte(len(s.Value)))
+	for key := range s.Value {
 		if intKey, ok := any(key).(int64); ok {
 			b = append(b, byte(intKey))
 		} else if strKey, ok := any(key).(string); ok {
@@ -91,27 +65,6 @@ func (s *TypedSet[T]) Serialize() []byte {
 		}
 	}
 	return b
-}
-
-func (s *TypedSet[T]) Size() int {
-	return len(s.value)
-}
-
-func (s *TypedSet[T]) Add(item T) bool {
-	if _, ok := s.value[item]; ok {
-		return false
-	}
-	s.value[item] = struct{}{}
-	return true
-}
-
-func (s *TypedSet[T]) Remove(item T) {
-	delete(s.value, item)
-}
-
-func (s *TypedSet[T]) Contains(item T) bool {
-	_, ok := s.value[item]
-	return ok
 }
 
 func DeduceEncodingFromItems(et map[int]struct{}) int {
@@ -186,36 +139,36 @@ func NewTypedSetFromEncodingAndItems(items []string, encoding int) ds.DSInterfac
 	case EncodingInt8:
 		for _, item := range items {
 			i, _ := strconv.ParseInt(item, 10, 8)
-			set.(*TypedSet[int8]).Add(int8(i))
+			set.(*TypedSet[int8]).Value[int8(i)] = struct{}{}
 		}
 	case EncodingInt16:
 		for _, item := range items {
 			i, _ := strconv.ParseInt(item, 10, 16)
-			set.(*TypedSet[int16]).Add(int16(i))
+			set.(*TypedSet[int16]).Value[int16(i)] = struct{}{}
 		}
 	case EncodingInt32:
 		for _, item := range items {
 			i, _ := strconv.ParseInt(item, 10, 32)
-			set.(*TypedSet[int32]).Add(int32(i))
+			set.(*TypedSet[int32]).Value[int32(i)] = struct{}{}
 		}
 	case EncodingInt64:
 		for _, item := range items {
 			i, _ := strconv.ParseInt(item, 10, 64)
-			set.(*TypedSet[int64]).Add(int64(i))
+			set.(*TypedSet[int64]).Value[int64(i)] = struct{}{}
 		}
 	case EncodingFloat32:
 		for _, item := range items {
 			i, _ := strconv.ParseFloat(item, 32)
-			set.(*TypedSet[float32]).Add(float32(i))
+			set.(*TypedSet[float32]).Value[float32(i)] = struct{}{}
 		}
 	case EncodingFloat64:
 		for _, item := range items {
 			i, _ := strconv.ParseFloat(item, 64)
-			set.(*TypedSet[float64]).Add(float64(i))
+			set.(*TypedSet[float64]).Value[float64(i)] = struct{}{}
 		}
 	default:
 		for _, item := range items {
-			set.(*TypedSet[string]).Add(item)
+			set.(*TypedSet[string]).Value[item] = struct{}{}
 		}
 	}
 	return set
