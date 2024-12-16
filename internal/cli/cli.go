@@ -139,7 +139,7 @@ func Execute() {
 		fmt.Println("  -enable-watch          Enable support for .WATCH commands and real-time reactivity (default: false)")
 		fmt.Println("  -enable-profiling      Enable profiling and capture critical metrics and traces in .prof files (default: false)")
 		fmt.Println("  -log-level             Log level, values: info, debug (default: \"info\")")
-		fmt.Println("  -log-dir               Log directory path (default: \"/tmp/dicedb\")")
+		fmt.Printf("  -log-dir               Log directory path (default: \"%s\")\n", config.GetDefaultParentDirPath())
 		fmt.Println("  -enable-persistence    Enable write-ahead logging (default: false)")
 		fmt.Println("  -restore-wal           Restore the database from the WAL files (default: false)")
 		fmt.Println("  -wal-engine            WAL engine to use, values: sqlite, aof (default: \"null\")")
@@ -153,6 +153,7 @@ func Execute() {
 	}
 
 	flag.Parse()
+	config.ConfigureParentDirPaths()
 
 	if len(os.Args) > 2 {
 		switch os.Args[1] {
@@ -240,8 +241,6 @@ func Execute() {
 			defaultConfig(&flagsConfig)
 		}
 	}
-
-	defaultConfig(&flagsConfig)
 }
 
 func defaultConfig(flags *config.Config) {
