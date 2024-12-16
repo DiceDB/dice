@@ -19,8 +19,10 @@ syntax = "proto3";
 package wal;
 option go_package = "internal/wal";
 
-// WALLogEntry represents a single log entry in the WAL.
-message WALLogEntry {
-    optional bytes checksum = 1; // SHA-256 checksum of the command for integrity
-    optional string command = 2; // Command
+message WALEntry {
+    string   version = 1;               // Version of the WAL entry (e.g., "v1.0")
+    uint64   log_sequence_number = 2;     // Log Sequence Number (LSN)
+    bytes    data = 3;                  // The actual data being logged
+    uint32   crc32 = 4;                   // Cyclic Redundancy Check for integrity
+    int64    timestamp = 5;             // Timestamp for the WAL entry (epoch time in nanoseconds)
 }
