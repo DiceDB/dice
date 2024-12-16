@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"cmp"
 	"strconv"
 
 	"github.com/dicedb/dice/internal/cmd"
@@ -14,6 +15,10 @@ import (
 type EvalResponse struct {
 	Error  error
 	Result interface{}
+}
+
+type constraint interface {
+	cmp.Ordered
 }
 
 func MakeEvalError(err error) *EvalResponse {
@@ -142,14 +147,63 @@ func createNewSetAndAdd(obj ds.DSInterface, oldEncoding int, item string) bool {
 	itemEncoding := ds.GetElementType(item)
 	encs[itemEncoding] = struct{}{}
 	newEncoding := set.DeduceEncodingFromItems(encs)
-	newSet := set.NewTypedSetFromEncoding(newEncoding)
-	var items []string
-	items = append(items, getAllItemsFromSet(obj)...) // optimise this
-	newSet = set.NewTypedSetFromEncodingAndItems(items, newEncoding)
+	var newSet ds.DSInterface
+	switch newEncoding {
+	case ds.EncodingInt8, ds.EncodingInt16, ds.EncodingInt32, ds.EncodingInt64:
+		items := make([]int, 0, lenOfSet(obj))
+		switch any(obj).(type) {
+		case *set.TypedSet[int8]:
+			for i := range obj.(*set.TypedSet[int8]).Value {
+				items = append(items, int(i))
+			}
+		case *set.TypedSet[int16]:
+			for i := range obj.(*set.TypedSet[int16]).Value {
+				items = append(items, int(i))
+			}
+		case *set.TypedSet[int32]:
+			for i := range obj.(*set.TypedSet[int32]).Value {
+				items = append(items, int(i))
+			}
+		case *set.TypedSet[int64]:
+			for i := range obj.(*set.TypedSet[int64]).Value {
+				items = append(items, int(i))
+			}
+		}
+		newSet = set.NewIntegerTypedSetFromEncodingAndItems(items, newEncoding)
+	case ds.EncodingFloat32, ds.EncodingFloat64:
+		items := make([]float64, 0, lenOfSet(obj))
+		switch any(obj).(type) {
+		case *set.TypedSet[float32]:
+			for i := range obj.(*set.TypedSet[float32]).Value {
+				items = append(items, float64(i))
+			}
+		case *set.TypedSet[float64]:
+			for i := range obj.(*set.TypedSet[float64]).Value {
+				items = append(items, i)
+			}
+		}
+		newSet = set.NewFloatTypedSetFromEncodingAndItems(items, newEncoding)
+	default:
+		items := make([]string, 0, lenOfSet(obj))
+		items = append(items, getAllItemsFromSet(obj)...) // optimise this
+		newSet = set.NewTypedSetFromEncodingAndItems(items, newEncoding)
+	}
 	obj = newSet
 	return true
 }
 
+func insertIntoTypedSet[T constraint](obj ds.DSInterface, item T) bool {
+	typedSet, ok := obj.(*set.TypedSet[T])
+	if !ok {
+		return false
+	}
+
+	if _, exists := typedSet.Value[item]; !exists {
+		typedSet.Value[item] = struct{}{}
+		return true
+	}
+	return false
+}
 func tryAndAddToSet(obj ds.DSInterface, item string) bool {
 	switch any(obj).(type) {
 	case *set.TypedSet[int8]:
@@ -157,60 +211,46 @@ func tryAndAddToSet(obj ds.DSInterface, item string) bool {
 		if ok != nil {
 			return createNewSetAndAdd(obj, ds.EncodingInt8, item)
 		}
-		if _, ok := obj.(*set.TypedSet[int8]).Value[int8(i)]; !ok {
-			obj.(*set.TypedSet[int8]).Value[int8(i)] = struct{}{}
-			return true
-		}
+
+		ii := int8(i)
+		return insertIntoTypedSet(obj, ii)
 	case *set.TypedSet[int16]:
 		i, ok := strconv.ParseInt(item, 10, 16)
 		if ok != nil {
 			return createNewSetAndAdd(obj, ds.EncodingInt16, item)
 		}
-		if _, ok := obj.(*set.TypedSet[int16]).Value[int16(i)]; !ok {
-			obj.(*set.TypedSet[int16]).Value[int16(i)] = struct{}{}
-			return true
-		}
+		ii := int16(i)
+		return insertIntoTypedSet(obj, ii)
 	case *set.TypedSet[int32]:
 		i, ok := strconv.ParseInt(item, 10, 32)
 		if ok != nil {
 			return createNewSetAndAdd(obj, ds.EncodingInt32, item)
 		}
-		if _, ok := obj.(*set.TypedSet[int32]).Value[int32(i)]; !ok {
-			obj.(*set.TypedSet[int32]).Value[int32(i)] = struct{}{}
-			return true
-		}
+		ii := int32(i)
+		return insertIntoTypedSet(obj, ii)
 	case *set.TypedSet[int64]:
 		i, ok := strconv.ParseInt(item, 10, 64)
 		if ok != nil {
 			return createNewSetAndAdd(obj, ds.EncodingInt64, item)
 		}
-		if _, ok := obj.(*set.TypedSet[int64]).Value[int64(i)]; !ok {
-			obj.(*set.TypedSet[int64]).Value[int64(i)] = struct{}{}
-			return true
-		}
+		ii := int64(i)
+		return insertIntoTypedSet(obj, ii)
 	case *set.TypedSet[float32]:
 		i, ok := strconv.ParseFloat(item, 32)
 		if ok != nil {
 			return createNewSetAndAdd(obj, ds.EncodingFloat32, item)
 		}
-		if _, ok := obj.(*set.TypedSet[float32]).Value[float32(i)]; !ok {
-			obj.(*set.TypedSet[float32]).Value[float32(i)] = struct{}{}
-			return true
-		}
+		ff := float32(i)
+		return insertIntoTypedSet(obj, ff)
 	case *set.TypedSet[float64]:
 		i, ok := strconv.ParseFloat(item, 64)
 		if ok != nil {
 			return createNewSetAndAdd(obj, ds.EncodingFloat64, item)
 		}
-		if _, ok := obj.(*set.TypedSet[float64]).Value[float64(i)]; !ok {
-			obj.(*set.TypedSet[float64]).Value[float64(i)] = struct{}{}
-			return true
-		}
+		ff := float64(i)
+		return insertIntoTypedSet(obj, ff)
 	default:
-		if _, ok := obj.(*set.TypedSet[string]).Value[item]; !ok {
-			obj.(*set.TypedSet[string]).Value[item] = struct{}{}
-			return true
-		}
+		return insertIntoTypedSet(obj, item)
 	}
 	return false
 }

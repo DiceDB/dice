@@ -47,7 +47,7 @@ func IsTypeTypedSet(obj ds.DSInterface) bool {
 		return false
 	}
 }
-func NewTypedSet[T constraint](encoding int) ds.DSInterface {
+func NewTypedSet[T constraint]() ds.DSInterface {
 	return &TypedSet[T]{
 		Value: make(map[T]struct{}),
 	}
@@ -117,20 +117,58 @@ func DeduceEncodingFromItems(et map[int]struct{}) int {
 func NewTypedSetFromEncoding(encoding int) ds.DSInterface {
 	switch encoding {
 	case EncodingInt8:
-		return NewTypedSet[int8](encoding)
+		return NewTypedSet[int8]()
 	case EncodingInt16:
-		return NewTypedSet[int16](encoding)
+		return NewTypedSet[int16]()
 	case EncodingInt32:
-		return NewTypedSet[int32](encoding)
+		return NewTypedSet[int32]()
 	case EncodingInt64:
-		return NewTypedSet[int64](encoding)
+		return NewTypedSet[int64]()
 	case EncodingFloat32:
-		return NewTypedSet[float32](encoding)
+		return NewTypedSet[float32]()
 	case EncodingFloat64:
-		return NewTypedSet[float64](encoding)
+		return NewTypedSet[float64]()
 	default:
-		return NewTypedSet[string](encoding)
+		return NewTypedSet[string]()
 	}
+}
+
+func NewIntegerTypedSetFromEncodingAndItems(items []int, encoding int) ds.DSInterface {
+	set := NewTypedSetFromEncoding(encoding)
+	switch encoding {
+	case EncodingInt8:
+		for _, item := range items {
+			set.(*TypedSet[int8]).Value[int8(item)] = struct{}{}
+		}
+	case EncodingInt16:
+		for _, item := range items {
+			set.(*TypedSet[int16]).Value[int16(item)] = struct{}{}
+		}
+	case EncodingInt32:
+		for _, item := range items {
+			set.(*TypedSet[int32]).Value[int32(item)] = struct{}{}
+		}
+	case EncodingInt64:
+		for _, item := range items {
+			set.(*TypedSet[int64]).Value[int64(item)] = struct{}{}
+		}
+	}
+	return set
+}
+
+func NewFloatTypedSetFromEncodingAndItems(items []float64, encoding int) ds.DSInterface {
+	set := NewTypedSetFromEncoding(encoding)
+	switch encoding {
+	case EncodingFloat32:
+		for _, item := range items {
+			set.(*TypedSet[float32]).Value[float32(item)] = struct{}{}
+		}
+	case EncodingFloat64:
+		for _, item := range items {
+			set.(*TypedSet[float64]).Value[item] = struct{}{}
+		}
+	}
+	return set
 }
 
 func NewTypedSetFromEncodingAndItems(items []string, encoding int) ds.DSInterface {
