@@ -22,7 +22,7 @@
       "repositoryUrl": {
         "url": "https://github.com/dicedb/dice"
       },
-      "licenses": ["BSL"],
+      "licenses": ["AGPL-3.0"],
       "tags": ["database", "high-performance", "key-value-store"]
     }
   ],
