@@ -20,7 +20,7 @@
         "url": "https://dicedb.io"
       },
       "repositoryUrl": {
-        "url": "https://github.com/dicedb/dice"
+        "url": "https://dicedb.io"
       },
       "licenses": ["AGPL-3.0"],
       "tags": ["database", "high-performance", "key-value-store"]
@@ -57,7 +57,7 @@
         "channels": ["other"]
       },
       {
-        "guid": "commuunity-contributors-and-events",
+        "guid": "community-contrib-and-events",
         "status": "active",
         "name": "Community swags, events and hackathons",
         "description": "This will cover the cost of 160+ OSS contributors by giving them DiceDB swags and keeping their morale high. Some fraction of the funds will also be used to run hackathons and some community events like Database Paper Reading Sessions. We aim to build a thriving community around DiceDB and databases in India.",
