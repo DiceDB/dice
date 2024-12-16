@@ -22,7 +22,7 @@ const (
 var SignedIntEncodings = []int{EncodingInt64, EncodingInt32, EncodingInt16, EncodingInt8}
 var FloatEncodings = []int{EncodingFloat64, EncodingFloat32}
 
-type constraint interface {
+type Constraint interface {
 	cmp.Ordered
 }
 
@@ -34,7 +34,7 @@ var _ ds.DSInterface = &TypedSet[float32]{}
 var _ ds.DSInterface = &TypedSet[float64]{}
 var _ ds.DSInterface = &TypedSet[string]{}
 
-type TypedSet[T constraint] struct {
+type TypedSet[T Constraint] struct {
 	ds.BaseDataStructure[ds.DSInterface]
 	Value map[T]struct{}
 }
@@ -47,7 +47,7 @@ func IsTypeTypedSet(obj ds.DSInterface) bool {
 		return false
 	}
 }
-func NewTypedSet[T constraint]() ds.DSInterface {
+func NewTypedSet[T Constraint]() ds.DSInterface {
 	return &TypedSet[T]{
 		Value: make(map[T]struct{}),
 	}
@@ -133,7 +133,7 @@ func NewTypedSetFromEncoding(encoding int) ds.DSInterface {
 	}
 }
 
-func NewIntegerTypedSetFromEncodingAndItems(items []int, encoding int) ds.DSInterface {
+func NewIntegerTypedSetFromEncodingAndItems(items []int64, encoding int) ds.DSInterface {
 	set := NewTypedSetFromEncoding(encoding)
 	switch encoding {
 	case EncodingInt8:

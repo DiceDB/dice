@@ -12,8 +12,10 @@ func BenchmarkEvalSaddInt8(b *testing.B) {
 	evalSADD([]string{"key", "1"}, store)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		x := i % 128
-		evalSADD([]string{"key", fmt.Sprintf("%d", x)}, store)
+		evalSADD([]string{"key", fmt.Sprintf("%d", i)}, store)
+	}
+	for i := 0; i < b.N; i++ {
+		evalSADD([]string{"key", fmt.Sprintf("value%d", i)}, store)
 	}
 	b.ReportAllocs()
 }
