@@ -57,7 +57,7 @@ func setupTest(store *dstore.Store) *dstore.Store {
 }
 
 func TestEval(t *testing.T) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	testEvalECHO(t, store)
 	testEvalHELLO(t, store)
@@ -1570,7 +1570,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -4351,7 +4351,7 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 }
 
 func BenchmarkEvalHSET(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -4644,7 +4644,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHKEYS(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
@@ -4656,7 +4656,7 @@ func BenchmarkEvalHKEYS(b *testing.B) {
 }
 
 func BenchmarkEvalPFCOUNT(b *testing.B) {
-	store := *dstore.NewStore(nil, nil, nil)
+	store := *dstore.NewStore(nil, nil)
 
 	// Helper function to create and insert HLL objects
 	createAndInsertHLL := func(key string, items []string) {
@@ -5002,7 +5002,7 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalHLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000}
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("HashSize_%d", size), func(b *testing.B) {
@@ -5322,7 +5322,7 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalTYPE(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Define different types of objects to benchmark
 	objectTypes := map[string]func(){
@@ -5657,7 +5657,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -5915,7 +5915,7 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString))
 
 	inputs := []struct {
@@ -5940,7 +5940,7 @@ func BenchmarkEvalGETRANGE(b *testing.B) {
 }
 
 func BenchmarkEvalHSETNX(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSETNX([]string{"KEY", fmt.Sprintf("FIELD_%d", i/2), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -6044,7 +6044,7 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHINCRBY(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// creating new fields
 	for i := 0; i < b.N; i++ {
@@ -6296,7 +6296,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalSETEX(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -6475,7 +6475,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 	store.Put("key1", store.NewObj("1", maxExDuration, object.ObjTypeString))
 	store.Put("key2", store.NewObj("1.2", maxExDuration, object.ObjTypeString))
 
@@ -6788,7 +6788,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalAPPEND(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalAPPEND([]string{"key", fmt.Sprintf("val_%d", i)}, store)
 	}
@@ -7516,7 +7516,7 @@ func BenchmarkEvalZPOPMIN(b *testing.B) {
 		},
 	}
 
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
@@ -7682,7 +7682,7 @@ func testEvalZREM(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalZRANK(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Set up initial sorted set
 	evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
@@ -7964,7 +7964,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setting initial fields with some values
 	store.Put("key1", store.NewObj(HashMap{"field1": "1.0", "field2": "1.2"}, maxExDuration, object.ObjTypeHashMap))
@@ -8403,7 +8403,7 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setup a sample JSON document
 	key := "doc1"
@@ -8527,7 +8527,7 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 		},
 	}
 
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
@@ -8543,7 +8543,7 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 	}
 }
 func BenchmarkZCOUNT(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Populate the sorted set with some members for basic benchmarks
 	evalZADD([]string{"key", "10", "member1", "20", "member2", "30", "member3"}, store)
@@ -8572,7 +8572,7 @@ func BenchmarkZCOUNT(b *testing.B) {
 	// Benchmark for edge cases
 	b.Run("Edge Case ZCOUNT", func(b *testing.B) {
 		// Reset the store and set up members
-		store = dstore.NewStore(nil, nil, nil)
+		store = dstore.NewStore(nil, nil)
 		evalZADD([]string{"key", "5", "member1", "15", "member2", "25", "member3"}, store)
 
 		b.ResetTimer()
