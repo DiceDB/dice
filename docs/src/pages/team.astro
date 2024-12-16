@@ -1,0 +1,122 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { getCollection } from "astro:content";
+import UserSocialHandles from "../components/UserSocialHandles.astro";
+const team = await getCollection("team");
+
+const pmc = team.filter((member) => member.data.roles.includes("pmc"));
+const committers = team.filter((member) =>
+  member.data.roles.includes("committer"),
+);
+
+const title = "Team";
+const description =
+  "DiceDB is a community-driven project, and every individual who has contributed their time, expertise, and patches has played a crucial role in shaping its success.";
+---
+
+<Layout {title} {description}>
+  <div class="columns is-centered">
+    <div class="column is-8 content">
+      <h1>Team</h1>
+      <p>
+        DiceDB is a community-driven project, and every individual who has
+        contributed their time, expertise, and patches has played a crucial role
+        in shaping its success. Our team is organized into three key groups:
+        <ul>
+          <li>Project Management Committee (PMC)</li>
+          <li>Committers</li>
+          <li>Contributors</li>
+        </ul>
+      </p>
+      <br />
+      <h2>Project Management Committee</h2>
+      <p>
+        Our Project Management Committee (PMC) steers the vision, ensuring
+        DiceDB stays aligned with its mission of building a reactive, scalable,
+        highly available, unified cache optimized for modern hardware.
+      </p>
+      <br />
+      <div class="columns is-multiline is-mobile">
+        {
+          pmc.map((member) => (
+            <div class="column is-3-desktop is-6-mobile">
+              <img src={member.data.avatar_url} alt={member.data.name} />
+              <h2 style="margin-top: 0.5em !important;">
+                {member.data.name.split(" ").map((char) => (
+                  <div class="name-char">{char}</div>
+                ))}
+              </h2>
+              <UserSocialHandles
+                x={member.data.x}
+                github={member.data.github}
+                linkedin={member.data.linkedin}
+                website={member.data.website}
+              />
+            </div>
+          ))
+        }
+      </div>
+      <br />
+      <h2>Committers</h2>
+      <p>
+        The committers, with their deep expertise, safeguard the stability and
+        quality of the codebase along with working on critical features and
+        improvements.
+      </p>
+      <div class="columns is-multiline is-mobile">
+        {
+          committers.map((member) => (
+            <div class="column is-3-desktop is-6-mobile">
+              <img src={member.data.avatar_url} alt={member.data.name} />
+              <h3>{member.data.name}</h3>
+              <UserSocialHandles
+                x={member.data.x}
+                github={member.data.github}
+                linkedin={member.data.linkedin}
+                website={member.data.website}
+              />
+            </div>
+          ))
+        }
+      </div>
+      <br />
+      <h2>Contributors</h2>
+      <p>
+        The contributors, with their fresh ideas and energy, push the boundaries
+        of what's possible. Each project has its own contributors, and you can
+        find them below. We regularly evaluate the contributions and promote
+        contributors to committers.
+        <ul>
+          <li>
+            <a
+              target="_blank"
+              href="https://github.com/DiceDB/dice/graphs/contributors"
+              >DiceDB/dice</a
+            >
+          </li>
+          <li>
+            <a
+              target="_blank"
+              href="https://github.com/DiceDB/playground-mono/graphs/contributors"
+              >DiceDB/playground-mono</a
+            >
+          </li>
+          <li>
+            <a
+              target="_blank"
+              href="https://github.com/DiceDB/alloy/graphs/contributors"
+              >DiceDB/alloy</a
+            >
+          </li>
+        </ul>
+      </p>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .name-char {
+    line-height: 1.5;
+    text-align: left;
+  }
+</style>

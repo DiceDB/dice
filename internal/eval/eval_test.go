@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package eval
 
 import (
@@ -43,7 +59,6 @@ func setupTest(store *dstore.Store) *dstore.Store {
 func TestEval(t *testing.T) {
 	store := dstore.NewStore(nil, nil, nil)
 
-	testEvalMSET(t, store)
 	testEvalECHO(t, store)
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
@@ -72,7 +87,6 @@ func TestEval(t *testing.T) {
 	testEvalEXPIRE(t, store)
 	testEvalEXPIRETIME(t, store)
 	testEvalEXPIREAT(t, store)
-	testEvalDbsize(t, store)
 	testEvalGETSET(t, store)
 	testEvalHSET(t, store)
 	testEvalHMSET(t, store)
@@ -132,7 +146,7 @@ func TestEval(t *testing.T) {
 	testEvalBitFieldRO(t, store)
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
-	testEvalSINTER(t, store)
+	testEvalGEOPOS(t, store)
 	testEvalJSONSTRAPPEND(t, store)
 	testEvalINCR(t, store)
 	testEvalINCRBY(t, store)
@@ -462,19 +476,6 @@ func testEvalGETDEL(t *testing.T, store *dstore.Store) {
 	}
 
 	runMigratedEvalTests(t, tests, evalGETDEL, store)
-}
-
-func testEvalMSET(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value":         {input: nil, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"empty array":       {input: []string{}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"one value":         {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"key val pair":      {input: []string{"KEY", "VAL"}, output: clientio.RespOK},
-		"odd key val pair":  {input: []string{"KEY", "VAL", "KEY2"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"even key val pair": {input: []string{"KEY", "VAL", "KEY2", "VAL2"}, output: clientio.RespOK},
-	}
-
-	runEvalTests(t, tests, evalMSET, store)
 }
 
 func testEvalGET(t *testing.T, store *dstore.Store) {
@@ -2896,54 +2897,6 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 	runMigratedEvalTests(t, tests, evalPERSIST, store)
 }
 
-func testEvalDbsize(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"DBSIZE command with invalid no of args": {
-			input:  []string{"INVALID_ARG"},
-			output: []byte("-ERR wrong number of arguments for 'dbsize' command\r\n"),
-		},
-		"no key in db": {
-			input:  nil,
-			output: []byte(":0\r\n"),
-		},
-		"one key exists in db": {
-			setup: func() {
-				evalSET([]string{"key", "val"}, store)
-			},
-			input:  nil,
-			output: []byte(":1\r\n"),
-		},
-		"two keys exist in db": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-			},
-			input:  nil,
-			output: []byte(":2\r\n"),
-		},
-		"repeating keys shall result in same dbsize": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-			},
-			input:  nil,
-			output: []byte(":2\r\n"),
-		},
-		"deleted keys shall be reflected in dbsize": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-				evalDEL([]string{"key2"}, store)
-			},
-			input:  nil,
-			output: []byte(":1\r\n"),
-		},
-	}
-
-	runEvalTests(t, tests, evalDBSIZE, store)
-}
-
 func testEvalPFADD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"PFADD nil value": {
@@ -2995,7 +2948,7 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 			name: "PFADD Incorrect type provided",
 			setup: func() {
 				key, value := "EXISTING_KEY", "VALUE"
-				oType := deduceType(value)
+				_, oType := getRawStringOrInt(value)
 				var exDurationMs int64 = -1
 				keepttl := false
 
@@ -4397,14 +4350,6 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 	}
 }
 
-func BenchmarkEvalMSET(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		store := dstore.NewStore(nil, nil, nil)
-		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
-	}
-}
-
 func BenchmarkEvalHSET(b *testing.B) {
 	store := dstore.NewStore(nil, nil, nil)
 	for i := 0; i < b.N; i++ {
@@ -4830,7 +4775,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: 89, Error: nil},
+			migratedOutput: EvalResponse{Result: 72, Error: nil},
 		},
 
 		"root path": {
@@ -4843,7 +4788,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$"},
-			migratedOutput: EvalResponse{Result: 89, Error: nil},
+			migratedOutput: EvalResponse{Result: 72, Error: nil},
 		},
 
 		"invalid path": {
@@ -5512,7 +5457,7 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 			},
 		},
 		"command getkeys with an invalid number of arguments for a command": {
-			input: []string{"GETKEYS", "MSET", "key1"},
+			input: []string{"GETKEYS", "SET", "key1"},
 			migratedOutput: EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrGeneral("invalid number of arguments specified for command"),
@@ -6096,13 +6041,6 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 	}
 
 	runMigratedEvalTests(t, tests, evalHSETNX, store)
-}
-func TestMSETConsistency(t *testing.T) {
-	store := dstore.NewStore(nil, nil, nil)
-	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
-
-	assert.Equal(t, "VAL", store.Get("KEY").Value)
-	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
 }
 
 func BenchmarkEvalHINCRBY(b *testing.B) {
@@ -6719,7 +6657,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: 3, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
-				oType := object.ExtractType(obj)
+				oType := obj.Type
 				if oType != object.ObjTypeInt {
 					t.Errorf("unexpected encoding")
 				}
@@ -6774,7 +6712,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: 2, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
-				oType := object.ExtractType(obj)
+				oType := obj.Type
 				if oType != object.ObjTypeString {
 					t.Errorf("unexpected encoding")
 				}
@@ -8107,14 +8045,8 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"INTEGER_KEY"},
 			migratedOutput: EvalResponse{
-				Result: base64.StdEncoding.EncodeToString([]byte{
-					0x09,
-					0xC0,
-					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A,
-					0xFF,
-					0x12, 0x77, 0xDE, 0x29, 0x53, 0xDB, 0x44, 0xC2,
-				}),
-				Error: nil,
+				Result: "CQUAAAAAAAAACv9+l81XgsShqw==",
+				Error:  nil,
 			},
 		},
 		"dump expired key": {
@@ -8332,54 +8264,94 @@ func testEvalGEODIST(t *testing.T, store *dstore.Store) {
 	runMigratedEvalTests(t, tests, evalGEODIST, store)
 }
 
-func testEvalSINTER(t *testing.T, store *dstore.Store) {
+func testEvalGEOPOS(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"intersection of two sets": {
+		"GEOPOS for existing single point": {
 			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-				evalSADD([]string{"set2", "c", "d", "e"}, store)
+				evalGEOADD([]string{"index", "13.361387", "38.115556", "Palermo"}, store)
 			},
-			input:  []string{"set1", "set2"},
-			output: clientio.Encode([]string{"c"}, false),
+			input: []string{"index", "Palermo"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{[]interface{}{float64(13.361387), float64(38.115556)}},
+				Error:  nil,
+			},
 		},
-		"intersection of three sets": {
+		"GEOPOS for multiple existing points": {
 			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-				evalSADD([]string{"set2", "b", "c", "d"}, store)
-				evalSADD([]string{"set3", "c", "d", "e"}, store)
+				evalGEOADD([]string{"points", "13.361387", "38.115556", "Palermo"}, store)
+				evalGEOADD([]string{"points", "15.087265", "37.502668", "Catania"}, store)
 			},
-			input:  []string{"set1", "set2", "set3"},
-			output: clientio.Encode([]string{"c"}, false),
+			input: []string{"points", "Palermo", "Catania"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{
+					[]interface{}{float64(13.361387), float64(38.115556)},
+					[]interface{}{float64(15.087265), float64(37.502668)},
+				},
+				Error: nil,
+			},
 		},
-		"intersection with single set": {
+		"GEOPOS for a point that does not exist": {
 			setup: func() {
-				evalSADD([]string{"set1", "a"}, store)
+				evalGEOADD([]string{"index", "13.361387", "38.115556", "Palermo"}, store)
 			},
-			input:  []string{"set1"},
-			output: clientio.Encode([]string{"a"}, false),
+			input: []string{"index", "NonExisting"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{nil},
+				Error:  nil,
+			},
 		},
-		"intersection with a non-existent key": {
+		"GEOPOS for multiple points, one existing and one non-existing": {
 			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
+				evalGEOADD([]string{"index", "13.361387", "38.115556", "Palermo"}, store)
 			},
-			input:  []string{"set1", "nonexistent"},
-			output: clientio.Encode([]string{}, false),
+			input: []string{"index", "Palermo", "NonExisting"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{
+					[]interface{}{float64(13.361387), float64(38.115556)},
+					nil,
+				},
+				Error: nil,
+			},
 		},
-		"intersection with wrong type": {
+		"GEOPOS for empty index": {
 			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-				store.Put("string", &object.Obj{Value: "string", Type: object.ObjTypeString})
+				evalGEOADD([]string{"", "13.361387", "38.115556", "Palermo"}, store)
 			},
-			input:  []string{"set1", "string"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
+			input: []string{"", "Palermo"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{
+					[]interface{}{float64(13.361387), float64(38.115556)},
+				},
+				Error: nil,
+			},
 		},
-		"no arguments": {
-			input:  []string{},
-			output: diceerrors.NewErrArity("SINTER"),
+		"GEOPOS with no members in key": {
+			input: []string{"index", "Palermo"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
+		},
+		"GEOPOS with invalid number of arguments": {
+			input: []string{"index"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("GEOPOS"),
+			},
+		},
+        "GEOPOS for a key not used for setting geospatial values": {
+			setup: func() {
+				evalSET([]string{"k", "v"}, store)
+			},
+			input: []string{"k", "v"},
+            migratedOutput: EvalResponse{
+				Result: nil, 
+				Error:  errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"),
+			},
 		},
 	}
 
-	runEvalTests(t, tests, evalSINTER, store)
+	runMigratedEvalTests(t, tests, evalGEOPOS, store)
 }
 
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
@@ -9028,7 +9000,7 @@ func testEvalBFINFO(t *testing.T, store *dstore.Store) {
 		{
 			name:           "BF.INFO on non-existent filter",
 			input:          []string{"nonExistentFilter"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR not found")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrKeyNotFound},
 		},
 	}
 

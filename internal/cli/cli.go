@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package cli
 
 import (
@@ -49,7 +65,7 @@ func printConfiguration() {
 	// Add whether the watch feature is enabled
 	slog.Info("running with", slog.Bool("profiling", config.DiceConfig.Performance.EnableProfiling))
 
-	// Add whether the watch feature is enabled
+	// Add whether the persistence feature is enabled
 	slog.Info("running with", slog.Bool("persistence", config.DiceConfig.Persistence.Enabled))
 }
 
@@ -73,10 +89,10 @@ func Execute() {
 
 	flag.IntVar(&flagsConfig.RespServer.Port, "port", 7379, "port for the DiceDB server")
 
-	flag.IntVar(&flagsConfig.HTTP.Port, "http-port", 7380, "port for accepting requets over HTTP")
+	flag.IntVar(&flagsConfig.HTTP.Port, "http-port", 8082, "port for accepting requets over HTTP")
 	flag.BoolVar(&flagsConfig.HTTP.Enabled, "enable-http", false, "enable DiceDB to listen, accept, and process HTTP")
 
-	flag.IntVar(&flagsConfig.WebSocket.Port, "websocket-port", 7381, "port for accepting requets over WebSocket")
+	flag.IntVar(&flagsConfig.WebSocket.Port, "websocket-port", 8379, "port for accepting requets over WebSocket")
 	flag.BoolVar(&flagsConfig.WebSocket.Enabled, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
 
 	flag.IntVar(&flagsConfig.Performance.NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
@@ -98,7 +114,7 @@ func Execute() {
 	flag.IntVar(&flagsConfig.Memory.KeysLimit, "keys-limit", config.DefaultKeysLimit, "keys limit for the DiceDB server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
-	flag.Float64Var(&flagsConfig.Memory.EvictionRatio, "eviction-ratio", 0.1, "ratio of keys to evict when the "+
+	flag.Float64Var(&flagsConfig.Memory.EvictionRatio, "eviction-ratio", 0.9, "ratio of keys to evict when the "+
 		"keys limit is reached")
 
 	flag.Usage = func() {
@@ -115,9 +131,9 @@ func Execute() {
 		fmt.Println("  -h, --help             Show this help message")
 		fmt.Println("  -host                  Host for the DiceDB server (default: \"0.0.0.0\")")
 		fmt.Println("  -port                  Port for the DiceDB server (default: 7379)")
-		fmt.Println("  -http-port             Port for accepting requests over HTTP (default: 7380)")
+		fmt.Println("  -http-port             Port for accepting requests over HTTP (default: 8082)")
 		fmt.Println("  -enable-http           Enable DiceDB to listen, accept, and process HTTP (default: false)")
-		fmt.Println("  -websocket-port        Port for accepting requests over WebSocket (default: 7381)")
+		fmt.Println("  -websocket-port        Port for accepting requests over WebSocket (default: 8379)")
 		fmt.Println("  -enable-websocket      Enable DiceDB to listen, accept, and process WebSocket (default: false)")
 		fmt.Println("  -num-shards            Number of shards to create. Defaults to number of cores (default: -1)")
 		fmt.Println("  -enable-watch          Enable support for .WATCH commands and real-time reactivity (default: false)")
@@ -130,8 +146,8 @@ func Execute() {
 		fmt.Println("  -requirepass           Enable authentication for the default user (default: \"\")")
 		fmt.Println("  -o                     Directory path to create the config file (default: \"\")")
 		fmt.Println("  -c                     File path of the config file (default: \"\")")
-		fmt.Println("  -keys-limit            Keys limit for the DiceDB server (default: 0)")
-		fmt.Println("  -eviction-ratio        Ratio of keys to evict when the keys limit is reached (default: 0.1)")
+		fmt.Println("  -keys-limit            Keys limit for the DiceDB server (default: 200000000)")
+		fmt.Println("  -eviction-ratio        Ratio of keys to evict when the keys limit is reached (default: 0.9)")
 		color.Unset()
 		os.Exit(0)
 	}

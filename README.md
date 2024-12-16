@@ -5,7 +5,7 @@ DiceDB
 <a href="https://dicedb.io/get-started/installation/">![Docs](https://img.shields.io/badge/docs-00A1FF?style=flat-square)</a>
 <a target="_blank" href="https://discord.gg/6r8uXWtXh7"><img src="https://dcbadge.limes.pink/api/server/6r8uXWtXh7?style=flat" alt="discord community" /></a>
 
-DiceDB is a redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.
+DiceDB is an open source, redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.
 
 We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [block our calendar](https://cal.com/dicedb-arpit). always up for a chat.
 
@@ -37,7 +37,7 @@ Although DiceDB is a drop-in replacement of Redis, which means almost no learnin
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```bash
-docker run -p 7379:7379 dicedb/dicedb --enable-multithreading --enable-watch
+docker run -p 7379:7379 dicedb/dicedb --enable-watch
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
@@ -60,10 +60,10 @@ To run DiceDB for local development or running from source, you will need
 ```bash
 git clone https://github.com/dicedb/dice
 cd dice
-go run main.go --enable-multithreading --enable-watch
+go run main.go --enable-watch
 ```
 
-You can skip passing the two flags if you are not working with multi-threading or `.WATCH` features.
+You can skip passing the flag if you are not working with `.WATCH` feature.
 
 1. Install GoLangCI
 

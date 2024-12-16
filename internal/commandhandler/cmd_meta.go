@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package commandhandler
 
 import (
@@ -112,6 +128,7 @@ const (
 	CmdRestore             = "RESTORE"
 	CmdGeoAdd              = "GEOADD"
 	CmdGeoDist             = "GEODIST"
+	CmdGeoPos              = "GEOPOS"
 	CmdClient              = "CLIENT"
 	CmdLatency             = "LATENCY"
 	CmdDel                 = "DEL"
@@ -129,10 +146,14 @@ const (
 	CmdGetDel              = "GETDEL"
 	CmdLrange              = "LRANGE"
 	CmdLinsert             = "LINSERT"
+	CmdJSONArrInsert       = "JSON.ARRINSERT"
+	CmdJSONArrTrim         = "JSON.ARRTRIM"
 	CmdJSONArrAppend       = "JSON.ARRAPPEND"
 	CmdJSONArrLen          = "JSON.ARRLEN"
 	CmdJSONArrPop          = "JSON.ARRPOP"
 	CmdJSONClear           = "JSON.CLEAR"
+	CmdJSONSet             = "JSON.SET"
+	CmdJSONObjKeys         = "JSON.OBJKEYS"
 	CmdJSONDel             = "JSON.DEL"
 	CmdJSONForget          = "JSON.FORGET"
 	CmdJSONGet             = "JSON.GET"
@@ -267,6 +288,12 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdJSONArrAppend: {
 		CmdType: SingleShard,
 	},
+	CmdJSONArrInsert: {
+		CmdType: SingleShard,
+	},
+	CmdJSONArrTrim: {
+		CmdType: SingleShard,
+	},
 	CmdJSONArrLen: {
 		CmdType: SingleShard,
 	},
@@ -274,6 +301,12 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdJSONClear: {
+		CmdType: SingleShard,
+	},
+	CmdJSONSet: {
+		CmdType: SingleShard,
+	},
+	CmdJSONObjKeys: {
 		CmdType: SingleShard,
 	},
 	CmdJSONDel: {
@@ -499,6 +532,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGeoDist: {
+		CmdType: SingleShard,
+	},
+	CmdGeoPos: {
 		CmdType: SingleShard,
 	},
 	CmdClient: {

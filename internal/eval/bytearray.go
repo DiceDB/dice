@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package eval
 
 import (
@@ -36,7 +52,7 @@ func NewByteArrayFromObj(obj *object.Obj) (*ByteArray, error) {
 }
 
 func getValueAsByteSlice(obj *object.Obj) ([]byte, error) {
-	oType := object.ExtractType(obj)
+	oType := obj.Type
 	switch oType {
 	case object.ObjTypeInt:
 		return []byte(strconv.FormatInt(obj.Value.(int64), 10)), nil
@@ -81,7 +97,7 @@ func getByteArrayValueAsByteSlice(obj *object.Obj) ([]byte, error) {
 }
 
 // ByteSliceToObj converts a byte slice to an Obj of the specified type and encoding
-func ByteSliceToObj(store *dstore.Store, oldObj *object.Obj, b []byte, objType uint8) (*object.Obj, error) {
+func ByteSliceToObj(store *dstore.Store, oldObj *object.Obj, b []byte, objType object.ObjectType) (*object.Obj, error) {
 	switch objType {
 	case object.ObjTypeInt:
 		return ByteSliceToIntObj(store, oldObj, b)

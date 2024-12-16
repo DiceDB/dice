@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package eval
 
 import (
@@ -201,7 +217,11 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	var oldVal *interface{}
 
 	key, value = args[0], args[1]
-	oType := deduceType(value)
+	storedValue, oType := getRawStringOrInt(value)
+
+	if oType != object.ObjTypeInt && oType != object.ObjTypeString {
+		return makeEvalError(diceerrors.ErrUnsupportedEncoding(int(oType)))
+	}
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
@@ -294,17 +314,6 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	// Cast the value properly based on the encoding type
-	var storedValue interface{}
-	switch oType {
-	case object.ObjTypeInt:
-		storedValue, _ = strconv.ParseInt(value, 10, 64)
-	case object.ObjTypeString:
-		storedValue = value
-	default:
-		return makeEvalError(diceerrors.ErrUnsupportedEncoding(int(oType)))
-	}
-
 	// putting the k and value in a Hash Table
 	store.Put(key, store.NewObj(storedValue, exDurationMs, oType), dstore.WithKeepTTL(keepttl))
 	if oldVal != nil {
@@ -338,7 +347,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// Decode and return the value based on its encoding
-	switch oType := object.ExtractType(obj); oType {
+	switch oType := obj.Type; oType {
 	case object.ObjTypeInt:
 		// Value is stored as an int64, so use type assertion
 		if IsInt64(obj.Value) {
@@ -642,7 +651,7 @@ func evalGETRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	var str string
-	switch oType := object.ExtractType(obj); oType {
+	switch oType := obj.Type; oType {
 	case object.ObjTypeString:
 		if val, ok := obj.Value.(string); ok {
 			str = val
@@ -1095,18 +1104,7 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 
 	// Key does not exist, create a new key
 	if obj == nil {
-		// Deduce type and encoding based on the value if no leading zeros
-		oType := deduceType(value)
-
-		// Transform the value based on the type and encoding
-		storedValue, err := storeValueWithType(value, oType)
-		if err != nil {
-			return &EvalResponse{
-				Result: nil,
-				Error:  err,
-			}
-		}
-
+		storedValue, oType := getRawStringOrInt(value)
 		store.Put(key, store.NewObj(storedValue, exDurationMs, oType))
 		return &EvalResponse{
 			Result: len(value),
@@ -1121,7 +1119,7 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
-	oType := object.ExtractType(obj)
+	oType := obj.Type
 
 	// Transform the value based on the current encoding
 	currentValue, err := convertValueToString(obj, oType)
@@ -2488,7 +2486,7 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 
 	if obj == nil {
 		strValue := formatFloat(incr, false)
-		oType := deduceType(strValue)
+		_, oType := getRawStringOrInt(strValue)
 		obj = store.NewObj(strValue, -1, oType)
 		store.Put(key, obj)
 		return &EvalResponse{
@@ -2522,7 +2520,7 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 	}
 	strValue := formatFloat(value, true)
 
-	oType := deduceType(strValue)
+	_, oType := getRawStringOrInt(strValue)
 
 	// Remove the trailing decimal for integer values
 	// to maintain consistency with redis
@@ -2630,6 +2628,7 @@ func evalDUMP(args []string, store *dstore.Store) *EvalResponse {
 
 	serializedValue, err := rdbSerialize(obj)
 	if err != nil {
+		fmt.Println("error", err)
 		return makeEvalError(diceerrors.ErrGeneral("serialization failed"))
 	}
 	encodedResult := base64.StdEncoding.EncodeToString(serializedValue)
@@ -2651,7 +2650,6 @@ func evalRestore(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		return makeEvalError(diceerrors.ErrGeneral("failed to decode base64 value"))
 	}
-
 	obj, err := rdbDeserialize(serializedData)
 	if err != nil {
 		return makeEvalError(diceerrors.ErrGeneral("deserialization failed"))
@@ -2878,9 +2876,16 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(err)
 	}
 
-	_, err = CreateBloomFilter(args[0], store, opts)
-	if err != nil {
+	key := args[0]
+
+	bf, err := GetBloomFilter(key, store)
+	if err != nil && err != diceerrors.ErrKeyNotFound { // bloom filter does not exist
 		return makeEvalError(err)
+	} else if err != nil && err == diceerrors.ErrKeyNotFound { // key does not exists
+		CreateOrReplaceBloomFilter(key, opts, store)
+		return makeEvalResult(clientio.OK)
+	} else if bf != nil { // bloom filter already exists
+		return makeEvalError(diceerrors.ErrKeyExists)
 	}
 	return makeEvalResult(clientio.OK)
 }
@@ -2892,12 +2897,12 @@ func evalBFADD(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.ADD"))
 	}
 
-	bloom, err := getOrCreateBloomFilter(args[0], store, nil)
+	bf, err := GetOrCreateBloomFilter(args[0], store, nil)
 	if err != nil {
 		return makeEvalError(err)
 	}
 
-	result, err := bloom.add(args[1])
+	result, err := bf.add(args[1])
 	if err != nil {
 		return makeEvalError(err)
 	}
@@ -2912,14 +2917,14 @@ func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.EXISTS"))
 	}
 
-	bloom, err := GetBloomFilter(args[0], store)
-	if err != nil {
+	bf, err := GetBloomFilter(args[0], store)
+	if err != nil && err != diceerrors.ErrKeyNotFound {
 		return makeEvalError(err)
-	}
-	if bloom == nil {
+	} else if err != nil && err == diceerrors.ErrKeyNotFound {
 		return makeEvalResult(clientio.IntegerZero)
 	}
-	result, err := bloom.exists(args[1])
+
+	result, err := bf.exists(args[1])
 	if err != nil {
 		return makeEvalError(err)
 	}
@@ -2933,25 +2938,20 @@ func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("BF.INFO"))
 	}
 
-	bloom, err := GetBloomFilter(args[0], store)
-
+	bf, err := GetBloomFilter(args[0], store)
 	if err != nil {
 		return makeEvalError(err)
 	}
 
-	if bloom == nil {
-		return makeEvalError(diceerrors.ErrGeneral("not found"))
-	}
 	opt := ""
 	if len(args) == 2 {
 		opt = args[1]
 	}
-	result, err := bloom.info(opt)
 
+	result, err := bf.info(opt)
 	if err != nil {
 		return makeEvalError(err)
 	}
-
 	return makeEvalResult(result)
 }
 
@@ -4441,7 +4441,7 @@ func evalGETDEL(args []string, store *dstore.Store) *EvalResponse {
 	objVal := store.GetDel(key)
 
 	// Decode and return the value based on its encoding
-	switch oType := object.ExtractType(objVal); oType {
+	switch oType := objVal.Type; oType {
 	case object.ObjTypeInt:
 		// Value is stored as an int64, so use type assertion
 		if IsInt64(objVal.Value) {
@@ -5082,7 +5082,7 @@ func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
 		object.AssertType(obj.Type, object.ObjTypeString) == nil ||
 		object.AssertType(obj.Type, object.ObjTypeInt) == nil {
 		var byteArray *ByteArray
-		oType := object.ExtractType(obj)
+		oType := obj.Type
 
 		switch oType {
 		case object.ObjTypeByteArray:
@@ -5180,7 +5180,7 @@ func evalGETBIT(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	requiredByteArraySize := offset>>3 + 1
-	switch oType := object.ExtractType(obj); oType {
+	switch oType := obj.Type; oType {
 	case object.ObjTypeSet:
 		return &EvalResponse{
 			Result: nil,
@@ -5429,7 +5429,7 @@ func bitfieldEvalGeneric(args []string, store *dstore.Store, isReadOnly bool) *E
 	var value *ByteArray
 	var err error
 
-	switch oType := object.ExtractType(obj); oType {
+	switch oType := obj.Type; oType {
 	case object.ObjTypeByteArray:
 		value = obj.Value.(*ByteArray)
 	case object.ObjTypeString, object.ObjTypeInt:
@@ -5660,7 +5660,7 @@ func evalJSONTOGGLE(args []string, store *dstore.Store) *EvalResponse {
 		obj.Value = jsonData
 	}
 
-	toggleResults = ReverseSlice(toggleResults)
+	toggleResults = reverseSlice(toggleResults)
 	return makeEvalResult(toggleResults)
 }
 
@@ -6231,6 +6231,58 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
+func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEOPOS"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	ss, err := sortedset.FromObject(obj)
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	results := make([]interface{}, len(args)-1)
+
+	for index := 1; index < len(args); index++ {
+		member := args[index]
+		hash, ok := ss.Get(member)
+
+		if !ok {
+			results[index-1] = (nil)
+			continue
+		}
+
+		lat, lon := geo.DecodeHash(hash)
+
+		latFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lat), 64)
+		lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
+
+		results[index-1] = []interface{}{lonFloat, latFloat}
+	}
+
+	return &EvalResponse{
+		Result: results,
+		Error:  nil,
+	}
+}
+
 func evalTouch(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
 		return makeEvalError(diceerrors.ErrWrongArgumentCount("TOUCH"))
@@ -6383,7 +6435,7 @@ func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	var typeStr string
-	switch oType := object.ExtractType(obj); oType {
+	switch oType := obj.Type; oType {
 	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
 		typeStr = "string"
 	case object.ObjTypeDequeue:
@@ -6430,7 +6482,7 @@ func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
 
 // 		var value []byte
 
-// 		switch oType, _ := object.ExtractType(obj); oType {
+// 		switch oType, _ := obj.Type; oType {
 // 		case object.ObjTypeByteArray:
 // 			byteArray := obj.Value.(*ByteArray)
 // 			byteArrayObject := *byteArray
@@ -6491,7 +6543,7 @@ func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
 // 			values[i] = make([]byte, 0)
 // 		} else {
 // 			// handle the case when it is byte array
-// 			switch oType, _ := object.ExtractType(obj); oType {
+// 			switch oType, _ := obj.Type; oType {
 // 			case object.ObjTypeByteArray:
 // 				byteArray := obj.Value.(*ByteArray)
 // 				byteArrayObject := *byteArray
@@ -6780,4 +6832,137 @@ func evalCommandDocs(args []string) *EvalResponse {
 	}
 
 	return makeEvalResult(result)
+}
+
+// This method executes each operation, contained in ops array, based on commands used.
+func executeBitfieldOps(value *ByteArray, ops []utils.BitFieldOp) []interface{} {
+	overflowType := WRAP
+	var result []interface{}
+	for _, op := range ops {
+		switch op.Kind {
+		case GET:
+			res := value.getBits(int(op.Offset), int(op.EVal), op.EType == SIGNED)
+			result = append(result, res)
+		case SET:
+			prevValue := value.getBits(int(op.Offset), int(op.EVal), op.EType == SIGNED)
+			value.setBits(int(op.Offset), int(op.EVal), op.Value)
+			result = append(result, prevValue)
+		case INCRBY:
+			res, err := value.incrByBits(int(op.Offset), int(op.EVal), op.Value, overflowType, op.EType == SIGNED)
+			if err != nil {
+				result = append(result, nil)
+			} else {
+				result = append(result, res)
+			}
+		case OVERFLOW:
+			overflowType = op.EType
+		}
+	}
+	return result
+}
+
+// formatFloat formats float64 as string.
+// Optionally appends a decimal (.0) for whole numbers,
+// if b is true.
+func formatFloat(f float64, b bool) string {
+	formatted := strconv.FormatFloat(f, 'f', -1, 64)
+	if b {
+		parts := strings.Split(formatted, ".")
+		if len(parts) == 1 {
+			formatted += ".0"
+		}
+	}
+	return formatted
+}
+
+// trimElementAndUpdateArray trim the array between the given start and stop index
+// Returns trimmed array
+func trimElementAndUpdateArray(arr []any, start, stop int) []any {
+	updatedArray := make([]any, 0)
+	length := len(arr)
+	if len(arr) == 0 {
+		return updatedArray
+	}
+	var startIdx, stopIdx int
+
+	if start >= length {
+		return updatedArray
+	}
+
+	startIdx = adjustIndex(start, arr)
+	stopIdx = adjustIndex(stop, arr)
+
+	if startIdx > stopIdx {
+		return updatedArray
+	}
+
+	updatedArray = arr[startIdx : stopIdx+1]
+	return updatedArray
+}
+
+// insertElementAndUpdateArray add an element at the given index
+// Returns remaining array and error
+func insertElementAndUpdateArray(arr []any, index int, elements []interface{}) (updatedArray []any, err error) {
+	length := len(arr)
+	var idx int
+	if index >= -length && index <= length {
+		idx = adjustIndex(index, arr)
+	} else {
+		return nil, errors.New("index out of bounds")
+	}
+	before := arr[:idx]
+	after := arr[idx:]
+
+	elements = append(elements, after...)
+	before = append(before, elements...)
+	updatedArray = append(updatedArray, before...)
+	return updatedArray, nil
+}
+
+// adjustIndex will bound the array between 0 and len(arr) - 1
+// It also handles negative indexes
+func adjustIndex(idx int, arr []any) int {
+	// if index is positive and out of bound, limit it to the last index
+	if idx > len(arr) {
+		idx = len(arr) - 1
+	}
+
+	// if index is negative, change it to equivalent positive index
+	if idx < 0 {
+		// if index is out of bound then limit it to the first index
+		if idx < -len(arr) {
+			idx = 0
+		} else {
+			idx = len(arr) + idx
+		}
+	}
+	return idx
+}
+
+// reverseSlice takes a slice of any type and returns a new slice with the elements reversed.
+func reverseSlice[T any](slice []T) []T {
+	reversed := make([]T, len(slice))
+	for i, v := range slice {
+		reversed[len(slice)-1-i] = v
+	}
+	return reversed
+}
+
+// Parses and returns the input string as an int64 or float64
+func parseFloatInt(input string) (result interface{}, err error) {
+	// Try to parse as an integer
+	if intValue, parseErr := strconv.ParseInt(input, 10, 64); parseErr == nil {
+		result = intValue
+		return
+	}
+
+	// Try to parse as a float
+	if floatValue, parseErr := strconv.ParseFloat(input, 64); parseErr == nil {
+		result = floatValue
+		return
+	}
+
+	// If neither parsing succeeds, return an error
+	err = errors.New("invalid input: not a valid int or float")
+	return
 }

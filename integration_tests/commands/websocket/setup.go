@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package websocket
 
 import (
@@ -11,10 +27,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/internal/server/httpws"
+
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/querymanager"
-	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/gorilla/websocket"
@@ -117,7 +134,7 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel)
 	queryWatcherLocal := querymanager.NewQueryManager()
 	config.DiceConfig.WebSocket.Port = opt.Port
-	testServer := server.NewWebSocketServer(shardManager, testPort1, nil)
+	testServer := httpws.NewWebSocketServer(shardManager, testPort1, nil)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 
 	// run shard manager

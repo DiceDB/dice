@@ -1,4 +1,20 @@
-package server
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+package httpws
 
 import (
 	"bytes"
@@ -14,6 +30,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/internal/iothread"
+
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
 
@@ -23,7 +41,6 @@ import (
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
-	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shard"
 	"github.com/gorilla/websocket"
 	"golang.org/x/exp/rand"
@@ -146,11 +163,18 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		}
 
 		// parse message to dice command
-		diceDBCmd, err := utils.ParseWebsocketMessage(msg)
+		diceDBCmd, err := ParseWebsocketMessage(msg)
 		if errors.Is(err, diceerrors.ErrEmptyCommand) {
 			continue
 		} else if err != nil {
 			if err := WriteResponseWithRetries(conn, []byte("error: parsing failed"), maxRetries); err != nil {
+				slog.Debug(fmt.Sprintf("Error writing message: %v", err))
+			}
+			continue
+		}
+
+		if iothread.CommandsMeta[diceDBCmd.Cmd].CmdType == iothread.MultiShard {
+			if err := WriteResponseWithRetries(conn, []byte("error: unsupported command"), maxRetries); err != nil {
 				slog.Debug(fmt.Sprintf("Error writing message: %v", err))
 			}
 			continue
@@ -274,7 +298,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	var responseValue interface{}
 	// Check if the command is migrated, if it is we use EvalResponse values
 	// else we use RESPParser to decode the response
-	_, ok := CmdMetaMap[diceDBCmd.Cmd]
+	_, ok := iothread.CommandsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		responseValue, err = DecodeEvalResponse(response.EvalResponse)

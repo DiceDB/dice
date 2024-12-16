@@ -1,6 +1,24 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package sortedset
 
 import (
+	"bytes"
+	"encoding/binary"
 	"strconv"
 	"strings"
 
@@ -250,4 +268,60 @@ func (ss *Set) CountInRange(minVal, maxVal float64) int {
 	})
 
 	return count
+}
+
+func (ss *Set) Serialize(buf *bytes.Buffer) error {
+	// Serialize the length of the memberMap
+	memberCount := uint64(len(ss.memberMap))
+	if err := binary.Write(buf, binary.BigEndian, memberCount); err != nil {
+		return err
+	}
+
+	// Serialize each member and its score
+	for member, score := range ss.memberMap {
+		memberLen := uint64(len(member))
+		if err := binary.Write(buf, binary.BigEndian, memberLen); err != nil {
+			return err
+		}
+		if _, err := buf.WriteString(member); err != nil {
+			return err
+		}
+		if err := binary.Write(buf, binary.BigEndian, score); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func DeserializeSortedSet(buf *bytes.Reader) (*Set, error) {
+	ss := New()
+
+	// Read the member count
+	var memberCount uint64
+	if err := binary.Read(buf, binary.BigEndian, &memberCount); err != nil {
+		return nil, err
+	}
+
+	// Read each member and its score
+	for i := uint64(0); i < memberCount; i++ {
+		var memberLen uint64
+		if err := binary.Read(buf, binary.BigEndian, &memberLen); err != nil {
+			return nil, err
+		}
+
+		member := make([]byte, memberLen)
+		if _, err := buf.Read(member); err != nil {
+			return nil, err
+		}
+
+		var score float64
+		if err := binary.Read(buf, binary.BigEndian, &score); err != nil {
+			return nil, err
+		}
+
+		// Add the member back to the set
+		ss.Upsert(score, string(member))
+	}
+
+	return ss, nil
 }

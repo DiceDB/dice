@@ -1,16 +1,33 @@
-package utils
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+package httpws
 
 import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"io"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/dicedb/dice/internal/server/utils"
 
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -64,7 +81,7 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 	queryParams := r.URL.Query()
 	keyPrefix := queryParams.Get(KeyPrefix)
 
-	if keyPrefix != "" && command == JSONIngest {
+	if keyPrefix != "" && command == utils.JSONIngest {
 		args = append(args, keyPrefix)
 	}
 	// Step 1: Handle JSON body if present
@@ -173,7 +190,7 @@ func ParseWebsocketMessage(msg []byte) (*cmd.DiceDBCmd, error) {
 
 	// if key prefix is empty for JSON.INGEST command
 	// add "" to cmdArr
-	if command == JSONIngest && len(cmdArr) == 2 {
+	if command == utils.JSONIngest && len(cmdArr) == 2 {
 		cmdArr = append([]string{""}, cmdArr...)
 	}
 

@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package object
 
 // Obj represents a basic object structure that includes metadata about the object
@@ -25,7 +41,7 @@ package object
 //     objects (e.g., strings, numbers, complex data structures like lists or maps).
 type Obj struct {
 	// Type holds the type of the object (e.g., string, int, complex structure)
-	Type uint8
+	Type ObjectType
 
 	// LastAccessedAt stores the last access timestamp of the object.
 	// It helps track when the object was last accessed and may be used for cache eviction or freshness tracking.
@@ -72,17 +88,21 @@ type InternalObj struct {
 	ExDuration int64
 }
 
-var ObjTypeString uint8 = 0
-var ObjTypeJSON uint8 = 3
-var ObjTypeByteArray uint8 = 4
-var ObjTypeInt uint8 = 5
-var ObjTypeSet uint8 = 6
-var ObjTypeHashMap uint8 = 7
-var ObjTypeSortedSet uint8 = 8
-var ObjTypeCountMinSketch uint8 = 9
-var ObjTypeBF uint8 = 10
-var ObjTypeDequeue uint8 = 11
+// ObjectType represents the type of a DiceDB object
+type ObjectType uint8
 
-func ExtractType(obj *Obj) (e1 uint8) {
-	return obj.Type
-}
+// Define object types as constants
+const (
+	ObjTypeString ObjectType = iota
+	_                        // skip 1 and 2 to maintain compatibility
+	_
+	ObjTypeJSON
+	ObjTypeByteArray
+	ObjTypeInt
+	ObjTypeSet
+	ObjTypeHashMap
+	ObjTypeSortedSet
+	ObjTypeCountMinSketch
+	ObjTypeBF
+	ObjTypeDequeue
+)
