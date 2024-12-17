@@ -7,8 +7,6 @@ DiceDB
 
 DiceDB is an open source, redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.
 
-We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [block our calendar](https://cal.com/dicedb-arpit). always up for a chat.
-
 > [!CAUTION]
 > DiceDB is under active development and supports a subset of Redis commands. Inconsistent behavior is expected. Feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
 
