@@ -34,6 +34,13 @@ import SocialHandlesIcons from "./SocialHandlesIcons.astro";
       <div class="navbar-start"></div>
       <div class="navbar-end">
         <a
+          class={`navbar-item`}
+          href="https://playground.dicedb.io"
+          target="_blank"
+        >
+          <span class="has-text-weight-bold"> Playground</span>
+        </a>
+        <a
           class={`navbar-item ${currentPage === "benchmarks" && "is-active"}`}
           href="/benchmarks"
         >

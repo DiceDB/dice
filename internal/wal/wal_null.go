@@ -34,7 +34,8 @@ func (w *WALNull) Init(t time.Time) error {
 }
 
 // LogCommand serializes a WALLogEntry and writes it to the current WAL file.
-func (w *WALNull) LogCommand(c *cmd.DiceDBCmd) {
+func (w *WALNull) LogCommand(b []byte) error {
+	return nil
 }
 
 func (w *WALNull) Close() error {

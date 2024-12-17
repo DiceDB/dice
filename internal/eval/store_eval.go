@@ -1900,7 +1900,7 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 	if obj == nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  nil,
+			Error:  diceerrors.ErrKeyDoesNotExist,
 		}
 	}
 
