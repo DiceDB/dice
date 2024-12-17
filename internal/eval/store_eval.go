@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package eval
 
 import (
@@ -202,7 +218,11 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	var oldVal *interface{}
 
 	key, value = args[0], args[1]
-	_, oType := getRawStringOrInt(value)
+	storedValue, oType := getRawStringOrInt(value)
+
+	if oType != object.ObjTypeInt && oType != object.ObjTypeString {
+		return makeEvalError(diceerrors.ErrUnsupportedEncoding(int(oType)))
+	}
 
 	for i := 2; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
@@ -293,17 +313,6 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		default:
 			return makeEvalError(diceerrors.ErrSyntax)
 		}
-	}
-
-	// Cast the value properly based on the encoding type
-	var storedValue interface{}
-	switch oType {
-	case object.ObjTypeInt:
-		storedValue, _ = strconv.ParseInt(value, 10, 64)
-	case object.ObjTypeString:
-		storedValue = value
-	default:
-		return makeEvalError(diceerrors.ErrUnsupportedEncoding(int(oType)))
 	}
 
 	// putting the k and value in a Hash Table
@@ -6219,6 +6228,58 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: utils.RoundToDecimals(result, 4),
+		Error:  nil,
+	}
+}
+
+func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEOPOS"),
+		}
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.NIL,
+			Error:  nil,
+		}
+	}
+
+	ss, err := sortedset.FromObject(obj)
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	results := make([]interface{}, len(args)-1)
+
+	for index := 1; index < len(args); index++ {
+		member := args[index]
+		hash, ok := ss.Get(member)
+
+		if !ok {
+			results[index-1] = (nil)
+			continue
+		}
+
+		lat, lon := geo.DecodeHash(hash)
+
+		latFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lat), 64)
+		lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
+
+		results[index-1] = []interface{}{lonFloat, latFloat}
+	}
+
+	return &EvalResponse{
+		Result: results,
 		Error:  nil,
 	}
 }

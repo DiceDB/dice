@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package eval
 
 import (
@@ -1222,6 +1238,14 @@ var (
 		NewEval:    evalGEODIST,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	geoPosCmdMeta = DiceCmdMeta{
+		Name:       "GEOPOS",
+		Info:       `Returns the latitude and longitude of the members identified by the particular index.`,
+		Arity:      -3,
+		NewEval:    evalGEOPOS,
+		IsMigrated: true,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
 	jsonstrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRAPPEND",
 		Info: `JSON.STRAPPEND key [path] value
@@ -1363,6 +1387,7 @@ func init() {
 	DiceCmds["FLUSHDB"] = flushdbCmdMeta
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
+	DiceCmds["GEOPOS"] = geoPosCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["GETBIT"] = getBitCmdMeta
 	DiceCmds["GETDEL"] = getDelCmdMeta

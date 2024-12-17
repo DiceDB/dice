@@ -1,10 +1,28 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 syntax = "proto3";
 
 package wal;
 option go_package = "internal/wal";
 
-// WALLogEntry represents a single log entry in the WAL.
-message WALLogEntry {
-    optional bytes checksum = 1; // SHA-256 checksum of the command for integrity
-    optional string command = 2; // Command
+message WALEntry {
+    string   version = 1;               // Version of the WAL entry (e.g., "v1.0")
+    uint64   log_sequence_number = 2;     // Log Sequence Number (LSN)
+    bytes    data = 3;                  // The actual data being logged
+    uint32   crc32 = 4;                   // Cyclic Redundancy Check for integrity
+    int64    timestamp = 5;             // Timestamp for the WAL entry (epoch time in nanoseconds)
 }

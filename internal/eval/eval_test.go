@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package eval
 
 import (
@@ -130,6 +146,7 @@ func TestEval(t *testing.T) {
 	testEvalBitFieldRO(t, store)
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
+	testEvalGEOPOS(t, store)
 	testEvalJSONSTRAPPEND(t, store)
 	testEvalINCR(t, store)
 	testEvalINCRBY(t, store)
@@ -8246,6 +8263,96 @@ func testEvalGEODIST(t *testing.T, store *dstore.Store) {
 	}
 
 	runMigratedEvalTests(t, tests, evalGEODIST, store)
+}
+
+func testEvalGEOPOS(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"GEOPOS for existing single point": {
+			setup: func() {
+				evalGEOADD([]string{"index", "13.361387", "38.115556", "Palermo"}, store)
+			},
+			input: []string{"index", "Palermo"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{[]interface{}{float64(13.361387), float64(38.115556)}},
+				Error:  nil,
+			},
+		},
+		"GEOPOS for multiple existing points": {
+			setup: func() {
+				evalGEOADD([]string{"points", "13.361387", "38.115556", "Palermo"}, store)
+				evalGEOADD([]string{"points", "15.087265", "37.502668", "Catania"}, store)
+			},
+			input: []string{"points", "Palermo", "Catania"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{
+					[]interface{}{float64(13.361387), float64(38.115556)},
+					[]interface{}{float64(15.087265), float64(37.502668)},
+				},
+				Error: nil,
+			},
+		},
+		"GEOPOS for a point that does not exist": {
+			setup: func() {
+				evalGEOADD([]string{"index", "13.361387", "38.115556", "Palermo"}, store)
+			},
+			input: []string{"index", "NonExisting"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{nil},
+				Error:  nil,
+			},
+		},
+		"GEOPOS for multiple points, one existing and one non-existing": {
+			setup: func() {
+				evalGEOADD([]string{"index", "13.361387", "38.115556", "Palermo"}, store)
+			},
+			input: []string{"index", "Palermo", "NonExisting"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{
+					[]interface{}{float64(13.361387), float64(38.115556)},
+					nil,
+				},
+				Error: nil,
+			},
+		},
+		"GEOPOS for empty index": {
+			setup: func() {
+				evalGEOADD([]string{"", "13.361387", "38.115556", "Palermo"}, store)
+			},
+			input: []string{"", "Palermo"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{
+					[]interface{}{float64(13.361387), float64(38.115556)},
+				},
+				Error: nil,
+			},
+		},
+		"GEOPOS with no members in key": {
+			input: []string{"index", "Palermo"},
+			migratedOutput: EvalResponse{
+				Result: clientio.NIL,
+				Error:  nil,
+			},
+		},
+		"GEOPOS with invalid number of arguments": {
+			input: []string{"index"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("GEOPOS"),
+			},
+		},
+        "GEOPOS for a key not used for setting geospatial values": {
+			setup: func() {
+				evalSET([]string{"k", "v"}, store)
+			},
+			input: []string{"k", "v"},
+            migratedOutput: EvalResponse{
+				Result: nil, 
+				Error:  errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"),
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalGEOPOS, store)
 }
 
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {

@@ -1,0 +1,69 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getCollection } from "astro:content";
+import { Video } from "lucide-astro";
+
+const updates = await getCollection("updates");
+updates.reverse();
+
+const title = "Community";
+const description = "";
+const callLink = "https://meet.google.com/qdf-pfkb-ckm";
+---
+
+<Layout {title} {description}>
+  <div class="columns is-centered">
+    <div class="column is-8 content">
+      <h1>Community</h1>
+      <p>
+        DiceDB is a community-driven project, and every individual who has
+        contributed their time, expertise, and patches has played a crucial role
+        in shaping its success. If you're interested in contributing to DiceDB,
+        you can always
+        <ul>
+          <li>
+            Find open issues on <a
+              target="_blank"
+              href="https://github.com/dicedb/dice/issues">GitHub</a
+            >
+          </li>
+          <li>
+            Join our <a
+              target="_blank"
+              href="https://discord.gg/6r8uXWtXh7"
+              target="_blank">Discord server</a
+            >
+          </li>
+        </ul>
+        The community is always open to new ideas and contributions, so feel free
+        to drop a note on our Discord server.
+      </p>
+      <br />
+      <h2>Weekly calls</h2>
+      <p>
+        We meet every Thursday at 19:00 IST to discuss what we did and what we
+        plan to do. The meeting is open to everyone, and you can join the call
+        by clicking the button below.
+      </p>
+      <div>
+        <a href={callLink} target="_blank" class="button is-primary">
+          <span class="icon"><Video /></span>
+          <span>Join the Meet</span>
+        </a>
+      </div>
+      <br />
+      <p>Here are the notes from our past weekly calls</p>
+      <div>
+        <ul>
+          {
+            updates.map((update) => (
+              <li>
+                <a href={`/updates/${update.slug}`}>{update.slug}</a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </div>
+</Layout>
