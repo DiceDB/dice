@@ -319,7 +319,7 @@ func TestJsonObjLen(t *testing.T) {
 		{
 			name:     "JSON.OBJLEN with non-existent key",
 			commands: []string{"json.set obj $ " + b, "json.objlen non_existing_key $"},
-			expected: []interface{}{"OK", nil},
+			expected: []interface{}{"OK", "ERR could not perform this operation on a key that doesn't exist"},
 		},
 		{
 			name:     "JSON.OBJLEN with empty path",
