@@ -24,9 +24,6 @@ import (
 	"github.com/dicedb/dice/internal/common"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
-	"github.com/dicedb/dice/internal/sql"
-	"github.com/ohler55/ojg/jp"
-	"github.com/xwb1989/sqlparser"
 )
 
 func NewStoreRegMap() common.ITable[string, *object.Obj] {
@@ -72,16 +69,14 @@ type Store struct {
 	store            common.ITable[string, *object.Obj]
 	expires          common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
 	numKeys          int
-	queryWatchChan   chan QueryWatchEvent
 	cmdWatchChan     chan CmdWatchEvent
 	evictionStrategy EvictionStrategy
 }
 
-func NewStore(queryWatchChan chan QueryWatchEvent, cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy) *Store {
+func NewStore(cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy) *Store {
 	store := &Store{
 		store:            NewStoreRegMap(),
 		expires:          NewExpireRegMap(),
-		queryWatchChan:   queryWatchChan,
 		cmdWatchChan:     cmdWatchChan,
 		evictionStrategy: evictionStrategy,
 	}
@@ -171,9 +166,6 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 	store.store.Put(k, obj)
 	store.evictionStrategy.OnAccess(k, obj, AccessSet)
 
-	if store.queryWatchChan != nil {
-		store.notifyQueryManager(k, Set, *obj)
-	}
 	if store.cmdWatchChan != nil {
 		store.notifyWatchManager(options.PutCmd, k)
 	}
@@ -274,10 +266,6 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 	store.store.Delete(sourceKey)
 	store.numKeys--
 
-	// Notify watchers about the deletion of the source key
-	if store.queryWatchChan != nil {
-		store.notifyQueryManager(sourceKey, Del, *sourceObj)
-	}
 	if store.cmdWatchChan != nil {
 		store.notifyWatchManager(Rename, sourceKey)
 	}
@@ -329,9 +317,6 @@ func (store *Store) deleteKey(k string, obj *object.Obj, opts ...DelOption) bool
 
 		store.evictionStrategy.OnAccess(k, obj, AccessDel)
 
-		if store.queryWatchChan != nil {
-			store.notifyQueryManager(k, Del, *obj)
-		}
 		if store.cmdWatchChan != nil {
 			store.notifyWatchManager(options.DelCmd, k)
 		}
@@ -350,43 +335,12 @@ func (store *Store) delByPtr(ptr string, opts ...DelOption) bool {
 	return false
 }
 
-// notifyQueryManager notifies the query manager about a key change, so that it can update the query cache if needed.
-func (store *Store) notifyQueryManager(k, operation string, obj object.Obj) {
-	store.queryWatchChan <- QueryWatchEvent{k, operation, obj}
-}
-
 func (store *Store) notifyWatchManager(cmd, affectedKey string) {
 	store.cmdWatchChan <- CmdWatchEvent{cmd, affectedKey}
 }
 
 func (store *Store) GetStore() common.ITable[string, *object.Obj] {
 	return store.store
-}
-
-// CacheKeysForQuery scans the store for keys that match the given where clause and sends them to the cache channel.
-// This allows the query manager to cache the existing keys that match the query.
-func (store *Store) CacheKeysForQuery(whereClause sqlparser.Expr, cacheChannel chan *[]struct {
-	Key   string
-	Value *object.Obj
-}) {
-	shardCache := make([]struct {
-		Key   string
-		Value *object.Obj
-	}, 0)
-	store.store.All(func(k string, v *object.Obj) bool {
-		matches, err := sql.EvaluateWhereClause(whereClause, sql.QueryResultRow{Key: k, Value: *v}, make(map[string]jp.Expr))
-		if err != nil || !matches {
-			return true
-		}
-
-		shardCache = append(shardCache, struct {
-			Key   string
-			Value *object.Obj
-		}{Key: k, Value: v})
-
-		return true
-	})
-	cacheChannel <- &shardCache
 }
 
 func (store *Store) evict(evictCount int) bool {

@@ -23,7 +23,7 @@ import (
 )
 
 func TestDelExpiry(t *testing.T) {
-	store := NewStore(nil, nil, nil)
+	store := NewStore(nil, nil)
 	// Initialize the test environment
 	store.store = NewStoreMap()
 	store.expires = NewExpireMap()

@@ -66,7 +66,6 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		queryWatchChan           chan dstore.QueryWatchEvent
 		cmdWatchChan             chan dstore.CmdWatchEvent
 		serverErrCh              = make(chan error, 2)
 		cmdWatchSubscriptionChan = make(chan watchmanager.WatchSubscription)
@@ -106,7 +105,6 @@ func main() {
 
 	if config.DiceConfig.Performance.EnableWatch {
 		bufSize := config.DiceConfig.Performance.WatchChanBufSize
-		queryWatchChan = make(chan dstore.QueryWatchEvent, bufSize)
 		cmdWatchChan = make(chan dstore.CmdWatchEvent, bufSize)
 	}
 
@@ -127,7 +125,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// Initialize the ShardManager
-	shardManager := shard.NewShardManager(uint8(numShards), queryWatchChan, cmdWatchChan, serverErrCh)
+	shardManager := shard.NewShardManager(uint8(numShards), cmdWatchChan, serverErrCh)
 
 	wg := sync.WaitGroup{}
 
