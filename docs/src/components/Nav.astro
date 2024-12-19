@@ -61,7 +61,7 @@ import { ArrowUpRight } from "lucide-astro";
           <span class="has-text-weight-bold"> Team</span>
         </a>
         <a
-          class={`navbar-item has-bg-red-500`}
+          class={`navbar-item`}
           href="https://playground.dicedb.io"
           target="_blank"
         >
@@ -69,7 +69,7 @@ import { ArrowUpRight } from "lucide-astro";
           <ArrowUpRight size={20} class="ml-1" />
         </a>
         <a
-        class={`navbar-item has-bg-red-500 ${currentPage === "docs" && "is-active"}`}
+        class={`navbar-item ${currentPage === "docs" && "is-active"}`}
         href="/get-started/installation/"
       >
           <span class="has-text-weight-bold"> Docs</span>
