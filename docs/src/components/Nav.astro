@@ -3,6 +3,7 @@ const pathname = new URL(Astro.request.url).pathname;
 const currentPage = pathname.split("/")[1];
 const currentSubPage = pathname.split("/")[2]; // To identify subpages under "community"
 import SocialHandlesIcons from "./SocialHandlesIcons.astro";
+import { ArrowUpRight } from "lucide-astro";
 ---
 
 <div>
@@ -33,25 +34,14 @@ import SocialHandlesIcons from "./SocialHandlesIcons.astro";
     <div class="navbar-menu">
       <div class="navbar-start"></div>
       <div class="navbar-end">
-        <a
-          class={`navbar-item`}
-          href="https://playground.dicedb.io"
-          target="_blank"
-        >
-          <span class="has-text-weight-bold"> Playground</span>
-        </a>
+        
         <a
           class={`navbar-item ${currentPage === "benchmarks" && "is-active"}`}
           href="/benchmarks"
         >
           <span class="has-text-weight-bold"> Benchmarks</span>
         </a>
-        <a
-          class={`navbar-item ${currentPage === "docs" && "is-active"}`}
-          href="/get-started/installation/"
-        >
-          <span class="has-text-weight-bold"> Docs</span>
-        </a>
+       
         <a
           class={`navbar-item ${currentPage === "blogs" && "is-active"}`}
           href="/blog"
@@ -69,6 +59,22 @@ import SocialHandlesIcons from "./SocialHandlesIcons.astro";
           href="/team"
         >
           <span class="has-text-weight-bold"> Team</span>
+        </a>
+        <a
+          class={`navbar-item has-bg-red-500`}
+          href="https://playground.dicedb.io"
+          target="_blank"
+        >
+          <span class="has-text-weight-bold"> Playground</span>
+          <ArrowUpRight size={20} class="ml-1" />
+        </a>
+        <a
+        class={`navbar-item has-bg-red-500 ${currentPage === "docs" && "is-active"}`}
+        href="/get-started/installation/"
+      >
+          <span class="has-text-weight-bold"> Docs</span>
+          <ArrowUpRight size={20} class="ml-1" />
+
         </a>
         <div class="navbar-item">
           <SocialHandlesIcons />
