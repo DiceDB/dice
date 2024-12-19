@@ -33,7 +33,7 @@ import { ArrowUpRight } from "lucide-astro";
     </div>
     <div class="navbar-menu">
       <div class="navbar-start"></div>
-      <div class="navbar-end">
+      <div class="navbar-end" style="gap:0.3rem;">
         
         <a
           class={`navbar-item ${currentPage === "benchmarks" && "is-active"}`}
@@ -43,7 +43,7 @@ import { ArrowUpRight } from "lucide-astro";
         </a>
        
         <a
-          class={`navbar-item ${currentPage === "blogs" && "is-active"}`}
+          class={`navbar-item ${currentPage === "blog" && "is-active"}`}
           href="/blog"
         >
           <span class="has-text-weight-bold"> Blog</span>
