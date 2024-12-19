@@ -46,12 +46,12 @@ const (
 # Version
 version = "0.1.0"
 
-# Async Server Configuration
-async_server.addr = "0.0.0.0"
-async_server.port = 7379
-async_server.keepalive = 300
-async_server.timeout = 300
-async_server.max_conn = 0
+# RESP Server Configuration
+resp_server.addr = "0.0.0.0"
+resp_server.port = 7379
+resp_server.keepalive = 300
+resp_server.timeout = 300
+resp_server.max_conn = 0
 
 # HTTP Configuration
 http.enabled = false
@@ -127,7 +127,7 @@ type Config struct {
 	Version     string      `config:"version" default:"0.1.0"`
 	InstanceID  string      `config:"instance_id"`
 	Auth        auth        `config:"auth"`
-	RespServer  respServer  `config:"async_server"`
+	RespServer  respServer  `config:"resp_server"`
 	HTTP        http        `config:"http"`
 	WebSocket   websocket   `config:"websocket"`
 	Performance performance `config:"performance"`
@@ -193,7 +193,7 @@ type persistence struct {
 
 type WALConfig struct {
 	// Directory where WAL log files will be stored
-	LogDir string `config:"log_dir" default:"tmp/dicedb-wal"`
+	LogDir string `config:"log_dir" default:"tmp/dicedb-wal" validate:"dirpath,required"`
 	// Whether WAL is enabled
 	Enabled bool `config:"enabled" default:"true"`
 	// WAL buffering mode: 'buffered' (writes buffered in memory) or 'unbuffered' (immediate disk writes)

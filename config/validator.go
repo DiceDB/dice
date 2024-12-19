@@ -59,7 +59,7 @@ func validateConfig(config *Config) error {
 func validateShardCount(sl validator.StructLevel) {
 	config := sl.Current().Interface().(Config)
 	if config.Performance.NumShards <= 0 && config.Performance.NumShards != -1 {
-		sl.ReportError(config.Performance.NumShards, "NumShards", "NumShards", "invalidValue", "must be -1 or greater than 0")
+		sl.ReportError(config.Performance.NumShards, "NumShards", "NumShards", "invalidValue", "use -1 for auto-sharding as per the number of CPUs or a positive integer")
 	}
 }
 
@@ -115,27 +115,6 @@ func applyDefaultValuesFromTags(config *Config, fieldName string) error {
 
 func validateWALConfig(sl validator.StructLevel) {
 	config := sl.Current().Interface().(Config)
-	
-	// LogDir validation
-	if config.WAL.LogDir == "" {
-		sl.ReportError(config.WAL.LogDir, "LogDir", "LogDir", "required", "cannot be empty")
-	}
-
-	// MaxSegmentSize validation
-	if config.WAL.MaxSegmentSizeMB <= 0 {
-		sl.ReportError(config.WAL.MaxSegmentSizeMB, "MaxSegmentSize", "MaxSegmentSize", "gt", "must be greater than 0")
-	}
-
-	// MaxSegmentCount validation
-	if config.WAL.MaxSegmentCount <= 0 {
-		sl.ReportError(config.WAL.MaxSegmentCount, "MaxSegmentCount", "MaxSegmentCount", "gt", "must be greater than 0")
-	}
-
-	// BufferSize validation
-	if config.WAL.BufferSizeMB <= 0 {
-		sl.ReportError(config.WAL.BufferSizeMB, "BufferSize", "BufferSize", "gt", "must be greater than 0")
-	}
-
 	// WALMode and WriteMode compatibility checks
 	if config.WAL.WalMode == "buffered" && config.WAL.WriteMode == "fsync" {
 		sl.ReportError(config.WAL.WalMode, "WALMode", "WALMode", "incompatible", "walMode 'buffered' cannot be used with writeMode 'fsync'")
