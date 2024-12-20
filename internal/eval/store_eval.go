@@ -5875,6 +5875,13 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 
 	store.Del(key)
 
+	if len(cd.InternalObjs) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("ERR dest key not present"),
+		}
+	}
+
 	copyObj := cd.InternalObjs[0].Obj.DeepCopy()
 	if copyObj == nil {
 		return &EvalResponse{
