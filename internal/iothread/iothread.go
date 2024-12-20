@@ -43,7 +43,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const defaultRequestTimeout = 6 * time.Second
+const defaultRequestTimeout = 600 * time.Second
 
 var requestCounter uint32
 
