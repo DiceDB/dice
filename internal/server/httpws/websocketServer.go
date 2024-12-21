@@ -30,7 +30,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dicedb/dice/internal/iothread"
+	"github.com/dicedb/dice/internal/commandhandler"
 
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
@@ -46,9 +46,12 @@ import (
 	"golang.org/x/exp/rand"
 )
 
-const Qwatch = "Q.WATCH"
-const Qunwatch = "Q.UNWATCH"
-const Subscribe = "SUBSCRIBE"
+const (
+	Qwatch         = "Q.WATCH"
+	Qunwatch       = "Q.UNWATCH"
+	Subscribe      = "SUBSCRIBE"
+	wsCmdHandlerID = "wsServer"
+)
 
 var unimplementedCommandsWebsocket = map[string]bool{
 	Qunwatch: true,
@@ -96,7 +99,7 @@ func (s *WebsocketServer) Run(ctx context.Context) error {
 	websocketCtx, cancelWebsocket := context.WithCancel(ctx)
 	defer cancelWebsocket()
 
-	s.shardManager.RegisterIOThread("wsServer", s.ioChan, nil)
+	s.shardManager.RegisterCommandHandler(wsCmdHandlerID, s.ioChan, nil)
 
 	wg.Add(1)
 	go func() {
@@ -170,7 +173,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 			continue
 		}
 
-		if iothread.CommandsMeta[diceDBCmd.Cmd].CmdType == iothread.MultiShard {
+		if commandhandler.CommandsMeta[diceDBCmd.Cmd].CmdType == commandhandler.MultiShard {
 			if err := WriteResponseWithRetries(conn, []byte("error: unsupported command"), maxRetries); err != nil {
 				slog.Debug(fmt.Sprintf("Error writing message: %v", err))
 			}
@@ -192,10 +195,10 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 
 		// create request
 		sp := &ops.StoreOp{
-			Cmd:         diceDBCmd,
-			IOThreadID:  "wsServer",
-			ShardID:     0,
-			WebsocketOp: true,
+			Cmd:          diceDBCmd,
+			CmdHandlerID: wsCmdHandlerID,
+			ShardID:      0,
+			WebsocketOp:  true,
 		}
 
 		// handle q.watch commands
@@ -295,7 +298,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 	var responseValue interface{}
 	// Check if the command is migrated, if it is we use EvalResponse values
 	// else we use RESPParser to decode the response
-	_, ok := iothread.CommandsMeta[diceDBCmd.Cmd]
+	_, ok := commandhandler.CommandsMeta[diceDBCmd.Cmd]
 	// TODO: Remove this conditional check and if (true) condition when all commands are migrated
 	if !ok {
 		responseValue, err = DecodeEvalResponse(response.EvalResponse)
