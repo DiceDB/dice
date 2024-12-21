@@ -112,11 +112,52 @@ func decomposeCopy(ctx context.Context, thread *BaseIOThread, cd *cmd.DiceDBCmd)
 
 	decomposedCmds := []*cmd.DiceDBCmd{
 		{
-			Cmd:         "OBJECTCOPY",
-			Args:        cd.Args[1:],
-			InternalObj: newObj,
+			Cmd:          "OBJECTCOPY",
+			Args:         cd.Args[1:],
+			InternalObjs: []*object.InternalObj{newObj},
 		},
 	}
+
+	return decomposedCmds, nil
+}
+
+// decomposeMSet decomposes the PFMERGE command into individual GET commands for each HLL.
+// For each key it creates a separate GET command to get the value at the given key.
+func decomposePFMerge(ctx context.Context, thread *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	// Waiting for GET command response for all the keys to be merged
+	resp := make([]*object.InternalObj, 0, len(cd.Args)-1)
+	for i := 1; i < len(cd.Args); i++ {
+		select {
+		case <-ctx.Done():
+			slog.Error("IOThread timed out waiting for response from shards", slog.String("id", thread.id), slog.Any("error", ctx.Err()))
+		case preProcessedResp, ok := <-thread.preprocessingChan:
+			if ok {
+				if preProcessedResp.EvalResponse.Error != nil {
+					return nil, diceerrors.ErrInvalidHyperLogLogKey
+				}
+
+				var hllObjectResult *object.InternalObj
+				if preProcessedResp.EvalResponse.Result == clientio.IntegerZero {
+					hllObjectResult = nil
+				} else {
+					hllObjectResult = preProcessedResp.EvalResponse.Result.(*object.InternalObj)
+				}
+
+				resp = append(resp, hllObjectResult)
+			}
+		}
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args)-1)
+	key := cd.Args[0]
+
+	decomposedCmds = append(decomposedCmds,
+		&cmd.DiceDBCmd{
+			Cmd:          store.PFMERGE,
+			Args:         []string{key},
+			InternalObjs: resp,
+		},
+	)
 
 	return decomposedCmds, nil
 }
