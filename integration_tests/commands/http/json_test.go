@@ -66,10 +66,6 @@ func runIntegrationTests(t *testing.T, exec *HTTPCommandExecutor, testCases []In
 				out := tc.expected[i]
 				result, _ := exec.FireCommand(cmd)
 
-				fmt.Println(cmd, result, out)
-				fmt.Printf("Type of value: %T\n", result) // Replace `value` with your actual variable
-				fmt.Printf("Type of value: %T\n", out)    // Replace `value` with your actual variable
-
 				switch tc.assertType[i] {
 				case "equal":
 					assert.Equal(t, out, result)
