@@ -603,6 +603,15 @@ var (
 		IsMigrated: true,
 		Arity:      -4,
 	}
+	jsonArrIndexCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRINDEX",
+		Info: `JSON.ARRINDEX key path value [start [stop]]
+		Search for the first occurrence of a JSON value in an array`,
+		NewEval:     evalJSONARRINDEX,
+		Arity:    -3,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+	}
 
 	// Internal command used to spawn request across all shards (works internally with the KEYS command)
 	singleKeysCmdMeta = DiceCmdMeta{
@@ -1475,6 +1484,7 @@ func init() {
 	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
 	DiceCmds["LINSERT"] = linsertCmdMeta
 	DiceCmds["LRANGE"] = lrangeCmdMeta
+	DiceCmds["JSON.ARRINDEX"] = jsonArrIndexCmdMeta
 
 	DiceCmds["SINGLETOUCH"] = singleTouchCmdMeta
 	DiceCmds["SINGLEDBSIZE"] = singleDBSizeCmdMeta
