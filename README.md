@@ -7,8 +7,6 @@ DiceDB
 
 DiceDB is an open source, redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.
 
-We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [block our calendar](https://cal.com/dicedb-arpit). always up for a chat.
-
 > [!CAUTION]
 > DiceDB is under active development and supports a subset of Redis commands. Inconsistent behavior is expected. Feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
 
@@ -20,15 +18,6 @@ We have multiple repositories where you can contribute. So, as per your interest
 - [dicedb/dicedb-cli](https://github.com/dicedb/dicedb-cli) command line interface for DiceDB / Stack - Go
 - [dicedb/playground-mono](https://github.com/dicedb/playground-mono) backend APIs for DiceDB playground / Stack - Go
 - [dicedb/alloy](https://github.com/dicedb/alloy) frontend and marketplace for DiceDB playground / Stack - NextJS
-
-## How is it different from Redis?
-
-Although DiceDB is a drop-in replacement of Redis, which means almost no learning curve and switching does not require any code change, it still differs in two key aspects and they are
-
-1. DiceDB is multithreaded and follows [shared-nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing_architecture).
-2. DiceDB supports `.WATCH` commands like `GET.WATCH`, `ZRANGE.WATCH`, etc. that lets clients listen to data changes and get the result set in real-time whenever something changes.
-
-`.WATCH` commands are pretty handy when it comes to building truly real-time applications like [Leaderboard](https://github.com/arpitbbhayani/leaderboard-go-dicedb).
 
 ## Get started
 
@@ -45,6 +34,10 @@ to it using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and SDKs.
 
 > [!TIP]
 > Since DiceDB is a drop-in replacement for Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
+
+## Supporters
+
+[![JetBrains logo.](https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
 
 
 ### Setting up DiceDB from source for development and contributions

@@ -1249,7 +1249,7 @@ func TestJsonObjLen(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "JSON.OBJLEN", Body: map[string]interface{}{"key": "non_existing_key", "path": "$"}},
 			},
-			expected: []interface{}{nil},
+			expected: []interface{}{"ERR could not perform this operation on a key that doesn't exist"},
 		},
 		{
 			name: "JSON.OBJLEN with empty path",

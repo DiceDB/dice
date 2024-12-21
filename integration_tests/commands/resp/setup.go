@@ -207,11 +207,10 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 		config.DiceConfig.RespServer.Port = 9739
 	}
 
-	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
-	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec)
+	shardManager := shard.NewShardManager(1, cmdWatchChan, gec)
 	ioThreadManager := iothread.NewManager(20000, shardManager)
 	// Initialize the RESP Server
 	wl, _ := wal.NewNullWAL()
