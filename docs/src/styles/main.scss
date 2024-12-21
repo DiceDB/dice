@@ -62,18 +62,20 @@ figcaption.header {
   padding: 0.5em;
 }
 
-@media screen and (max-width: 1024px) {
-  .navbar-item {
-    margin-top: 0.3em;
-  }
-}
 
 .navbar-item {
   border-radius: 0.75em;
 }
 
 .navbar-end {
+  display: flex;
   gap: 0.3rem;
+}
+
+@media screen and (max-width: 1024px) {
+  .navbar-end {
+    flex-direction: column;
+  }
 }
 
 .section {
