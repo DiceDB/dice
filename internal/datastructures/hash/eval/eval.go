@@ -1,6 +1,8 @@
 package eval
 
 import (
+	"strconv"
+
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	ds "github.com/dicedb/dice/internal/datastructures"
@@ -48,6 +50,7 @@ func hSetGeneric(args []string, store *dstore.Store, cmd string) *EvalResponse {
 
 	if obj == nil {
 		obj = hash.NewHash()
+		store.Put(key, obj)
 	}
 
 	hash, ok := hash.GetIfTypeHash(obj)
@@ -55,7 +58,7 @@ func hSetGeneric(args []string, store *dstore.Store, cmd string) *EvalResponse {
 		return MakeEvalError(ds.ErrWrongTypeOperation)
 	}
 
-	count := 0
+	var count int64 = 0
 
 	for i := 1; i < len(args); i += 2 {
 		field := args[i]
@@ -114,16 +117,16 @@ func evalHMGET(args []string, store *dstore.Store) *EvalResponse {
 
 	key := args[0]
 	obj := store.Get(key)
-	if obj == nil {
-		return MakeEvalResult(clientio.NIL)
-	}
+	values := make([]interface{}, 0)
 
+	if obj == nil {
+		obj = hash.NewHash()
+	}
 	hash, ok := hash.GetIfTypeHash(obj)
 	if !ok {
 		return MakeEvalError(ds.ErrWrongTypeOperation)
 	}
 
-	values := make([]interface{}, 0)
 	for i := 1; i < len(args); i++ {
 		value, ok := hash.Get(args[i])
 		if ok {
@@ -134,4 +137,252 @@ func evalHMGET(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return MakeEvalResult(values)
+}
+
+func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return MakeEvalError(ds.ErrWrongArgumentCount("HKEYS"))
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return MakeEvalResult(clientio.EmptyArray)
+	}
+
+	hash, ok := hash.GetIfTypeHash(obj)
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	keys := make([]string, 0, len(hash.Value))
+	for key, item := range hash.Value {
+		if !item.Expired() {
+			keys = append(keys, key)
+		}
+	}
+	return MakeEvalResult(keys)
+}
+
+func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return MakeEvalError(ds.ErrWrongArgumentCount("HEXISTS"))
+	}
+
+	key := args[0]
+	field := args[1]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return MakeEvalResult(clientio.IntegerZero)
+	}
+
+	hash, ok := hash.GetIfTypeHash(obj)
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	if _, ok := hash.Get(field); ok {
+		return MakeEvalResult(clientio.IntegerOne)
+	}
+
+	return MakeEvalResult(clientio.IntegerZero)
+}
+
+func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return MakeEvalError(ds.ErrWrongArgumentCount("HVALS"))
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return MakeEvalResult(clientio.EmptyArray)
+	}
+
+	hash, ok := hash.GetIfTypeHash(obj)
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	values := make([]string, 0, len(hash.Value))
+	for _, item := range hash.Value {
+		val, ok := item.Get()
+		if ok {
+			values = append(values, val)
+		}
+	}
+	return MakeEvalResult(values)
+}
+
+func evalHDEL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return MakeEvalError(ds.ErrWrongArgumentCount("HDEL"))
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return MakeEvalResult(int64(0))
+	}
+
+	hash, ok := hash.GetIfTypeHash(obj)
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	var count int64 = 0
+	for i := 1; i < len(args); i++ {
+		if hash.Delete(args[i]) {
+			count++
+		}
+	}
+
+	return MakeEvalResult(count)
+}
+
+func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return MakeEvalError(ds.ErrWrongArgumentCount("HLEN"))
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return MakeEvalResult(clientio.IntegerZero)
+	}
+
+	hash, ok := hash.GetIfTypeHash(obj)
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	count := 0
+	for _, item := range hash.Value {
+		if !item.Expired() {
+			count++
+		}
+	}
+
+	return MakeEvalResult(count)
+}
+
+func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return MakeEvalError(ds.ErrWrongArgumentCount("HSTRLEN"))
+	}
+
+	key := args[0]
+	field := args[1]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return MakeEvalResult(clientio.IntegerZero)
+	}
+
+	hash, ok := hash.GetIfTypeHash(obj)
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	value, ok := hash.Get(field)
+	if !ok {
+		return MakeEvalResult(clientio.IntegerZero)
+	}
+
+	return MakeEvalResult(len(value))
+}
+
+func evalHGETALL(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 1 {
+		return MakeEvalError(ds.ErrWrongArgumentCount("HGETALL"))
+	}
+
+	key := args[0]
+	obj := store.Get(key)
+	if obj == nil {
+		return MakeEvalResult([]string{})
+	}
+
+	hash, ok := hash.GetIfTypeHash(obj)
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	values := make([]string, 0, len(hash.Value)*2)
+	for key, item := range hash.Value {
+		val, ok := item.Get()
+		if ok {
+			values = append(values, key)
+			values = append(values, val)
+		}
+	}
+
+	return MakeEvalResult(values)
+}
+
+func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return MakeEvalError(ds.ErrWrongArgumentCount("HINCRBY"))
+	}
+
+	key := args[0]
+	field := args[1]
+	increment, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return MakeEvalError(ds.ErrIntegerOutOfRange)
+	}
+	obj := store.Get(key)
+	if obj == nil {
+		obj = hash.NewHash()
+	}
+
+	hash, ok := hash.GetIfTypeHash(obj)
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	value, ok := hash.Get(field)
+	if !ok {
+		value = "0"
+	}
+	newVal, err := hashIncrementValue(&value, increment)
+	if err != nil {
+		return MakeEvalError(err)
+	}
+	hash.Add(field, strconv.FormatInt(newVal, 10), -1)
+	return MakeEvalResult(newVal)
+}
+
+func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 3 {
+		return MakeEvalError(ds.ErrWrongArgumentCount("HINCRBYFLOAT"))
+	}
+
+	key := args[0]
+	field := args[1]
+	increment, err := strconv.ParseFloat(args[2], 64)
+	if err != nil {
+		return MakeEvalError(ds.ErrInvalidNumberFormat)
+	}
+	obj := store.Get(key)
+	if obj == nil {
+		obj = hash.NewHash()
+	}
+
+	hash, ok := hash.GetIfTypeHash(obj)
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	value, ok := hash.Get(field)
+	if !ok {
+		value = "0"
+	}
+	newVal, err := hashIncrementFloatValue(&value, increment)
+	if err != nil {
+		return MakeEvalError(err)
+	}
+	hash.Add(field, *newVal, -1)
+	return MakeEvalResult(*newVal)
 }

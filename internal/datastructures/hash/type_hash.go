@@ -58,7 +58,7 @@ func (s *Hash) Get(key string) (string, bool) {
 	return item.Get()
 }
 
-func (s *Hash) Del(key string) bool {
+func (s *Hash) Delete(key string) bool {
 	_, ok := s.Value[key]
 	if !ok {
 		return false

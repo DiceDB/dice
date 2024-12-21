@@ -116,6 +116,9 @@ func (i *HashItem[T]) Set(val string) error {
 	case []byte:
 		i.Value = any([]byte(val)).(T)
 		return nil
+	case string:
+		i.Value = any(val).(T)
+		return nil
 	}
 	return errors.New("value out of range or invalid type")
 }
@@ -126,9 +129,21 @@ func (i *HashItem[T]) Get() (string, bool) {
 		return "", false
 	}
 	switch any(i.Value).(type) {
-	case int8, int16, int32, int64:
+	case int8:
+		return strconv.FormatInt(int64(any(i.Value).(int8)), 10), true
+	case int16:
+		return strconv.FormatInt(int64(any(i.Value).(int16)), 10), true
+	case int32:
+		return strconv.FormatInt(int64(any(i.Value).(int32)), 10), true
+	case int64:
 		return strconv.FormatInt(any(i.Value).(int64), 10), true
-	case uint8, uint16, uint32, uint64:
+	case uint8:
+		return strconv.FormatUint(uint64(any(i.Value).(uint8)), 10), true
+	case uint16:
+		return strconv.FormatUint(uint64(any(i.Value).(uint16)), 10), true
+	case uint32:
+		return strconv.FormatUint(uint64(any(i.Value).(uint32)), 10), true
+	case uint64:
 		return strconv.FormatUint(any(i.Value).(uint64), 10), true
 	case float32:
 		return strconv.FormatFloat(float64(any(i.Value).(float32)), 'f', -1, 32), true
@@ -136,6 +151,8 @@ func (i *HashItem[T]) Get() (string, bool) {
 		return strconv.FormatFloat(any(i.Value).(float64), 'f', -1, 64), true
 	case []byte:
 		return string(any(i.Value).([]byte)), true
+	case string:
+		return any(i.Value).(string), true
 	}
 	return "", false
 }
@@ -145,9 +162,15 @@ func (i *HashItem[T]) Expiry() int64 {
 }
 
 func (i *HashItem[T]) SetExpiry(expiry int64) {
+	if expiry > 0 {
+		expiry += utils.GetCurrentTime().UnixMilli()
+	}
 	i.expiry = expiry
 }
 
 func (i *HashItem[T]) Expired() bool {
+	if i.expiry == -1 {
+		return false
+	}
 	return utils.GetCurrentTime().UnixMilli() >= i.expiry
 }
