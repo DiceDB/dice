@@ -29,6 +29,9 @@ const earthRadius float64 = 6372797.560856
 // Bit precision for geohash - picked up to match redis
 const bitPrecision = 52
 
+// Bit precision for geohash string - picked up to match redis
+const bitPrecisionString = 10
+
 func DegToRad(deg float64) float64 {
 	return math.Pi * deg / 180.0
 }
@@ -64,22 +67,23 @@ func GetLatDistance(lat1, lat2 float64) float64 {
 	return earthRadius * math.Abs(DegToRad(lat2)-DegToRad(lat1))
 }
 
-// EncodeHash returns a geo hash for a given coordinate, and returns it in float64 so it can be used as score in a zset
-func EncodeHash(
-	latitude,
-	longitude float64,
-) float64 {
-	h := geohash.EncodeIntWithPrecision(latitude, longitude, bitPrecision)
+// EncodeInt returns a geo hash for a given coordinate, and returns it in float64 so it can be used as score in a zset
+func EncodeInt(lat, lon float64) float64 {
+	h := geohash.EncodeIntWithPrecision(lat, lon, bitPrecision)
 
 	return float64(h)
 }
 
-// DecodeHash returns the latitude and longitude from a geo hash
+// DecodeInt returns the latitude and longitude from a geo hash
 // The hash should be a float64, as it is used as score in a zset
-func DecodeHash(hash float64) (lat, lon float64) {
+func DecodeInt(hash float64) (lat, lon float64) {
 	lat, lon = geohash.DecodeIntWithPrecision(uint64(hash), bitPrecision)
 
 	return lat, lon
+}
+
+func EncodeString(lat, lon float64) string {
+	return geohash.EncodeWithPrecision(lat, lon, bitPrecisionString)
 }
 
 // ConvertDistance converts a distance from meters to the desired unit

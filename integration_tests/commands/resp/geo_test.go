@@ -139,16 +139,82 @@ func TestGeoPos(t *testing.T) {
 			expect: []interface{}{"(nil)"},
 		},
 		{
-            name: "GEOPOS for a key not used for setting geospatial values",
-            cmds: []string{
-				"SET k v",                
-				"GEOPOS k v",            
+			name: "GEOPOS for a key not used for setting geospatial values",
+			cmds: []string{
+				"SET k v",
+				"GEOPOS k v",
 			},
-            expect: []interface{}{
+			expect: []interface{}{
 				"OK",
 				"WRONGTYPE Operation against a key holding the wrong kind of value",
 			},
-        },
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+			}
+		})
+	}
+}
+
+func TestGeoHash(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []interface{}
+		delays []time.Duration
+	}{
+		{
+			name: "GEOHASH with no arguments",
+			cmds: []string{
+				"GEOHASH points",
+			},
+			expect: []interface{}{"ERR wrong number of arguments for 'geohash' command"},
+		},
+		{
+			name: "GEOHASH on non-geo key",
+			cmds: []string{
+				"SET key value",
+				"GEOHASH key member",
+			},
+			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
+		{
+			name: "GEOHASH with non-existent key",
+			cmds: []string{
+				"GEOHASH geopoints NonExistent",
+			},
+			expect: []interface{}{"ERR no such key"},
+		},
+		{
+			name: "GEOHASH with non-existent member",
+			cmds: []string{
+				"GEOADD points -74.0060 40.7128 NewYork",
+				"GEOHASH points NonExistent",
+			},
+			expect: []interface{}{int64(1), []interface{}{"(nil)"}},
+		},
+		{
+			name: "GEOHASH with a single member",
+			cmds: []string{
+				"GEOHASH points NewYork",
+			},
+			expect: []interface{}{[]interface{}{"dr5regw3pp"}},
+		},
+		{
+			name: "GEOHASH with multiple members",
+			cmds: []string{
+				"GEOADD points -73.935242 40.730610 Brooklyn",
+				"GEOHASH points NewYork Brooklyn NonExistent",
+			},
+			expect: []interface{}{int64(1), []interface{}{"dr5regw3pp", "dr5rtwccpb", "(nil)"}},
+		},
 	}
 
 	for _, tc := range testCases {

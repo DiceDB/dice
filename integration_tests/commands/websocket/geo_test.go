@@ -138,16 +138,16 @@ func TestGeoPos(t *testing.T) {
 			expect: []interface{}{nil},
 		},
 		{
-            name: "GEOPOS for a key not used for setting geospatial values",
-            cmds: []string{
-				"SET k v",                
-				"GEOPOS k v",            
+			name: "GEOPOS for a key not used for setting geospatial values",
+			cmds: []string{
+				"SET k v",
+				"GEOPOS k v",
 			},
-            expect: []interface{}{
+			expect: []interface{}{
 				"OK",
 				"WRONGTYPE Operation against a key holding the wrong kind of value",
 			},
-        },
+		},
 	}
 
 	for _, tc := range testCases {
@@ -161,3 +161,68 @@ func TestGeoPos(t *testing.T) {
 	}
 }
 
+func TestGeoHash(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+	conn := exec.ConnectToServer()
+	defer conn.Close()
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []interface{}
+	}{
+		{
+			name:   "GEOHASH with wrong number of arguments",
+			cmds:   []string{"GEOHASH points"},
+			expect: []interface{}{"ERR wrong number of arguments for 'geohash' command"},
+		},
+		{
+			name: "GEOHASH with non-existent key",
+			cmds: []string{
+				"GEOHASH nonexistent member1",
+			},
+			expect: []interface{}{"ERR no such key"},
+		},
+		{
+			name: "GEOHASH with existing key but missing member",
+			cmds: []string{
+				"GEOADD points -74.0060 40.7128 NewYork",
+				"GEOHASH points missingMember",
+			},
+			expect: []interface{}{float64(1), []interface{}{(nil)}},
+		},
+		{
+			name: "GEOHASH for single member",
+			cmds: []string{
+				"GEOHASH points NewYork",
+			},
+			expect: []interface{}{[]interface{}{"dr5regw3pp"}},
+		},
+		{
+			name: "GEOHASH for multiple members",
+			cmds: []string{
+				"GEOADD points -118.2437 34.0522 LosAngeles",
+				"GEOHASH points NewYork LosAngeles",
+			},
+			expect: []interface{}{float64(1), []interface{}{"dr5regw3pp", "9q5ctr186n"}},
+		},
+		{
+			name: "GEOHASH with a key of wrong type",
+			cmds: []string{
+				"SET points somevalue",
+				"GEOHASH points member1",
+			},
+			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.Nil(t, err, "Unexpected error for cmd: %s", cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd: %s", cmd)
+			}
+		})
+	}
+}

@@ -147,6 +147,7 @@ func TestEval(t *testing.T) {
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
 	testEvalGEOPOS(t, store)
+	testEvalGEOHASH(t, store)
 	testEvalJSONSTRAPPEND(t, store)
 	testEvalINCR(t, store)
 	testEvalINCRBY(t, store)
@@ -8339,19 +8340,81 @@ func testEvalGEOPOS(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrWrongArgumentCount("GEOPOS"),
 			},
 		},
-        "GEOPOS for a key not used for setting geospatial values": {
+		"GEOPOS for a key not used for setting geospatial values": {
 			setup: func() {
 				evalSET([]string{"k", "v"}, store)
 			},
 			input: []string{"k", "v"},
-            migratedOutput: EvalResponse{
-				Result: nil, 
+			migratedOutput: EvalResponse{
+				Result: nil,
 				Error:  errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"),
 			},
 		},
 	}
 
 	runMigratedEvalTests(t, tests, evalGEOPOS, store)
+}
+
+func testEvalGEOHASH(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"GEOHASH with wrong number of arguments": {
+			input: []string{"mygeo"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("GEOHASH"),
+			},
+		},
+		"GEOHASH with non-existent key": {
+			input: []string{"nonexistent", "member1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrKeyNotFound,
+			},
+		},
+		"GEOHASH with existing key but missing member": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input: []string{"mygeo", "missingMember"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{(nil)},
+				Error:  nil,
+			},
+		},
+		"GEOHASH for single member": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input: []string{"mygeo", "NewYork"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{"dr5regw3pp"},
+				Error:  nil,
+			},
+		},
+		"GEOHASH for multiple members": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+				evalGEOADD([]string{"mygeo", "-118.2437", "34.0522", "LosAngeles"}, store)
+			},
+			input: []string{"mygeo", "NewYork", "LosAngeles"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{"dr5regw3pp", "9q5ctr186n"},
+				Error:  nil,
+			},
+		},
+		"GEOHASH with a key of wrong type": {
+			setup: func() {
+				store.Put("mygeo", store.NewObj("string_value", -1, object.ObjTypeString))
+			},
+			input: []string{"mygeo", "member1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalGEOHASH, store)
 }
 
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
