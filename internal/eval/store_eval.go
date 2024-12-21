@@ -6146,7 +6146,7 @@ func evalGEOADD(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		hash := geo.EncodeHash(latitude, longitude)
+		hash := geo.EncodeInt(latitude, longitude)
 
 		wasInserted := ss.Upsert(hash, member)
 		if wasInserted {
@@ -6211,8 +6211,8 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	lat1, lon1 := geo.DecodeHash(score1)
-	lat2, lon2 := geo.DecodeHash(score2)
+	lat1, lon1 := geo.DecodeInt(score1)
+	lat2, lon2 := geo.DecodeInt(score2)
 
 	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
 
@@ -6250,7 +6250,6 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	ss, err := sortedset.FromObject(obj)
-
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
@@ -6269,7 +6268,7 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		lat, lon := geo.DecodeHash(hash)
+		lat, lon := geo.DecodeInt(hash)
 
 		latFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lat), 64)
 		lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
@@ -6279,6 +6278,52 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: results,
+		Error:  nil,
+	}
+}
+
+func evalGEOHASH(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEOHASH"),
+		}
+	}
+
+	key := args[0]
+	members := args[1:]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrKeyNotFound,
+		}
+	}
+
+	ss, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Prepare the response for each member
+	result := make([]interface{}, 0)
+	for _, member := range members {
+		entry, exists := ss.Get(member)
+		if !exists {
+			result = append(result, nil) // clientio.RespNIL
+			continue
+		}
+
+		lat, lon := geo.DecodeInt(entry)
+		result = append(result, geo.EncodeString(lat, lon))
+	}
+
+	return &EvalResponse{
+		Result: result,
 		Error:  nil,
 	}
 }

@@ -32,9 +32,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/querymanager"
 	"github.com/dicedb/dice/internal/shard"
-	dstore "github.com/dicedb/dice/internal/store"
 )
 
 type TestServerOptions struct {
@@ -129,9 +127,8 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 
 	globalErrChannel := make(chan error)
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
-	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel)
-	queryWatcherLocal := querymanager.NewQueryManager()
+	shardManager := shard.NewShardManager(1, nil, globalErrChannel)
+
 	config.DiceConfig.HTTP.Port = opt.Port
 	// Initialize the HTTPServer
 	testServer := httpws.NewHTTPServer(shardManager, nil)
@@ -142,12 +139,6 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	go func() {
 		defer wg.Done()
 		shardManager.Run(shardManagerCtx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		queryWatcherLocal.Run(ctx, watchChan)
 	}()
 
 	// Start the server in a goroutine

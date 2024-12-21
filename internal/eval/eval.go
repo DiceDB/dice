@@ -21,15 +21,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dicedb/dice/internal/object"
-
-	"github.com/dicedb/dice/internal/sql"
-
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/querymanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -187,92 +182,5 @@ func evalSLEEP(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 	time.Sleep(time.Duration(durationSec) * time.Second)
-	return clientio.RespOK
-}
-
-// EvalQWATCH adds the specified key to the watch list for the caller client.
-// Every time a key in the watch list is modified, the client will be sent a response
-// containing the new value of the key along with the operation that was performed on it.
-// Contains only one argument, the query to be watched.
-func EvalQWATCH(args []string, httpOp, websocketOp bool, client *comm.Client, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("Q.WATCH")
-	}
-
-	// Parse and get the selection from the query.
-	query, e := sql.ParseQuery( /*sql=*/ args[0])
-
-	if e != nil {
-		return clientio.Encode(e, false)
-	}
-
-	// use an unbuffered channel to ensure that we only proceed to query execution once the query watcher has built the cache
-	cacheChannel := make(chan *[]struct {
-		Key   string
-		Value *object.Obj
-	})
-	var watchSubscription querymanager.QuerySubscription
-
-	if httpOp || websocketOp {
-		watchSubscription = querymanager.QuerySubscription{
-			Subscribe:          true,
-			Query:              query,
-			CacheChan:          cacheChannel,
-			QwatchClientChan:   client.HTTPQwatchResponseChan,
-			ClientIdentifierID: client.ClientIdentifierID,
-		}
-	} else {
-		watchSubscription = querymanager.QuerySubscription{
-			Subscribe: true,
-			Query:     query,
-			ClientFD:  client.Fd,
-			CacheChan: cacheChannel,
-		}
-	}
-
-	querymanager.QuerySubscriptionChan <- watchSubscription
-	store.CacheKeysForQuery(query.Where, cacheChannel)
-
-	// Return the result of the query.
-	responseChan := make(chan querymanager.AdhocQueryResult)
-	querymanager.AdhocQueryChan <- querymanager.AdhocQuery{
-		Query:        query,
-		ResponseChan: responseChan,
-	}
-
-	queryResult := <-responseChan
-	if queryResult.Err != nil {
-		return clientio.Encode(queryResult.Err, false)
-	}
-
-	// TODO: We should return the list of all queries being watched by the client.
-	return clientio.Encode(querymanager.GenericWatchResponse(sql.Qwatch, query.String(), *queryResult.Result), false)
-}
-
-// EvalQUNWATCH removes the specified key from the watch list for the caller client.
-func EvalQUNWATCH(args []string, httpOp bool, client *comm.Client) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("Q.UNWATCH")
-	}
-	query, e := sql.ParseQuery( /*sql=*/ args[0])
-	if e != nil {
-		return clientio.Encode(e, false)
-	}
-
-	if httpOp {
-		querymanager.QuerySubscriptionChan <- querymanager.QuerySubscription{
-			Subscribe:          false,
-			Query:              query,
-			QwatchClientChan:   client.HTTPQwatchResponseChan,
-			ClientIdentifierID: client.ClientIdentifierID,
-		}
-	} else {
-		querymanager.QuerySubscriptionChan <- querymanager.QuerySubscription{
-			Subscribe: false,
-			Query:     query,
-			ClientFD:  client.Fd,
-		}
-	}
-
 	return clientio.RespOK
 }

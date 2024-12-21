@@ -86,10 +86,6 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 	switch diceCmd.Name {
 	// Old implementation kept as it is, but we will be moving
 	// to the new implementation soon for all commands
-	case "SUBSCRIBE", "Q.WATCH":
-		return &EvalResponse{Result: EvalQWATCH(e.cmd.Args, e.isHTTPOperation, e.isWebSocketOperation, e.client, e.store), Error: nil}
-	case "UNSUBSCRIBE", "Q.UNWATCH":
-		return &EvalResponse{Result: EvalQUNWATCH(e.cmd.Args, e.isHTTPOperation, e.client), Error: nil}
 	case auth.Cmd:
 		return &EvalResponse{Result: EvalAUTH(e.cmd.Args, e.client), Error: nil}
 	case "ABORT":
