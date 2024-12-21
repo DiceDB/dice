@@ -87,7 +87,6 @@ func TestGETUNWATCH(t *testing.T) {
 			if !ok {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
-			fmt.Println(castedValue)
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "GET", castedValue[0])
 			assert.Equal(t, "426696421", castedValue[1])
