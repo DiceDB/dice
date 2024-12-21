@@ -306,8 +306,9 @@ func DeserializeCMS(buffer *bytes.Reader) (*CountMinSketch, error) {
 
 	// Read matrix
 	matrix := make([][]uint64, depth)
+	flatMatrix := make([]uint64, depth*width) // single memory allocation
 	for i := 0; i < int(depth); i++ {
-		matrix[i] = make([]uint64, width)
+		matrix[i] = flatMatrix[i*int(width) : (i+1)*int(width)]
 		for j := 0; j < int(width); j++ {
 			if err := binary.Read(buffer, binary.BigEndian, &matrix[i][j]); err != nil {
 				return nil, err
