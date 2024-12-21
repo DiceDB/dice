@@ -33,8 +33,7 @@ import { ArrowUpRight } from "lucide-astro";
     </div>
     <div class="navbar-menu">
       <div class="navbar-start"></div>
-      <div class="navbar-end" style="gap:0.3rem;">
-        
+      <div class="navbar-end">
         <a
           class={`navbar-item ${currentPage === "benchmarks" && "is-active"}`}
           href="/benchmarks"
@@ -65,16 +64,24 @@ import { ArrowUpRight } from "lucide-astro";
           href="https://playground.dicedb.io"
           target="_blank"
         >
+        <span class="icon-text">
           <span class="has-text-weight-bold"> Playground</span>
-          <ArrowUpRight size={20} class="ml-1" />
+          <span class="icon">
+            <ArrowUpRight size={20} class="ml-1" />
+          </span>
+        </span>
         </a>
         <a
-        class={`navbar-item ${currentPage === "docs" && "is-active"}`}
-        href="/get-started/installation/"
+          class={`navbar-item ${currentPage === "docs" && "is-active"}`}
+          href="/get-started/installation/"
       >
-          <span class="has-text-weight-bold"> Docs</span>
-          <ArrowUpRight size={20} class="ml-1" />
-
+       
+          <span class="icon-text">
+            <span class="has-text-weight-bold">Docs</span>
+            <span class="icon">
+              <ArrowUpRight size={20} class="ml-1" />
+            </span>
+          </span>
         </a>
         <div class="navbar-item">
           <SocialHandlesIcons />
