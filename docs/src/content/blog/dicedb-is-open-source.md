@@ -7,7 +7,7 @@ published_at: 2024-12-14
 author: arpit
 ---
 
-Since the inception of DiceDB, [our](dicedb.io/team) vision has always been rooted in
+Since the inception of DiceDB, [our](/team) vision has always been rooted in
 building a high-performance caching backbone for modern architecture. Today, we are thrilled to announce that DiceDB
 is now open source under the [GNU Affero General Public License (AGPL) 3.0](https://github.com/dicedb/dice?tab=AGPL-3.0-1-ov-file#readme).
 This marks a significant milestone in our journey - one that reflects both our technical clarity and our commitment to the open source ethos.
