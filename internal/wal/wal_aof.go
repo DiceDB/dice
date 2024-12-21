@@ -71,7 +71,7 @@ func NewAOFWAL(directory string) (*AOF, error) {
 
 	return &AOF{
 		logDir:                 directory,
-		walMode:                config.DiceConfig.WAL.WalMode,
+		walMode:                config.DiceConfig.WAL.Mode,
 		bufferSyncTicker:       time.NewTicker(config.DiceConfig.WAL.BufferSyncInterval),
 		segmentRotationTicker:  time.NewTicker(config.DiceConfig.WAL.MaxSegmentRotationTime),
 		segmentRetentionTicker: time.NewTicker(config.DiceConfig.WAL.MaxSegmentRetentionDuration),
