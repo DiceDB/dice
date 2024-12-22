@@ -22,6 +22,7 @@ import (
 	"log/slog"
 
 	"github.com/dicedb/dice/internal/cmd"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
 )
 
@@ -696,7 +697,8 @@ func validateCmdMeta(c string, meta CmdMeta) error {
 	switch meta.CmdType {
 	case Global:
 		if meta.CmdHandlerFunction == nil {
-			return fmt.Errorf("global command %s must have CmdHandlerFunction function", c)
+			slog.Debug("global command %s must have CmdHandlerFunction function", slog.String("command", c))
+			return diceerrors.ErrInternalServer
 		}
 	case MultiShard, AllShard:
 		if meta.decomposeCommand == nil || meta.composeResponse == nil {
