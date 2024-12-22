@@ -147,7 +147,7 @@ func main() {
 		defer stopProfiling()
 	}
 	ioThreadManager := iothread.NewManager(config.DiceConfig.Performance.MaxClients)
-	cmdHandlerManager := commandhandler.NewManager(config.DiceConfig.Performance.MaxCmdHandlers, shardManager)
+	cmdHandlerManager := commandhandler.NewManager(config.DiceConfig.Performance.MaxClients, shardManager)
 
 	respServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 	serverWg.Add(1)

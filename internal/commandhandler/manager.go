@@ -11,7 +11,7 @@ import (
 type Manager struct {
 	activeCmdHandlers sync.Map
 	numCmdHandlers    atomic.Int32
-	maxCmdHandlers    int32
+	maxClients        int32
 	ShardManager      *shard.ShardManager
 	mu                sync.Mutex
 }
@@ -21,10 +21,10 @@ var (
 	ErrCmdHandlerNotFound    = errors.New("command handler not found")
 )
 
-func NewManager(maxCmdHandlers int32, sm *shard.ShardManager) *Manager {
+func NewManager(maxClients int32, sm *shard.ShardManager) *Manager {
 	return &Manager{
-		maxCmdHandlers: maxCmdHandlers,
-		ShardManager:   sm,
+		maxClients:   maxClients,
+		ShardManager: sm,
 	}
 }
 
@@ -32,7 +32,7 @@ func (m *Manager) RegisterCommandHandler(cmdHandler *BaseCommandHandler) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.CommandHandlerCount() >= m.maxCmdHandlers {
+	if m.CommandHandlerCount() >= m.maxClients {
 		return ErrMaxCmdHandlersReached
 	}
 
