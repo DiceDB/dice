@@ -66,4 +66,7 @@ const (
 	FILTERS         string = "FILTER"
 	ITEMS           string = "ITEMS"
 	EXPANSION       string = "EXPANSION"
+	BYSCORE         string = "BYSCORE"
+	BYLEX           string = "BYLEX"
+	LIMIT           string = "LIMIT"
 )
