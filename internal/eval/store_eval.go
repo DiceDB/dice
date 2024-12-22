@@ -976,24 +976,7 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	startStr := args[1]
 	stopStr := args[2]
 
-	if !strings.HasPrefix(startStr, "(") && !strings.HasPrefix(startStr, "[") &&
-		startStr != "-" && startStr != "+" && startStr != "-inf" && startStr != "+inf" {
-		if len(startStr) > 1 && startStr[0] == '0' {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrIntegerOutOfRange,
-			}
-		}
-	}
-	if !strings.HasPrefix(stopStr, "(") && !strings.HasPrefix(stopStr, "[") &&
-		stopStr != "-" && stopStr != "+" && stopStr != "-inf" && stopStr != "+inf" {
-		if len(stopStr) > 1 && stopStr[0] == '0' {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrIntegerOutOfRange,
-			}
-		}
-	}
+	
 
 	withScores := false
 	reverse := false
@@ -1068,6 +1051,27 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 				Error:  diceerrors.ErrSyntax,
 			}
 		}
+	}
+
+	if !byScore {
+		if !strings.HasPrefix(startStr, "(") && !strings.HasPrefix(startStr, "[") &&
+		startStr != "-" && startStr != "+" && startStr != "-inf" && startStr != "+inf" {
+		if len(startStr) > 1 && startStr[0] == '0' {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+	}
+	if !strings.HasPrefix(stopStr, "(") && !strings.HasPrefix(stopStr, "[") &&
+		stopStr != "-" && stopStr != "+" && stopStr != "-inf" && stopStr != "+inf" {
+		if len(stopStr) > 1 && stopStr[0] == '0' {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+	}
 	}
 
 	if !byLex {
