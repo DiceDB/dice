@@ -219,7 +219,7 @@ type CmdMeta struct {
 
 	// decomposeCommand is a function that takes a DiceDB command and breaks it down into smaller,
 	// manageable DiceDB commands for each shard processing. It returns a slice of DiceDB commands.
-	decomposeCommand func(ctx context.Context, h *BaseCommandHandler, DiceDBCmd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error)
+	decomposeCommand func(h *BaseCommandHandler, ctx context.Context, DiceDBCmd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error)
 
 	// composeResponse is a function that combines multiple responses from the execution of commands
 	// into a single response object. It accepts a variadic parameter of EvalResponse objects
@@ -584,7 +584,7 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:            MultiShard,
 		preProcessing:      true,
 		preProcessResponse: preProcessRename,
-		decomposeCommand:   decomposeRename,
+		decomposeCommand:   (*BaseCommandHandler).decomposeRename,
 		composeResponse:    composeRename,
 	},
 
@@ -592,57 +592,57 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:            MultiShard,
 		preProcessing:      true,
 		preProcessResponse: customProcessCopy,
-		decomposeCommand:   decomposeCopy,
+		decomposeCommand:   (*BaseCommandHandler).decomposeCopy,
 		composeResponse:    composeCopy,
 	},
 
 	CmdMset: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeMSet,
+		decomposeCommand: (*BaseCommandHandler).decomposeMSet,
 		composeResponse:  composeMSet,
 	},
 
 	CmdMget: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeMGet,
+		decomposeCommand: (*BaseCommandHandler).decomposeMGet,
 		composeResponse:  composeMGet,
 	},
 
 	CmdSInter: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeSInter,
+		decomposeCommand: (*BaseCommandHandler).decomposeSInter,
 		composeResponse:  composeSInter,
 	},
 
 	CmdSDiff: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeSDiff,
+		decomposeCommand: (*BaseCommandHandler).decomposeSDiff,
 		composeResponse:  composeSDiff,
 	},
 
 	CmdJSONMget: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeJSONMget,
+		decomposeCommand: (*BaseCommandHandler).decomposeJSONMget,
 		composeResponse:  composeJSONMget,
 	},
 	CmdTouch: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeTouch,
+		decomposeCommand: (*BaseCommandHandler).decomposeTouch,
 		composeResponse:  composeTouch,
 	},
 	CmdDBSize: {
 		CmdType:          AllShard,
-		decomposeCommand: decomposeDBSize,
+		decomposeCommand: (*BaseCommandHandler).decomposeDBSize,
 		composeResponse:  composeDBSize,
 	},
 	CmdKeys: {
 		CmdType:          AllShard,
-		decomposeCommand: decomposeKeys,
+		decomposeCommand: (*BaseCommandHandler).decomposeKeys,
 		composeResponse:  composeKeys,
 	},
 	CmdFlushDB: {
 		CmdType:          AllShard,
-		decomposeCommand: decomposeFlushDB,
+		decomposeCommand: (*BaseCommandHandler).decomposeFlushDB,
 		composeResponse:  composeFlushDB,
 	},
 

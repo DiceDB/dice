@@ -184,7 +184,7 @@ func (h *BaseCommandHandler) executeCommand(ctx context.Context, diceDBCmd *cmd.
 		case MultiShard, AllShard:
 			var err error
 			// If the command supports multisharding, break it down into multiple commands.
-			cmdList, err = meta.decomposeCommand(ctx, h, diceDBCmd)
+			cmdList, err = meta.decomposeCommand(h, ctx, diceDBCmd)
 			if err != nil {
 				slog.Debug("error decomposing command", slog.String("id", h.id), slog.Any("error", err))
 				// Check if it's a CustomError
