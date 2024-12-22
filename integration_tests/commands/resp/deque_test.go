@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 import (
@@ -468,7 +484,7 @@ func TestLInsert(t *testing.T) {
 		{
 			name:   "LINSERT wrong type",
 			cmds:   []string{"SET k1 val1", "LINSERT k1 before val1 val2"},
-			expect: []any{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []any{"OK", "-WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 	}
 
@@ -512,7 +528,7 @@ func TestLRange(t *testing.T) {
 		{
 			name:   "LRANGE wrong type",
 			cmds:   []string{"SET k1 val1", "LRANGE k1 0 100"},
-			expect: []any{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+			expect: []any{"OK", "-WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 	}
 

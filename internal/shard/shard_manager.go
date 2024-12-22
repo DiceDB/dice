@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package shard
 
 import (
@@ -27,7 +43,7 @@ type ShardManager struct {
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
-func NewShardManager(shardCount uint8, queryWatchChan chan dstore.QueryWatchEvent, cmdWatchChan chan dstore.CmdWatchEvent, globalErrorChan chan error) *ShardManager {
+func NewShardManager(shardCount uint8, cmdWatchChan chan dstore.CmdWatchEvent, globalErrorChan chan error) *ShardManager {
 	shards := make([]*ShardThread, shardCount)
 	shardReqMap := make(map[ShardID]chan *ops.StoreOp)
 	shardErrorChan := make(chan *ShardError)
@@ -36,7 +52,7 @@ func NewShardManager(shardCount uint8, queryWatchChan chan dstore.QueryWatchEven
 	for i := uint8(0); i < shardCount; i++ {
 		evictionStrategy := dstore.NewBatchEvictionLRU(maxKeysPerShard, config.DiceConfig.Memory.EvictionRatio)
 		// Shards are numbered from 0 to shardCount-1
-		shard := NewShardThread(i, globalErrorChan, shardErrorChan, queryWatchChan, cmdWatchChan, evictionStrategy)
+		shard := NewShardThread(i, globalErrorChan, shardErrorChan, cmdWatchChan, evictionStrategy)
 		shards[i] = shard
 		shardReqMap[i] = shard.ReqChan
 	}

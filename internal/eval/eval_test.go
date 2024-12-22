@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package eval
 
 import (
@@ -41,9 +57,8 @@ func setupTest(store *dstore.Store) *dstore.Store {
 }
 
 func TestEval(t *testing.T) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
-	testEvalMSET(t, store)
 	testEvalECHO(t, store)
 	testEvalHELLO(t, store)
 	testEvalSET(t, store)
@@ -72,7 +87,6 @@ func TestEval(t *testing.T) {
 	testEvalEXPIRE(t, store)
 	testEvalEXPIRETIME(t, store)
 	testEvalEXPIREAT(t, store)
-	testEvalDbsize(t, store)
 	testEvalGETSET(t, store)
 	testEvalHSET(t, store)
 	testEvalHMSET(t, store)
@@ -133,8 +147,8 @@ func TestEval(t *testing.T) {
 	testEvalBitFieldRO(t, store)
 	testEvalGEOADD(t, store)
 	testEvalGEODIST(t, store)
-	testEvalSINTER(t, store)
-	testEvalOBJECTENCODING(t, store)
+	testEvalGEOPOS(t, store)
+	testEvalGEOHASH(t, store)
 	testEvalJSONSTRAPPEND(t, store)
 	testEvalINCR(t, store)
 	testEvalINCRBY(t, store)
@@ -144,6 +158,7 @@ func TestEval(t *testing.T) {
 	testEvalBFINFO(t, store)
 	testEvalBFEXISTS(t, store)
 	testEvalBFADD(t, store)
+	testEvalJSONARRINDEX(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -289,7 +304,7 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "bar"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			migratedOutput: EvalResponse{Result: "bar", Error: nil},
@@ -305,7 +320,7 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation},
@@ -464,19 +479,6 @@ func testEvalGETDEL(t *testing.T, store *dstore.Store) {
 	}
 
 	runMigratedEvalTests(t, tests, evalGETDEL, store)
-}
-
-func testEvalMSET(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value":         {input: nil, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"empty array":       {input: []string{}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"one value":         {input: []string{"KEY"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"key val pair":      {input: []string{"KEY", "VAL"}, output: clientio.RespOK},
-		"odd key val pair":  {input: []string{"KEY", "VAL", "KEY2"}, output: []byte("-ERR wrong number of arguments for 'mset' command\r\n")},
-		"even key val pair": {input: []string{"KEY", "VAL", "KEY2", "VAL2"}, output: clientio.RespOK},
-	}
-
-	runEvalTests(t, tests, evalMSET, store)
 }
 
 func testEvalGET(t *testing.T, store *dstore.Store) {
@@ -930,7 +932,7 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 				value := `{"a":2}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$", "a", "1"},
@@ -946,7 +948,7 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 				value := `[1,2,3]`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$", "0", "10"},
@@ -962,7 +964,7 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 				value := `{"a":2}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.a", "0", "6"},
@@ -978,7 +980,7 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 				value := `[1,2,3,4,5]`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$", "0", "2"},
@@ -994,7 +996,7 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 				value := `{"connection":{"wireless":true,"names":[0,1,2,3,4]},"names":[0,1,2,3,4]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.names", "1", "3"},
@@ -1016,7 +1018,7 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 				}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$..names", "1", "3"},
@@ -1032,7 +1034,7 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 				value := `{"connection":{"wireless":true,"names":[0,1,2,3,4]},"names":[0,1,2,3,4]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.connection", "1", "2"},
@@ -1048,7 +1050,7 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 				value := `{"connection":{"wireless":true,"names":[0,1,2,3,4]},"names":[0,1,2,3,4]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.names", "-3", "-1"},
@@ -1064,7 +1066,7 @@ func testEvalJSONARRTRIM(t *testing.T, store *dstore.Store) {
 				value := `{"connection":{"wireless":true,"names":[0,1,2,3,4]},"names":[0,1,2,3,4]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.names", "-1", "-3"},
@@ -1121,7 +1123,7 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"NONEXISTENT_KEY", "$.a", "0", "1"},
@@ -1137,7 +1139,7 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.a", "a", "1"},
@@ -1153,7 +1155,7 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				value := "[1,2,3]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$", "4", "\"a\"", "1"},
@@ -1169,7 +1171,7 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.a", "0", "6"},
@@ -1185,7 +1187,7 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				value := "[1,2]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$", "0", "6", "\"a\"", "3.14"},
@@ -1201,7 +1203,7 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				value := `{"connection":{"wireless":true,"names":["1","2"]},"price":99.98,"names":[3,4]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$..names", "2", "7", "8"},
@@ -1217,7 +1219,7 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				value := `{"connection":{"wireless":true,"names":["1","2"]},"price":99.98,"names":[3,4]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$..names", "-1", "7", "8"},
@@ -1233,7 +1235,7 @@ func testEvalJSONARRINSERT(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":[1,2,3]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.a", "0", "1", "null", "3.14", "true", "{\"a\":123}"},
@@ -1297,7 +1299,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"age\":13,\"name\":\"a\"}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
@@ -1313,7 +1315,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 				value := "[1,2,3]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"EXISTING_KEY"},
@@ -1329,7 +1331,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"age\":13,\"high\":1.60,\"pet\":null,\"flag\":false, \"partner\":{\"name\":\"tom\"}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1347,7 +1349,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\"}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1411,7 +1413,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  nil,
+				Error:  diceerrors.ErrKeyDoesNotExist,
 			},
 		},
 		"jsonobjlen root not object": {
@@ -1421,7 +1423,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 				value := "[1,2,3]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -1437,7 +1439,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"name\":\"John\",\"age\":30,\"city\":\"New York\"}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -1453,7 +1455,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"name\":\"John\",\"age\":30,\"pets\":null,\"languages\":[\"python\",\"golang\"],\"flag\":false}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.*"},
@@ -1469,7 +1471,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.person"},
@@ -1485,7 +1487,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"name\":\"John\",\"age\":30}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$invalid_path"},
@@ -1501,7 +1503,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.person.age"},
@@ -1517,7 +1519,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.person.name"},
@@ -1533,7 +1535,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"person\":{\"name\":\"John\",\"age\":30},\"languages\":[\"python\",\"golang\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.languages"},
@@ -1571,7 +1573,7 @@ func testEvalJSONOBJLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -1626,7 +1628,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -1643,7 +1645,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1661,7 +1663,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1703,7 +1705,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -1720,7 +1722,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1738,7 +1740,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 					"\"flag\":false, \"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1789,7 +1791,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 					"\"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -1805,7 +1807,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 				value := "{\"array\":[1,2,3,\"s\",null]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1822,7 +1824,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":\"test\"}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1839,7 +1841,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 				value := "{\"age\":13}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1856,7 +1858,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 				value := "{\"price\":3.14}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1873,7 +1875,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 				value := "{\"flag\":false}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.flag"},
@@ -1890,7 +1892,7 @@ func testEvalJSONCLEAR(t *testing.T, store *dstore.Store) {
 					"\"partner\":{\"name\":\"tom\",\"language\":[\"rust\"]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.*"},
@@ -1956,7 +1958,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"language\":[\"java\",\"go\",\"python\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1972,7 +1974,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"language\":[\"java\",\"go\",\"python\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -1988,7 +1990,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":\"test\"}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -2004,7 +2006,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"flag\":true}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -2020,7 +2022,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"price\":3}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -2036,7 +2038,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"price\":3.14}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -2052,7 +2054,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 				value := "{\"name\":\"tom\",\"partner\":{\"name\":\"jerry\"}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -2115,7 +2117,7 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -2232,7 +2234,7 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"doc", "$.a", "qwe"},
@@ -2248,7 +2250,7 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": \"b\",\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"doc", "$.a", "2"},
@@ -2264,7 +2266,7 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": \"b\",\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"doc", "$..a", "2"},
@@ -2280,7 +2282,7 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"doc", "$.a", "2"},
@@ -2296,7 +2298,7 @@ func testEvalJSONNUMMULTBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":10,\"b\":[{\"a\":2}, {\"a\":5}, {\"a\":\"c\"}]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"doc", "$..fe", "2"},
@@ -2317,7 +2319,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"array", "$.a", "6"},
@@ -2333,7 +2335,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":[1,2]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"array", "$.a", "6"},
@@ -2349,7 +2351,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":[1,2]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"array", "$.a", "6", "7", "8"},
@@ -2365,7 +2367,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"b\":[\"b\",\"c\"]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"array", "$.b", `"d"`},
@@ -2381,7 +2383,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":[[1,2]]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"array", "$.a", "[1,2,3]"},
@@ -2397,7 +2399,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":[{\"b\": 1}]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"array", "$.a", "{\"c\": 3}"},
@@ -2413,7 +2415,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":[1,2],\"b\":{\"a\":[10]}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"array", "$..a", "6"},
@@ -2429,7 +2431,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "[1,2,3]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"array", "$", "6"},
@@ -2445,7 +2447,7 @@ func testEvalJSONARRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":[1,2]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"array", "$.a", `"blue"`},
@@ -2520,7 +2522,7 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
 				if err != nil {
 					fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
 				}
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", ".active"},
@@ -2539,7 +2541,7 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
 				if err != nil {
 					fmt.Printf("Debug: Error unmarshaling JSON: %v\n", err)
 				}
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", ".active"},
@@ -2573,7 +2575,7 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
 				value := `{"isSimple":true,"nested":{"isSimple":false}}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"NESTED_KEY", "$..isSimple"},
@@ -2589,7 +2591,7 @@ func testEvalJSONTOGGLE(t *testing.T, store *dstore.Store) {
 				value := `{"field": true, "nested": {"field": false, "nested": {"field": true}}}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"DEEP_NESTED_KEY", "$..field"},
@@ -2898,54 +2900,6 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 	runMigratedEvalTests(t, tests, evalPERSIST, store)
 }
 
-func testEvalDbsize(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"DBSIZE command with invalid no of args": {
-			input:  []string{"INVALID_ARG"},
-			output: []byte("-ERR wrong number of arguments for 'dbsize' command\r\n"),
-		},
-		"no key in db": {
-			input:  nil,
-			output: []byte(":0\r\n"),
-		},
-		"one key exists in db": {
-			setup: func() {
-				evalSET([]string{"key", "val"}, store)
-			},
-			input:  nil,
-			output: []byte(":1\r\n"),
-		},
-		"two keys exist in db": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-			},
-			input:  nil,
-			output: []byte(":2\r\n"),
-		},
-		"repeating keys shall result in same dbsize": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-			},
-			input:  nil,
-			output: []byte(":2\r\n"),
-		},
-		"deleted keys shall be reflected in dbsize": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-				evalDEL([]string{"key2"}, store)
-			},
-			input:  nil,
-			output: []byte(":1\r\n"),
-		},
-	}
-
-	runEvalTests(t, tests, evalDBSIZE, store)
-}
-
 func testEvalPFADD(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
 		"PFADD nil value": {
@@ -2997,11 +2951,11 @@ func testEvalPFADD(t *testing.T, store *dstore.Store) {
 			name: "PFADD Incorrect type provided",
 			setup: func() {
 				key, value := "EXISTING_KEY", "VALUE"
-				oType, oEnc := deduceTypeEncoding(value)
+				_, oType := getRawStringOrInt(value)
 				var exDurationMs int64 = -1
 				keepttl := false
 
-				store.Put(key, store.NewObj(value, exDurationMs, oType, oEnc), dstore.WithKeepTTL(keepttl))
+				store.Put(key, store.NewObj(value, exDurationMs, oType), dstore.WithKeepTTL(keepttl))
 			},
 			input:  []string{"EXISTING_KEY", "1"},
 			output: []byte("-WRONGTYPE Key is not a valid HyperLogLog string value"),
@@ -3214,7 +3168,7 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3235,7 +3189,7 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3277,7 +3231,7 @@ func testEvalHGETALL(t *testing.T, store *dstore.Store) {
 				newMap := make(HashMap) // Empty hash map
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3299,7 +3253,7 @@ func testEvalHGETALL(t *testing.T, store *dstore.Store) {
 				newMap["field3"] = "value3"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3351,7 +3305,7 @@ func testEvalHMGET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3372,7 +3326,7 @@ func testEvalHMGET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3393,7 +3347,7 @@ func testEvalHMGET(t *testing.T, store *dstore.Store) {
 					"field2": "value2",
 				}
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3434,7 +3388,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3503,7 +3457,7 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3521,7 +3475,7 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 				newMap[field] = "HelloWorld"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3565,7 +3519,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3584,7 +3538,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				newMap[field] = "HelloWorld"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -3788,7 +3742,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := "{\"name\":\"Bhima\",\"age\":10}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -3804,7 +3758,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := "10.9"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -3820,7 +3774,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := "10"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -3836,7 +3790,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := "[\"age\", \"name\"]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -3852,7 +3806,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := "true"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -3868,7 +3822,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := `"hello"`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -3884,7 +3838,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := `{"partner":{"name":"tom","language":["rust"]}}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -3901,7 +3855,7 @@ func testEvalJSONSTRLEN(t *testing.T, store *dstore.Store) {
 				value := `{"partner":{"name":21,"language":["rust"]}}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 
@@ -4177,7 +4131,7 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"number", "$.a", "3"},
@@ -4194,7 +4148,7 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 2.5}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"number", "$.a", "1.5"},
@@ -4211,7 +4165,7 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 2, \"b\": 10, \"c\": [15, {\"d\": 20}]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"number", "$..*", "5"},
@@ -4241,7 +4195,7 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": [1, 2, 3]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"number", "$.a[1]", "5"},
@@ -4257,7 +4211,7 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"number", "$.b", "3"},
@@ -4273,7 +4227,7 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 5, \"b\": \"not a number\", \"c\": [1, 2]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"number", "$..*", "2"},
@@ -4320,7 +4274,7 @@ func testEvalJSONNUMINCRBY(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": {\"b\": {\"c\": 10}}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"number", "$..c", "5"},
@@ -4399,16 +4353,8 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 	}
 }
 
-func BenchmarkEvalMSET(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		store := dstore.NewStore(nil, nil, nil)
-		evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
-	}
-}
-
 func BenchmarkEvalHSET(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -4472,7 +4418,7 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -4494,7 +4440,7 @@ func testEvalHSET(t *testing.T, store *dstore.Store) {
 				newMap[field] = mockValue
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -4575,7 +4521,7 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -4597,7 +4543,7 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 				newMap[field] = mockValue
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -4651,7 +4597,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 				newMap[field1] = "HelloWorld"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -4701,7 +4647,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHKEYS(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for i := 0; i < b.N; i++ {
 		evalHSET([]string{"KEY", fmt.Sprintf("FIELD_%d", i), fmt.Sprintf("VALUE_%d", i)}, store)
@@ -4713,7 +4659,7 @@ func BenchmarkEvalHKEYS(b *testing.B) {
 }
 
 func BenchmarkEvalPFCOUNT(b *testing.B) {
-	store := *dstore.NewStore(nil, nil, nil)
+	store := *dstore.NewStore(nil, nil)
 
 	// Helper function to create and insert HLL objects
 	createAndInsertHLL := func(key string, items []string) {
@@ -4828,11 +4774,11 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 1}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: 89, Error: nil},
+			migratedOutput: EvalResponse{Result: 72, Error: nil},
 		},
 
 		"root path": {
@@ -4841,11 +4787,11 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 1}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$"},
-			migratedOutput: EvalResponse{Result: 89, Error: nil},
+			migratedOutput: EvalResponse{Result: 72, Error: nil},
 		},
 
 		"invalid path": {
@@ -4854,7 +4800,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 1}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "INVALID_PATH"},
@@ -4867,7 +4813,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 1, \"b\": 2}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$.a"},
@@ -4882,7 +4828,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 1, \"b\": \"dice\"}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$.a", "$.b"},
@@ -4895,7 +4841,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "[\"roll\", \"the\", \"dices\"]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[1]"},
@@ -4908,7 +4854,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "[\"roll\", \"the\", \"dices\"]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[1,2]"},
@@ -4921,7 +4867,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "[\"roll\", \"the\", \"dices\"]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[4]"},
@@ -4934,7 +4880,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "[\"roll\", \"the\", \"dices\"]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[1,2,4]"},
@@ -4947,7 +4893,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "[\"roll\", \"the\", \"dices\"]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[-1]"},
@@ -4960,7 +4906,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "[\"roll\", \"the\", \"dices\"]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[-1,-2]"},
@@ -4973,7 +4919,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "[\"roll\", \"the\", \"dices\"]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[-4]"},
@@ -4986,7 +4932,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "[\"roll\", \"the\", \"dices\"]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[*]"},
@@ -4999,7 +4945,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "[\"roll\", \"the\", \"dices\"]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[:]"},
@@ -5012,7 +4958,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				value := "[2, 3.5, true, null, \"dice\", {}, [], {\"a\": 1, \"b\": 2}, [7, 8, 0]]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[:]"},
@@ -5059,7 +5005,7 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalHLEN(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000}
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("HashSize_%d", size), func(b *testing.B) {
@@ -5106,7 +5052,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				value := "[]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY"},
@@ -5122,7 +5068,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 1, \"b\": []}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY", "$.b"},
@@ -5138,7 +5084,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 1, \"b\": []}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY", "$.*"},
@@ -5154,7 +5100,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				value := "[0, 1, 2, 3, 4, 5]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY"},
@@ -5170,7 +5116,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				value := "[0, 1, 2, 3, 4, 5]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY", "$", "2"},
@@ -5186,7 +5132,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				value := "[0, 1, 2, 3, 4, 5]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY", "$", "10"},
@@ -5202,7 +5148,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				value := "[0, 1, 2, 3, 4, 5]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY", "$", "-2"},
@@ -5218,7 +5164,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				value := "[0, 1, 2, 3, 4, 5]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY", "$", "-10"},
@@ -5234,7 +5180,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				value := "[0, 1, 2, 3, 4, 5]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY", "$", "2"},
@@ -5257,7 +5203,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 				value := "{\"a\": 2, \"b\": [0, 1, 2, 3, 4, 5]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:  []string{"MOCK_KEY", "$.b", "2"},
@@ -5333,7 +5279,7 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 		"TYPE key exists and is of type String": {
 			name: "TYPE key exists and is of type String",
 			setup: func() {
-				store.Put("string_key", store.NewObj("value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("string_key", store.NewObj("value", -1, object.ObjTypeString))
 			},
 			input: []string{"string_key"},
 			migratedOutput: EvalResponse{
@@ -5344,7 +5290,7 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 		"TYPE key exists and is of type List": {
 			name: "TYPE key exists and is of type List",
 			setup: func() {
-				store.Put("list_key", store.NewObj([]byte("value"), -1, object.ObjTypeByteList, object.ObjEncodingRaw))
+				evalLPUSH([]string{"list_key", "value"}, store)
 			},
 			input: []string{"list_key"},
 			migratedOutput: EvalResponse{
@@ -5355,7 +5301,7 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 		"TYPE key exists and is of type Set": {
 			name: "TYPE key exists and is of type Set",
 			setup: func() {
-				store.Put("set_key", store.NewObj([]byte("value"), -1, object.ObjTypeSet, object.ObjEncodingRaw))
+				store.Put("set_key", store.NewObj([]byte("value"), -1, object.ObjTypeSet))
 			},
 			input: []string{"set_key"},
 			migratedOutput: EvalResponse{
@@ -5366,7 +5312,7 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 		"TYPE key exists and is of type Hash": {
 			name: "TYPE key exists and is of type Hash",
 			setup: func() {
-				store.Put("hash_key", store.NewObj([]byte("value"), -1, object.ObjTypeHashMap, object.ObjEncodingRaw))
+				store.Put("hash_key", store.NewObj([]byte("value"), -1, object.ObjTypeHashMap))
 			},
 			input: []string{"hash_key"},
 			migratedOutput: EvalResponse{
@@ -5379,21 +5325,21 @@ func testEvalTYPE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalTYPE(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Define different types of objects to benchmark
 	objectTypes := map[string]func(){
 		"String": func() {
-			store.Put("string_key", store.NewObj("value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+			store.Put("string_key", store.NewObj("value", -1, object.ObjTypeString))
 		},
 		"List": func() {
-			store.Put("list_key", store.NewObj([]byte("value"), -1, object.ObjTypeByteList, object.ObjEncodingRaw))
+			store.Put("list_key", store.NewObj([]byte("value"), -1, object.ObjTypeDequeue))
 		},
 		"Set": func() {
-			store.Put("set_key", store.NewObj([]byte("value"), -1, object.ObjTypeSet, object.ObjEncodingRaw))
+			store.Put("set_key", store.NewObj([]byte("value"), -1, object.ObjTypeSet))
 		},
 		"Hash": func() {
-			store.Put("hash_key", store.NewObj([]byte("value"), -1, object.ObjTypeHashMap, object.ObjEncodingRaw))
+			store.Put("hash_key", store.NewObj([]byte("value"), -1, object.ObjTypeHashMap))
 		},
 	}
 
@@ -5514,7 +5460,7 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 			},
 		},
 		"command getkeys with an invalid number of arguments for a command": {
-			input: []string{"GETKEYS", "MSET", "key1"},
+			input: []string{"GETKEYS", "SET", "key1"},
 			migratedOutput: EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrGeneral("invalid number of arguments specified for command"),
@@ -5610,7 +5556,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 				value := "[1]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY"},
@@ -5626,7 +5572,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 				value := `{"name":"John","age":30,"pets":null,"languages":["python","golang"],"flag":false}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.*"},
@@ -5642,7 +5588,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 				value := `{"person":{"name":"John","age":30},"languages":["python","golang"]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.person.age"},
@@ -5658,7 +5604,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 				value := `{"person":{"name":"John","age":30},"languages":["python","golang"]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.person.name"},
@@ -5674,7 +5620,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 				value := `{"person":{"name":"John","age":30},"languages":["python","golang"]}`
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"EXISTING_KEY", "$.languages"},
@@ -5714,7 +5660,7 @@ func testEvalJSONOBJKEYS(t *testing.T, store *dstore.Store) {
 
 func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
 	sizes := []int{0, 10, 100, 1000, 10000, 100000} // Various sizes of JSON objects
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("JSONObjectSize_%d", size), func(b *testing.B) {
@@ -5743,10 +5689,10 @@ func BenchmarkEvalJSONOBJKEYS(b *testing.B) {
 
 func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 	setupForStringValue := func() {
-		store.Put("STRING_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+		store.Put("STRING_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString))
 	}
 	setupForIntegerValue := func() {
-		store.Put("INTEGER_KEY", store.NewObj("1234", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+		store.Put("INTEGER_KEY", store.NewObj("1234", maxExDuration, object.ObjTypeString))
 	}
 	tests := map[string]evalTestCase{
 		"GETRANGE against non-existing key": {
@@ -5945,7 +5891,7 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 		"GETRANGE against byte array with valid range: 0 4": {
 			setup: func() {
 				key := "BYTEARRAY_KEY"
-				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray))
 			},
 			input:          []string{"BYTEARRAY_KEY", "0", "4"},
 			migratedOutput: EvalResponse{Result: "hello", Error: nil},
@@ -5953,7 +5899,7 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 		"GETRANGE against byte array with valid range: 6 -1": {
 			setup: func() {
 				key := "BYTEARRAY_KEY"
-				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray))
 			},
 			input:          []string{"BYTEARRAY_KEY", "6", "-1"},
 			migratedOutput: EvalResponse{Result: "world", Error: nil},
@@ -5961,7 +5907,7 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 		"GETRANGE against byte array with invalid range: 20 30": {
 			setup: func() {
 				key := "BYTEARRAY_KEY"
-				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray, object.ObjEncodingByteArray))
+				store.Put(key, store.NewObj(&ByteArray{data: []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64}}, maxExDuration, object.ObjTypeByteArray))
 			},
 			input:          []string{"BYTEARRAY_KEY", "20", "30"},
 			migratedOutput: EvalResponse{Result: "", Error: nil},
@@ -5972,8 +5918,8 @@ func testEvalGETRANGE(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalGETRANGE(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
-	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString, object.ObjEncodingRaw))
+	store := dstore.NewStore(nil, nil)
+	store.Put("BENCHMARK_KEY", store.NewObj("Hello World", maxExDuration, object.ObjTypeString))
 
 	inputs := []struct {
 		start string
@@ -5997,7 +5943,7 @@ func BenchmarkEvalGETRANGE(b *testing.B) {
 }
 
 func BenchmarkEvalHSETNX(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalHSETNX([]string{"KEY", fmt.Sprintf("FIELD_%d", i/2), fmt.Sprintf("VALUE_%d", i)}, store)
 	}
@@ -6061,7 +6007,7 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 				newMap[field] = "mock_field_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6082,7 +6028,7 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 				newMap[field] = "existing_value"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6099,16 +6045,9 @@ func testEvalHSETNX(t *testing.T, store *dstore.Store) {
 
 	runMigratedEvalTests(t, tests, evalHSETNX, store)
 }
-func TestMSETConsistency(t *testing.T) {
-	store := dstore.NewStore(nil, nil, nil)
-	evalMSET([]string{"KEY", "VAL", "KEY2", "VAL2"}, store)
-
-	assert.Equal(t, "VAL", store.Get("KEY").Value)
-	assert.Equal(t, "VAL2", store.Get("KEY2").Value)
-}
 
 func BenchmarkEvalHINCRBY(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// creating new fields
 	for i := 0; i < b.N; i++ {
@@ -6150,7 +6089,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "10"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6176,7 +6115,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				newMap := make(HashMap)
 				newMap[field] = "new_value"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6194,7 +6133,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 				h[field] = " 10  "
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6216,7 +6155,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 
 				h[field] = "-10"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6233,7 +6172,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 
 				h[field] = fmt.Sprintf("%v", math.MaxInt64)
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6250,7 +6189,7 @@ func testEvalHINCRBY(t *testing.T, store *dstore.Store) {
 
 				h[field] = fmt.Sprintf("%v", math.MinInt64)
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6360,7 +6299,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalSETEX(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -6405,7 +6344,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "2.1"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "0.1"},
@@ -6416,7 +6355,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "2"
-				obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(value, -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "0.1"},
@@ -6427,7 +6366,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "2"
-				obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(value, -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "-0.1"},
@@ -6438,7 +6377,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "1"
-				obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(value, -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "1e-2"},
@@ -6449,7 +6388,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "1e2"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "1e-1"},
@@ -6460,7 +6399,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "0.1"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "-0.1"},
@@ -6471,7 +6410,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "   2   "
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "0.1"},
@@ -6482,7 +6421,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "string"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "0.1"},
@@ -6493,7 +6432,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "2.0"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "a"},
@@ -6504,7 +6443,7 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "1e308"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "1e308"},
@@ -6539,9 +6478,9 @@ func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
-	store.Put("key1", store.NewObj("1", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
-	store.Put("key2", store.NewObj("1.2", maxExDuration, object.ObjTypeString, object.ObjEncodingEmbStr))
+	store := dstore.NewStore(nil, nil)
+	store.Put("key1", store.NewObj("1", maxExDuration, object.ObjTypeString))
+	store.Put("key2", store.NewObj("1.2", maxExDuration, object.ObjTypeString))
 
 	inputs := []struct {
 		key  string
@@ -6586,7 +6525,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				newMap["field2"] = "Value2"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6615,7 +6554,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				newMap["field3"] = "value3"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6651,7 +6590,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 				newMap["field3"] = "value3"
 
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          newMap,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -6707,7 +6646,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "val"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "val"},
@@ -6721,8 +6660,8 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			migratedOutput: EvalResponse{Result: 3, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
-				_, enc := object.ExtractTypeEncoding(obj)
-				if enc != object.ObjEncodingInt {
+				oType := obj.Type
+				if oType != object.ObjTypeInt {
 					t.Errorf("unexpected encoding")
 				}
 			},
@@ -6732,7 +6671,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				key := "key"
 				value := "123"
 				storedValue, _ := strconv.ParseInt(value, 10, 64)
-				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(storedValue, -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", "val"},
@@ -6749,7 +6688,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := ""
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", ""},
@@ -6759,7 +6698,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "key"
 				value := "val"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"key", ""},
@@ -6769,15 +6708,15 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				store.Del("key")
 				storedValue, _ := strconv.ParseInt("1", 10, 64)
-				obj := store.NewObj(storedValue, -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(storedValue, -1, object.ObjTypeInt)
 				store.Put("key", obj)
 			},
 			input:          []string{"key", "2"},
 			migratedOutput: EvalResponse{Result: 2, Error: nil},
 			validator: func(output []byte) {
 				obj := store.Get("key")
-				_, enc := object.ExtractTypeEncoding(obj)
-				if enc != object.ObjEncodingRaw {
+				oType := obj.Type
+				if oType != object.ObjTypeString {
 					t.Errorf("unexpected encoding")
 				}
 			},
@@ -6787,7 +6726,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				key := "listKey"
 				value := "val"
 				// Create a new list object
-				obj := store.NewObj(NewDeque(), -1, object.ObjTypeByteList, object.ObjEncodingDeque)
+				obj := store.NewObj(NewDeque(), -1, object.ObjTypeDequeue)
 				store.Put(key, obj)
 				obj.Value.(*Deque).LPush(value)
 			},
@@ -6802,7 +6741,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 					"existingVal": {},
 					"anotherVal":  {},
 				}
-				obj := store.NewObj(initialValues, -1, object.ObjTypeSet, object.ObjEncodingSetStr)
+				obj := store.NewObj(initialValues, -1, object.ObjTypeSet)
 				store.Put(key, obj)
 			},
 			input:          []string{"setKey", "val"},
@@ -6816,7 +6755,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 					"field1": "value1",
 					"field2": "value2",
 				}
-				obj := store.NewObj(initialValues, -1, object.ObjTypeHashMap, object.ObjEncodingHashMap)
+				obj := store.NewObj(initialValues, -1, object.ObjTypeHashMap)
 				store.Put(key, obj)
 			},
 			input:          []string{"hashKey", "val"},
@@ -6833,7 +6772,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 				initialByteArray.SetBit(10, true)   // Set the eleventh bit to 1
 				initialByteArray.SetBit(11, true)   // Set the twelfth bit to 1
 				initialByteArray.SetBit(14, true)   // Set the fifteenth bit to 1
-				obj := store.NewObj(initialByteArray, -1, object.ObjTypeByteArray, object.ObjEncodingByteArray)
+				obj := store.NewObj(initialByteArray, -1, object.ObjTypeByteArray)
 				store.Put(key, obj)
 			},
 			input:          []string{"bitKey", "1"},
@@ -6852,7 +6791,7 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalAPPEND(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 	for i := 0; i < b.N; i++ {
 		evalAPPEND([]string{"key", fmt.Sprintf("val_%d", i)}, store)
 	}
@@ -6876,7 +6815,7 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				value := "\"Roll the Dice\""
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MOCK_KEY"},
@@ -6888,7 +6827,7 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				value := "10"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MOCK_KEY"},
@@ -6900,7 +6839,7 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				value := "true"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MOCK_KEY"},
@@ -6911,7 +6850,7 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				key := "MOCK_KEY"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(nil), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MOCK_KEY"},
@@ -6923,7 +6862,7 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				value := "[]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MOCK_KEY"},
@@ -6935,7 +6874,7 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				value := "{}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MOCK_KEY"},
@@ -6947,7 +6886,7 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				value := "[\"dice\", 10, 10.5, true, null]"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MOCK_KEY"},
@@ -6959,7 +6898,7 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				value := "{\"b\": [\"dice\", 10, 10.5, true, null]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MOCK_KEY"},
@@ -6971,7 +6910,7 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 				value := "{\"b\": [\"dice\", 10, 10.5, true, null]}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input:          []string{"MOCK_KEY", "$.b"},
@@ -7305,7 +7244,7 @@ func testEvalZADD(t *testing.T, store *dstore.Store) {
 		},
 		"ZADD to a key of wrong type": {
 			setup: func() {
-				store.Put("mywrongtypekey", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("mywrongtypekey", store.NewObj("string_value", -1, object.ObjTypeString))
 			},
 			input: []string{"mywrongtypekey", "1", "member1"},
 			migratedOutput: EvalResponse{
@@ -7329,7 +7268,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 		},
 		"ZRANGE with wrong type key": {
 			setup: func() {
-				store.Put("mystring", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("mystring", store.NewObj("string_value", -1, object.ObjTypeString))
 			},
 			input: []string{"mystring", "0", "-1"},
 			migratedOutput: EvalResponse{
@@ -7453,7 +7392,7 @@ func testEvalZPOPMIN(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMIN with wrong type of key with/without count argument": {
 			setup: func() {
-				store.Put("mystring", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("mystring", store.NewObj("string_value", -1, object.ObjTypeString))
 			},
 			input: []string{"mystring", "1"},
 			migratedOutput: EvalResponse{
@@ -7523,7 +7462,7 @@ func testEvalZPOPMIN(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMIN on empty sorted set": {
 			setup: func() {
-				store.Put("myzset", store.NewObj(sortedset.New(), -1, object.ObjTypeSortedSet, object.ObjEncodingBTree)) // Ensure the set exists but is empty
+				store.Put("myzset", store.NewObj(sortedset.New(), -1, object.ObjTypeSortedSet)) // Ensure the set exists but is empty
 			},
 			input: []string{"myzset"},
 			migratedOutput: EvalResponse{
@@ -7580,7 +7519,7 @@ func BenchmarkEvalZPOPMIN(b *testing.B) {
 		},
 	}
 
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
@@ -7695,7 +7634,7 @@ func testEvalZREM(t *testing.T, store *dstore.Store) {
 		},
 		"ZREM with wrong type key": {
 			setup: func() {
-				store.Put("string_key", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("string_key", store.NewObj("string_value", -1, object.ObjTypeString))
 			},
 			input: []string{"string_key", "field"},
 			migratedOutput: EvalResponse{
@@ -7746,7 +7685,7 @@ func testEvalZREM(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalZRANK(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Set up initial sorted set
 	evalZADD([]string{"myzset", "1", "member1", "2", "member2", "3", "member3"}, store)
@@ -7788,7 +7727,7 @@ func testEvalZCARD(t *testing.T, store *dstore.Store) {
 		},
 		"ZCARD with wrong type key": {
 			setup: func() {
-				store.Put("string_key", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("string_key", store.NewObj("string_value", -1, object.ObjTypeString))
 			},
 			input: []string{"string_key"},
 			migratedOutput: EvalResponse{
@@ -7900,7 +7839,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				key := "key"
 				h := make(HashMap)
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7916,7 +7855,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "2.1"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7932,7 +7871,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "2"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7948,7 +7887,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "2.0"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7964,7 +7903,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "2.0"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7981,7 +7920,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "non_numeric"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -7997,7 +7936,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "1e308"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -8013,7 +7952,7 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 				h := make(HashMap)
 				h[field] = "1e2"
 				obj := &object.Obj{
-					TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+					Type:           object.ObjTypeHashMap,
 					Value:          h,
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
@@ -8028,11 +7967,11 @@ func testEvalHINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalHINCRBYFLOAT(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setting initial fields with some values
-	store.Put("key1", store.NewObj(HashMap{"field1": "1.0", "field2": "1.2"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingHashMap))
-	store.Put("key2", store.NewObj(HashMap{"field1": "0.1"}, maxExDuration, object.ObjTypeHashMap, object.ObjEncodingHashMap))
+	store.Put("key1", store.NewObj(HashMap{"field1": "1.0", "field2": "1.2"}, maxExDuration, object.ObjTypeHashMap))
+	store.Put("key2", store.NewObj(HashMap{"field1": "0.1"}, maxExDuration, object.ObjTypeHashMap))
 
 	inputs := []struct {
 		key   string
@@ -8086,7 +8025,7 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "user"
 				value := "hello"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input: []string{"user"},
@@ -8104,26 +8043,20 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 			setup: func() {
 				key := "INTEGER_KEY"
 				value := int64(10)
-				obj := store.NewObj(value, -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(value, -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input: []string{"INTEGER_KEY"},
 			migratedOutput: EvalResponse{
-				Result: base64.StdEncoding.EncodeToString([]byte{
-					0x09,
-					0xC0,
-					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A,
-					0xFF,
-					0x12, 0x77, 0xDE, 0x29, 0x53, 0xDB, 0x44, 0xC2,
-				}),
-				Error: nil,
+				Result: "CQUAAAAAAAAACv9+l81XgsShqw==",
+				Error:  nil,
 			},
 		},
 		"dump expired key": {
 			setup: func() {
 				key := "EXPIRED_KEY"
 				value := "This will expire"
-				obj := store.NewObj(value, -1, object.ObjTypeString, object.ObjEncodingRaw)
+				obj := store.NewObj(value, -1, object.ObjTypeString)
 				store.Put(key, obj)
 				var exDurationMs int64 = -1
 				store.SetExpiry(obj, exDurationMs)
@@ -8267,7 +8200,7 @@ func testEvalGEOADD(t *testing.T, store *dstore.Store) {
 		},
 		"GEOADD to a key of wrong type": {
 			setup: func() {
-				store.Put("mygeo", store.NewObj("string_value", -1, object.ObjTypeString, object.ObjEncodingRaw))
+				store.Put("mygeo", store.NewObj("string_value", -1, object.ObjTypeString))
 			},
 			input: []string{"mygeo", "-74.0060", "40.7128", "NewYork"},
 			migratedOutput: EvalResponse{
@@ -8334,103 +8267,156 @@ func testEvalGEODIST(t *testing.T, store *dstore.Store) {
 	runMigratedEvalTests(t, tests, evalGEODIST, store)
 }
 
-func testEvalSINTER(t *testing.T, store *dstore.Store) {
+func testEvalGEOPOS(t *testing.T, store *dstore.Store) {
 	tests := map[string]evalTestCase{
-		"intersection of two sets": {
+		"GEOPOS for existing single point": {
 			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-				evalSADD([]string{"set2", "c", "d", "e"}, store)
+				evalGEOADD([]string{"index", "13.361387", "38.115556", "Palermo"}, store)
 			},
-			input:  []string{"set1", "set2"},
-			output: clientio.Encode([]string{"c"}, false),
-		},
-		"intersection of three sets": {
-			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-				evalSADD([]string{"set2", "b", "c", "d"}, store)
-				evalSADD([]string{"set3", "c", "d", "e"}, store)
-			},
-			input:  []string{"set1", "set2", "set3"},
-			output: clientio.Encode([]string{"c"}, false),
-		},
-		"intersection with single set": {
-			setup: func() {
-				evalSADD([]string{"set1", "a"}, store)
-			},
-			input:  []string{"set1"},
-			output: clientio.Encode([]string{"a"}, false),
-		},
-		"intersection with a non-existent key": {
-			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-			},
-			input:  []string{"set1", "nonexistent"},
-			output: clientio.Encode([]string{}, false),
-		},
-		"intersection with wrong type": {
-			setup: func() {
-				evalSADD([]string{"set1", "a", "b", "c"}, store)
-				store.Put("string", &object.Obj{Value: "string", TypeEncoding: object.ObjTypeString})
-			},
-			input:  []string{"set1", "string"},
-			output: []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"),
-		},
-		"no arguments": {
-			input:  []string{},
-			output: diceerrors.NewErrArity("SINTER"),
-		},
-	}
-
-	runEvalTests(t, tests, evalSINTER, store)
-}
-
-func testEvalOBJECTENCODING(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"nil value": {
-			setup: func() {},
-			input: nil,
+			input: []string{"index", "Palermo"},
 			migratedOutput: EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongArgumentCount("OBJECT"),
+				Result: []interface{}{[]interface{}{float64(13.361387), float64(38.115556)}},
+				Error:  nil,
 			},
 		},
-		"empty array": {
-			setup: func() {},
-			input: []string{},
+		"GEOPOS for multiple existing points": {
+			setup: func() {
+				evalGEOADD([]string{"points", "13.361387", "38.115556", "Palermo"}, store)
+				evalGEOADD([]string{"points", "15.087265", "37.502668", "Catania"}, store)
+			},
+			input: []string{"points", "Palermo", "Catania"},
 			migratedOutput: EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrWrongArgumentCount("OBJECT"),
+				Result: []interface{}{
+					[]interface{}{float64(13.361387), float64(38.115556)},
+					[]interface{}{float64(15.087265), float64(37.502668)},
+				},
+				Error: nil,
 			},
 		},
-		"object with invalid subcommand": {
-			setup: func() {},
-			input: []string{"TESTSUBCOMMAND", "key"},
+		"GEOPOS for a point that does not exist": {
+			setup: func() {
+				evalGEOADD([]string{"index", "13.361387", "38.115556", "Palermo"}, store)
+			},
+			input: []string{"index", "NonExisting"},
 			migratedOutput: EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+				Result: []interface{}{nil},
+				Error:  nil,
 			},
 		},
-		"key does not exist": {
-			setup: func() {},
-			input: []string{"ENCODING", "NONEXISTENT_KEY"},
+		"GEOPOS for multiple points, one existing and one non-existing": {
+			setup: func() {
+				evalGEOADD([]string{"index", "13.361387", "38.115556", "Palermo"}, store)
+			},
+			input: []string{"index", "Palermo", "NonExisting"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{
+					[]interface{}{float64(13.361387), float64(38.115556)},
+					nil,
+				},
+				Error: nil,
+			},
+		},
+		"GEOPOS for empty index": {
+			setup: func() {
+				evalGEOADD([]string{"", "13.361387", "38.115556", "Palermo"}, store)
+			},
+			input: []string{"", "Palermo"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{
+					[]interface{}{float64(13.361387), float64(38.115556)},
+				},
+				Error: nil,
+			},
+		},
+		"GEOPOS with no members in key": {
+			input: []string{"index", "Palermo"},
 			migratedOutput: EvalResponse{
 				Result: clientio.NIL,
 				Error:  nil,
 			},
 		},
-		"key exists": {
-			setup: func() {
-				evalLPUSH([]string{"EXISTING_KEY", "mock_value"}, store)
-			},
-			input: []string{"ENCODING", "EXISTING_KEY"},
+		"GEOPOS with invalid number of arguments": {
+			input: []string{"index"},
 			migratedOutput: EvalResponse{
-				Result: "deque",
-				Error:  nil,
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("GEOPOS"),
+			},
+		},
+		"GEOPOS for a key not used for setting geospatial values": {
+			setup: func() {
+				evalSET([]string{"k", "v"}, store)
+			},
+			input: []string{"k", "v"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  errors.New("WRONGTYPE Operation against a key holding the wrong kind of value"),
 			},
 		},
 	}
 
-	runMigratedEvalTests(t, tests, evalOBJECT, store)
+	runMigratedEvalTests(t, tests, evalGEOPOS, store)
+}
+
+func testEvalGEOHASH(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"GEOHASH with wrong number of arguments": {
+			input: []string{"mygeo"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("GEOHASH"),
+			},
+		},
+		"GEOHASH with non-existent key": {
+			input: []string{"nonexistent", "member1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrKeyNotFound,
+			},
+		},
+		"GEOHASH with existing key but missing member": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input: []string{"mygeo", "missingMember"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{(nil)},
+				Error:  nil,
+			},
+		},
+		"GEOHASH for single member": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+			},
+			input: []string{"mygeo", "NewYork"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{"dr5regw3pp"},
+				Error:  nil,
+			},
+		},
+		"GEOHASH for multiple members": {
+			setup: func() {
+				evalGEOADD([]string{"mygeo", "-74.0060", "40.7128", "NewYork"}, store)
+				evalGEOADD([]string{"mygeo", "-118.2437", "34.0522", "LosAngeles"}, store)
+			},
+			input: []string{"mygeo", "NewYork", "LosAngeles"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{"dr5regw3pp", "9q5ctr186n"},
+				Error:  nil,
+			},
+		},
+		"GEOHASH with a key of wrong type": {
+			setup: func() {
+				store.Put("mygeo", store.NewObj("string_value", -1, object.ObjTypeString))
+			},
+			input: []string{"mygeo", "member1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongTypeOperation,
+			},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalGEOHASH, store)
 }
 
 func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
@@ -8441,7 +8427,7 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"doc1", "$.nested1.a", "\"baz\""},
@@ -8466,7 +8452,7 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 				value := "\"abcd\""
 				var rootData interface{}
 				_ = sonic.Unmarshal([]byte(value), &rootData)
-				obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 				store.Put(key, obj)
 			},
 			input: []string{"doc1", "$", "\"piu\""},
@@ -8482,14 +8468,14 @@ func testEvalJSONSTRAPPEND(t *testing.T, store *dstore.Store) {
 }
 
 func BenchmarkEvalJSONSTRAPPEND(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Setup a sample JSON document
 	key := "doc1"
 	value := "{\"a\":\"foo\", \"nested1\": {\"a\": \"hello\"}, \"nested2\": {\"a\": 31}}"
 	var rootData interface{}
 	_ = sonic.Unmarshal([]byte(value), &rootData)
-	obj := store.NewObj(rootData, -1, object.ObjTypeJSON, object.ObjEncodingJSON)
+	obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 	store.Put(key, obj)
 
 	b.ResetTimer()
@@ -8556,7 +8542,7 @@ func testEvalZPOPMAX(t *testing.T, store *dstore.Store) {
 		},
 		"ZPOPMAX on an empty sorted set": {
 			setup: func() {
-				store.Put("myzset", store.NewObj(sortedset.New(), -1, object.ObjTypeSortedSet, object.ObjEncodingBTree))
+				store.Put("myzset", store.NewObj(sortedset.New(), -1, object.ObjTypeSortedSet))
 			},
 			input: []string{"myzset"},
 			migratedOutput: EvalResponse{
@@ -8606,7 +8592,7 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 		},
 	}
 
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
@@ -8622,7 +8608,7 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 	}
 }
 func BenchmarkZCOUNT(b *testing.B) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 
 	// Populate the sorted set with some members for basic benchmarks
 	evalZADD([]string{"key", "10", "member1", "20", "member2", "30", "member3"}, store)
@@ -8651,7 +8637,7 @@ func BenchmarkZCOUNT(b *testing.B) {
 	// Benchmark for edge cases
 	b.Run("Edge Case ZCOUNT", func(b *testing.B) {
 		// Reset the store and set up members
-		store = dstore.NewStore(nil, nil, nil)
+		store = dstore.NewStore(nil, nil)
 		evalZADD([]string{"key", "5", "member1", "15", "member2", "25", "member3"}, store)
 
 		b.ResetTimer()
@@ -8686,7 +8672,7 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 			name: "INCR key exists",
 			setup: func() {
 				key := "KEY2"
-				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY2"},
@@ -8696,7 +8682,7 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 			name: "INCR key holding string value",
 			setup: func() {
 				key := "KEY3"
-				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY3"},
@@ -8727,7 +8713,7 @@ func testEvalINCR(t *testing.T, store *dstore.Store) {
 			name: "INCR Max Overflow",
 			setup: func() {
 				key := "KEY5"
-				obj := store.NewObj(int64(math.MaxInt64), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(int64(math.MaxInt64), -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY5"},
@@ -8773,7 +8759,7 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 			name: "INCRBY key exists",
 			setup: func() {
 				key := "KEY2"
-				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY2", "3"},
@@ -8783,7 +8769,7 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 			name: "INCRBY key holding string value",
 			setup: func() {
 				key := "KEY3"
-				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY3", "2"},
@@ -8814,7 +8800,7 @@ func testEvalINCRBY(t *testing.T, store *dstore.Store) {
 			name: "INCRBY Max Overflow",
 			setup: func() {
 				key := "KEY5"
-				obj := store.NewObj(int64(math.MaxInt64-3), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(int64(math.MaxInt64-3), -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY5", "4"},
@@ -8860,7 +8846,7 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 			name: "DECR key exists",
 			setup: func() {
 				key := "KEY2"
-				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY2"},
@@ -8870,7 +8856,7 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 			name: "DECR key holding string value",
 			setup: func() {
 				key := "KEY3"
-				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY3"},
@@ -8901,7 +8887,7 @@ func testEvalDECR(t *testing.T, store *dstore.Store) {
 			name: "DECR Min Overflow",
 			setup: func() {
 				key := "KEY5"
-				obj := store.NewObj(int64(math.MinInt64), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(int64(math.MinInt64), -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY5"},
@@ -8947,7 +8933,7 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 			name: "DECRBY key exists",
 			setup: func() {
 				key := "KEY2"
-				obj := store.NewObj(int64(1), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(int64(1), -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY2", "3"},
@@ -8957,7 +8943,7 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 			name: "DECRBY key holding string value",
 			setup: func() {
 				key := "KEY3"
-				obj := store.NewObj("VAL1", -1, object.ObjTypeString, object.ObjEncodingEmbStr)
+				obj := store.NewObj("VAL1", -1, object.ObjTypeString)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY3", "2"},
@@ -8988,7 +8974,7 @@ func testEvalDECRBY(t *testing.T, store *dstore.Store) {
 			name: "DECRBY Min Overflow",
 			setup: func() {
 				key := "KEY5"
-				obj := store.NewObj(int64(math.MinInt64+3), -1, object.ObjTypeInt, object.ObjEncodingInt)
+				obj := store.NewObj(int64(math.MinInt64+3), -1, object.ObjTypeInt)
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY5", "4"},
@@ -9079,7 +9065,7 @@ func testEvalBFINFO(t *testing.T, store *dstore.Store) {
 		{
 			name:           "BF.INFO on non-existent filter",
 			input:          []string{"nonExistentFilter"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR not found")},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrKeyNotFound},
 		},
 	}
 
@@ -9228,7 +9214,7 @@ func testEvalLINSERT(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY", "before", "mock_value", "element"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-WRONGTYPE Operation against a key holding the wrong kind of value")},
 		},
 	}
 	runMigratedEvalTests(t, tests, evalLINSERT, store)
@@ -9315,8 +9301,95 @@ func testEvalLRANGE(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"EXISTING_KEY", "mock_value"}, store)
 			},
 			input:          []string{"EXISTING_KEY", "0", "4"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("-WRONGTYPE Operation against a key holding the wrong kind of value")},
 		},
 	}
 	runMigratedEvalTests(t, tests, evalLRANGE, store)
+}
+
+func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
+	normalArray  := `[0,1,2,3,4,3]`
+	tests := []evalTestCase{
+		{
+			name:  "nil value",
+			setup: func() {},
+			input: nil,
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRINDEX"),
+			},
+		},
+		{
+			name:  "empty args",
+			setup: func() {},
+			input: []string{},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("JSON.ARRINDEX"),
+			},
+		},
+		{
+			name: "start index is invalid",
+			setup: func() {
+				key := "EXISTING_KEY"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(normalArray), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY", "$", "3", "abc"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error: errors.New("ERR Couldn't parse as integer"),
+			},
+		},
+		{
+			name: "stop index is invalid",
+			setup: func() {
+				key := "EXISTING_KEY"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(normalArray), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY", "$", "3", "4", "abc"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error: errors.New("ERR Couldn't parse as integer"),
+			},
+		},
+		{
+			name: "start and stop optional param valid",
+			setup: func() {
+				key := "EXISTING_KEY"
+				var rootData interface{}
+				_ = sonic.Unmarshal([]byte(normalArray), &rootData)
+				obj := store.NewObj(rootData, -1, object.ObjTypeJSON)
+				store.Put(key, obj)
+			},
+			input: []string{"EXISTING_KEY", "$", "4", "4", "5"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{4},
+				Error: nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store = setupTest(store)
+
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			response := evalJSONARRINDEX(tt.input, store)
+			assert.Equal(t, tt.migratedOutput.Result, response.Result)
+			if tt.migratedOutput.Error != nil {
+				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
+			} else {
+				assert.NoError(t, response.Error)
+			}
+		})
+	}
 }

@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package http
 
 import (
@@ -12,14 +28,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/dicedb/dice/internal/server/httpws"
 
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/querymanager"
-	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
-	dstore "github.com/dicedb/dice/internal/store"
 )
 
 type TestServerOptions struct {
@@ -88,7 +101,7 @@ func (e *HTTPCommandExecutor) FireCommand(cmd HTTPCommand) (interface{}, error) 
 	defer resp.Body.Close()
 
 	if cmd.Command != "Q.WATCH" {
-		var result utils.HTTPResponse
+		var result httpws.HTTPResponse
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
 			return nil, err
@@ -114,12 +127,11 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 
 	globalErrChannel := make(chan error)
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
-	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel)
-	queryWatcherLocal := querymanager.NewQueryManager()
+	shardManager := shard.NewShardManager(1, nil, globalErrChannel)
+
 	config.DiceConfig.HTTP.Port = opt.Port
 	// Initialize the HTTPServer
-	testServer := server.NewHTTPServer(shardManager, nil)
+	testServer := httpws.NewHTTPServer(shardManager, nil)
 	// Inform the user that the server is starting
 	fmt.Println("Starting the test server on port", config.DiceConfig.HTTP.Port)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
@@ -127,12 +139,6 @@ func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOption
 	go func() {
 		defer wg.Done()
 		shardManager.Run(shardManagerCtx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		queryWatcherLocal.Run(ctx, watchChan)
 	}()
 
 	// Start the server in a goroutine

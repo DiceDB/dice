@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package main
 
 import (
@@ -15,6 +31,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/internal/server/httpws"
+
 	"github.com/dicedb/dice/internal/cli"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
@@ -25,10 +43,13 @@ import (
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/iothread"
 	"github.com/dicedb/dice/internal/observability"
-	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
+)
+
+const (
+	WALEngineAOF = "aof"
 )
 
 func main() {
@@ -45,7 +66,6 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		queryWatchChan           chan dstore.QueryWatchEvent
 		cmdWatchChan             chan dstore.CmdWatchEvent
 		serverErrCh              = make(chan error, 2)
 		cmdWatchSubscriptionChan = make(chan watchmanager.WatchSubscription)
@@ -54,16 +74,8 @@ func main() {
 
 	wl, _ = wal.NewNullWAL()
 	if config.DiceConfig.Persistence.Enabled {
-		if config.DiceConfig.Persistence.WALEngine == "sqlite" {
-			_wl, err := wal.NewSQLiteWAL(config.DiceConfig.Persistence.WALDir)
-			if err != nil {
-				slog.Warn("could not create WAL with", slog.String("wal-engine", config.DiceConfig.Persistence.WALEngine), slog.Any("error", err))
-				sigs <- syscall.SIGKILL
-				return
-			}
-			wl = _wl
-		} else if config.DiceConfig.Persistence.WALEngine == "aof" {
-			_wl, err := wal.NewAOFWAL(config.DiceConfig.Persistence.WALDir)
+		if config.DiceConfig.Persistence.WALEngine == WALEngineAOF {
+			_wl, err := wal.NewAOFWAL(config.DiceConfig.WAL.LogDir)
 			if err != nil {
 				slog.Warn("could not create WAL with", slog.String("wal-engine", config.DiceConfig.Persistence.WALEngine), slog.Any("error", err))
 				sigs <- syscall.SIGKILL
@@ -93,7 +105,6 @@ func main() {
 
 	if config.DiceConfig.Performance.EnableWatch {
 		bufSize := config.DiceConfig.Performance.WatchChanBufSize
-		queryWatchChan = make(chan dstore.QueryWatchEvent, bufSize)
 		cmdWatchChan = make(chan dstore.CmdWatchEvent, bufSize)
 	}
 
@@ -114,7 +125,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// Initialize the ShardManager
-	shardManager := shard.NewShardManager(uint8(numShards), queryWatchChan, cmdWatchChan, serverErrCh)
+	shardManager := shard.NewShardManager(uint8(numShards), cmdWatchChan, serverErrCh)
 
 	wg := sync.WaitGroup{}
 
@@ -140,13 +151,13 @@ func main() {
 	go runServer(ctx, &serverWg, respServer, serverErrCh)
 
 	if config.DiceConfig.HTTP.Enabled {
-		httpServer := server.NewHTTPServer(shardManager, wl)
+		httpServer := httpws.NewHTTPServer(shardManager, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, httpServer, serverErrCh)
 	}
 
 	if config.DiceConfig.WebSocket.Enabled {
-		websocketServer := server.NewWebSocketServer(shardManager, config.DiceConfig.WebSocket.Port, wl)
+		websocketServer := httpws.NewWebSocketServer(shardManager, config.DiceConfig.WebSocket.Port, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
 	}

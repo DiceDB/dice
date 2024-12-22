@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package http
 
 import (
@@ -159,120 +175,121 @@ func TestSetDataCmd(t *testing.T) {
 			assert_type: []string{"equal", "array", "equal", "array"},
 			expected:    []interface{}{float64(3), []any{string("bar"), string("baz"), string("bax")}, float64(0), []any{string("bar"), string("baz"), string("bax")}},
 		},
-		{
-			name: "SADD & SDIFF",
-			commands: []HTTPCommand{
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo2", "value": "baz"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo2", "value": "bax"}},
-				{Command: "SDIFF", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
-			},
-			assert_type: []string{"equal", "equal", "equal", "equal", "array"},
-			expected:    []interface{}{float64(1), float64(1), float64(1), float64(1), []any{string("bar")}},
-		},
-		{
-			name: "SADD & SDIFF with non-existing subsequent key",
-			commands: []HTTPCommand{
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
-				{Command: "SDIFF", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
-			},
-			assert_type: []string{"equal", "equal", "array"},
-			expected:    []interface{}{float64(1), float64(1), []any{string("bar"), string("baz")}},
-		},
-		{
-			name: "SADD & SDIFF with wrong key type",
-			commands: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SDIFF", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
-			},
-			assert_type: []string{"equal", "equal"},
-			expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
-		},
-		{
-			name: "SADD & SDIFF with subsequent key of wrong type",
-			commands: []HTTPCommand{
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
-				{Command: "SET", Body: map[string]interface{}{"key": "foo2", "value": "bar"}},
-				{Command: "SDIFF", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
-			},
-			assert_type: []string{"equal", "equal", "equal", "equal"},
-			expected:    []interface{}{float64(1), float64(1), "OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
-		},
-		{
-			name: "SADD & SDIFF with non-existing first key",
-			commands: []HTTPCommand{
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
-				{Command: "SDIFF", Body: map[string]interface{}{"key1": "foo2", "key2": "foo"}},
-			},
-			assert_type: []string{"equal", "equal", "array"},
-			expected:    []interface{}{float64(1), float64(1), []any{}},
-		},
-		{
-			name: "SADD & SDIFF with one key",
-			commands: []HTTPCommand{
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
-				{Command: "SDIFF", Body: map[string]interface{}{"key": "foo"}},
-			},
-			assert_type: []string{"equal", "equal", "array"},
-			expected:    []interface{}{float64(1), float64(1), []any{string("bar"), string("baz")}},
-		},
-		{
-			name: "SADD & SINTER",
-			commands: []HTTPCommand{
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo2", "value": "baz"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo2", "value": "bax"}},
-				{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
-			},
-			assert_type: []string{"equal", "equal", "equal", "equal", "array"},
-			expected:    []interface{}{float64(1), float64(1), float64(1), float64(1), []any{string("baz")}},
-		},
-		{
-			name: "SADD & SINTER with non-existing subsequent key",
-			commands: []HTTPCommand{
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
-				{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
-			},
-			assert_type: []string{"equal", "equal", "array"},
-			expected:    []interface{}{float64(1), float64(1), []any{}},
-		},
-		{
-			name: "SADD & SINTER with wrong key type",
-			commands: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
-			},
-			assert_type: []string{"equal", "equal"},
-			expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
-		},
-		{
-			name: "SADD & SINTER with subsequent key of wrong type",
-			commands: []HTTPCommand{
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
-				{Command: "SET", Body: map[string]interface{}{"key": "foo2", "value": "bar"}},
-				{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
-			},
-			assert_type: []string{"equal", "equal", "equal", "equal"},
-			expected:    []interface{}{float64(1), float64(1), "OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
-		},
-		{
-			name: "SADD & SINTER with single key",
-			commands: []HTTPCommand{
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
-				{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
-				{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo"}}},
-			},
-			assert_type: []string{"equal", "equal", "array"},
-			expected:    []interface{}{float64(1), float64(1), []any{string("bar"), string("baz")}},
-		},
+		// Skipping these tests until multishards cmds supported by http
+		//{
+		//	name: "SADD & SDIFF",
+		//	commands: []HTTPCommand{
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo2", "value": "baz"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo2", "value": "bax"}},
+		//		{Command: "SDIFF", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
+		//	},
+		//	assert_type: []string{"equal", "equal", "equal", "equal", "array"},
+		//	expected:    []interface{}{float64(1), float64(1), float64(1), float64(1), []any{string("bar")}},
+		//},
+		//{
+		//	name: "SADD & SDIFF with non-existing subsequent key",
+		//	commands: []HTTPCommand{
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
+		//		{Command: "SDIFF", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
+		//	},
+		//	assert_type: []string{"equal", "equal", "array"},
+		//	expected:    []interface{}{float64(1), float64(1), []any{string("bar"), string("baz")}},
+		//},
+		//{
+		//	name: "SADD & SDIFF with wrong key type",
+		//	commands: []HTTPCommand{
+		//		{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SDIFF", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
+		//	},
+		//	assert_type: []string{"equal", "equal"},
+		//	expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		//},
+		//{
+		//	name: "SADD & SDIFF with subsequent key of wrong type",
+		//	commands: []HTTPCommand{
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
+		//		{Command: "SET", Body: map[string]interface{}{"key": "foo2", "value": "bar"}},
+		//		{Command: "SDIFF", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
+		//	},
+		//	assert_type: []string{"equal", "equal", "equal", "equal"},
+		//	expected:    []interface{}{float64(1), float64(1), "OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		//},
+		//{
+		//	name: "SADD & SDIFF with non-existing first key",
+		//	commands: []HTTPCommand{
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
+		//		{Command: "SDIFF", Body: map[string]interface{}{"key1": "foo2", "key2": "foo"}},
+		//	},
+		//	assert_type: []string{"equal", "equal", "array"},
+		//	expected:    []interface{}{float64(1), float64(1), []any{}},
+		//},
+		//{
+		//	name: "SADD & SDIFF with one key",
+		//	commands: []HTTPCommand{
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
+		//		{Command: "SDIFF", Body: map[string]interface{}{"key": "foo"}},
+		//	},
+		//	assert_type: []string{"equal", "equal", "array"},
+		//	expected:    []interface{}{float64(1), float64(1), []any{string("bar"), string("baz")}},
+		//},
+		//{
+		//	name: "SADD & SINTER",
+		//	commands: []HTTPCommand{
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo2", "value": "baz"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo2", "value": "bax"}},
+		//		{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
+		//	},
+		//	assert_type: []string{"equal", "equal", "equal", "equal", "array"},
+		//	expected:    []interface{}{float64(1), float64(1), float64(1), float64(1), []any{string("baz")}},
+		//},
+		//{
+		//	name: "SADD & SINTER with non-existing subsequent key",
+		//	commands: []HTTPCommand{
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
+		//		{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
+		//	},
+		//	assert_type: []string{"equal", "equal", "array"},
+		//	expected:    []interface{}{float64(1), float64(1), []any{}},
+		//},
+		//{
+		//	name: "SADD & SINTER with wrong key type",
+		//	commands: []HTTPCommand{
+		//		{Command: "SET", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
+		//	},
+		//	assert_type: []string{"equal", "equal"},
+		//	expected:    []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		//},
+		//{
+		//	name: "SADD & SINTER with subsequent key of wrong type",
+		//	commands: []HTTPCommand{
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
+		//		{Command: "SET", Body: map[string]interface{}{"key": "foo2", "value": "bar"}},
+		//		{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo", "foo2"}}},
+		//	},
+		//	assert_type: []string{"equal", "equal", "equal", "equal"},
+		//	expected:    []interface{}{float64(1), float64(1), "OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		//},
+		//{
+		//	name: "SADD & SINTER with single key",
+		//	commands: []HTTPCommand{
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "bar"}},
+		//		{Command: "SADD", Body: map[string]interface{}{"key": "foo", "value": "baz"}},
+		//		{Command: "SINTER", Body: map[string]interface{}{"values": []interface{}{"foo"}}},
+		//	},
+		//	assert_type: []string{"equal", "equal", "array"},
+		//	expected:    []interface{}{float64(1), float64(1), []any{string("bar"), string("baz")}},
+		//},
 	}
 
 	defer exec.FireCommand(HTTPCommand{

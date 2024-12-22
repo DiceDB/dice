@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package clientio
 
 import (
@@ -7,8 +23,6 @@ import (
 	"strconv"
 
 	"github.com/dicedb/dice/internal/object"
-
-	"github.com/dicedb/dice/internal/sql"
 
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -282,15 +296,6 @@ func Encode(value interface{}, isSimple bool) []byte {
 		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
 		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
 		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
-	case []sql.QueryResultRow:
-		var b []byte
-		buf := bytes.NewBuffer(b) // Create a buffer for accumulating encoded rows.
-		for _, row := range value.([]sql.QueryResultRow) {
-			buf.WriteString("*2\r\n")                 // Start a new array for each row.
-			buf.Write(Encode(row.Key, false))         // Encode the row key.
-			buf.Write(Encode(row.Value.Value, false)) // Encode the row value.
-		}
-		return []byte(fmt.Sprintf("*%d\r\n%s", len(v), buf.Bytes())) // Return the encoded response.
 
 	// Handle map[string]bool and return a nil response indicating unsupported types.
 	case map[string]bool:

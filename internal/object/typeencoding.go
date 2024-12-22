@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package object
 
 import (
@@ -6,33 +22,15 @@ import (
 	diceerrors "github.com/dicedb/dice/internal/errors"
 )
 
-func GetType(te uint8) uint8 {
-	return (te >> 4) << 4
-}
-
-func GetEncoding(te uint8) uint8 {
-	return te & 0b00001111
-}
-
-func AssertType(te, t uint8) error {
-	if GetType(te) != t {
+func AssertTypeWithError(te, t ObjectType) error {
+	if te != t {
 		return errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
 	}
 	return nil
 }
 
-func AssertEncoding(te, e uint8) error {
-	if GetEncoding(te) != e {
-		return errors.New("the operation is not permitted on this encoding")
-	}
-	return nil
-}
-
-func AssertTypeAndEncoding(typeEncoding, expectedType, expectedEncoding uint8) []byte {
-	if err := AssertType(typeEncoding, expectedType); err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongKeyTypeErr)
-	}
-	if err := AssertEncoding(typeEncoding, expectedEncoding); err != nil {
+func AssertType(_type, expectedType ObjectType) []byte {
+	if err := AssertTypeWithError(_type, expectedType); err != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongKeyTypeErr)
 	}
 	return nil

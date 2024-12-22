@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 import (
@@ -1186,7 +1202,7 @@ func TestJsonObjLen(t *testing.T) {
 		{
 			name:     "JSON.OBJLEN with non-existent key",
 			commands: []string{"json.set obj $ " + b, "json.objlen non_existing_key $"},
-			expected: []interface{}{"OK", "(nil)"},
+			expected: []interface{}{"OK", "ERR could not perform this operation on a key that doesn't exist"},
 		},
 		{
 			name:     "JSON.OBJLEN with empty path",
@@ -1658,6 +1674,168 @@ func TestJsonARRTRIM(t *testing.T) {
 					assert.True(t, testutils.ArraysArePermutations(out.([]interface{}), result.([]interface{})))
 				} else if tcase.assertType[i] == "jsoneq" {
 					assert.JSONEq(t, out.(string), result.(string))
+				}
+			}
+		})
+	}
+}
+
+func TestJSONARRINDEX(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	FireCommand(conn, "DEL key")
+	defer FireCommand(conn, "DEL key")
+
+	normalArray  := `[0,1,2,3,4,3]`
+	nestedArray  := `{"arrays":[{"arr":[1,2,3]},{"arr":[2,3,4]},{"arr":[1]}]}`
+	nestedArray2 := `{"a":[3],"nested":{"a":{"b":2,"c":1}}}`
+
+	tests := []struct {
+		name       string
+		commands   []string
+		expected   []interface{}
+		assertType []string
+	}{
+		{
+			name:     "should return error if key is not present",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex nonExistentKey $ 3"},
+			expected: []interface{}{"OK", "ERR could not perform this operation on a key that doesn't exist"},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return error if json path is invalid",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $invalid_path 3"},
+			expected: []interface{}{"OK", "ERR Path '$invalid_path' does not exist"},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return error if provided path does not have any data",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $.some_path 3"},
+			expected: []interface{}{"OK", []interface{}{}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return error if invalid start index provided",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 abc"},
+			expected: []interface{}{"OK", "ERR Couldn't parse as integer"},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return error if invalid stop index provided",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 4 abc"},
+			expected: []interface{}{"OK", "ERR Couldn't parse as integer"},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return array index when given element is present",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3"},
+			expected: []interface{}{"OK", []interface{}{int64(3)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return -1 when given element is not present",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 10"},
+			expected: []interface{}{"OK", []interface{}{int64(-1)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return array index with start optional param provided",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 4"},
+			expected: []interface{}{"OK", []interface{}{int64(5)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return array index with start and stop optional param provided",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 4 4 5"},
+			expected: []interface{}{"OK", []interface{}{int64(4)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return -1 with start and stop optional param provided where start > stop",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 2 1"},
+			expected: []interface{}{"OK", []interface{}{int64(-1)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return -1 with start (out of boud) and stop (out of bound) optional param provided",
+			commands: []string{"json.set key $ " + normalArray, "json.arrindex key $ 3 6 10"},
+			expected: []interface{}{"OK", []interface{}{int64(-1)}},
+			assertType: []string{"equal", "equal"},
+		},
+		{
+			name:     "should return list of array indexes for nested json",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $.arrays.*.arr 3"},
+			expected: []interface{}{"OK", []interface{}{int64(2), int64(1), int64(-1)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return list of array indexes for multiple json path",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3"},
+			expected: []interface{}{"OK", []interface{}{int64(2), int64(1), int64(-1)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return array of length 1 for nested json path, with index",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $.arrays[1].arr 3"},
+			expected: []interface{}{"OK", []interface{}{int64(1)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return empty array for nonexistent path in nested json",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr1 3"},
+			expected: []interface{}{"OK", []interface{}{}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return -1 for each nonexisting value in nested json",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 5"},
+			expected: []interface{}{"OK", []interface{}{int64(-1), int64(-1), int64(-1)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return nil for non-array path and -1 for array path if value DNE",
+			commands: []string{"json.set key $ " + nestedArray2, "json.arrindex key $..a 2"},
+			expected: []interface{}{"OK", []interface{}{int64(-1), "(nil)"}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should return nil for non-array path if value DNE and valid index for array path if value exists",
+			commands: []string{"json.set key $ " + nestedArray2, "json.arrindex key $..a 3"},
+			expected: []interface{}{"OK", []interface{}{int64(0), "(nil)"}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+		{
+			name:     "should handle stop index - 0 which should be last index inclusive",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 1 0", "json.arrindex key $..arr 3 2 0"},
+			expected: []interface{}{"OK", []interface{}{int64(2), int64(1), int64(-1)}, []interface{}{int64(2), int64(-1), int64(-1)}},
+			assertType: []string{"equal", "deep_equal", "deep_equal"},
+		},
+		{
+			name:     "should handle stop index - -1 which should be last index exclusive",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 1 -1", "json.arrindex key $..arr 3 2 -1"},
+			expected: []interface{}{"OK", []interface{}{int64(-1), int64(1), int64(-1)}, []interface{}{int64(-1), int64(-1), int64(-1)}},
+			assertType: []string{"equal", "deep_equal", "deep_equal"},
+		},
+		{
+			name:     "should handle negative start index",
+			commands: []string{"json.set key $ " + nestedArray, "json.arrindex key $..arr 3 -1"},
+			expected: []interface{}{"OK", []interface{}{int64(2), int64(-1), int64(-1)}},
+			assertType: []string{"equal", "deep_equal"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			FireCommand(conn, "DEL key")
+
+			for i, cmd := range tc.commands {
+				result := FireCommand(conn, cmd)
+				expected := tc.expected[i]
+				if tc.assertType[i] == "equal" {
+					assert.Equal(t, result, expected)
+				} else if tc.assertType[i] == "deep_equal" {
+					assert.ElementsMatch(t, result.([]interface{}), expected.([]interface{}))
 				}
 			}
 		})

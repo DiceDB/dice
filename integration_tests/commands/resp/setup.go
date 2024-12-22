@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 import (
@@ -191,11 +207,10 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 		config.DiceConfig.RespServer.Port = 9739
 	}
 
-	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
 	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
-	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec)
+	shardManager := shard.NewShardManager(1, cmdWatchChan, gec)
 	ioThreadManager := iothread.NewManager(20000, shardManager)
 	// Initialize the RESP Server
 	wl, _ := wal.NewNullWAL()

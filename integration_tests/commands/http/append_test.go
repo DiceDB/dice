@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package http
 
 import (
@@ -120,6 +136,19 @@ func TestAPPEND(t *testing.T) {
 			expected: []interface{}{float64(0), float64(0), float64(0), float64(0), float64(0), float64(0), float64(3), "421"},
 			cleanup: []HTTPCommand{
 				{Command: "del", Body: map[string]interface{}{"key": "bitkey"}},
+			},
+		},
+		{
+			name: "SET and SETBIT commands followed by GET",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "key", "value": "10"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "key", "values": []string{"1", "1"}}},
+				{Command: "GET", Body: map[string]interface{}{"key": "key"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "key", "values": []string{"0", "1"}}},
+			},
+			expected: []interface{}{"OK", float64(0), "q0", float64(0)},
+			cleanup: []HTTPCommand{
+				{Command: "del", Body: map[string]interface{}{"key": "key"}},
 			},
 		},
 		{

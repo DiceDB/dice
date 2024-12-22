@@ -1,57 +1,69 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package eval
 
 import (
-	"github.com/dicedb/dice/internal/object"
 	"testing"
+
+	"github.com/dicedb/dice/internal/object"
 
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
-// TestDeduceTypeEncoding tests the deduceTypeEncoding function using table-driven tests.
-func TestDeduceTypeEncoding(t *testing.T) {
+// TestDeduceType tests the deduceType function using table-driven tests.
+func TestDeduceType(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		wantType uint8
+		wantType object.ObjectType
 		wantEnc  uint8
 	}{
 		{
 			name:     "Integer string",
 			input:    "123",
 			wantType: object.ObjTypeInt,
-			wantEnc:  object.ObjEncodingInt,
 		},
 		{
 			name:     "Short string",
 			input:    "short string",
 			wantType: object.ObjTypeString,
-			wantEnc:  object.ObjEncodingEmbStr,
 		},
 		{
 			name:     "Long string",
 			input:    "this is a very long string that exceeds the maximum length for EMBSTR encoding",
 			wantType: object.ObjTypeString,
-			wantEnc:  object.ObjEncodingRaw,
 		},
 		{
 			name:     "Empty string",
 			input:    utils.EmptyStr,
 			wantType: object.ObjTypeString,
-			wantEnc:  object.ObjEncodingEmbStr,
 		},
 		{
 			name:     "Boundary length string",
 			input:    "this string is exactly forty-four characters long",
 			wantType: object.ObjTypeString,
-			wantEnc:  object.ObjEncodingRaw,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotType, gotEnc := deduceTypeEncoding(tt.input)
-			if gotType != tt.wantType || gotEnc != tt.wantEnc {
-				t.Errorf("deduceTypeEncoding(%q) = (%v, %v), want (%v, %v)", tt.input, gotType, gotEnc, tt.wantType, tt.wantEnc)
+			_, gotType := getRawStringOrInt(tt.input)
+			if gotType != tt.wantType {
+				t.Errorf("deduceType(%q) = (%v), want (%v)", tt.input, gotType, tt.wantType)
 			}
 		})
 	}

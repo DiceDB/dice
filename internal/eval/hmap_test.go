@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package eval
 
 import (
@@ -71,7 +87,7 @@ func TestHashMapIncrementValue(t *testing.T) {
 }
 
 func TestGetValueFromHashMap(t *testing.T) {
-	store := store.NewStore(nil, nil, nil)
+	store := store.NewStore(nil, nil)
 	key := "key1"
 	field := "field1"
 	value := "value1"
@@ -79,7 +95,7 @@ func TestGetValueFromHashMap(t *testing.T) {
 	hmap.Set(field, value)
 
 	obj := &object.Obj{
-		TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+		Type:           object.ObjTypeHashMap,
 		Value:          hmap,
 		LastAccessedAt: uint32(time.Now().Unix()),
 	}

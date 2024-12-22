@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 import (
@@ -11,7 +27,6 @@ func TestObjectCommand(t *testing.T) {
 	conn := getLocalConnection()
 	defer conn.Close()
 	defer FireCommand(conn, "FLUSHDB")
-	simpleJSON := `{"name":"John","age":30}`
 
 	testCases := []struct {
 		name       string
@@ -28,86 +43,6 @@ func TestObjectCommand(t *testing.T) {
 			assertType: []string{"equal", "assert", "assert", "equal", "assert"},
 			delay:      []time.Duration{0, 2 * time.Second, 3 * time.Second, 0, 0},
 			cleanup:    []string{"DEL foo"},
-		},
-		{
-			name:       "Object Encoding check for raw",
-			commands:   []string{"SET foo foobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar", "OBJECT ENCODING foo"},
-			expected:   []interface{}{"OK", "raw"},
-			assertType: []string{"equal", "equal"},
-			delay:      []time.Duration{0, 0},
-			cleanup:    []string{"DEL foo"},
-		},
-		{
-			name:       "Object Encoding check for int",
-			commands:   []string{"SET foo 1", "OBJECT ENCODING foo"},
-			expected:   []interface{}{"OK", "int"},
-			assertType: []string{"equal", "equal"},
-			delay:      []time.Duration{0, 0},
-			cleanup:    []string{"DEL foo"},
-		},
-		{
-			name:       "Object Encoding check for embstr",
-			commands:   []string{"SET foo bar", "OBJECT ENCODING foo"},
-			expected:   []interface{}{"OK", "embstr"},
-			assertType: []string{"equal", "equal"},
-			delay:      []time.Duration{0, 0},
-			cleanup:    []string{"DEL foo"},
-		},
-		{
-			name:       "Object Encoding check for deque",
-			commands:   []string{"LPUSH listKey 'value1'", "LPUSH listKey 'value2'", "OBJECT ENCODING listKey"},
-			expected:   []interface{}{int64(1), int64(2), "deque"},
-			assertType: []string{"assert", "assert", "equal"},
-			delay:      []time.Duration{0, 0, 0},
-			cleanup:    []string{"DEL listKey"},
-		},
-		{
-			name:       "Object Encoding check for bf",
-			commands:   []string{"BF.ADD bloomkey value1", "BF.ADD bloomkey value2", "OBJECT ENCODING bloomkey"},
-			expected:   []interface{}{int64(1), int64(1), "bf"},
-			assertType: []string{"assert", "assert", "equal"},
-			delay:      []time.Duration{0, 0, 0},
-			cleanup:    []string{"DEL bloomkey"},
-		},
-		{
-			name:       "Object Encoding check for json",
-			commands:   []string{`JSON.SET k10 $ ` + simpleJSON, "OBJECT ENCODING k10"},
-			expected:   []interface{}{"OK", "json"},
-			assertType: []string{"equal", "equal"},
-			delay:      []time.Duration{0, 0},
-			cleanup:    []string{"DEL k10"},
-		},
-		{
-			name:       "Object Encoding check for bytearray",
-			commands:   []string{"SETBIT kbitset 0 1", "SETBIT kbitset 1 0", "SETBIT kbitset 2 1", "OBJECT ENCODING kbitset"},
-			expected:   []interface{}{int64(0), int64(0), int64(0), "bytearray"},
-			assertType: []string{"assert", "assert", "assert", "equal"},
-			delay:      []time.Duration{0, 0, 0, 0},
-			cleanup:    []string{"DEL kbitset"},
-		},
-		{
-			name:       "Object Encoding check for hashmap",
-			commands:   []string{"HSET hashKey hKey hValue", "OBJECT ENCODING hashKey"},
-			expected:   []interface{}{int64(1), "hashmap"},
-			assertType: []string{"assert", "equal"},
-			delay:      []time.Duration{0, 0},
-			cleanup:    []string{"DEL hashKey"},
-		},
-		{
-			name:       "Object Encoding check for btree",
-			commands:   []string{"ZADD btreekey 1 'member1' 2 'member2'", "OBJECT ENCODING btreekey"},
-			expected:   []interface{}{int64(2), "btree"},
-			assertType: []string{"equal", "equal"},
-			delay:      []time.Duration{0, 0},
-			cleanup:    []string{"DEL btreekey"},
-		},
-		{
-			name:       "Object Encoding check for setstr",
-			commands:   []string{"SADD skey one two three", "OBJECT ENCODING skey"},
-			expected:   []interface{}{int64(3), "setstr"},
-			assertType: []string{"assert", "equal"},
-			delay:      []time.Duration{0, 0},
-			cleanup:    []string{"DEL skey"},
 		},
 	}
 

@@ -1,6 +1,7 @@
 ---
 const pathname = new URL(Astro.request.url).pathname;
 const currentPage = pathname.split("/")[1];
+const currentSubPage = pathname.split("/")[2]; // To identify subpages under "community"
 import SocialHandlesIcons from "./SocialHandlesIcons.astro";
 ---
 
@@ -33,6 +34,13 @@ import SocialHandlesIcons from "./SocialHandlesIcons.astro";
       <div class="navbar-start"></div>
       <div class="navbar-end">
         <a
+          class={`navbar-item`}
+          href="https://playground.dicedb.io"
+          target="_blank"
+        >
+          <span class="has-text-weight-bold"> Playground</span>
+        </a>
+        <a
           class={`navbar-item ${currentPage === "benchmarks" && "is-active"}`}
           href="/benchmarks"
         >
@@ -49,6 +57,18 @@ import SocialHandlesIcons from "./SocialHandlesIcons.astro";
           href="/blog"
         >
           <span class="has-text-weight-bold"> Blog</span>
+        </a>
+        <a
+          class={`navbar-item ${currentPage === "community" && "is-active"}`}
+          href="/community"
+        >
+          <span class="has-text-weight-bold"> Community</span>
+        </a>
+        <a
+          class={`navbar-item ${currentPage === "team" && "is-active"}`}
+          href="/team"
+        >
+          <span class="has-text-weight-bold"> Team</span>
         </a>
         <div class="navbar-item">
           <SocialHandlesIcons />

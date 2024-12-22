@@ -5,9 +5,7 @@ DiceDB
 <a href="https://dicedb.io/get-started/installation/">![Docs](https://img.shields.io/badge/docs-00A1FF?style=flat-square)</a>
 <a target="_blank" href="https://discord.gg/6r8uXWtXh7"><img src="https://dcbadge.limes.pink/api/server/6r8uXWtXh7?style=flat" alt="discord community" /></a>
 
-DiceDB is a redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.
-
-We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [block our calendar](https://cal.com/dicedb-arpit). always up for a chat.
+DiceDB is an open source, redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.
 
 > [!CAUTION]
 > DiceDB is under active development and supports a subset of Redis commands. Inconsistent behavior is expected. Feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
@@ -21,15 +19,6 @@ We have multiple repositories where you can contribute. So, as per your interest
 - [dicedb/playground-mono](https://github.com/dicedb/playground-mono) backend APIs for DiceDB playground / Stack - Go
 - [dicedb/alloy](https://github.com/dicedb/alloy) frontend and marketplace for DiceDB playground / Stack - NextJS
 
-## How is it different from Redis?
-
-Although DiceDB is a drop-in replacement of Redis, which means almost no learning curve and switching does not require any code change, it still differs in two key aspects and they are
-
-1. DiceDB is multithreaded and follows [shared-nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing_architecture).
-2. DiceDB supports `.WATCH` commands like `GET.WATCH`, `ZRANGE.WATCH`, etc. that lets clients listen to data changes and get the result set in real-time whenever something changes.
-
-`.WATCH` commands are pretty handy when it comes to building truly real-time applications like [Leaderboard](https://github.com/arpitbbhayani/leaderboard-go-dicedb).
-
 ## Get started
 
 ### Setting up DiceDB with Docker
@@ -37,7 +26,7 @@ Although DiceDB is a drop-in replacement of Redis, which means almost no learnin
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```bash
-docker run -p 7379:7379 dicedb/dicedb --enable-multithreading --enable-watch
+docker run -p 7379:7379 dicedb/dicedb --enable-watch
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
@@ -45,6 +34,10 @@ to it using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and SDKs.
 
 > [!TIP]
 > Since DiceDB is a drop-in replacement for Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
+
+## Supporters
+
+[![JetBrains logo.](https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
 
 
 ### Setting up DiceDB from source for development and contributions
@@ -60,10 +53,10 @@ To run DiceDB for local development or running from source, you will need
 ```bash
 git clone https://github.com/dicedb/dice
 cd dice
-go run main.go --enable-multithreading --enable-watch
+go run main.go --enable-watch
 ```
 
-You can skip passing the two flags if you are not working with multi-threading or `.WATCH` features.
+You can skip passing the flag if you are not working with `.WATCH` feature.
 
 1. Install GoLangCI
 

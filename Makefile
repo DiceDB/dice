@@ -29,12 +29,16 @@ build: ## generate the dicedb binary for the current OS and architecture
 	@echo "Building for $(GOOS)/$(GOARCH)"
 	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./dicedb
 
+build-debug: ## generate the dicedb binary for the current OS and architecture
+	@echo "Building for $(GOOS)/$(GOARCH)"
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -gcflags="all=-N -l" -o ./dicedb
+
 ##@ Testing
 
 # Changing the parallel package count to 1 due to a possible race condition which causes the tests to get stuck.
 # TODO: Fix the tests to run in parallel, and remove the -p=1 flag.
 test: ## run the integration tests
-	go test -v -race -count=1 -p=1 ./integration_tests/...
+	go test -race -count=1 -p=1 ./integration_tests/...
 
 test-one: ## run a single integration test function by name (e.g. make test-one TEST_FUNC=TestSetGet)
 	go test -v -race -count=1 --run $(TEST_FUNC) ./integration_tests/...
@@ -101,3 +105,7 @@ release: ## build and push the Docker image to Docker Hub with the latest tag an
 	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:$(VERSION) .
 	docker push dicedb/dicedb:$(VERSION)
 	docker push dicedb/dicedb:latest
+
+push-binary-remote:
+	$(MAKE) build
+	scp -i ${SSH_PEM_PATH} ./dicedb ubuntu@${REMOTE_HOST}:.
