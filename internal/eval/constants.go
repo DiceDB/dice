@@ -69,4 +69,6 @@ const (
 	BYSCORE         string = "BYSCORE"
 	BYLEX           string = "BYLEX"
 	LIMIT           string = "LIMIT"
+	PLUSINF         string = "+inf"
+	MINUSINF        string = "-inf"
 )

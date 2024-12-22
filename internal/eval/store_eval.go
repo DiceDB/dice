@@ -976,8 +976,6 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	startStr := args[1]
 	stopStr := args[2]
 
-	
-
 	withScores := false
 	reverse := false
 	byScore := false
@@ -1055,23 +1053,23 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 
 	if !byScore {
 		if !strings.HasPrefix(startStr, "(") && !strings.HasPrefix(startStr, "[") &&
-		startStr != "-" && startStr != "+" && startStr != "-inf" && startStr != "+inf" {
-		if len(startStr) > 1 && startStr[0] == '0' {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrIntegerOutOfRange,
+			startStr != "-" && startStr != "+" && startStr != MINUSINF && startStr != PLUSINF {
+			if len(startStr) > 1 && startStr[0] == '0' {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
 			}
 		}
-	}
-	if !strings.HasPrefix(stopStr, "(") && !strings.HasPrefix(stopStr, "[") &&
-		stopStr != "-" && stopStr != "+" && stopStr != "-inf" && stopStr != "+inf" {
-		if len(stopStr) > 1 && stopStr[0] == '0' {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrIntegerOutOfRange,
+		if !strings.HasPrefix(stopStr, "(") && !strings.HasPrefix(stopStr, "[") &&
+			stopStr != "-" && stopStr != "+" && stopStr != MINUSINF && stopStr != PLUSINF {
+			if len(stopStr) > 1 && stopStr[0] == '0' {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
 			}
 		}
-	}
 	}
 
 	if !byLex {
@@ -1087,7 +1085,7 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 			validStopStr = stopStr
 		}
 
-		if validStartStr != "+inf" && validStartStr != "-inf" {
+		if validStartStr != PLUSINF && validStartStr != MINUSINF {
 			_, err := strconv.ParseInt(validStartStr, 10, 64)
 			if err != nil {
 				return &EvalResponse{
@@ -1097,7 +1095,7 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 
-		if validStopStr != "+inf" && validStopStr != "-inf" {
+		if validStopStr != PLUSINF && validStopStr != MINUSINF {
 			_, err := strconv.ParseInt(validStopStr, 10, 64)
 			if err != nil {
 				return &EvalResponse{
@@ -1182,7 +1180,7 @@ func parseScoreRange(min, max string) (float64, float64, error) {
 	minScore := math.Inf(-1)
 	maxScore := math.Inf(1)
 
-	if min != "-inf" {
+	if min != MINUSINF {
 		var err error
 		if min[0] == '(' {
 			minScore, err = strconv.ParseFloat(min[1:], 64)
@@ -1198,7 +1196,7 @@ func parseScoreRange(min, max string) (float64, float64, error) {
 		}
 	}
 
-	if max != "+inf" {
+	if max != PLUSINF {
 		var err error
 		if max[0] == '(' {
 			maxScore, err = strconv.ParseFloat(max[1:], 64)
