@@ -24,8 +24,8 @@ import (
 
 type Manager struct {
 	connectedClients sync.Map
-	numIOThreads     atomic.Int32
-	maxClients       int32
+	numIOThreads     atomic.Uint32
+	maxClients       uint32
 	mu               sync.Mutex
 }
 
@@ -34,7 +34,7 @@ var (
 	ErrIOThreadNotFound  = errors.New("io-thread not found")
 )
 
-func NewManager(maxClients int32) *Manager {
+func NewManager(maxClients uint32) *Manager {
 	return &Manager{
 		maxClients: maxClients,
 	}
@@ -54,7 +54,7 @@ func (m *Manager) RegisterIOThread(ioThread IOThread) error {
 	return nil
 }
 
-func (m *Manager) IOThreadCount() int32 {
+func (m *Manager) IOThreadCount() uint32 {
 	return m.numIOThreads.Load()
 }
 
@@ -76,6 +76,6 @@ func (m *Manager) UnregisterIOThread(id string) error {
 		return ErrIOThreadNotFound
 	}
 
-	m.numIOThreads.Add(-1)
+	m.numIOThreads.Add(^uint32(0))
 	return nil
 }

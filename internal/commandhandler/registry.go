@@ -10,8 +10,8 @@ import (
 
 type Registry struct {
 	activeCmdHandlers sync.Map
-	numCmdHandlers    atomic.Int32
-	maxClients        int32
+	numCmdHandlers    atomic.Uint32
+	maxCmdHandlers    uint32
 	ShardManager      *shard.ShardManager
 	mu                sync.Mutex
 }
@@ -22,10 +22,10 @@ var (
 	ErrCmdHandlerNotBase     = errors.New("command handler is not a BaseCommandHandler")
 )
 
-func NewRegistry(maxClients int32, sm *shard.ShardManager) *Registry {
+func NewRegistry(maxClients uint32, sm *shard.ShardManager) *Registry {
 	return &Registry{
-		maxClients:   maxClients,
-		ShardManager: sm,
+		maxCmdHandlers: maxClients,
+		ShardManager:   sm,
 	}
 }
 
@@ -33,7 +33,7 @@ func (m *Registry) RegisterCommandHandler(cmdHandler *BaseCommandHandler) error 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.CommandHandlerCount() >= m.maxClients {
+	if m.CommandHandlerCount() >= m.maxCmdHandlers {
 		return ErrMaxCmdHandlersReached
 	}
 
@@ -52,7 +52,7 @@ func (m *Registry) RegisterCommandHandler(cmdHandler *BaseCommandHandler) error 
 	return nil
 }
 
-func (m *Registry) CommandHandlerCount() int32 {
+func (m *Registry) CommandHandlerCount() uint32 {
 	return m.numCmdHandlers.Load()
 }
 
@@ -69,6 +69,6 @@ func (m *Registry) UnregisterCommandHandler(id string) error {
 	} else {
 		return ErrCmdHandlerNotFound
 	}
-	m.numCmdHandlers.Add(-1)
+	m.numCmdHandlers.Add(^uint32(0))
 	return nil
 }
