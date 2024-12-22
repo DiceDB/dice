@@ -8,7 +8,7 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 )
 
-type Manager struct {
+type Registry struct {
 	activeCmdHandlers sync.Map
 	numCmdHandlers    atomic.Int32
 	maxClients        int32
@@ -21,14 +21,14 @@ var (
 	ErrCmdHandlerNotFound    = errors.New("command handler not found")
 )
 
-func NewManager(maxClients int32, sm *shard.ShardManager) *Manager {
-	return &Manager{
+func NewRegistry(maxClients int32, sm *shard.ShardManager) *Registry {
+	return &Registry{
 		maxClients:   maxClients,
 		ShardManager: sm,
 	}
 }
 
-func (m *Manager) RegisterCommandHandler(cmdHandler *BaseCommandHandler) error {
+func (m *Registry) RegisterCommandHandler(cmdHandler *BaseCommandHandler) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -51,11 +51,11 @@ func (m *Manager) RegisterCommandHandler(cmdHandler *BaseCommandHandler) error {
 	return nil
 }
 
-func (m *Manager) CommandHandlerCount() int32 {
+func (m *Registry) CommandHandlerCount() int32 {
 	return m.numCmdHandlers.Load()
 }
 
-func (m *Manager) UnregisterCommandHandler(id string) error {
+func (m *Registry) UnregisterCommandHandler(id string) error {
 	m.ShardManager.UnregisterCommandHandler(id)
 	if cmdHandler, loaded := m.activeCmdHandlers.LoadAndDelete(id); loaded {
 		ch := cmdHandler.(*BaseCommandHandler)

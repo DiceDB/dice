@@ -213,7 +213,7 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, cmdWatchChan, gec)
 	ioThreadManager := iothread.NewManager(20000)
-	cmdHandlerManager := commandhandler.NewManager(20000, shardManager)
+	cmdHandlerManager := commandhandler.NewRegistry(20000, shardManager)
 
 	// Initialize the RESP Server
 	wl, _ := wal.NewNullWAL()

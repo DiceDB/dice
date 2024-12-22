@@ -63,7 +63,7 @@ type Server struct {
 	serverFD                 int
 	connBacklogSize          int
 	ioThreadManager          *iothread.Manager
-	cmdHandlerManager        *commandhandler.Manager
+	cmdHandlerManager        *commandhandler.Registry
 	shardManager             *shard.ShardManager
 	watchManager             *watchmanager.Manager
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
@@ -71,7 +71,7 @@ type Server struct {
 	wl                       wal.AbstractWAL
 }
 
-func NewServer(shardManager *shard.ShardManager, ioThreadManager *iothread.Manager, cmdHandlerManager *commandhandler.Manager,
+func NewServer(shardManager *shard.ShardManager, ioThreadManager *iothread.Manager, cmdHandlerManager *commandhandler.Registry,
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent,
 	globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
@@ -268,7 +268,7 @@ func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *
 
 func (s *Server) startCommandHandler(ctx context.Context, wg *sync.WaitGroup, cmdHandler *commandhandler.BaseCommandHandler) {
 	wg.Done()
-	defer func(wm *commandhandler.Manager, id string) {
+	defer func(wm *commandhandler.Registry, id string) {
 		err := wm.UnregisterCommandHandler(id)
 		if err != nil {
 			slog.Warn("Failed to unregister command handler", slog.String("id", id), slog.Any("error", err))
