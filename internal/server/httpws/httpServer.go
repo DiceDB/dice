@@ -45,7 +45,7 @@ import (
 
 const (
 	Abort            = "ABORT"
-	stringNil        = "(nil)"
+	Nil              = "(nil)"
 	httpCmdHandlerID = "httpServer"
 )
 
@@ -427,7 +427,7 @@ func ResponseParser(responseValue interface{}) interface{} {
 		r := make([]interface{}, 0, len(v))
 		for _, resp := range v {
 			if val, ok := resp.(clientio.RespType); ok {
-				if stringNil == RespTypeToValue(val) {
+				if Nil == RespTypeToValue(val) {
 					r = append(r, nil)
 				} else {
 					r = append(r, RespTypeToValue(val))
@@ -443,7 +443,7 @@ func ResponseParser(responseValue interface{}) interface{} {
 
 	case clientio.RespType:
 		responseValue = RespTypeToValue(v)
-		if responseValue == stringNil {
+		if responseValue == Nil {
 			responseValue = nil // in order to convert it in json null
 		}
 
@@ -490,7 +490,7 @@ func DecodeEvalResponse(evalResp *eval.EvalResponse) (interface{}, error) {
 func replaceNilInInterface(data interface{}) interface{} {
 	switch v := data.(type) {
 	case string:
-		if v == stringNil {
+		if v == Nil {
 			return nil
 		}
 		return v
