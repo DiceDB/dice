@@ -284,15 +284,17 @@ func (s *Server) startCommandHandler(ctx context.Context, wg *sync.WaitGroup, cm
 }
 
 func GenerateUniqueIOThreadID() string {
-	count := atomic.AddUint64(&ioThreadCounter, 1)
-	timestamp := time.Now().UnixNano()/int64(time.Millisecond) - startTime
-	return fmt.Sprintf("W-%d-%d", timestamp, count)
+	return GenerateUniqueID("I", &ioThreadCounter)
 }
 
 func GenerateUniqueCommandHandlerID() string {
-	count := atomic.AddUint64(&cmdHandlerCounter, 1)
-	timestamp := time.Now().UnixNano()/int64(time.Millisecond) - startTime
-	return fmt.Sprintf("W-%d-%d", timestamp, count)
+	return GenerateUniqueID("C", &cmdHandlerCounter)
+}
+
+func GenerateUniqueID(prefix string, counter *uint64) string {
+	count := atomic.AddUint64(counter, 1)
+	timestamp := time.Now().UnixMilli() - startTime
+	return fmt.Sprintf("%s-%d-%d", prefix, timestamp, count)
 }
 
 func (s *Server) Shutdown() {
