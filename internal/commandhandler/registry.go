@@ -17,9 +17,10 @@ type Registry struct {
 }
 
 var (
-	ErrMaxCmdHandlersReached = errors.New("maximum number of command handlers reached")
-	ErrCmdHandlerNotFound    = errors.New("command handler not found")
-	ErrCmdHandlerNotBase     = errors.New("command handler is not a BaseCommandHandler")
+	ErrMaxCmdHandlersReached     = errors.New("maximum number of command handlers reached")
+	ErrCmdHandlerNotFound        = errors.New("command handler not found")
+	ErrCmdHandlerNotBase         = errors.New("command handler is not a BaseCommandHandler")
+	ErrCmdHandlerResponseChanNil = errors.New("command handler response channel is nil")
 )
 
 func NewRegistry(maxClients uint32, sm *shard.ShardManager) *Registry {
@@ -37,14 +38,11 @@ func (m *Registry) RegisterCommandHandler(cmdHandler *BaseCommandHandler) error 
 		return ErrMaxCmdHandlersReached
 	}
 
-	responseChan := cmdHandler.responseChan
-	preprocessingChan := cmdHandler.preprocessingChan
-
-	if responseChan != nil && preprocessingChan != nil {
-		m.ShardManager.RegisterCommandHandler(cmdHandler.ID(), responseChan, preprocessingChan) // TODO: Change responseChan type to ShardResponse
-	} else if responseChan != nil && preprocessingChan == nil {
-		m.ShardManager.RegisterCommandHandler(cmdHandler.ID(), responseChan, nil)
+	if cmdHandler.responseChan == nil {
+		return ErrCmdHandlerResponseChanNil
 	}
+
+	m.ShardManager.RegisterCommandHandler(cmdHandler.ID(), cmdHandler.responseChan, cmdHandler.preprocessingChan)
 
 	m.activeCmdHandlers.Store(cmdHandler.ID(), cmdHandler)
 
