@@ -37,11 +37,13 @@ type CommandHandler interface {
 
 type BaseCommandHandler struct {
 	CommandHandler
-	id                       string
-	parser                   requestparser.Parser
+	id     string
+	parser requestparser.Parser
+	wl     wal.AbstractWAL
+
 	shardManager             *shard.ShardManager
-	adhocReqChan             chan *cmd.DiceDBCmd
 	Session                  *auth.Session
+	adhocReqChan             chan *cmd.DiceDBCmd
 	globalErrorChan          chan error
 	ioThreadReadChan         chan []byte             // Channel to receive data from io-thread
 	ioThreadWriteChan        chan interface{}        // Channel to send data to io-thread
@@ -49,7 +51,6 @@ type BaseCommandHandler struct {
 	responseChan             chan *ops.StoreResponse // Channel to communicate with shard
 	preprocessingChan        chan *ops.StoreResponse // Channel to communicate with shard
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
-	wl                       wal.AbstractWAL
 }
 
 func NewCommandHandler(id string, responseChan, preprocessingChan chan *ops.StoreResponse,
