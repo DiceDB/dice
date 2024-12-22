@@ -20,15 +20,12 @@ import (
 	"errors"
 	"sync"
 	"sync/atomic"
-
-	"github.com/dicedb/dice/internal/shard"
 )
 
 type Manager struct {
 	connectedClients sync.Map
-	numIOThreads     atomic.Int32
-	maxClients       int32
-	shardManager     *shard.ShardManager
+	numIOThreads     atomic.Uint32
+	maxClients       uint32
 	mu               sync.Mutex
 }
 
@@ -37,10 +34,9 @@ var (
 	ErrIOThreadNotFound  = errors.New("io-thread not found")
 )
 
-func NewManager(maxClients int32, sm *shard.ShardManager) *Manager {
+func NewManager(maxClients uint32) *Manager {
 	return &Manager{
-		maxClients:   maxClients,
-		shardManager: sm,
+		maxClients: maxClients,
 	}
 }
 
@@ -53,20 +49,12 @@ func (m *Manager) RegisterIOThread(ioThread IOThread) error {
 	}
 
 	m.connectedClients.Store(ioThread.ID(), ioThread)
-	responseChan := ioThread.(*BaseIOThread).responseChan
-	preprocessingChan := ioThread.(*BaseIOThread).preprocessingChan
-
-	if responseChan != nil && preprocessingChan != nil {
-		m.shardManager.RegisterIOThread(ioThread.ID(), responseChan, preprocessingChan) // TODO: Change responseChan type to ShardResponse
-	} else if responseChan != nil && preprocessingChan == nil {
-		m.shardManager.RegisterIOThread(ioThread.ID(), responseChan, nil)
-	}
 
 	m.numIOThreads.Add(1)
 	return nil
 }
 
-func (m *Manager) IOThreadCount() int32 {
+func (m *Manager) IOThreadCount() uint32 {
 	return m.numIOThreads.Load()
 }
 
@@ -88,8 +76,6 @@ func (m *Manager) UnregisterIOThread(id string) error {
 		return ErrIOThreadNotFound
 	}
 
-	m.shardManager.UnregisterIOThread(id)
-	m.numIOThreads.Add(-1)
-
+	m.numIOThreads.Add(^uint32(0))
 	return nil
 }
