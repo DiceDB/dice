@@ -1136,8 +1136,6 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 		result = sortedSet.GetRangeByScore(start, stop, withScores, reverse, offset, count)
-	} else if byLex {
-		// TODO: PLACEHOLDER FOR BYLEX IMPLEMENTATION
 	} else {
 		start, err := strconv.ParseInt(startStr, 10, 64)
 		if err != nil {
