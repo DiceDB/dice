@@ -232,19 +232,20 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			// Register the io-thread with the manager
 			err = s.ioThreadManager.RegisterIOThread(thread)
 			if err != nil {
-				return err
+				slog.Debug("Failed to register io-thread", slog.String("id", ioThreadID), slog.Any("error", err))
+				continue
 			}
-
-			wg.Add(1)
-			go s.startIOThread(ctx, wg, thread)
 
 			// Register the command handler with the manager
 			err = s.cmdHandlerManager.RegisterCommandHandler(handler)
 			if err != nil {
-				return err
+				slog.Debug("Failed to register command handler", slog.String("id", cmdHandlerID), slog.Any("error", err))
+				continue
 			}
 
-			wg.Add(1)
+			// Registration for both IO thread and command handler is done to ensure there is no error before starting the goroutines
+			wg.Add(2)
+			go s.startIOThread(ctx, wg, thread)
 			go s.startCommandHandler(ctx, wg, handler)
 		}
 	}
