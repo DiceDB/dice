@@ -180,6 +180,7 @@ const (
 	CmdCommandDocs         = "COMMAND|DOCS"
 	CmdCommandGetKeys      = "COMMAND|GETKEYS"
 	CmdCommandGetKeysFlags = "COMMAND|GETKEYSANDFLAGS"
+	CmdJSONArrIndex        = "JSON.ARRINDEX"
 )
 
 // Multi-shard commands.
@@ -572,6 +573,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdCommandGetKeysFlags: {
+		CmdType: SingleShard,
+	},
+	CmdJSONArrIndex: {
 		CmdType: SingleShard,
 	},
 

@@ -66,10 +66,6 @@ func runIntegrationTests(t *testing.T, exec *HTTPCommandExecutor, testCases []In
 				out := tc.expected[i]
 				result, _ := exec.FireCommand(cmd)
 
-				fmt.Println(cmd, result, out)
-				fmt.Printf("Type of value: %T\n", result) // Replace `value` with your actual variable
-				fmt.Printf("Type of value: %T\n", out)    // Replace `value` with your actual variable
-
 				switch tc.assertType[i] {
 				case "equal":
 					assert.Equal(t, out, result)
@@ -81,6 +77,8 @@ func runIntegrationTests(t *testing.T, exec *HTTPCommandExecutor, testCases []In
 					// fmt.Println("hi expected : ", out)
 					// fmt.Println("hi actual :", result)
 					assert.JSONEq(t, out.(string), result.(string))
+				case "deep_equal":
+					assert.ElementsMatch(t, result.([]interface{}), out.([]interface{}))
 				}
 			}
 		})
@@ -1788,4 +1786,178 @@ func TestJsonARRTRIM(t *testing.T) {
 	// Clean up the keys
 	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "a"}})
 	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "b"}})
+}
+
+func TestJSONARRINDEX(t *testing.T) {
+	exec := NewHTTPCommandExecutor()
+
+	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "key"}})
+	defer exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "key"}})
+
+	normalArray  := `[0,1,2,3,4,3]`
+	nestedArray  := `{"arrays":[{"arr":[1,2,3]},{"arr":[2,3,4]},{"arr":[1]}]}`
+	nestedArray2 := `{"a":[3],"nested":{"a":{"b":2,"c":1}}}`
+
+	testCases := []IntegrationTestCase{
+		{
+			name:     "should return array index when given element is present",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(normalArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$", "value": 3}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(3)}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return -1 when given element is not present",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(normalArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$", "value": 10}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(-1)}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return array index with start optional param provided",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(normalArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$", "values": []string{"3", "4"}}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(5)}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return array index with start and stop optional param provided",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(normalArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$", "values": []string{"4", "4", "5"}}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(4)}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return -1 with start and stop optional param provided where start > stop",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(normalArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$", "values": []string{"3", "2", "1"}}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(-1)}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return -1 with start (out of boud) and stop (out of bound) optional param provided",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(normalArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$", "values": []string{"3", "6", "10"}}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(-1)}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return list of array indexes for nested json",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(nestedArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$.arrays.*.arr", "value": 3}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(2), float64(1), float64(-1)}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return list of array indexes for multiple json path",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(nestedArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$..arr", "value": 3}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(2), float64(1), float64(-1)}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return array of length 1 for nested json path, with index",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(nestedArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$.arrays[1].arr", "value": 3}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(1)}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return empty array for nonexistent path in nested json",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(nestedArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$..arr1", "value": 3}},
+			},
+			expected: []interface{}{"OK", []interface{}{}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return -1 for each nonexisting value in nested json",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(nestedArray)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$..arr", "value": 5}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(-1), float64(-1), float64(-1)}},
+			assertType: []string{"equal", "equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return nil for non-array path and -1 for array path if value DNE",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(nestedArray2)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$..a", "value": 2}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(-1), nil}},
+			assertType: []string{"equal", "deep_equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+		{
+			name:     "should return nil for non-array path if value DNE and valid index for array path if value exists",
+			commands: []HTTPCommand{
+				{Command: "JSON.SET", Body: map[string]interface{}{"key": "key", "path": "$", "json": json.RawMessage(nestedArray2)}},
+				{Command: "JSON.ARRINDEX", Body: map[string]interface{}{"key": "key", "path": "$..a", "value": 3}},
+			},
+			expected: []interface{}{"OK", []interface{}{float64(0), nil}},
+			assertType: []string{"equal", "deep_equal"},
+			cleanUp: []HTTPCommand{
+				{Command: "DEL", Body: map[string]interface{}{"key": "key"}},
+			},
+		},
+	}
+
+	preTestChecksCommand := HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "key"}}
+	postTestChecksCommand := HTTPCommand{Command: "DEL", Body: map[string]interface{}{"key": "key"}}
+	runIntegrationTests(t, exec, testCases, preTestChecksCommand, postTestChecksCommand)
 }

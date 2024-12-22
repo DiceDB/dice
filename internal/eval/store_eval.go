@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/bits"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -6877,6 +6878,141 @@ func evalCommandDocs(args []string) *EvalResponse {
 	}
 
 	return makeEvalResult(result)
+}
+
+func evalJSONARRINDEX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 || len(args) > 5 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("JSON.ARRINDEX"))
+	}
+
+	key := args[0]
+	path := args[1]
+	start := 0
+	stop := 0
+
+	var value interface{}
+	var err error
+
+	if strings.Contains(args[2], `"`) {
+		// user has provided string argument
+		value = args[2]
+	} else {
+		// parse it to float since default arg type would be string
+		value, err = strconv.ParseFloat(args[2], 64)
+
+		if err != nil {
+			return makeEvalError(diceerrors.ErrGeneral("Couldn't parse as integer"))
+		}
+	}
+
+	// Convert start to integer if provided
+	if len(args) >= 4 {
+		var err error
+		start, err = strconv.Atoi(args[3])
+		if err != nil {
+			return makeEvalError(diceerrors.ErrGeneral("Couldn't parse as integer"))
+		}
+	}
+
+	// Convert stop to integer if provided
+	if len(args) == 5 {
+		var err error
+		stop, err = strconv.Atoi(args[4])
+		if err != nil {
+			return makeEvalError(diceerrors.ErrGeneral("Couldn't parse as integer"))
+		}
+	}
+
+	// Check if the path specified is valid
+	expr, err2 := jp.ParseString(path)
+	if err2 != nil {
+		return makeEvalError(diceerrors.ErrJSONPathNotFound(path))
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
+	}
+
+	if err2 := object.AssertType(obj.Type, object.ObjTypeJSON); err2 != nil {
+		return makeEvalError(diceerrors.ErrGeneral("Existing key has wrong Dice type"))
+	}
+
+	jsonData := obj.Value
+
+	// Check if the value stored is JSON type
+	_, err = sonic.Marshal(jsonData)
+
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("Existing key has wrong Dice type"))
+	}
+
+	results := expr.Get(jsonData)
+	arrIndexList := make([]interface{}, 0, len(results))
+
+	for _, result := range results {
+		switch utils.GetJSONFieldType(result) {
+		case utils.ArrayType:
+			elementFound := false
+			arr := result.([]interface{})
+			length := len(arr)
+
+			adjustedStart, adjustedStop := adjustIndices(start, stop, length)
+
+			if adjustedStart == -1 { 
+				arrIndexList = append(arrIndexList, -1) 
+				continue 
+			}
+
+			// Range [start, stop) : start is inclusive, stop is exclusive
+			for i := adjustedStart; i < adjustedStop; i++ {
+				if reflect.DeepEqual(arr[i], value) {
+					arrIndexList = append(arrIndexList, i)
+					elementFound = true
+					break
+				}
+			}
+
+			if !elementFound {
+				arrIndexList = append(arrIndexList, -1)
+			}
+		default:
+			arrIndexList = append(arrIndexList, nil)
+		}
+	}
+
+	return makeEvalResult(arrIndexList)
+}
+
+// adjustIndices adjusts the start and stop indices for array traversal. 
+// It handles negative indices and ensures they are within the array bounds. 
+func adjustIndices(start, stop, length int) (adjustedStart, adjustedStop int) { 
+	if length == 0 {
+		return -1, -1 
+	}
+	if start < 0 {
+		start += length 
+	}
+
+	if stop <= 0  {
+		stop += length 
+	}
+	if start < 0 {
+		start = 0
+	}
+	if stop < 0 {
+		stop = 0
+	}
+	if start >= length {
+		return -1, -1
+	}
+	if stop > length {
+		stop = length
+	}
+	if start > stop {
+		return -1, -1
+	}
+	return start, stop
 }
 
 // This method executes each operation, contained in ops array, based on commands used.
