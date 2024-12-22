@@ -976,15 +976,93 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	startStr := args[1]
 	stopStr := args[2]
 
+	if !strings.HasPrefix(startStr, "(") && !strings.HasPrefix(startStr, "[") &&
+		startStr != "-" && startStr != "+" && startStr != "-inf" && startStr != "+inf" {
+		if len(startStr) > 1 && startStr[0] == '0' {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+	}
+	if !strings.HasPrefix(stopStr, "(") && !strings.HasPrefix(stopStr, "[") &&
+		stopStr != "-" && stopStr != "+" && stopStr != "-inf" && stopStr != "+inf" {
+		if len(stopStr) > 1 && stopStr[0] == '0' {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+	}
+
 	withScores := false
 	reverse := false
+	byScore := false
+	byLex := false
+	limit := false
+	offset := 0
+	count := -1
+
 	for i := 3; i < len(args); i++ {
 		arg := strings.ToUpper(args[i])
-		if arg == WithScores {
+		switch arg {
+		case WithScores:
 			withScores = true
-		} else if arg == REV {
+		case REV:
 			reverse = true
-		} else {
+		case BYSCORE:
+			if byLex {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.NewErr("ERR syntax error, BYSCORE and BYLEX cannot be used together"),
+				}
+			}
+			byScore = true
+		case BYLEX:
+			if byScore {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.NewErr("ERR syntax error, BYSCORE and BYLEX cannot be used together"),
+				}
+			}
+			byLex = true
+		case LIMIT:
+			if !byScore && !byLex {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.NewErr("ERR syntax error, LIMIT is only supported in combination with either BYSCORE or BYLEX"),
+				}
+			}
+			if i+2 >= len(args) {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrSyntax,
+				}
+			}
+			limit = true
+			var err error
+			offset, err = strconv.Atoi(args[i+1])
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidNumberFormat,
+				}
+			}
+			count, err = strconv.Atoi(args[i+2])
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidNumberFormat,
+				}
+			}
+			if offset < 0 {
+				return &EvalResponse{
+					Result: []string{},
+					Error:  nil,
+				}
+			}
+			i += 2
+		default:
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrSyntax,
@@ -992,19 +1070,37 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	start, err := strconv.Atoi(startStr)
-	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrInvalidNumberFormat,
+	if !byLex {
+		var validStartStr, validStopStr string
+		if startStr[0] == '(' {
+			validStartStr = startStr[1:]
+		} else {
+			validStartStr = startStr
 		}
-	}
+		if stopStr[0] == '(' {
+			validStopStr = stopStr[1:]
+		} else {
+			validStopStr = stopStr
+		}
 
-	stop, err := strconv.Atoi(stopStr)
-	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrInvalidNumberFormat,
+		if validStartStr != "+inf" && validStartStr != "-inf" {
+			_, err := strconv.ParseInt(validStartStr, 10, 64)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
+			}
+		}
+
+		if validStopStr != "+inf" && validStopStr != "-inf" {
+			_, err := strconv.ParseInt(validStopStr, 10, 64)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrIntegerOutOfRange,
+				}
+			}
 		}
 	}
 
@@ -1017,7 +1113,6 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	sortedSet, errMsg := sortedset.FromObject(obj)
-
 	if errMsg != nil {
 		return &EvalResponse{
 			Result: nil,
@@ -1025,12 +1120,97 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	result := sortedSet.GetRange(start, stop, withScores, reverse)
+	var result []string
+
+	if byScore {
+		if reverse {
+			startStr, stopStr = stopStr, startStr
+		}
+		start, stop, err := parseScoreRange(startStr, stopStr)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.NewErr(err.Error()),
+			}
+		}
+		result = sortedSet.GetRangeByScore(start, stop, withScores, reverse, offset, count)
+	} else if byLex {
+		// TODO: PLACEHOLDER FOR BYLEX IMPLEMENTATION
+	} else {
+		start, err := strconv.ParseInt(startStr, 10, 64)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+
+		stop, err := strconv.ParseInt(stopStr, 10, 64)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrIntegerOutOfRange,
+			}
+		}
+
+		result = sortedSet.GetRange(int(start), int(stop), withScores, reverse)
+	}
+
+	if limit && !byScore && !byLex {
+		if offset >= len(result) || offset < 0 {
+			result = []string{}
+		} else {
+			end := offset + count
+			if end > len(result) || count < 0 {
+				end = len(result)
+			}
+			result = result[offset:end]
+		}
+	}
 
 	return &EvalResponse{
 		Result: result,
 		Error:  nil,
 	}
+}
+
+func parseScoreRange(min, max string) (float64, float64, error) {
+	minScore := math.Inf(-1)
+	maxScore := math.Inf(1)
+
+	if min != "-inf" {
+		var err error
+		if min[0] == '(' {
+			minScore, err = strconv.ParseFloat(min[1:], 64)
+			if err != nil {
+				return 0, 0, fmt.Errorf("ERR min or max is not a float")
+			}
+			minScore = math.Nextafter(minScore, math.Inf(1))
+		} else {
+			minScore, err = strconv.ParseFloat(min, 64)
+			if err != nil {
+				return 0, 0, fmt.Errorf("ERR min or max is not a float")
+			}
+		}
+	}
+
+	if max != "+inf" {
+		var err error
+		if max[0] == '(' {
+			maxScore, err = strconv.ParseFloat(max[1:], 64)
+			if err != nil {
+				return 0, 0, fmt.Errorf("ERR min or max is not a float")
+			}
+			maxScore = math.Nextafter(maxScore, math.Inf(-1))
+		} else {
+			maxScore, err = strconv.ParseFloat(max, 64)
+			if err != nil {
+				return 0, 0, fmt.Errorf("ERR min or max is not a float")
+			}
+		}
+	}
+
+	return minScore, maxScore, nil
 }
 
 // evalZREM removes the specified members from the sorted set stored at key.
@@ -6959,9 +7139,9 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) *EvalResponse {
 
 			adjustedStart, adjustedStop := adjustIndices(start, stop, length)
 
-			if adjustedStart == -1 { 
-				arrIndexList = append(arrIndexList, -1) 
-				continue 
+			if adjustedStart == -1 {
+				arrIndexList = append(arrIndexList, -1)
+				continue
 			}
 
 			// Range [start, stop) : start is inclusive, stop is exclusive
@@ -6984,18 +7164,18 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) *EvalResponse {
 	return makeEvalResult(arrIndexList)
 }
 
-// adjustIndices adjusts the start and stop indices for array traversal. 
-// It handles negative indices and ensures they are within the array bounds. 
-func adjustIndices(start, stop, length int) (adjustedStart, adjustedStop int) { 
+// adjustIndices adjusts the start and stop indices for array traversal.
+// It handles negative indices and ensures they are within the array bounds.
+func adjustIndices(start, stop, length int) (adjustedStart, adjustedStop int) {
 	if length == 0 {
-		return -1, -1 
+		return -1, -1
 	}
 	if start < 0 {
-		start += length 
+		start += length
 	}
 
-	if stop <= 0  {
-		stop += length 
+	if stop <= 0 {
+		stop += length
 	}
 	if start < 0 {
 		start = 0

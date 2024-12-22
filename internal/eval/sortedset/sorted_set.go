@@ -325,3 +325,52 @@ func DeserializeSortedSet(buf *bytes.Reader) (*Set, error) {
 
 	return ss, nil
 }
+
+// GetRangeByScore returns a slice of members with scores between min and max, inclusive.
+func (ss *Set) GetRangeByScore(min, max float64, withScores bool, reverse bool, offset, count int) []string {
+	var result []string
+	index := 0
+	returned := 0
+
+	iterFunc := func(item btree.Item) bool {
+		ssi := item.(*Item)
+
+		if reverse {
+			if ssi.Score > max {
+				return true
+			}
+			if ssi.Score < min {
+				return false
+			}
+		} else {
+			if ssi.Score < min {
+				return true
+			}
+			if ssi.Score > max {
+				return false
+			}
+		}
+
+		if index >= offset {
+			result = append(result, ssi.Member)
+			if withScores {
+				scoreStr := strings.ToLower(strconv.FormatFloat(ssi.Score, 'g', -1, 64))
+				result = append(result, scoreStr)
+			}
+			returned++
+			if count > 0 && returned >= count {
+				return false
+			}
+		}
+		index++
+		return true
+	}
+
+	if reverse {
+		ss.tree.Descend(iterFunc)
+	} else {
+		ss.tree.Ascend(iterFunc)
+	}
+
+	return result
+}
