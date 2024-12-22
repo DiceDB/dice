@@ -5139,6 +5139,51 @@ func evalLINSERT(args []string, store *dstore.Store) *EvalResponse {
 	return makeEvalResult(res)
 }
 
+func evalLINDEX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) != 2 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("LINDEX"))
+	}
+
+	key := args[0]
+	index, err := strconv.ParseInt(args[1], 10, 64)
+
+	if err != nil {
+		return makeEvalError(errors.New("-ERR value is not an integer or out of range"))
+	}
+
+	obj := store.Get(key)
+
+	if obj == nil {
+		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
+	}
+
+	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeByteList); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingDeque); err != nil {
+		return makeEvalError(diceerrors.ErrWrongTypeOperation)
+	}
+
+	deq := obj.Value.(*Deque)
+
+	if index < 0 {
+		index = deq.Length - (-1 * index)
+	}
+
+	var itr = deq.NewIterator()
+	var i int64 = 0
+	for ; i < index; i++ {
+		itr.Next()
+	}
+
+	value, _ := itr.Value()
+	return &EvalResponse{
+		Result: value,
+		Error:  nil,
+	}
+}
+
 // SETBIT key offset value
 func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
 	var err error

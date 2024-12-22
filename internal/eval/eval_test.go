@@ -97,6 +97,7 @@ func TestEval(t *testing.T) {
 	testEvalRPOP(t, store)
 	testEvalLLEN(t, store)
 	testEvalLINSERT(t, store)
+	testEvalLINDEX(t, store)
 	testEvalLRANGE(t, store)
 	testEvalGETDEL(t, store)
 	testEvalGETEX(t, store)
@@ -9231,6 +9232,47 @@ func testEvalLINSERT(t *testing.T, store *dstore.Store) {
 		},
 	}
 	runMigratedEvalTests(t, tests, evalLINSERT, store)
+}
+
+func testEvalLINDEX(t *testing.T, store *dstore.Store) {
+	tests := map[string]evalTestCase{
+		"nil value": {
+			input:          nil,
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("LINDEX")},
+		},
+		"empty args": {
+			input:          []string{},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("LINDEX")},
+		},
+		"wrong number of args": {
+			input:          []string{"KEY1"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("LINDEX")},
+		},
+		"key does not exist": {
+			input:          []string{"NONEXISTENT_KEY", "1"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrKeyDoesNotExist},
+		},
+		"key exists : positive index": {
+			setup: func() {
+				evalRPUSH([]string{"EXISTING_KEY", "mock_value1"}, store)
+				evalRPUSH([]string{"EXISTING_KEY", "mock_value2"}, store)
+				evalRPUSH([]string{"EXISTING_KEY", "mock_value3"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "1"},
+			migratedOutput: EvalResponse{Result: "mock_value2", Error: nil},
+		},
+		"key exists : negative index": {
+			setup: func() {
+				evalRPUSH([]string{"EXISTING_KEY", "mock_value1"}, store)
+				evalRPUSH([]string{"EXISTING_KEY", "mock_value2"}, store)
+				evalRPUSH([]string{"EXISTING_KEY", "mock_value3"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "-1"},
+			migratedOutput: EvalResponse{Result: "mock_value3", Error: nil},
+		},
+	}
+
+	runMigratedEvalTests(t, tests, evalLINDEX, store)
 }
 
 func testEvalLRANGE(t *testing.T, store *dstore.Store) {

@@ -599,3 +599,79 @@ func TestLPOPCount(t *testing.T) {
 
 	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
 }
+
+func TestLIndex(t *testing.T) {
+	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
+
+	testcases := []struct {
+		name    string
+		cmds    []HTTPCommand
+		expects []any
+	}{
+		{
+			name: "LINDEX for string values",
+			cmds: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v1"}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v2"}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v3"}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v4"}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": 0}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": 2}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": 3}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": -1}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": -4}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": -3}},
+			},
+			expects: []interface{}{
+				float64(1),
+				float64(2),
+				float64(3),
+				float64(4),
+				"v1",
+				"v3",
+				"v4",
+				"v4",
+				"v1",
+				"v2",
+			},
+		},
+		{
+			name: "LINDEX for int values",
+			cmds: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": 1}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": 2}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": 3}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": 4}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": 0}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": 2}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": 3}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": -1}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": -4}},
+				{Command: "LINDEX", Body: map[string]interface{}{"key": "k", "value": -3}},
+			},
+			expects: []interface{}{
+				float64(1),
+				float64(2),
+				float64(3),
+				float64(4),
+				1,
+				3,
+				4,
+				4,
+				1,
+				2,
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": []interface{}{"k"}}})
+			for i, cmd := range tc.cmds {
+				result, _ := exec.FireCommand(cmd)
+				assert.Equal(t, tc.expects[i], result, "Value mismatch for cmd %v", cmd)
+			}
+		})
+	}
+}

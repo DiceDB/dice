@@ -592,6 +592,15 @@ func (i *DequeIterator) Next() (string, error) {
 	return x, nil
 }
 
+func (i *DequeIterator) Value() (string, error) {
+	if i.ElementsTraversed == i.deque.Length {
+		return "", fmt.Errorf("iterator exhausted")
+	}
+
+	x, _ := DecodeDeqEntry(i.CurrentNode.buf[i.BufIndex:])
+	return x, nil
+}
+
 // *************************** deque entry encode/decode ***************************
 
 // EncodeDeqEntry encodes `x` into an entry of Deque. An entry will be encoded as [enc + data + backlen].
