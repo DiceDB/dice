@@ -189,7 +189,7 @@ func (h *BaseCommandHandler) executeCommand(ctx context.Context, diceDBCmd *cmd.
 				// Check if it's a CustomError
 				var customErr *diceerrors.PreProcessError
 				if errors.As(err, &customErr) {
-					return nil, fmt.Errorf("%v", customErr.Result)
+					return nil, err
 				}
 				return nil, err
 			}
@@ -490,6 +490,10 @@ func (h *BaseCommandHandler) handleError(err error) error {
 
 func (h *BaseCommandHandler) sendResponseToIOThread(resp interface{}, err error) {
 	if err != nil {
+		var customErr *diceerrors.PreProcessError
+		if errors.As(err, &customErr) {
+			h.ioThreadWriteChan <- customErr.Result
+		}
 		h.ioThreadWriteChan <- err
 		return
 	}
