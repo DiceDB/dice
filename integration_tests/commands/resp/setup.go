@@ -212,8 +212,8 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, cmdWatchChan, gec)
-	ioThreadManager := iothread.NewManager(20000)
-	cmdHandlerManager := commandhandler.NewRegistry(20000, shardManager)
+	ioThreadManager := iothread.NewManager(config.DiceConfig.Performance.MaxClients)
+	cmdHandlerManager := commandhandler.NewRegistry(config.DiceConfig.Performance.MaxClients, shardManager)
 
 	// Initialize the RESP Server
 	wl, _ := wal.NewNullWAL()
