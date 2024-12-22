@@ -19,6 +19,7 @@ type Registry struct {
 var (
 	ErrMaxCmdHandlersReached = errors.New("maximum number of command handlers reached")
 	ErrCmdHandlerNotFound    = errors.New("command handler not found")
+	ErrCmdHandlerNotBase     = errors.New("command handler is not a BaseCommandHandler")
 )
 
 func NewRegistry(maxClients int32, sm *shard.ShardManager) *Registry {
@@ -58,7 +59,10 @@ func (m *Registry) CommandHandlerCount() int32 {
 func (m *Registry) UnregisterCommandHandler(id string) error {
 	m.ShardManager.UnregisterCommandHandler(id)
 	if cmdHandler, loaded := m.activeCmdHandlers.LoadAndDelete(id); loaded {
-		ch := cmdHandler.(*BaseCommandHandler)
+		ch, ok := cmdHandler.(*BaseCommandHandler)
+		if !ok {
+			return ErrCmdHandlerNotBase
+		}
 		if err := ch.Stop(); err != nil {
 			return err
 		}
