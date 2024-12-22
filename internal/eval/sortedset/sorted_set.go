@@ -327,7 +327,7 @@ func DeserializeSortedSet(buf *bytes.Reader) (*Set, error) {
 }
 
 // GetRangeByScore returns a slice of members with scores between min and max, inclusive.
-func (ss *Set) GetRangeByScore(min, max float64, withScores bool, reverse bool, offset, count int) []string {
+func (ss *Set) GetRangeByScore(min, max float64, withScores, reverse bool, offset, count int) []string {
 	var result []string
 	index := 0
 	returned := 0

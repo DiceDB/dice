@@ -1137,7 +1137,7 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 		}
 		result = sortedSet.GetRangeByScore(start, stop, withScores, reverse, offset, count)
 	} else {
-		start, err := strconv.ParseInt(startStr, 10, 64)
+		start, err := strconv.Atoi(startStr)
 		if err != nil {
 			return &EvalResponse{
 				Result: nil,
@@ -1145,7 +1145,7 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 
-		stop, err := strconv.ParseInt(stopStr, 10, 64)
+		stop, err := strconv.Atoi(stopStr)
 		if err != nil {
 			return &EvalResponse{
 				Result: nil,
@@ -1153,7 +1153,7 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 			}
 		}
 
-		result = sortedSet.GetRange(int(start), int(stop), withScores, reverse)
+		result = sortedSet.GetRange(start, stop, withScores, reverse)
 	}
 
 	if limit && !byScore && !byLex {
@@ -1174,36 +1174,34 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	}
 }
 
-func parseScoreRange(min, max string) (float64, float64, error) {
-	minScore := math.Inf(-1)
-	maxScore := math.Inf(1)
+func parseScoreRange(minStr, maxStr string) (minScore, maxScore float64, err error) {
+	minScore = math.Inf(-1)
+	maxScore = math.Inf(1)
 
-	if min != MINUSINF {
-		var err error
-		if min[0] == '(' {
-			minScore, err = strconv.ParseFloat(min[1:], 64)
+	if minStr != MINUSINF {
+		if minStr[0] == '(' {
+			minScore, err = strconv.ParseFloat(minStr[1:], 64)
 			if err != nil {
 				return 0, 0, fmt.Errorf("ERR min or max is not a float")
 			}
 			minScore = math.Nextafter(minScore, math.Inf(1))
 		} else {
-			minScore, err = strconv.ParseFloat(min, 64)
+			minScore, err = strconv.ParseFloat(minStr, 64)
 			if err != nil {
 				return 0, 0, fmt.Errorf("ERR min or max is not a float")
 			}
 		}
 	}
 
-	if max != PLUSINF {
-		var err error
-		if max[0] == '(' {
-			maxScore, err = strconv.ParseFloat(max[1:], 64)
+	if maxStr != PLUSINF {
+		if maxStr[0] == '(' {
+			maxScore, err = strconv.ParseFloat(maxStr[1:], 64)
 			if err != nil {
 				return 0, 0, fmt.Errorf("ERR min or max is not a float")
 			}
 			maxScore = math.Nextafter(maxScore, math.Inf(-1))
 		} else {
-			maxScore, err = strconv.ParseFloat(max, 64)
+			maxScore, err = strconv.ParseFloat(maxStr, 64)
 			if err != nil {
 				return 0, 0, fmt.Errorf("ERR min or max is not a float")
 			}
