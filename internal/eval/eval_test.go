@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/dicedb/dice/internal/cmd"
 	"math"
 	"reflect"
 	"strconv"
@@ -49,6 +50,14 @@ type evalTestCase struct {
 	validator      func(output []byte)
 	newValidator   func(output interface{})
 	migratedOutput EvalResponse
+}
+
+type evalMultiShardTestCase struct {
+	name      string
+	setup     func()
+	input     *cmd.DiceDBCmd
+	validator func(output interface{})
+	output    EvalResponse
 }
 
 func setupTest(store *dstore.Store) *dstore.Store {
@@ -101,7 +110,6 @@ func TestEval(t *testing.T) {
 	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
 	testEvalHSCAN(t, store)
-	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
 	testEvalJSONOBJLEN(t, store)
 	testEvalHLEN(t, store)
@@ -3012,12 +3020,14 @@ func testEvalPFCOUNT(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
+	tests := map[string]evalMultiShardTestCase{
 		"PFMERGE nil value": {
 			name:  "PFMERGE nil value",
 			setup: func() {},
-			input: nil,
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd: "PFMERGE",
+			},
+			output: EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
 			},
@@ -3025,8 +3035,11 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 		"PFMERGE empty array": {
 			name:  "PFMERGE empty array",
 			setup: func() {},
-			input: []string{},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{},
+			},
+			output: EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
 			},
@@ -3042,8 +3055,11 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input: []string{"INVALID_OBJ_DEST_KEY"},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"INVALID_OBJ_DEST_KEY"},
+			},
+			output: EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrInvalidHyperLogLogKey,
 			},
@@ -3051,17 +3067,32 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 		"PFMERGE destKey doesn't exist": {
 			name:  "PFMERGE destKey doesn't exist",
 			setup: func() {},
-			input: []string{"NON_EXISTING_DEST_KEY"},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"NON_EXISTING_DEST_KEY"},
+			},
+			output: EvalResponse{
 				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
 		"PFMERGE destKey exist": {
-			name:  "PFMERGE destKey exist",
-			setup: func() {},
-			input: []string{"NON_EXISTING_DEST_KEY"},
-			migratedOutput: EvalResponse{
+			name: "PFMERGE destKey exist",
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"EXISTING_DEST_KEY"},
+			},
+			output: EvalResponse{
 				Result: clientio.OK,
 				Error:  nil,
 			},
@@ -3078,8 +3109,11 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
+			},
+			output: EvalResponse{
 				Result: clientio.OK,
 				Error:  nil,
 			},
@@ -3096,8 +3130,19 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY"},
+				InternalObjs: []*object.InternalObj{
+					{
+						Obj: &object.Obj{
+							Value: hyperloglog.New(),
+							Type:  object.ObjTypeHLL,
+						},
+					},
+				},
+			},
+			output: EvalResponse{
 				Result: clientio.OK,
 				Error:  nil,
 			},
@@ -3113,7 +3158,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-				srcKey := "EXISTING_SRC_KEY"
+				srcKey := "EXISTING_SRC_KEY1"
 				srcValue := hyperloglog.New()
 				value.Insert([]byte("SRC_VALUE"))
 				srcKeyObj := &object.Obj{
@@ -3121,16 +3166,41 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(srcKey, srcKeyObj)
+				srcKey2 := "EXISTING_SRC_KEY2"
+				srcValue2 := hyperloglog.New()
+				value.Insert([]byte("SRC_VALUE"))
+				srcKeyObj2 := &object.Obj{
+					Value:          srcValue2,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(srcKey2, srcKeyObj2)
 			},
-			input: []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY"},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY1", "EXISTING_SRC_KEY2"},
+				InternalObjs: []*object.InternalObj{
+					{
+						Obj: &object.Obj{
+							Value: hyperloglog.New(),
+							Type:  object.ObjTypeHLL,
+						},
+					},
+					{
+						Obj: &object.Obj{
+							Value: hyperloglog.New(),
+							Type:  object.ObjTypeHLL,
+						},
+					},
+				},
+			},
+			output: EvalResponse{
 				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
 	}
 
-	runMigratedEvalTests(t, tests, evalPFMERGE, store)
+	runEvalTestsMultiShard(t, tests, evalPFMERGE, store)
 }
 
 func testEvalHGET(t *testing.T, store *dstore.Store) {
@@ -4348,6 +4418,26 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			}
 
 			assert.NoError(t, output.Error)
+		})
+	}
+}
+
+func runEvalTestsMultiShard(t *testing.T, tests map[string]evalMultiShardTestCase, evalFunc func(*cmd.DiceDBCmd, *dstore.Store) *EvalResponse, store *dstore.Store) {
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			store = setupTest(store)
+			if tc.setup != nil {
+				tc.setup()
+			}
+
+			output := evalFunc(tc.input, store)
+			if tc.output.Error != nil {
+				assert.Equal(t, tc.output.Error, output.Error)
+			}
+
+			if tc.output.Result != nil {
+				assert.Equal(t, tc.output.Result, output.Result)
+			}
 		})
 	}
 }

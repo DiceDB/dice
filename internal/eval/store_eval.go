@@ -401,6 +401,20 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 
+	case object.ObjTypeHLL:
+		// Value is stored as a hyperloglog, use type assertion
+		if val, ok := obj.Value.(*hyperloglog.Sketch); ok {
+			return &EvalResponse{
+				Result: val,
+				Error:  nil,
+			}
+		}
+
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+
 	default:
 		return &EvalResponse{
 			Result: nil,
@@ -1705,7 +1719,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 			hll.Insert([]byte(arg))
 		}
 
-		obj = store.NewObj(hll, -1, object.ObjTypeString)
+		obj = store.NewObj(hll, -1, object.ObjTypeHLL)
 
 		store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 		return &EvalResponse{
@@ -1726,7 +1740,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 		existingHll.Insert([]byte(arg))
 	}
 
-	obj = store.NewObj(existingHll, -1, object.ObjTypeString)
+	obj = store.NewObj(existingHll, -1, object.ObjTypeHLL)
 	store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 
 	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
@@ -1993,63 +2007,6 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: objectLen,
-		Error:  nil,
-	}
-}
-
-func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
-		}
-	}
-
-	var mergedHll *hyperloglog.Sketch
-	destKey := args[0]
-	obj := store.Get(destKey)
-
-	// If destKey doesn't exist, create a new HLL, else fetch the existing
-	if obj == nil {
-		mergedHll = hyperloglog.New()
-	} else {
-		var ok bool
-		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
-		if !ok {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrInvalidHyperLogLogKey,
-			}
-		}
-	}
-
-	for _, arg := range args {
-		obj := store.Get(arg)
-		if obj != nil {
-			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
-			if !ok {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrInvalidHyperLogLogKey,
-				}
-			}
-
-			err := mergedHll.Merge(currKeyHll)
-			if err != nil {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrCorruptedHyperLogLogObject,
-				}
-			}
-		}
-	}
-
-	// Save the mergedHll
-	obj = store.NewObj(mergedHll, -1, object.ObjTypeString)
-	store.Put(destKey, obj, dstore.WithPutCmd(dstore.PFMERGE))
-
-	return &EvalResponse{
-		Result: clientio.OK,
 		Error:  nil,
 	}
 }
@@ -5919,7 +5876,14 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 
 	store.Del(key)
 
-	copyObj := cd.InternalObj.Obj.DeepCopy()
+	if len(cd.InternalObjs) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("ERR dest key not present"),
+		}
+	}
+
+	copyObj := cd.InternalObjs[0].Obj.DeepCopy()
 	if copyObj == nil {
 		return &EvalResponse{
 			Result: clientio.IntegerZero,
@@ -5927,7 +5891,7 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	exDurationMs := cd.InternalObj.ExDuration
+	exDurationMs := cd.InternalObjs[0].ExDuration
 
 	store.Put(key, copyObj)
 
@@ -5937,6 +5901,62 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: clientio.IntegerOne,
+		Error:  nil,
+	}
+}
+
+func evalPFMERGE(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	if len(cd.Args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
+		}
+	}
+
+	var mergedHll *hyperloglog.Sketch
+	destKey := cd.Args[0]
+	obj := store.Get(destKey)
+
+	// If destKey doesn't exist, create a new HLL, else fetch the existing
+	if obj == nil {
+		mergedHll = hyperloglog.New()
+	} else {
+		var ok bool
+		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
+		if !ok {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidHyperLogLogKey,
+			}
+		}
+	}
+
+	for _, obj := range cd.InternalObjs {
+		if obj != nil {
+			currKeyHll, ok := obj.Obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidHyperLogLogKey,
+				}
+			}
+
+			err := mergedHll.Merge(currKeyHll)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrCorruptedHyperLogLogObject,
+				}
+			}
+		}
+	}
+
+	// Save the mergedHll
+	obj = store.NewObj(mergedHll, -1, object.ObjTypeHLL)
+	store.Put(destKey, obj, dstore.WithPutCmd(dstore.PFMERGE))
+
+	return &EvalResponse{
+		Result: clientio.OK,
 		Error:  nil,
 	}
 }

@@ -365,9 +365,6 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdPFCount: {
 		CmdType: SingleShard,
 	},
-	CmdPFMerge: {
-		CmdType: SingleShard,
-	},
 	CmdTTL: {
 		CmdType: SingleShard,
 	},
@@ -594,6 +591,14 @@ var CommandsMeta = map[string]CmdMeta{
 		preProcessResponse: customProcessCopy,
 		decomposeCommand:   decomposeCopy,
 		composeResponse:    composeCopy,
+	},
+
+	CmdPFMerge: {
+		CmdType:            MultiShard,
+		preProcessing:      true,
+		preProcessResponse: preProcessPFMerge,
+		decomposeCommand:   decomposePFMerge,
+		composeResponse:    composePFMerge,
 	},
 
 	CmdMset: {
