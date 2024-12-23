@@ -201,7 +201,7 @@ func (c *CountMinSketch) DeepCopy() *CountMinSketch {
 	matrix := make([][]uint64, c.opts.depth)
 	flatMatrix := make([]uint64, c.opts.depth*c.opts.width) // single memory allocation
 	for row := uint64(0); row < c.opts.depth; row++ {
-		matrix[row] = flatMatrix[row*c.opts.width : (row+1)*c.opts.width]
+		matrix[row] = flatMatrix[row*c.opts.width : (row+1)*c.opts.width : (row+1)*c.opts.width]
 		copy(matrix[row], c.matrix[row])
 	}
 
