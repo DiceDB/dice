@@ -121,8 +121,9 @@ func decomposeCopy(ctx context.Context, thread *BaseIOThread, cd *cmd.DiceDBCmd)
 	return decomposedCmds, nil
 }
 
-// decomposeMSet decomposes the PFMERGE command into individual GET commands for each HLL.
-// For each key it creates a separate GET command to get the value at the given key.
+// decomposePFMerge decomposes the PFMERGE command into individual GET commands for each HLL.
+// For each key it creates a separate GET command to get the value at the given key, and waits for all responses to be
+// returned before proceeding.
 func decomposePFMerge(ctx context.Context, thread *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	// Waiting for GET command response for all the keys to be merged
 	resp := make([]*object.InternalObj, 0, len(cd.Args)-1)
