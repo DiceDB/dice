@@ -4772,15 +4772,8 @@ func evalSADD(args []string, store *dstore.Store) *EvalResponse {
         // If the object does not exist, create a new set
         set = make(map[string]struct{}, lengthOfItems)
     } else {
-        // Type and encoding checks
-        if err := object.AssertType(obj.TypeEncoding, object.ObjTypeSet); err != nil {
-            return &EvalResponse{
-                Result: nil,
-                Error:  diceerrors.ErrWrongTypeOperation,
-            }
-        }
-
-        if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingSetStr); err != nil {
+        // Type checks
+        if err := object.AssertType(obj.Type, object.ObjTypeSet); err != nil {
             return &EvalResponse{
                 Result: nil,
                 Error:  diceerrors.ErrWrongTypeOperation,
@@ -4799,7 +4792,7 @@ func evalSADD(args []string, store *dstore.Store) *EvalResponse {
     }
 
     // Single Put operation at the end
-    obj = store.NewObj(set, -1, object.ObjTypeSet, object.ObjEncodingSetStr)
+    obj = store.NewObj(set, -1, object.ObjTypeSet)
     store.Put(key, obj, dstore.WithKeepTTL(false), dstore.WithPutCmd(dstore.SADD))
 
     return &EvalResponse{
