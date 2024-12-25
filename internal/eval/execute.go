@@ -69,9 +69,9 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 		// ===============================================================================
 		// dealing with store object is not recommended for all commands
 		// These operations are specialised for the commands which requires
-		// transferring data across multiple shards. e.g COPY, RENAME
+		// transferring data across multiple shards. e.g. COPY, RENAME, PFMERGE
 		// ===============================================================================
-		if e.cmd.InternalObj != nil {
+		if e.cmd.InternalObjs != nil {
 			// This involves handling object at store level, evaluating it, modifying it, and then storing it back.
 			return diceCmd.StoreObjectEval(e.cmd, e.store)
 		}
