@@ -4399,8 +4399,8 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			// TODO: Make this generic so that all kind of slices can be handled
 			if b, ok := output.Result.([]byte); ok && tc.migratedOutput.Result != nil {
 				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
-					fmt.Println(string(b))
-					fmt.Println(string(expectedBytes))
+					// fmt.Println(string(b))
+					// fmt.Println(string(expectedBytes))
 					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else if a, ok := output.Result.([]string); ok && tc.migratedOutput.Result != nil {
