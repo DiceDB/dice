@@ -127,6 +127,52 @@ func TestLPush(t *testing.T) {
 	DeleteKey(t, conn, exec, "k")
 }
 
+func TestLIndex(t *testing.T) {
+	exec := NewWebsocketCommandExecutor()
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []any
+	}{
+		{
+			name: "LINDEX",
+			cmds: []string{
+				"RPUSH k v1 v2 v3 v4",
+				"LINDEX k 0",
+				"LINDEX k 2",
+				"LINDEX k 3",
+				"LINDEX k -1",
+				"LINDEX k -4",
+				"LINDEX k -3",
+			},
+			expect: []any{
+				float64(4),
+				"v1",
+				"v3",
+				"v4",
+				"v4",
+				"v1",
+				"v2",
+			},
+		},
+	}
+
+	conn := exec.ConnectToServer()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			for i, cmd := range tc.cmds {
+				result, err := exec.FireCommandAndReadResponse(conn, cmd)
+				assert.NilError(t, err)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+			}
+		})
+	}
+
+	DeleteKey(t, conn, exec, "k")
+}
+
 func TestRPush(t *testing.T) {
 	deqNormalValues, deqEdgeValues := deqTestInit()
 	exec := NewWebsocketCommandExecutor()

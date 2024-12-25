@@ -33,6 +33,7 @@ var (
 	ErrIntegerOutOfRange          = errors.New("ERR value is not an integer or out of range")                            // Represents a value that is either not an integer or is out of allowed range.
 	ErrInvalidNumberFormat        = errors.New("ERR value is not an integer or a float")                                 // Signals that a value provided is not in a valid integer or float format.
 	ErrValueOutOfRange            = errors.New("ERR value is out of range")                                              // Indicates that a value is beyond the permissible range.
+	ErrIndexOutOfRange            = errors.New("ERR Index out of range")                                                 // Indicates that index given by the user is out of range
 	ErrOverflow                   = errors.New("ERR increment or decrement would overflow")                              // Signifies that an increment or decrement operation would exceed the limits.
 	ErrSyntax                     = errors.New("ERR syntax error")                                                       // Represents a syntax error in a DiceDB command.
 	ErrKeyNotFound                = errors.New("ERR no such key")                                                        // Indicates that the specified key does not exist.

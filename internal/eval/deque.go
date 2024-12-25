@@ -612,7 +612,7 @@ func (i *DequeIterator) Next() (string, error) {
 
 func (i *DequeIterator) Value() (string, error) {
 	if i.ElementsTraversed == i.deque.Length {
-		return "", fmt.Errorf("iterator exhausted")
+		return "(nil)", fmt.Errorf("iterator exhausted")
 	}
 
 	x, _ := DecodeDeqEntry(i.CurrentNode.buf[i.BufIndex:])

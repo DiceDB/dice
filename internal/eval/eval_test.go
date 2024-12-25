@@ -9256,6 +9256,13 @@ func testEvalLINDEX(t *testing.T, store *dstore.Store) {
 			input:          []string{"EXISTING_KEY", "-1"},
 			migratedOutput: EvalResponse{Result: "mock_value3", Error: nil},
 		},
+		"key exists : out of range index": {
+			setup: func() {
+				evalRPUSH([]string{"EXISTING_KEY", "mock_value1"}, store)
+			},
+			input:          []string{"EXISTING_KEY", "1"},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrIndexOutOfRange},
+		},
 	}
 
 	runMigratedEvalTests(t, tests, evalLINDEX, store)
@@ -9308,7 +9315,7 @@ func testEvalLRANGE(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
-	normalArray  := `[0,1,2,3,4,3]`
+	normalArray := `[0,1,2,3,4,3]`
 	tests := []evalTestCase{
 		{
 			name:  "nil value",
@@ -9340,7 +9347,7 @@ func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
 			input: []string{"EXISTING_KEY", "$", "3", "abc"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error: errors.New("ERR Couldn't parse as integer"),
+				Error:  errors.New("ERR Couldn't parse as integer"),
 			},
 		},
 		{
@@ -9355,7 +9362,7 @@ func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
 			input: []string{"EXISTING_KEY", "$", "3", "4", "abc"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error: errors.New("ERR Couldn't parse as integer"),
+				Error:  errors.New("ERR Couldn't parse as integer"),
 			},
 		},
 		{
@@ -9370,7 +9377,7 @@ func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
 			input: []string{"EXISTING_KEY", "$", "4", "4", "5"},
 			migratedOutput: EvalResponse{
 				Result: []interface{}{4},
-				Error: nil,
+				Error:  nil,
 			},
 		},
 	}
