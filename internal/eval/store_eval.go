@@ -5038,7 +5038,7 @@ func evalLINDEX(args []string, store *dstore.Store) *EvalResponse {
 	var itr = deq.NewIterator()
 	var i int64 = 0
 	for ; i < index; i++ {
-		itr.Next()
+		_, _ = itr.Next()
 	}
 
 	value, _ := itr.Value()
