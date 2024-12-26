@@ -79,3 +79,34 @@ func customProcessCopy(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 
 	return nil
 }
+
+// preProcessPFMerge prepares the PFMERGE command for preprocessing by sending GETOBJECT commands
+// to retrieve the value of all the keys to be merged with. The retrieved value is used later in the
+// decomposePFMERGE function to merge the hll keys to the new key.
+func preProcessPFMerge(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
+	if len(diceDBCmd.Args) < 1 {
+		return diceerrors.ErrWrongArgumentCount("PFMERGE")
+	}
+
+	// Sending GETOBJECT commands for the keys to be merged, which would be used in
+	// later stages to merge with destination key in PFMERGE command.
+	for i := 1; i < len(diceDBCmd.Args); i++ {
+		sid, rc := thread.shardManager.GetShardInfo(diceDBCmd.Args[i])
+		preCmd := cmd.DiceDBCmd{
+			Cmd:  "GETOBJECT",
+			Args: []string{diceDBCmd.Args[i]},
+		}
+
+		rc <- &ops.StoreOp{
+			SeqID:         0,
+			RequestID:     GenerateUniqueRequestID(),
+			Cmd:           &preCmd,
+			IOThreadID:    thread.id,
+			ShardID:       sid,
+			Client:        nil,
+			PreProcessing: true,
+		}
+	}
+
+	return nil
+}

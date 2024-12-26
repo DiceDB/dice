@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/bits"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -391,6 +392,20 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 		if val, ok := obj.Value.(*ByteArray); ok {
 			return &EvalResponse{
 				Result: string(val.data),
+				Error:  nil,
+			}
+		}
+
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+
+	case object.ObjTypeHLL:
+		// Value is stored as a hyperloglog, use type assertion
+		if val, ok := obj.Value.(*hyperloglog.Sketch); ok {
+			return &EvalResponse{
+				Result: val,
 				Error:  nil,
 			}
 		}
@@ -1704,7 +1719,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 			hll.Insert([]byte(arg))
 		}
 
-		obj = store.NewObj(hll, -1, object.ObjTypeString)
+		obj = store.NewObj(hll, -1, object.ObjTypeHLL)
 
 		store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 		return &EvalResponse{
@@ -1725,7 +1740,7 @@ func evalPFADD(args []string, store *dstore.Store) *EvalResponse {
 		existingHll.Insert([]byte(arg))
 	}
 
-	obj = store.NewObj(existingHll, -1, object.ObjTypeString)
+	obj = store.NewObj(existingHll, -1, object.ObjTypeHLL)
 	store.Put(key, obj, dstore.WithPutCmd(dstore.PFADD))
 
 	if newCardinality := existingHll.Estimate(); initialCardinality != newCardinality {
@@ -1992,63 +2007,6 @@ func evalJSONOBJLEN(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: objectLen,
-		Error:  nil,
-	}
-}
-
-func evalPFMERGE(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) < 1 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
-		}
-	}
-
-	var mergedHll *hyperloglog.Sketch
-	destKey := args[0]
-	obj := store.Get(destKey)
-
-	// If destKey doesn't exist, create a new HLL, else fetch the existing
-	if obj == nil {
-		mergedHll = hyperloglog.New()
-	} else {
-		var ok bool
-		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
-		if !ok {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrInvalidHyperLogLogKey,
-			}
-		}
-	}
-
-	for _, arg := range args {
-		obj := store.Get(arg)
-		if obj != nil {
-			currKeyHll, ok := obj.Value.(*hyperloglog.Sketch)
-			if !ok {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrInvalidHyperLogLogKey,
-				}
-			}
-
-			err := mergedHll.Merge(currKeyHll)
-			if err != nil {
-				return &EvalResponse{
-					Result: nil,
-					Error:  diceerrors.ErrCorruptedHyperLogLogObject,
-				}
-			}
-		}
-	}
-
-	// Save the mergedHll
-	obj = store.NewObj(mergedHll, -1, object.ObjTypeString)
-	store.Put(destKey, obj, dstore.WithPutCmd(dstore.PFMERGE))
-
-	return &EvalResponse{
-		Result: clientio.OK,
 		Error:  nil,
 	}
 }
@@ -5918,7 +5876,14 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 
 	store.Del(key)
 
-	copyObj := cd.InternalObj.Obj.DeepCopy()
+	if len(cd.InternalObjs) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("ERR dest key not present"),
+		}
+	}
+
+	copyObj := cd.InternalObjs[0].Obj.DeepCopy()
 	if copyObj == nil {
 		return &EvalResponse{
 			Result: clientio.IntegerZero,
@@ -5926,7 +5891,7 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	exDurationMs := cd.InternalObj.ExDuration
+	exDurationMs := cd.InternalObjs[0].ExDuration
 
 	store.Put(key, copyObj)
 
@@ -5936,6 +5901,62 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: clientio.IntegerOne,
+		Error:  nil,
+	}
+}
+
+func evalPFMERGE(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
+	if len(cd.Args) < 1 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
+		}
+	}
+
+	var mergedHll *hyperloglog.Sketch
+	destKey := cd.Args[0]
+	obj := store.Get(destKey)
+
+	// If destKey doesn't exist, create a new HLL, else fetch the existing
+	if obj == nil {
+		mergedHll = hyperloglog.New()
+	} else {
+		var ok bool
+		mergedHll, ok = obj.Value.(*hyperloglog.Sketch)
+		if !ok {
+			return &EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrInvalidHyperLogLogKey,
+			}
+		}
+	}
+
+	for _, obj := range cd.InternalObjs {
+		if obj != nil {
+			currKeyHll, ok := obj.Obj.Value.(*hyperloglog.Sketch)
+			if !ok {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrInvalidHyperLogLogKey,
+				}
+			}
+
+			err := mergedHll.Merge(currKeyHll)
+			if err != nil {
+				return &EvalResponse{
+					Result: nil,
+					Error:  diceerrors.ErrCorruptedHyperLogLogObject,
+				}
+			}
+		}
+	}
+
+	// Save the mergedHll
+	obj = store.NewObj(mergedHll, -1, object.ObjTypeHLL)
+	store.Put(destKey, obj, dstore.WithPutCmd(dstore.PFMERGE))
+
+	return &EvalResponse{
+		Result: clientio.OK,
 		Error:  nil,
 	}
 }
@@ -6146,7 +6167,7 @@ func evalGEOADD(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		hash := geo.EncodeHash(latitude, longitude)
+		hash := geo.EncodeInt(latitude, longitude)
 
 		wasInserted := ss.Upsert(hash, member)
 		if wasInserted {
@@ -6211,8 +6232,8 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	lat1, lon1 := geo.DecodeHash(score1)
-	lat2, lon2 := geo.DecodeHash(score2)
+	lat1, lon1 := geo.DecodeInt(score1)
+	lat2, lon2 := geo.DecodeInt(score2)
 
 	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
 
@@ -6250,7 +6271,6 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	ss, err := sortedset.FromObject(obj)
-
 	if err != nil {
 		return &EvalResponse{
 			Result: nil,
@@ -6269,7 +6289,7 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		lat, lon := geo.DecodeHash(hash)
+		lat, lon := geo.DecodeInt(hash)
 
 		latFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lat), 64)
 		lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
@@ -6279,6 +6299,52 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 
 	return &EvalResponse{
 		Result: results,
+		Error:  nil,
+	}
+}
+
+func evalGEOHASH(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEOHASH"),
+		}
+	}
+
+	key := args[0]
+	members := args[1:]
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrKeyNotFound,
+		}
+	}
+
+	ss, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	// Prepare the response for each member
+	result := make([]interface{}, 0)
+	for _, member := range members {
+		entry, exists := ss.Get(member)
+		if !exists {
+			result = append(result, nil) // clientio.RespNIL
+			continue
+		}
+
+		lat, lon := geo.DecodeInt(entry)
+		result = append(result, geo.EncodeString(lat, lon))
+	}
+
+	return &EvalResponse{
+		Result: result,
 		Error:  nil,
 	}
 }
@@ -6832,6 +6898,141 @@ func evalCommandDocs(args []string) *EvalResponse {
 	}
 
 	return makeEvalResult(result)
+}
+
+func evalJSONARRINDEX(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 3 || len(args) > 5 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("JSON.ARRINDEX"))
+	}
+
+	key := args[0]
+	path := args[1]
+	start := 0
+	stop := 0
+
+	var value interface{}
+	var err error
+
+	if strings.Contains(args[2], `"`) {
+		// user has provided string argument
+		value = args[2]
+	} else {
+		// parse it to float since default arg type would be string
+		value, err = strconv.ParseFloat(args[2], 64)
+
+		if err != nil {
+			return makeEvalError(diceerrors.ErrGeneral("Couldn't parse as integer"))
+		}
+	}
+
+	// Convert start to integer if provided
+	if len(args) >= 4 {
+		var err error
+		start, err = strconv.Atoi(args[3])
+		if err != nil {
+			return makeEvalError(diceerrors.ErrGeneral("Couldn't parse as integer"))
+		}
+	}
+
+	// Convert stop to integer if provided
+	if len(args) == 5 {
+		var err error
+		stop, err = strconv.Atoi(args[4])
+		if err != nil {
+			return makeEvalError(diceerrors.ErrGeneral("Couldn't parse as integer"))
+		}
+	}
+
+	// Check if the path specified is valid
+	expr, err2 := jp.ParseString(path)
+	if err2 != nil {
+		return makeEvalError(diceerrors.ErrJSONPathNotFound(path))
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return makeEvalError(diceerrors.ErrKeyDoesNotExist)
+	}
+
+	if err2 := object.AssertType(obj.Type, object.ObjTypeJSON); err2 != nil {
+		return makeEvalError(diceerrors.ErrGeneral("Existing key has wrong Dice type"))
+	}
+
+	jsonData := obj.Value
+
+	// Check if the value stored is JSON type
+	_, err = sonic.Marshal(jsonData)
+
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("Existing key has wrong Dice type"))
+	}
+
+	results := expr.Get(jsonData)
+	arrIndexList := make([]interface{}, 0, len(results))
+
+	for _, result := range results {
+		switch utils.GetJSONFieldType(result) {
+		case utils.ArrayType:
+			elementFound := false
+			arr := result.([]interface{})
+			length := len(arr)
+
+			adjustedStart, adjustedStop := adjustIndices(start, stop, length)
+
+			if adjustedStart == -1 {
+				arrIndexList = append(arrIndexList, -1)
+				continue
+			}
+
+			// Range [start, stop) : start is inclusive, stop is exclusive
+			for i := adjustedStart; i < adjustedStop; i++ {
+				if reflect.DeepEqual(arr[i], value) {
+					arrIndexList = append(arrIndexList, i)
+					elementFound = true
+					break
+				}
+			}
+
+			if !elementFound {
+				arrIndexList = append(arrIndexList, -1)
+			}
+		default:
+			arrIndexList = append(arrIndexList, nil)
+		}
+	}
+
+	return makeEvalResult(arrIndexList)
+}
+
+// adjustIndices adjusts the start and stop indices for array traversal.
+// It handles negative indices and ensures they are within the array bounds.
+func adjustIndices(start, stop, length int) (adjustedStart, adjustedStop int) {
+	if length == 0 {
+		return -1, -1
+	}
+	if start < 0 {
+		start += length
+	}
+
+	if stop <= 0 {
+		stop += length
+	}
+	if start < 0 {
+		start = 0
+	}
+	if stop < 0 {
+		stop = 0
+	}
+	if start >= length {
+		return -1, -1
+	}
+	if stop > length {
+		stop = length
+	}
+	if start > stop {
+		return -1, -1
+	}
+	return start, stop
 }
 
 // This method executes each operation, contained in ops array, based on commands used.

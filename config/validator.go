@@ -115,6 +115,7 @@ func applyDefaultValuesFromTags(config *Config, fieldName string) error {
 
 func validateWALConfig(sl validator.StructLevel) {
 	config := sl.Current().Interface().(Config)
+  
 	// WALMode and WriteMode compatibility checks
 	if config.WAL.Mode == "buffered" && config.WAL.WriteMode == "fsync" {
 		sl.ReportError(config.WAL.Mode, "mode", "Mode", "incompatible", "walMode 'buffered' cannot be used with writeMode 'fsync'")

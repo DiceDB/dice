@@ -297,7 +297,7 @@ func DeserializeCMS(buffer *bytes.Reader) (*CountMinSketch, error) {
 	if err := binary.Read(buffer, binary.BigEndian, &count); err != nil {
 		return nil, err
 	}
-	fmt.Println(depth, width, count, buffer.Len())
+	// fmt.Println(depth, width, count, buffer.Len())
 	// Validate data size
 	expectedSize := int(depth * width * 8) // Each uint64 takes 8 bytes
 	if buffer.Len() <= expectedSize {

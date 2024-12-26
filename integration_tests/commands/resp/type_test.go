@@ -72,6 +72,14 @@ func TestType(t *testing.T) {
 		// 	commands: []string{"SET key1 \"foobar\"", "SET key2 \"abcdef\"", "TYPE dest"},
 		// 	expected: []interface{}{"OK", "OK", "string"},
 		// },
+		{
+			name: "TYPE for key with Zset value",
+			commands: []string{
+				"ZADD myzetset 1 'one' 2 'two'",
+				"TYPE myzetset",
+			},
+			expected:      []interface{}{int64(2), "zset"},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -127,13 +127,21 @@ var (
 // their implementation for HTTP and WebSocket protocols is still pending.
 // As a result, their Eval functions remained intact.
 var (
-	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
 	objectCopyCmdMeta = DiceCmdMeta{
 		Name:            "OBJECTCOPY",
 		Info:            `COPY command copies the value stored at the source key to the destination key.`,
 		StoreObjectEval: evalCOPYObject,
 		IsMigrated:      true,
 		Arity:           -2,
+	}
+	pfMergeCmdMeta = DiceCmdMeta{
+		Name: "PFMERGE",
+		Info: `PFMERGE destkey [sourcekey [sourcekey ...]]
+		Merges one or more HyperLogLog values into a single key.`,
+		IsMigrated:      true,
+		Arity:           -2,
+		KeySpecs:        KeySpecs{BeginIndex: 1},
+		StoreObjectEval: evalPFMERGE,
 	}
 )
 
@@ -603,6 +611,15 @@ var (
 		IsMigrated: true,
 		Arity:      -4,
 	}
+	jsonArrIndexCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRINDEX",
+		Info: `JSON.ARRINDEX key path value [start [stop]]
+		Search for the first occurrence of a JSON value in an array`,
+		NewEval:    evalJSONARRINDEX,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
+	}
 
 	// Internal command used to spawn request across all shards (works internally with the KEYS command)
 	singleKeysCmdMeta = DiceCmdMeta{
@@ -967,15 +984,6 @@ var (
 		Arity:      -2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
-	pfMergeCmdMeta = DiceCmdMeta{
-		Name: "PFMERGE",
-		Info: `PFMERGE destkey [sourcekey [sourcekey ...]]
-		Merges one or more HyperLogLog values into a single key.`,
-		NewEval:    evalPFMERGE,
-		IsMigrated: true,
-		Arity:      -2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
-	}
 	jsonStrlenCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRLEN",
 		Info: `JSON.STRLEN key [path]
@@ -1237,6 +1245,14 @@ var (
 		IsMigrated: true,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	geoHashCmdMeta = DiceCmdMeta{
+		Name:       "GEOHASH",
+		Info:       `Return Geohash strings representing the position of one or more elements representing a geospatial index`,
+		Arity:      -2,
+		IsMigrated: true,
+		NewEval:    evalGEOHASH,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
 	jsonstrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRAPPEND",
 		Info: `JSON.STRAPPEND key [path] value
@@ -1344,6 +1360,7 @@ var (
 func init() {
 	PreProcessing["COPY"] = evalGetObject
 	PreProcessing["RENAME"] = evalGET
+	PreProcessing["GETOBJECT"] = evalGetObject
 
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
@@ -1379,6 +1396,7 @@ func init() {
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
 	DiceCmds["GEOPOS"] = geoPosCmdMeta
+	DiceCmds["GEOHASH"] = geoHashCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["GETBIT"] = getBitCmdMeta
 	DiceCmds["GETDEL"] = getDelCmdMeta
@@ -1466,6 +1484,7 @@ func init() {
 	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
 	DiceCmds["LINSERT"] = linsertCmdMeta
 	DiceCmds["LRANGE"] = lrangeCmdMeta
+	DiceCmds["JSON.ARRINDEX"] = jsonArrIndexCmdMeta
 
 	DiceCmds["SINGLETOUCH"] = singleTouchCmdMeta
 	DiceCmds["SINGLEDBSIZE"] = singleDBSizeCmdMeta

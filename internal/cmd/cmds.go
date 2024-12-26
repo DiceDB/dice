@@ -45,12 +45,12 @@ type DiceDBCmd struct {
 	// This slice allows flexible support for commands with variable arguments.
 	Args []string
 
-	// InternalObj is a pointer to an InternalObj, representing an optional data structure
+	// InternalObjs is a pointer to list of InternalObjs, representing an optional data structure
 	// associated with the command. This contains pointer to the underlying simple
 	// types such as int, string or even complex types
 	// like hashes, sets, or sorted sets, which are stored and manipulated as objects.
 	// WARN: This parameter should be used with caution
-	InternalObj *object.InternalObj
+	InternalObjs []*object.InternalObj
 }
 
 type RedisCmds struct {

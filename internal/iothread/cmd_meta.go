@@ -129,6 +129,7 @@ const (
 	CmdGeoAdd              = "GEOADD"
 	CmdGeoDist             = "GEODIST"
 	CmdGeoPos              = "GEOPOS"
+	CmdGeoHash             = "GEOHASH"
 	CmdClient              = "CLIENT"
 	CmdLatency             = "LATENCY"
 	CmdDel                 = "DEL"
@@ -179,6 +180,7 @@ const (
 	CmdCommandDocs         = "COMMAND|DOCS"
 	CmdCommandGetKeys      = "COMMAND|GETKEYS"
 	CmdCommandGetKeysFlags = "COMMAND|GETKEYSANDFLAGS"
+	CmdJSONArrIndex        = "JSON.ARRINDEX"
 )
 
 // Multi-shard commands.
@@ -363,9 +365,6 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdPFCount: {
 		CmdType: SingleShard,
 	},
-	CmdPFMerge: {
-		CmdType: SingleShard,
-	},
 	CmdTTL: {
 		CmdType: SingleShard,
 	},
@@ -537,6 +536,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdGeoPos: {
 		CmdType: SingleShard,
 	},
+	CmdGeoHash: {
+		CmdType: SingleShard,
+	},
 	CmdClient: {
 		CmdType: SingleShard,
 	},
@@ -570,6 +572,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdCommandGetKeysFlags: {
 		CmdType: SingleShard,
 	},
+	CmdJSONArrIndex: {
+		CmdType: SingleShard,
+	},
 
 	// Multi-shard commands.
 	CmdRename: {
@@ -586,6 +591,14 @@ var CommandsMeta = map[string]CmdMeta{
 		preProcessResponse: customProcessCopy,
 		decomposeCommand:   decomposeCopy,
 		composeResponse:    composeCopy,
+	},
+
+	CmdPFMerge: {
+		CmdType:            MultiShard,
+		preProcessing:      true,
+		preProcessResponse: preProcessPFMerge,
+		decomposeCommand:   decomposePFMerge,
+		composeResponse:    composePFMerge,
 	},
 
 	CmdMset: {

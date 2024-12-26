@@ -262,3 +262,17 @@ func composeFlushDB(responses ...ops.StoreResponse) interface{} {
 
 	return clientio.OK
 }
+
+// composePFMerge processes responses from multiple shards for an "PFMerge" operation.
+// It loops through the responses to check if any shard returned an error.
+// If an error is detected, it immediately returns that error. Otherwise, it returns "OK"
+// to indicate that all merged HyperLogLog is set to the destination variable successfully.
+func composePFMerge(responses ...ops.StoreResponse) interface{} {
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+	}
+
+	return clientio.OK
+}
