@@ -16,7 +16,7 @@ items in each pod:
 
 > Focused on enhancing the core database capabilities, such as supported data structures and performance optimizations.
 
-1. Support for Vectors
+1. Support for Vectors - [doc](https://docs.google.com/document/d/1MTrWawyA1St-mjTwt6dBIzONAx3tICyCpYl-u_DVkVs/edit?usp=sharing) / [@KaviiSuri](https://github.com/KaviiSuri)
 2. I/O Optimizations
 
 ## HA, Scale, and Fault Tolerance
@@ -36,6 +36,6 @@ items in each pod:
 
 > Enhancing monitoring and integration capabilities for better observability and seamless third-party tooling support.
 
-1. DiceDB observability through Prometheus
+1. DiceDB observability through Prometheus - [doc](https://docs.google.com/document/d/15ekPRvhqxORuP-fxzoWxA3939gqZWxQ4RzGG-8Z-C2A/edit?usp=sharing) / [@JyotinderSingh](https://github.com/JyotinderSingh)
 
 > This is not an exhaustive list, Please refer to the [GitHub issues](https://github.com/DiceDB/dice/issues) to find the granular items that are being worked upon.
