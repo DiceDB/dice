@@ -115,7 +115,7 @@ func applyDefaultValuesFromTags(config *Config, fieldName string) error {
 
 func validateWALConfig(sl validator.StructLevel) {
 	config := sl.Current().Interface().(Config)
-	
+
 	// LogDir validation
 	if config.WAL.LogDir == "" {
 		sl.ReportError(config.WAL.LogDir, "LogDir", "LogDir", "required", "cannot be empty")

@@ -6979,9 +6979,9 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) *EvalResponse {
 
 			adjustedStart, adjustedStop := adjustIndices(start, stop, length)
 
-			if adjustedStart == -1 { 
-				arrIndexList = append(arrIndexList, -1) 
-				continue 
+			if adjustedStart == -1 {
+				arrIndexList = append(arrIndexList, -1)
+				continue
 			}
 
 			// Range [start, stop) : start is inclusive, stop is exclusive
@@ -7004,18 +7004,18 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) *EvalResponse {
 	return makeEvalResult(arrIndexList)
 }
 
-// adjustIndices adjusts the start and stop indices for array traversal. 
-// It handles negative indices and ensures they are within the array bounds. 
-func adjustIndices(start, stop, length int) (adjustedStart, adjustedStop int) { 
+// adjustIndices adjusts the start and stop indices for array traversal.
+// It handles negative indices and ensures they are within the array bounds.
+func adjustIndices(start, stop, length int) (adjustedStart, adjustedStop int) {
 	if length == 0 {
-		return -1, -1 
+		return -1, -1
 	}
 	if start < 0 {
-		start += length 
+		start += length
 	}
 
-	if stop <= 0  {
-		stop += length 
+	if stop <= 0 {
+		stop += length
 	}
 	if start < 0 {
 		start = 0
