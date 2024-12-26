@@ -532,6 +532,8 @@ func TestLIndex(t *testing.T) {
 			}
 		})
 	}
+
+	deqCleanUp(conn, "k")
 }
 
 func TestLRange(t *testing.T) {
