@@ -1609,10 +1609,9 @@ func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 
 func testEvalRANDOMKEY(t *testing.T, store *dstore.Store) {
 	t.Run("invalid no of args", func(t *testing.T) {
-		response := evalRANDOMKEY([]string{"INVALID_ARG"}, store)
-		expectedErr := diceerrors.NewErrArity("RANDOMKEY")
-
-		assert.Equal(t, response, expectedErr)
+		response := evalRandomKey([]string{"INVALID_ARG"}, store)
+		expectedErr := errors.New("ERR wrong number of arguments for 'randomkey' command")
+		assert.Equal(t, response.Error, expectedErr)
 	})
 
 	t.Run("some keys present in db", func(t *testing.T) {
@@ -1632,13 +1631,15 @@ func testEvalRANDOMKEY(t *testing.T, store *dstore.Store) {
 
 		results := make(map[string]int)
 		for i := 0; i < 10000; i++ {
-			result := evalRANDOMKEY([]string{}, store)
-			results[string(result)]++
+			result := evalRandomKey([]string{}, store)
+
+			str, ok := result.Result.(string)
+			assert.True(t, ok)
+			results[str]++
 		}
 
-		for key, _ := range data {
-			returnedKey := clientio.Encode(key, false)
-			if results[string(returnedKey)] == 0 {
+		for key := range data {
+			if results[key] == 0 {
 				t.Errorf("key %s was never returned", key)
 			}
 		}
@@ -1660,9 +1661,9 @@ func BenchmarkEvalRANDOMKEY(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 
-		// Benchmark the evalRANDOMKEY function
+		// Benchmark the evalRandomKey function
 		for i := 0; i < b.N; i++ {
-			_ = evalRANDOMKEY([]string{}, store)
+			_ = evalRandomKey([]string{}, store)
 		}
 	})
 }

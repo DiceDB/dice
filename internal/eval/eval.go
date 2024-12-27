@@ -17,9 +17,7 @@
 package eval
 
 import (
-	"crypto/rand"
 	"fmt"
-	"math/big"
 	"strconv"
 	"time"
 
@@ -185,35 +183,4 @@ func evalSLEEP(args []string, store *dstore.Store) []byte {
 	}
 	time.Sleep(time.Duration(durationSec) * time.Second)
 	return clientio.RespOK
-}
-
-// evalRANDOMKEY returns a random key from the currently selected database.
-func evalRANDOMKEY(args []string, store *dstore.Store) []byte {
-	if len(args) > 0 {
-		return diceerrors.NewErrArity("RANDOMKEY")
-	}
-
-	availKeys, err := store.Keys("*")
-	if err != nil {
-		return diceerrors.NewErrWithMessage("could not get keys")
-	}
-
-	if len(availKeys) > 0 {
-		for range len(availKeys) {
-			randKeyIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(availKeys))))
-			if err != nil {
-				continue
-			}
-
-			randKey := availKeys[randKeyIdx.Uint64()]
-			keyObj := store.Get(randKey)
-			if keyObj == nil {
-				continue
-			}
-
-			return clientio.Encode(randKey, false)
-		}
-	}
-
-	return clientio.RespNIL
 }

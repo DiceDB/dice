@@ -324,3 +324,21 @@ func decomposeFlushDB(_ context.Context, thread *BaseIOThread, cd *cmd.DiceDBCmd
 	}
 	return decomposedCmds, nil
 }
+
+func decomposeRandomKey(_ context.Context, thread *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) > 0 {
+		return nil, diceerrors.ErrWrongArgumentCount("RANDOMKEY")
+	}
+
+	decomposedCmds := make([]*cmd.DiceDBCmd, 0, len(cd.Args))
+	for i := uint8(0); i < uint8(thread.shardManager.GetShardCount()); i++ {
+		decomposedCmds = append(decomposedCmds,
+			&cmd.DiceDBCmd{
+				Cmd:  store.RandomKey,
+				Args: []string{},
+			},
+		)
+	}
+
+	return decomposedCmds, nil
+}

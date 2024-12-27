@@ -177,14 +177,6 @@ var (
 		NewEval:    evalGET,
 	}
 
-	randomKeyCmdMeta = DiceCmdMeta{
-		Name:       "RANDOMKEY",
-		Info:       `RANDOMKEY returns a random key from the currently selected database.`,
-		Arity:      1,
-		IsMigrated: false,
-		Eval:       evalRANDOMKEY,
-	}
-
 	getSetCmdMeta = DiceCmdMeta{
 		Name:       "GETSET",
 		Info:       `GETSET returns the previous string value of a key after setting it to a new value.`,
@@ -1363,6 +1355,13 @@ var (
 		Arity:      4,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	randomKeyCmdMeta = DiceCmdMeta{
+		Name:       "RANDOMKEY",
+		Info:       `RANDOMKEY returns a random key from the currently selected database.`,
+		NewEval:    evalRandomKey,
+		Arity:      1,
+		IsMigrated: true,
+	}
 )
 
 func init() {
@@ -1493,12 +1492,11 @@ func init() {
 	DiceCmds["LINSERT"] = linsertCmdMeta
 	DiceCmds["LRANGE"] = lrangeCmdMeta
 	DiceCmds["JSON.ARRINDEX"] = jsonArrIndexCmdMeta
+	DiceCmds["RANDOMKEY"] = randomKeyCmdMeta
 
 	DiceCmds["SINGLETOUCH"] = singleTouchCmdMeta
 	DiceCmds["SINGLEDBSIZE"] = singleDBSizeCmdMeta
 	DiceCmds["SINGLEKEYS"] = singleKeysCmdMeta
-
-	DiceCmds["RANDOMKEY"] = randomKeyCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}

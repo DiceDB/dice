@@ -17,10 +17,12 @@
 package eval
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"math/bits"
 	"reflect"
 	"regexp"
@@ -7002,6 +7004,37 @@ func evalJSONARRINDEX(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return makeEvalResult(arrIndexList)
+}
+
+// evalRANDOMKEY returns a random key from the currently selected database.
+func evalRandomKey(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) > 0 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("RANDOMKEY"))
+	}
+
+	availKeys, err := store.Keys("*")
+	if err != nil {
+		return makeEvalError(diceerrors.ErrGeneral("could not get keys"))
+	}
+
+	if len(availKeys) > 0 {
+		for range len(availKeys) {
+			randKeyIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(availKeys))))
+			if err != nil {
+				continue
+			}
+
+			randKey := availKeys[randKeyIdx.Uint64()]
+			keyObj := store.Get(randKey)
+			if keyObj == nil {
+				continue
+			}
+
+			return makeEvalResult(randKey)
+		}
+	}
+
+	return makeEvalResult(nil)
 }
 
 // adjustIndices adjusts the start and stop indices for array traversal.

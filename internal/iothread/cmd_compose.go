@@ -17,7 +17,10 @@
 package iothread
 
 import (
+	"crypto/rand"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"math"
+	"math/big"
 	"sort"
 
 	"github.com/dicedb/dice/internal/clientio"
@@ -275,4 +278,22 @@ func composePFMerge(responses ...ops.StoreResponse) interface{} {
 	}
 
 	return clientio.OK
+}
+
+func composeRandomKey(responses ...ops.StoreResponse) interface{} {
+	results := make([]interface{}, 0, len(responses))
+	for idx := range responses {
+		if responses[idx].EvalResponse.Error != nil {
+			return responses[idx].EvalResponse.Error
+		}
+
+		results = append(results, responses[idx].EvalResponse.Result)
+	}
+
+	idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(results))))
+	if err != nil {
+		return diceerrors.ErrGeneral("cannot extract random key")
+	}
+
+	return results[idx.Int64()]
 }
