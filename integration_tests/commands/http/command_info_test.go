@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package http
 
 import (
@@ -15,38 +31,21 @@ func TestCommandInfo(t *testing.T) {
 			commands: []HTTPCommand{
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"key": "SET"}},
 			},
-			expected: []interface{}{[]interface{}{[]interface{}{"set", float64(-3), float64(1), float64(0), float64(0), []any{}}}},
+			expected: []interface{}{[]interface{}{[]interface{}{"set", float64(-3), float64(1), float64(0), float64(0), interface{}(nil)}}},
 		},
 		{
 			name: "Get command",
 			commands: []HTTPCommand{
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"key": "GET"}},
 			},
-			expected: []interface{}{[]interface{}{[]interface{}{"get", float64(2), float64(1), float64(0), float64(0), []any{}}}},
+			expected: []interface{}{[]interface{}{[]interface{}{"get", float64(2), float64(1), float64(0), float64(0), interface{}(nil)}}},
 		},
 		{
 			name: "PING command",
 			commands: []HTTPCommand{
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"key": "PING"}},
 			},
-			expected: []interface{}{[]interface{}{[]interface{}{"ping", float64(-1), float64(0), float64(0), float64(0), []any{}}}},
-		},
-		{
-			name: "Invalid command",
-			commands: []HTTPCommand{
-				{Command: "COMMAND/INFO", Body: map[string]interface{}{"key": "INVALID_CMD"}},
-			},
-			expected: []interface{}{[]interface{}{nil}},
-		},
-		{
-			name: "Combination of valid and Invalid command",
-			commands: []HTTPCommand{
-				{Command: "COMMAND/INFO", Body: map[string]interface{}{"keys": []interface{}{"SET", "INVALID_CMD"}}},
-			},
-			expected: []interface{}{[]interface{}{
-				[]interface{}{"set", float64(-3), float64(1), float64(0), float64(0), []any{}},
-				nil,
-			}},
+			expected: []interface{}{[]interface{}{[]interface{}{"ping", float64(-1), float64(0), float64(0), float64(0), interface{}(nil)}}},
 		},
 		{
 			name: "Combination of multiple valid commands",
@@ -54,8 +53,8 @@ func TestCommandInfo(t *testing.T) {
 				{Command: "COMMAND/INFO", Body: map[string]interface{}{"keys": []interface{}{"SET", "GET"}}},
 			},
 			expected: []interface{}{[]interface{}{
-				[]interface{}{"set", float64(-3), float64(1), float64(0), float64(0), []any{}},
-				[]interface{}{"get", float64(2), float64(1), float64(0), float64(0), []any{}},
+				[]interface{}{"set", float64(-3), float64(1), float64(0), float64(0), interface{}(nil)},
+				[]interface{}{"get", float64(2), float64(1), float64(0), float64(0), interface{}(nil)},
 			}},
 		},
 	}

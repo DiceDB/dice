@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 import (
@@ -72,6 +88,132 @@ func TestGeoDist(t *testing.T) {
 				"GEODIST points Palermo Catania km",
 			},
 			expect: []interface{}{int64(1), int64(1), "166274.144", "166.2741"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+			}
+		})
+	}
+}
+
+func TestGeoPos(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []interface{}
+		delays []time.Duration
+	}{
+		{
+			name: "GEOPOS b/w existing points",
+			cmds: []string{
+				"GEOADD index 13.361389 38.115556 Palermo",
+				"GEOPOS index Palermo",
+			},
+			expect: []interface{}{
+				int64(1),
+				[]interface{}{[]interface{}{"13.361387", "38.115556"}},
+			},
+		},
+		{
+			name: "GEOPOS for non existing points",
+			cmds: []string{
+				"GEOPOS index NonExisting",
+			},
+			expect: []interface{}{
+				[]interface{}{"(nil)"},
+			},
+		},
+		{
+			name: "GEOPOS for non existing index",
+			cmds: []string{
+				"GEOPOS NonExisting Palermo",
+			},
+			expect: []interface{}{"(nil)"},
+		},
+		{
+			name: "GEOPOS for a key not used for setting geospatial values",
+			cmds: []string{
+				"SET k v",
+				"GEOPOS k v",
+			},
+			expect: []interface{}{
+				"OK",
+				"WRONGTYPE Operation against a key holding the wrong kind of value",
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+			}
+		})
+	}
+}
+
+func TestGeoHash(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testCases := []struct {
+		name   string
+		cmds   []string
+		expect []interface{}
+		delays []time.Duration
+	}{
+		{
+			name: "GEOHASH with no arguments",
+			cmds: []string{
+				"GEOHASH points",
+			},
+			expect: []interface{}{"ERR wrong number of arguments for 'geohash' command"},
+		},
+		{
+			name: "GEOHASH on non-geo key",
+			cmds: []string{
+				"SET key value",
+				"GEOHASH key member",
+			},
+			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value"},
+		},
+		{
+			name: "GEOHASH with non-existent key",
+			cmds: []string{
+				"GEOHASH geopoints NonExistent",
+			},
+			expect: []interface{}{"ERR no such key"},
+		},
+		{
+			name: "GEOHASH with non-existent member",
+			cmds: []string{
+				"GEOADD points -74.0060 40.7128 NewYork",
+				"GEOHASH points NonExistent",
+			},
+			expect: []interface{}{int64(1), []interface{}{"(nil)"}},
+		},
+		{
+			name: "GEOHASH with a single member",
+			cmds: []string{
+				"GEOHASH points NewYork",
+			},
+			expect: []interface{}{[]interface{}{"dr5regw3pp"}},
+		},
+		{
+			name: "GEOHASH with multiple members",
+			cmds: []string{
+				"GEOADD points -73.935242 40.730610 Brooklyn",
+				"GEOHASH points NewYork Brooklyn NonExistent",
+			},
+			expect: []interface{}{int64(1), []interface{}{"dr5regw3pp", "dr5rtwccpb", "(nil)"}},
 		},
 	}
 

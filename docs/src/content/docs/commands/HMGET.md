@@ -71,7 +71,6 @@ The `HMGET` command can raise errors in the following scenarios:
 2) (nil)
 ```
 
-
 ### Invalid Usage
 
 Trying to retrieve fields from a key that is not a hash.

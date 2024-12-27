@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 import (
@@ -33,14 +49,8 @@ func TestGETUNWATCH(t *testing.T) {
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
 
 	defer func() {
-		if err := publisher.Close(); err != nil {
-			t.Errorf("Error closing publisher connection: %v", err)
-		}
-		for _, sub := range subscribers {
-			if err := sub.Close(); err != nil {
-				t.Errorf("Error closing subscriber connection: %v", err)
-			}
-		}
+		err := ClosePublisherSubscribers(publisher, subscribers)
+		assert.Nil(t, err)
 	}()
 
 	FireCommand(publisher, fmt.Sprintf("DEL %s", getUnwatchKey))
@@ -77,7 +87,6 @@ func TestGETUNWATCH(t *testing.T) {
 			if !ok {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
-			fmt.Println(castedValue)
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "GET", castedValue[0])
 			assert.Equal(t, "426696421", castedValue[1])
@@ -86,18 +95,8 @@ func TestGETUNWATCH(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	for _, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", "426696421"))
-		assert.NotNil(t, rp)
+	unsubscribeFromWatchUpdates(t, subscribers, "GET", "426696421")
 
-		v, err := rp.DecodeOne()
-		assert.NoError(t, err)
-		castedValue, ok := v.(string)
-		if !ok {
-			t.Errorf("Type assertion to string failed for value: %v", v)
-		}
-		assert.Equal(t, castedValue, "OK")
-	}
 	// Test updates are not sent after unsubscribing
 	for _, tc := range getUnwatchTestCases[2:] {
 		res := FireCommand(publisher, fmt.Sprintf("SET %s %s", tc.key, tc.val))
@@ -109,10 +108,11 @@ func TestGETUNWATCH(t *testing.T) {
 
 			go func() {
 				v, err := rp.DecodeOne()
-				if err != nil {
-					errChan <- err
-				} else {
-					responseChan <- v
+				select {
+				case errChan <- err:
+				case responseChan <- v:
+				case <-time.After(200 * time.Millisecond):
+					// if test goroutine returns, this one must exit too
 				}
 			}()
 
@@ -132,15 +132,23 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
 	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
 
-	publisher.Del(context.Background(), getUnwatchKey)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	defer func() {
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
+
+	publisher.Del(ctx, getUnwatchKey)
 
 	// subscribe for updates
 	channels := make([]<-chan *dicedb.WatchResult, len(subscribers))
 	for i, subscriber := range subscribers {
-		watch := subscriber.client.WatchConn(context.Background())
+		watch := subscriber.client.WatchConn(ctx)
 		subscribers[i].watch = watch
 		assert.NotNil(t, watch)
-		firstMsg, err := watch.Watch(context.Background(), "GET", getUnwatchKey)
+		firstMsg, err := watch.Watch(ctx, "GET", getUnwatchKey)
 		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, "GET")
 		assert.Equal(t, "426696421", firstMsg.Fingerprint)
@@ -148,7 +156,7 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	}
 
 	// Fire updates and validate receipt
-	err := publisher.Set(context.Background(), getUnwatchKey, "check", 0).Err()
+	err := publisher.Set(ctx, getUnwatchKey, "check", 0).Err()
 	assert.Nil(t, err)
 
 	for _, channel := range channels {
@@ -159,22 +167,17 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	for _, subscriber := range subscribers {
-		err := subscriber.watch.Unwatch(context.Background(), "GET", "426696421")
-		assert.Nil(t, err)
-	}
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, "GET", "426696421")
 
 	// fire updates and validate that they are not received
-	err = publisher.Set(context.Background(), getUnwatchKey, "final", 0).Err()
+	err = publisher.Set(ctx, getUnwatchKey, "final", 0).Err()
 	assert.Nil(t, err)
 	for _, channel := range channels {
-		go func(ch <-chan *dicedb.WatchResult) {
-			select {
-			case v := <-ch:
-				assert.Fail(t, fmt.Sprintf("%v", v))
-			case <-time.After(100 * time.Millisecond):
-				// This is the expected behavior - no response within the timeout
-			}
-		}(channel)
+		select {
+		case v := <-channel:
+			assert.Fail(t, fmt.Sprintf("%v", v))
+		case <-time.After(100 * time.Millisecond):
+			// This is the expected behavior - no response within the timeout
+		}
 	}
 }

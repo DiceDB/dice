@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 import (
@@ -7,10 +23,12 @@ import (
 )
 
 var getDocsTestCases = []struct {
-	name     string
-	inCmd    string
-	expected interface{}
+	name              string
+	inCmd             string
+	expected          interface{}
+	skipExpectedMatch bool
 }{
+	{"Without any commands", "", []any{}, true},
 	{"Set command", "SET", []interface{}{[]interface{}{
 		"set",
 		[]interface{}{
@@ -21,7 +39,7 @@ var getDocsTestCases = []struct {
 			"lastIndex", int64(0),
 			"step", int64(0),
 		},
-	}}},
+	}}, false},
 	{"Get command", "GET", []interface{}{[]interface{}{
 		"get",
 		[]interface{}{
@@ -32,7 +50,7 @@ var getDocsTestCases = []struct {
 			"lastIndex", int64(0),
 			"step", int64(0),
 		},
-	}}},
+	}}, false},
 	{"Ping command", "PING", []interface{}{[]interface{}{
 		"ping",
 		[]interface{}{
@@ -43,9 +61,10 @@ var getDocsTestCases = []struct {
 			"lastIndex", int64(0),
 			"step", int64(0),
 		},
-	}}},
+	}}, false},
 	{"Invalid command", "INVALID_CMD",
 		[]any{},
+		false,
 	},
 	{"Combination of valid and Invalid command", "SET INVALID_CMD", []interface{}{[]interface{}{
 		"set",
@@ -56,7 +75,7 @@ var getDocsTestCases = []struct {
 			"beginIndex", int64(1),
 			"lastIndex", int64(0),
 			"step", int64(0),
-		}}}},
+		}}}, false},
 	{"Combination of multiple valid commands", "SET GET", []interface{}{[]interface{}{
 		"set",
 		[]interface{}{
@@ -76,7 +95,7 @@ var getDocsTestCases = []struct {
 				"lastIndex", int64(0),
 				"step", int64(0),
 			},
-		}}},
+		}}, false},
 }
 
 func TestCommandDocs(t *testing.T) {
@@ -86,7 +105,14 @@ func TestCommandDocs(t *testing.T) {
 	for _, tc := range getDocsTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := FireCommand(conn, "COMMAND DOCS "+tc.inCmd)
-			assert.Equal(t, tc.expected, result)
+			if !tc.skipExpectedMatch {
+				assert.Equal(t, tc.expected, result)
+			} else {
+				assert.NotNil(t, result)
+				_, ok := result.([]interface{})
+				assert.True(t, ok)
+				assert.True(t, len(result.([]interface{})) > 0)
+			}
 		})
 	}
 }

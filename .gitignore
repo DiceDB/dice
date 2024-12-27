@@ -1,5 +1,7 @@
 bin/dice
 *.aof
+*.out
+*.prof
 .vscode/
 dice-server
 dicedb
@@ -10,6 +12,7 @@ __pycache__
 *.rdb
 dice
 main
+tmp/
 
 # build output
 dist/

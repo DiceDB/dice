@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 // The following commands are a part of this test class:
@@ -12,8 +28,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
-
-// TODO: BITOP has not been migrated yet. Once done, we can uncomment the tests - please check accuracy and validate for expected values.
 
 // func TestBitOp(t *testing.T) {
 // 	conn := getLocalConnection()
@@ -265,6 +279,7 @@ import (
 
 func TestBitCount(t *testing.T) {
 	conn := getLocalConnection()
+	defer conn.Close()
 	testcases := []struct {
 		InCmds []string
 		Out    []interface{}
@@ -280,6 +295,22 @@ func TestBitCount(t *testing.T) {
 		{
 			InCmds: []string{"SETBIT mykey 122 1"},
 			Out:    []interface{}{int64(0)},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -1 1"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -1 0"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -10000 1"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -10000 0"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
 		},
 		{
 			InCmds: []string{"GETBIT mykey 122"},
@@ -342,6 +373,7 @@ func TestBitCount(t *testing.T) {
 
 func TestBitPos(t *testing.T) {
 	conn := getLocalConnection()
+	defer conn.Close()
 	testcases := []struct {
 		name         string
 		val          interface{}

@@ -1,0 +1,63 @@
+---
+import { Twitter, Github, Linkedin, Globe } from "lucide-astro";
+const { x, github, linkedin, website } = Astro.props;
+---
+
+<ul class="buttons" style="margin-left: 0 !important;">
+  {
+    x && (
+      <a
+        class="button is-small"
+        target="_blank"
+        href={x}
+        title="Follow on Twitter (X)"
+      >
+        <span class="icon">
+          <Twitter />
+        </span>
+      </a>
+    )
+  }
+  {
+    github && (
+      <a
+        class="button is-small"
+        target="_blank"
+        href={github}
+        title="Follow on GitHub"
+      >
+        <span class="icon">
+          <Github />
+        </span>
+      </a>
+    )
+  }
+  {
+    linkedin && (
+      <a
+        class="button is-small"
+        target="_blank"
+        href={linkedin}
+        title="Follow on LinkedIn"
+      >
+        <span class="icon">
+          <Linkedin />
+        </span>
+      </a>
+    )
+  }
+  {
+    website && (
+      <a
+        class="button is-small"
+        target="_blank"
+        href={website}
+        title="Visit website"
+      >
+        <span class="icon">
+          <Globe />
+        </span>
+      </a>
+    )
+  }
+</ul>

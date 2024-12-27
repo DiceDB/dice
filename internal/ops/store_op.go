@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package ops
 
 import (
@@ -11,8 +27,8 @@ type StoreOp struct {
 	RequestID     uint32         // RequestID identifies the request that this StoreOp belongs to
 	Cmd           *cmd.DiceDBCmd // Cmd is the atomic Store command (e.g., GET, SET)
 	ShardID       uint8          // ShardID of the shard on which the Store command will be executed
-	WorkerID      string         // WorkerID is the ID of the worker that sent this Store operation
-	Client        *comm.Client   // Client that sent this Store operation. TODO: This can potentially replace the WorkerID in the future
+	IOThreadID    string         // IOThreadID is the ID of the io-thread that sent this Store operation
+	Client        *comm.Client   // Client that sent this Store operation. TODO: This can potentially replace the IOThreadID in the future
 	HTTPOp        bool           // HTTPOp is true if this Store operation is an HTTP operation
 	WebsocketOp   bool           // WebsocketOp is true if this Store operation is a Websocket operation
 	PreProcessing bool           // PreProcessing indicates whether a comamnd operation requires preprocessing before execution. This is mainly used is multi-step-multi-shard commands

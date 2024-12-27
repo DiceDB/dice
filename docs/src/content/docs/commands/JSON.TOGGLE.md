@@ -6,19 +6,18 @@ description: Documentation for the DiceDB command JSON.TOGGLE
 The `JSON.TOGGLE` command is part of the DiceDBJSON module, which allows you to manipulate JSON data stored in DiceDB. This command is used to toggle the boolean value at a specified path within a JSON document. If the value at the specified path is `true`, it will be changed to `false`, and vice versa.
 
 ## Parameters
-| Parameter | Description                                                                 | Type   | Required |
-| --------- | --------------------------------------------------------------------------- | ------ | -------- |
+
+| Parameter | Description                                                               | Type   | Required |
+| --------- | ------------------------------------------------------------------------- | ------ | -------- |
 | `key`     | The key under which the JSON document is stored.                          | String | Yes      |
 | `path`    | The JSONPath expression specifying the location within the JSON document. | String | Yes      |
 
-
 ## Return Values
 
-| Condition                           | Return Value                                                                 |
-| ----------------------------------- | ---------------------------------------------------------------------------- |
-| Command is successful               | The number of values that were toggled.                                    |
-| Path does not exist                 | `0`                                                                          |
-
+| Condition             | Return Value                            |
+| --------------------- | --------------------------------------- |
+| Command is successful | The number of values that were toggled. |
+| Path does not exist   | `0`                                     |
 
 ## Behaviour
 

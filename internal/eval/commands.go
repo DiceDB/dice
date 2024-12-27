@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package eval
 
 import (
@@ -52,6 +68,13 @@ var (
 	DiceCmds      = map[string]DiceCmdMeta{}
 )
 
+// Custom Commands:
+// This command type allows for flexibility in defining and executing specific,
+// non-standard operations. Each command has metadata that specifies its behavior
+// and execution logic (Eval function). While the RESP (Redis Serialization Protocol)
+// server supports custom logic for these commands and treats them as CUSTOM commands,
+// their implementation for HTTP and WebSocket protocols is still pending.
+// As a result, their Eval functions remain defined but not yet migrated.
 var (
 	echoCmdMeta = DiceCmdMeta{
 		Name:  "ECHO",
@@ -68,7 +91,65 @@ var (
 		IsMigrated: false,
 		Eval:       evalPING,
 	}
+	helloCmdMeta = DiceCmdMeta{
+		Name:  "HELLO",
+		Info:  `HELLO always replies with a list of current server and connection properties, such as: versions, modules loaded, client ID, replication role and so forth`,
+		Eval:  evalHELLO,
+		Arity: -1,
+	}
+	authCmdMeta = DiceCmdMeta{
+		Name: "AUTH",
+		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
+		If the user is not authenticated, it returns with an encoded error message`,
+		Eval: nil,
+	}
+	abortCmdMeta = DiceCmdMeta{
+		Name:  "ABORT",
+		Info:  "Quit the server",
+		Eval:  nil,
+		Arity: 1,
+	}
+	sleepCmdMeta = DiceCmdMeta{
+		Name: "SLEEP",
+		Info: `SLEEP sets db to sleep for the specified number of seconds.
+		The sleep time should be the only param in args.
+		Returns error response if the time param in args is not of integer format.
+		SLEEP returns RespOK after sleeping for mentioned seconds`,
+		Eval:  evalSLEEP,
+		Arity: 1,
+	}
+)
 
+// Multi Shard or All Shard Commands:
+// This command type allows to do operations across multiple shards and gather the results
+// While the RESP server supports scatter-gather logic for these commands and
+// treats them as MultiShard or commands,
+// their implementation for HTTP and WebSocket protocols is still pending.
+// As a result, their Eval functions remained intact.
+var (
+	objectCopyCmdMeta = DiceCmdMeta{
+		Name:            "OBJECTCOPY",
+		Info:            `COPY command copies the value stored at the source key to the destination key.`,
+		StoreObjectEval: evalCOPYObject,
+		IsMigrated:      true,
+		Arity:           -2,
+	}
+	pfMergeCmdMeta = DiceCmdMeta{
+		Name: "PFMERGE",
+		Info: `PFMERGE destkey [sourcekey [sourcekey ...]]
+		Merges one or more HyperLogLog values into a single key.`,
+		IsMigrated:      true,
+		Arity:           -2,
+		KeySpecs:        KeySpecs{BeginIndex: 1},
+		StoreObjectEval: evalPFMERGE,
+	}
+)
+
+// Single Shard command
+// This command type executes within a single shard and no custom logic is required to
+// compose the results. Although http and websocket always uses shard - 0 still logic
+// remains same in case of RESP as well. As a result following commands are successfully migrated
+var (
 	setCmdMeta = DiceCmdMeta{
 		Name: "SET",
 		Info: `SET puts a new <key, value> pair in db as in the args
@@ -112,12 +193,6 @@ var (
 		NewEval:    evalGETSET,
 	}
 
-	authCmdMeta = DiceCmdMeta{
-		Name: "AUTH",
-		Info: `AUTH returns with an encoded "OK" if the user is authenticated.
-		If the user is not authenticated, it returns with an encoded error message`,
-		Eval: nil,
-	}
 	getDelCmdMeta = DiceCmdMeta{
 		Name: "GETDEL",
 		Info: `GETDEL returns the value for the queried key in args
@@ -128,17 +203,6 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 		NewEval:    evalGETDEL,
-	}
-	msetCmdMeta = DiceCmdMeta{
-		Name: "MSET",
-		Info: `MSET sets multiple keys to multiple values in the db
-		args should contain an even number of elements
-		each pair of elements will be treated as <key, value> pair
-		Returns encoded error response if the number of arguments is not even
-		Returns encoded OK RESP once all entries are added`,
-		Eval:     evalMSET,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 2, LastKey: -1},
 	}
 	jsonsetCmdMeta = DiceCmdMeta{
 		Name: "JSON.SET",
@@ -161,16 +225,6 @@ var (
 		Arity:      2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
-	}
-	jsonMGetCmdMeta = DiceCmdMeta{
-		Name: "JSON.MGET",
-		Info: `JSON.MGET key..key [path]
-		Returns the encoded RESP value of the key, if present
-		Null reply: If the key doesn't exist or has expired.
-		Error reply: If the number of arguments is incorrect or the stored value is not a JSON type.`,
-		Eval:     evalJSONMGET,
-		Arity:    2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
 	jsontoggleCmdMeta = DiceCmdMeta{
 		Name: "JSON.TOGGLE",
@@ -367,9 +421,10 @@ var (
 		Name: "DEL",
 		Info: `DEL deletes all the specified keys in args list
 		returns the count of total deleted keys after encoding`,
-		Eval:     evalDEL,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
+		IsMigrated: true,
+		NewEval:    evalDEL,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
 	}
 	expireCmdMeta = DiceCmdMeta{
 		Name: "EXPIRE",
@@ -404,18 +459,6 @@ var (
 		Arity:      -3,
 		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
 	}
-	helloCmdMeta = DiceCmdMeta{
-		Name:  "HELLO",
-		Info:  `HELLO always replies with a list of current server and connection properties, such as: versions, modules loaded, client ID, replication role and so forth`,
-		Eval:  evalHELLO,
-		Arity: -1,
-	}
-	bgrewriteaofCmdMeta = DiceCmdMeta{
-		Name:  "BGREWRITEAOF",
-		Info:  `Instruct Dice to start an Append Only File rewrite process. The rewrite will create a small optimized version of the current Append Only File.`,
-		Eval:  EvalBGREWRITEAOF,
-		Arity: 1,
-	}
 	incrCmdMeta = DiceCmdMeta{
 		Name: "INCR",
 		Info: `INCR increments the value of the specified key in args by 1,
@@ -444,33 +487,19 @@ var (
 		NewEval:    evalINCRBYFLOAT,
 		IsMigrated: true,
 	}
-	infoCmdMeta = DiceCmdMeta{
-		Name: "INFO",
-		Info: `INFO creates a buffer with the info of total keys per db
-		Returns the encoded buffer as response`,
-		Eval:  evalINFO,
-		Arity: -1,
-	}
 	clientCmdMeta = DiceCmdMeta{
-		Name:  "CLIENT",
-		Info:  `This is a container command for client connection commands.`,
-		Eval:  evalCLIENT,
-		Arity: -2,
+		Name:       "CLIENT",
+		Info:       `This is a container command for client connection commands.`,
+		NewEval:    evalCLIENT,
+		IsMigrated: true,
+		Arity:      -2,
 	}
 	latencyCmdMeta = DiceCmdMeta{
-		Name:  "LATENCY",
-		Info:  `This is a container command for latency diagnostics commands.`,
-		Eval:  evalLATENCY,
-		Arity: -2,
-	}
-	sleepCmdMeta = DiceCmdMeta{
-		Name: "SLEEP",
-		Info: `SLEEP sets db to sleep for the specified number of seconds.
-		The sleep time should be the only param in args.
-		Returns error response if the time param in args is not of integer format.
-		SLEEP returns RespOK after sleeping for mentioned seconds`,
-		Eval:  evalSLEEP,
-		Arity: 1,
+		Name:       "LATENCY",
+		Info:       `This is a container command for latency diagnostics commands.`,
+		NewEval:    evalLATENCY,
+		IsMigrated: true,
+		Arity:      -2,
 	}
 	bfreserveCmdMeta = DiceCmdMeta{
 		Name: "BF.RESERVE",
@@ -506,50 +535,6 @@ var (
 		IsMigrated: true,
 		Arity:      2,
 	}
-	// TODO: Remove this override once we support QWATCH in dice-cli.
-	subscribeCmdMeta = DiceCmdMeta{
-		Name: "SUBSCRIBE",
-		Info: `SUBSCRIBE(or QWATCH) adds the specified key to the watch list for the caller client.
-		Every time a key in the watch list is modified, the client will be sent a response
-		containing the new value of the key along with the operation that was performed on it.
-		Contains only one argument, the key to be watched.`,
-		Eval:  nil,
-		Arity: 1,
-	}
-	qwatchCmdMeta = DiceCmdMeta{
-		Name: "Q.WATCH",
-		Info: `Q.WATCH adds the specified key to the watch list for the caller client.
-		Every time a key in the watch list is modified, the client will be sent a response
-		containing the new value of the key along with the operation that was performed on it.
-		Contains only one argument, the key to be watched.`,
-		Eval:  nil,
-		Arity: 1,
-	}
-	qUnwatchCmdMeta = DiceCmdMeta{
-		Name: "Q.UNWATCH",
-		Info: `Unsubscribes or QUnwatches the client from the given key's watch session.
-		It removes the key from the watch list for the caller client.`,
-		Eval:  nil,
-		Arity: 1,
-	}
-	ExecCmdMeta = DiceCmdMeta{
-		Name:  "EXEC",
-		Info:  `EXEC executes commands in a transaction, which is initiated by MULTI`,
-		Eval:  nil,
-		Arity: 1,
-	}
-	DiscardCmdMeta = DiceCmdMeta{
-		Name:  "DISCARD",
-		Info:  `DISCARD discards all the commands in a transaction, which is initiated by MULTI`,
-		Eval:  nil,
-		Arity: 1,
-	}
-	abortCmdMeta = DiceCmdMeta{
-		Name:  "ABORT",
-		Info:  "Quit the server",
-		Eval:  nil,
-		Arity: 1,
-	}
 	setBitCmdMeta = DiceCmdMeta{
 		Name:       "SETBIT",
 		Info:       "SETBIT sets or clears the bit at offset in the string value stored at key",
@@ -569,99 +554,88 @@ var (
 		IsMigrated: true,
 		NewEval:    evalBITCOUNT,
 	}
-	bitOpCmdMeta = DiceCmdMeta{
-		Name: "BITOP",
-		Info: "BITOP performs bitwise operations between multiple keys",
-		Eval: evalBITOP,
+
+	persistCmdMeta = DiceCmdMeta{
+		Name:       "PERSIST",
+		Info:       "PERSIST removes the expiration from a key",
+		IsMigrated: true,
+		NewEval:    evalPERSIST,
 	}
+
 	commandCmdMeta = DiceCmdMeta{
 		Name:        "COMMAND",
 		Info:        "Evaluates COMMAND <subcommand> command based on subcommand",
-		Eval:        evalCommand,
+		NewEval:     evalCommand,
+		IsMigrated:  true,
 		Arity:       -1,
 		SubCommands: []string{Count, GetKeys, GetKeysandFlags, List, Help, Info, Docs},
 	}
 	commandCountCmdMeta = DiceCmdMeta{
-		Name:  "COMMAND|COUNT",
-		Info:  "Returns a count of commands.",
-		Eval:  evalCommand,
-		Arity: 2,
+		Name:       "COMMAND|COUNT",
+		Info:       "Returns a count of commands.",
+		NewEval:    evalCommand,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	commandHelpCmdMeta = DiceCmdMeta{
-		Name:  "COMMAND|HELP",
-		Info:  "Returns helpful text about the different subcommands",
-		Eval:  evalCommand,
-		Arity: 2,
+		Name:       "COMMAND|HELP",
+		Info:       "Returns helpful text about the different subcommands",
+		NewEval:    evalCommand,
+		IsMigrated: true,
+		Arity:      2,
 	}
 	commandInfoCmdMeta = DiceCmdMeta{
-		Name:  "COMMAND|INFO",
-		Info:  "Returns information about one, multiple or all commands.",
-		Eval:  evalCommand,
-		Arity: -2,
+		Name:       "COMMAND|INFO",
+		Info:       "Returns information about one, multiple or all commands.",
+		NewEval:    evalCommand,
+		IsMigrated: true,
+		Arity:      -2,
 	}
 	commandListCmdMeta = DiceCmdMeta{
-		Name:  "COMMAND|LIST",
-		Info:  "Returns a list of command names.",
-		Eval:  evalCommand,
-		Arity: -2,
+		Name:       "COMMAND|LIST",
+		Info:       "Returns a list of command names.",
+		NewEval:    evalCommand,
+		IsMigrated: true,
+		Arity:      -2,
 	}
 	commandDocsCmdMeta = DiceCmdMeta{
-		Name:  "COMMAND|DOCS",
-		Info:  "Returns documentary information about one, multiple or all commands.",
-		Eval:  evalCommand,
-		Arity: -2,
+		Name:       "COMMAND|DOCS",
+		Info:       "Returns documentary information about one, multiple or all commands.",
+		NewEval:    evalCommand,
+		IsMigrated: true,
+		Arity:      -2,
 	}
 	commandGetKeysCmdMeta = DiceCmdMeta{
-		Name:  "COMMAND|GETKEYS",
-		Info:  "Extracts the key names from an arbitrary command.",
-		Eval:  evalCommand,
-		Arity: -4,
+		Name:       "COMMAND|GETKEYS",
+		Info:       "Extracts the key names from an arbitrary command.",
+		NewEval:    evalCommand,
+		IsMigrated: true,
+		Arity:      -4,
 	}
 	commandGetKeysAndFlagsCmdMeta = DiceCmdMeta{
-		Name:  "COMMAND|GETKEYSANDFLAGS",
-		Info:  "Returns a list of command names.",
-		Eval:  evalCommand,
-		Arity: -4,
+		Name:       "COMMAND|GETKEYSANDFLAGS",
+		Info:       "Returns a list of command names.",
+		NewEval:    evalCommand,
+		IsMigrated: true,
+		Arity:      -4,
+	}
+	jsonArrIndexCmdMeta = DiceCmdMeta{
+		Name: "JSON.ARRINDEX",
+		Info: `JSON.ARRINDEX key path value [start [stop]]
+		Search for the first occurrence of a JSON value in an array`,
+		NewEval:    evalJSONARRINDEX,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+		IsMigrated: true,
 	}
 
-	keysCmdMeta = DiceCmdMeta{
-		Name:  "KEYS",
-		Info:  "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
-		Eval:  evalKeys,
-		Arity: 1,
-	}
-
-	MGetCmdMeta = DiceCmdMeta{
-		Name: "MGET",
-		Info: `The MGET command returns an array of RESP values corresponding to the provided keys.
-		For each key, if the key is expired or does not exist, the response will be RespNIL;
-		otherwise, the response will be the RESP value of the key.
-		`,
-		Eval:     evalMGET,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
-	}
-	persistCmdMeta = DiceCmdMeta{
-		Name: "PERSIST",
-		Info: "PERSIST removes the expiration from a key",
-		Eval: evalPersist,
-	}
-
-	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
-	copyCmdMeta = DiceCmdMeta{
-		Name:  "COPY",
-		Info:  `COPY command copies the value stored at the source key to the destination key.`,
-		Eval:  evalCOPY,
-		Arity: -2,
-	}
-
-	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
-	objectCopyCmdMeta = DiceCmdMeta{
-		Name:            "OBJECTCOPY",
-		Info:            `COPY command copies the value stored at the source key to the destination key.`,
-		StoreObjectEval: evalCOPYObject,
-		IsMigrated:      true,
-		Arity:           -2,
+	// Internal command used to spawn request across all shards (works internally with the KEYS command)
+	singleKeysCmdMeta = DiceCmdMeta{
+		Name:       "SINGLEKEYS",
+		Info:       "KEYS command is used to get all the keys in the database. Complexity is O(n) where n is the number of keys in the database.",
+		NewEval:    evalKEYS,
+		Arity:      1,
+		IsMigrated: true,
 	}
 
 	decrCmdMeta = DiceCmdMeta{
@@ -698,13 +672,8 @@ var (
 		Name: "EXISTS",
 		Info: `EXISTS key1 key2 ... key_N
 		Return value is the number of keys existing.`,
-		Eval: evalEXISTS,
-	}
-	renameCmdMeta = DiceCmdMeta{
-		Name:  "RENAME",
-		Info:  "Renames a key and overwrites the destination",
-		Eval:  evalRename,
-		Arity: 3,
+		IsMigrated: true,
+		NewEval:    evalEXISTS,
 	}
 	getexCmdMeta = DiceCmdMeta{
 		Name: "GETEX",
@@ -861,19 +830,25 @@ var (
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
 		OBJECT command is used to inspect the internals of the Redis objects.`,
-		Eval:     evalOBJECT,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 2},
+		NewEval:    evalOBJECT,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 2},
+		IsMigrated: true,
 	}
-	touchCmdMeta = DiceCmdMeta{
-		Name: "TOUCH",
-		Info: `TOUCH key1 key2 ... key_N
+
+	// Internal command used to spawn request across all shards (works internally with Touch command)
+	singleTouchCmdMeta = DiceCmdMeta{
+		Name: "SINGLETOUCH",
+		Info: `TOUCH key1
 		Alters the last access time of a key(s).
-		A key is ignored if it does not exist.`,
-		Eval:     evalTOUCH,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		A key is ignored if it does not exist.
+		This is for one by one counting and for multisharding`,
+		NewEval:    evalTouch,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+
 	lpushCmdMeta = DiceCmdMeta{
 		Name:       "LPUSH",
 		Info:       "LPUSH pushes values into the left side of the deque",
@@ -912,17 +887,21 @@ var (
 		IsMigrated: true,
 		Arity:      1,
 	}
-	dbSizeCmdMeta = DiceCmdMeta{
-		Name:  "DBSIZE",
-		Info:  `DBSIZE Return the number of keys in the database`,
-		Eval:  evalDBSIZE,
-		Arity: 1,
+	// Internal command used to spawn request across all shards (works internally with DBSIZE command)
+	singleDBSizeCmdMeta = DiceCmdMeta{
+		Name:       "SINGLEDBSIZE",
+		Info:       `DBSIZE Return the number of keys in the database`,
+		NewEval:    evalDBSize,
+		IsMigrated: true,
+		Arity:      -2,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	flushdbCmdMeta = DiceCmdMeta{
-		Name:  "FLUSHDB",
-		Info:  `FLUSHDB deletes all the keys of the currently selected DB`,
-		Eval:  evalFLUSHDB,
-		Arity: -1,
+		Name:       "FLUSHDB",
+		Info:       `FLUSHDB deletes all the keys of the currently selected DB`,
+		NewEval:    evalFLUSHDB,
+		IsMigrated: true,
+		Arity:      -1,
 	}
 	bitposCmdMeta = DiceCmdMeta{
 		Name: "BITPOS",
@@ -995,24 +974,6 @@ var (
 		IsMigrated: true,
 		NewEval:    evalSCARD,
 	}
-	sdiffCmdMeta = DiceCmdMeta{
-		Name: "SDIFF",
-		Info: `SDIFF key1 [key2 ... key_N]
-		Returns the members of the set resulting from the difference between the first set and all the successive sets.
-		Non existing keys are treated as empty sets.`,
-		Eval:     evalSDIFF,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
-	sinterCmdMeta = DiceCmdMeta{
-		Name: "SINTER",
-		Info: `SINTER key1 [key2 ... key_N]
-		Returns the members of the set resulting from the intersection of all the given sets.
-		Non existing keys are treated as empty sets.`,
-		Eval:     evalSINTER,
-		Arity:    -2,
-		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
 	pfAddCmdMeta = DiceCmdMeta{
 		Name: "PFADD",
 		Info: `PFADD key [element [element ...]]
@@ -1027,15 +988,6 @@ var (
 		Info: `PFCOUNT key [key ...]
 		Returns the approximated cardinality of the set(s) observed by the HyperLogLog key(s).`,
 		NewEval:    evalPFCOUNT,
-		IsMigrated: true,
-		Arity:      -2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
-	}
-	pfMergeCmdMeta = DiceCmdMeta{
-		Name: "PFMERGE",
-		Info: `PFMERGE destkey [sourcekey [sourcekey ...]]
-		Merges one or more HyperLogLog values into a single key.`,
-		NewEval:    evalPFMERGE,
 		IsMigrated: true,
 		Arity:      -2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
@@ -1056,12 +1008,6 @@ var (
 		NewEval:    evalHLEN,
 		IsMigrated: true,
 		Arity:      2,
-	}
-	selectCmdMeta = DiceCmdMeta{
-		Name:  "SELECT",
-		Info:  `Select the logical database having the specified zero-based numeric index. New connections always use the database 0`,
-		Eval:  evalSELECT,
-		Arity: 1,
 	}
 	jsonnumincrbyCmdMeta = DiceCmdMeta{
 		Name:       "JSON.NUMINCRBY",
@@ -1090,10 +1036,11 @@ var (
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
 	typeCmdMeta = DiceCmdMeta{
-		Name:  "TYPE",
-		Info:  `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
-		Eval:  evalTYPE,
-		Arity: 1,
+		Name:       "TYPE",
+		Info:       `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
+		IsMigrated: true,
+		NewEval:    evalTYPE,
+		Arity:      1,
 
 		KeySpecs: KeySpecs{BeginIndex: 1},
 	}
@@ -1298,6 +1245,22 @@ var (
 		NewEval:    evalGEODIST,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	geoPosCmdMeta = DiceCmdMeta{
+		Name:       "GEOPOS",
+		Info:       `Returns the latitude and longitude of the members identified by the particular index.`,
+		Arity:      -3,
+		NewEval:    evalGEOPOS,
+		IsMigrated: true,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
+	geoHashCmdMeta = DiceCmdMeta{
+		Name:       "GEOHASH",
+		Info:       `Return Geohash strings representing the position of one or more elements representing a geospatial index`,
+		Arity:      -2,
+		IsMigrated: true,
+		NewEval:    evalGEOHASH,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
 	jsonstrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRAPPEND",
 		Info: `JSON.STRAPPEND key [path] value
@@ -1405,6 +1368,7 @@ var (
 func init() {
 	PreProcessing["COPY"] = evalGetObject
 	PreProcessing["RENAME"] = evalGET
+	PreProcessing["GETOBJECT"] = evalGetObject
 
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta
@@ -1413,10 +1377,8 @@ func init() {
 	DiceCmds["BF.EXISTS"] = bfexistsCmdMeta
 	DiceCmds["BF.INFO"] = bfinfoCmdMeta
 	DiceCmds["BF.RESERVE"] = bfreserveCmdMeta
-	DiceCmds["BGREWRITEAOF"] = bgrewriteaofCmdMeta
 	DiceCmds["BITCOUNT"] = bitCountCmdMeta
 	DiceCmds["BITFIELD"] = bitfieldCmdMeta
-	DiceCmds["BITOP"] = bitOpCmdMeta
 	DiceCmds["BITFIELD_RO"] = bitfieldroCmdMeta
 	DiceCmds["BITPOS"] = bitposCmdMeta
 	DiceCmds["CLIENT"] = clientCmdMeta
@@ -1428,16 +1390,12 @@ func init() {
 	DiceCmds["COMMAND|INFO"] = commandInfoCmdMeta
 	DiceCmds["COMMAND|DOCS"] = commandDocsCmdMeta
 	DiceCmds["COMMAND|GETKEYSANDFLAGS"] = commandGetKeysAndFlagsCmdMeta
-	DiceCmds["COPY"] = copyCmdMeta
 	DiceCmds["OBJECTCOPY"] = objectCopyCmdMeta
-	DiceCmds["DBSIZE"] = dbSizeCmdMeta
 	DiceCmds["DECR"] = decrCmdMeta
 	DiceCmds["DECRBY"] = decrByCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
-	DiceCmds["DISCARD"] = DiscardCmdMeta
 	DiceCmds["DUMP"] = dumpkeyCMmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta
-	DiceCmds["EXEC"] = ExecCmdMeta
 	DiceCmds["EXISTS"] = existsCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
 	DiceCmds["EXPIREAT"] = expireatCmdMeta
@@ -1445,6 +1403,8 @@ func init() {
 	DiceCmds["FLUSHDB"] = flushdbCmdMeta
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
+	DiceCmds["GEOPOS"] = geoPosCmdMeta
+	DiceCmds["GEOHASH"] = geoHashCmdMeta
 	DiceCmds["GET"] = getCmdMeta
 	DiceCmds["GETBIT"] = getBitCmdMeta
 	DiceCmds["GETDEL"] = getDelCmdMeta
@@ -1471,7 +1431,6 @@ func init() {
 	DiceCmds["INCR"] = incrCmdMeta
 	DiceCmds["INCRBYFLOAT"] = incrByFloatCmdMeta
 	DiceCmds["INCRBY"] = incrbyCmdMeta
-	DiceCmds["INFO"] = infoCmdMeta
 	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
 	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
@@ -1483,7 +1442,6 @@ func init() {
 	DiceCmds["JSON.FORGET"] = jsonforgetCmdMeta
 	DiceCmds["JSON.GET"] = jsongetCmdMeta
 	DiceCmds["JSON.INGEST"] = jsoningestCmdMeta
-	DiceCmds["JSON.MGET"] = jsonMGetCmdMeta
 	DiceCmds["JSON.NUMINCRBY"] = jsonnumincrbyCmdMeta
 	DiceCmds["JSON.NUMMULTBY"] = jsonnummultbyCmdMeta
 	DiceCmds["JSON.OBJKEYS"] = jsonobjkeysCmdMeta
@@ -1493,13 +1451,10 @@ func init() {
 	DiceCmds["JSON.STRLEN"] = jsonStrlenCmdMeta
 	DiceCmds["JSON.TOGGLE"] = jsontoggleCmdMeta
 	DiceCmds["JSON.TYPE"] = jsontypeCmdMeta
-	DiceCmds["KEYS"] = keysCmdMeta
 	DiceCmds["LATENCY"] = latencyCmdMeta
 	DiceCmds["LLEN"] = llenCmdMeta
 	DiceCmds["LPOP"] = lpopCmdMeta
 	DiceCmds["LPUSH"] = lpushCmdMeta
-	DiceCmds["MGET"] = MGetCmdMeta
-	DiceCmds["MSET"] = msetCmdMeta
 	DiceCmds["OBJECT"] = objectCmdMeta
 	DiceCmds["PERSIST"] = persistCmdMeta
 	DiceCmds["PFADD"] = pfAddCmdMeta
@@ -1507,26 +1462,17 @@ func init() {
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
 	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
-	DiceCmds["Q.UNWATCH"] = qUnwatchCmdMeta
-	DiceCmds["Q.WATCH"] = qwatchCmdMeta
-	DiceCmds["RANDOMKEY"] = randomKeyCmdMeta
-	DiceCmds["RENAME"] = renameCmdMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta
 	DiceCmds["RPUSH"] = rpushCmdMeta
 	DiceCmds["SADD"] = saddCmdMeta
 	DiceCmds["SCARD"] = scardCmdMeta
-	DiceCmds["SDIFF"] = sdiffCmdMeta
-	DiceCmds["SELECT"] = selectCmdMeta
 	DiceCmds["SET"] = setCmdMeta
 	DiceCmds["SETBIT"] = setBitCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
-	DiceCmds["SINTER"] = sinterCmdMeta
 	DiceCmds["SLEEP"] = sleepCmdMeta
 	DiceCmds["SMEMBERS"] = smembersCmdMeta
 	DiceCmds["SREM"] = sremCmdMeta
-	DiceCmds["SUBSCRIBE"] = subscribeCmdMeta
-	DiceCmds["TOUCH"] = touchCmdMeta
 	DiceCmds["TTL"] = ttlCmdMeta
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
@@ -1546,6 +1492,13 @@ func init() {
 	DiceCmds["CMS.MERGE"] = cmsMergeCmdMeta
 	DiceCmds["LINSERT"] = linsertCmdMeta
 	DiceCmds["LRANGE"] = lrangeCmdMeta
+	DiceCmds["JSON.ARRINDEX"] = jsonArrIndexCmdMeta
+
+	DiceCmds["SINGLETOUCH"] = singleTouchCmdMeta
+	DiceCmds["SINGLEDBSIZE"] = singleDBSizeCmdMeta
+	DiceCmds["SINGLEKEYS"] = singleKeysCmdMeta
+
+	DiceCmds["RANDOMKEY"] = randomKeyCmdMeta
 }
 
 // Function to convert DiceCmdMeta to []interface{}
@@ -1594,8 +1547,13 @@ func convertCmdMetaToDocs(cmdMeta *DiceCmdMeta) []interface{} {
 // Function to convert map[string]DiceCmdMeta{} to []interface{}
 func convertDiceCmdsMapToDocs() []interface{} {
 	var result []interface{}
+	// TODO: Add other keys supported as part of COMMAND DOCS, currently only
+	// command name and summary supported. This would required adding more metadata to supported commands
 	for _, cmdMeta := range DiceCmds {
-		result = append(result, convertCmdMetaToDocs(&cmdMeta))
+		result = append(result, strings.ToLower(cmdMeta.Name))
+		subResult := []interface{}{"summary", cmdMeta.Info}
+		result = append(result, subResult)
 	}
+
 	return result
 }

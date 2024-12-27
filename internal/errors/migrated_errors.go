@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package errors
 
 import (
@@ -33,6 +49,7 @@ var (
 	ErrInvalidIPAddress           = errors.New("invalid IP address")
 	ErrInvalidFingerprint         = errors.New("invalid fingerprint")
 	ErrKeyDoesNotExist            = errors.New("ERR could not perform this operation on a key that doesn't exist")
+	ErrKeyExists                  = errors.New("ERR key exists")
 
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {
@@ -53,8 +70,8 @@ var (
 	ErrFormatted = func(errMsg string, opts ...any) error {
 		return ErrGeneral(fmt.Sprintf(errMsg, opts...))
 	}
-	ErrWorkerNotFound = func(workerID string) error {
-		return fmt.Errorf("ERR worker with ID %s not found", workerID) // Indicates that a worker with the specified ID does not exist.
+	ErrIOThreadNotFound = func(id string) error {
+		return fmt.Errorf("ERR io-thread with ID %s not found", id) // Indicates that an io-thread with the specified ID does not exist.
 	}
 
 	ErrJSONPathNotFound = func(path string) error {
@@ -71,6 +88,10 @@ var (
 
 	ErrUnexpectedJSONPathType = func(expectedType string, actualType interface{}) error {
 		return fmt.Errorf("ERR wrong type of path value - expected %s but found %s", expectedType, actualType) // Signals an unexpected type received when an integer was expected.
+	}
+
+	ErrUnknownCmd = func(cmd string) error {
+		return fmt.Errorf("ERROR unknown command '%v'", cmd) // Indicates that an unsupported encoding type was provided.
 	}
 )
 

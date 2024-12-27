@@ -136,12 +136,12 @@ OK
 
 ## Best Practices
 
-- Use `TTL` command to check remaining time before expiration
-- Consider using `PERSIST` command to remove expiration if needed
+- Use [`TTL`](/commands/ttl) command to check remaining time before expiration
+- Consider using [`PERSIST`](/commands/persist) command to remove expiration if needed
 - Choose appropriate conditional flags (NX, XX, GT, LT) based on your use case
 - Ensure Unix timestamps are in seconds, not milliseconds
 - Be aware of the timestamp limit of [9223372036854775]
 
 ## Alternatives
 
-- Use `EXPIRE` command for simpler expiration control based on relative time
+- Use [`EXPIRE`](/commands/expire) command for simpler expiration control based on relative time

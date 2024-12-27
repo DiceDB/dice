@@ -15,12 +15,12 @@ But, before we start, make sure you have
 
 ### Starting DiceDB
 
-Start the DiceDB server with the two flags `--enable-multithreading` and `--enable-watch`
-to enable multi-threading and watch mode, respectively. Your command would look something
+Start the DiceDB server with the flag `--enable-watch`
+to enable watch mode. Your command would look something
 like this
 
 ```bash
-docker run -p 7379:7379 dicedb/dicedb --enable-multithreading --enable-watch
+docker run -p 7379:7379 dicedb/dicedb --enable-watch
 ```
 
 Also, connect to the database using the CLI as mentioned in the above installation steps or
@@ -73,7 +73,7 @@ This can be used to build real-time applications like leaderboards, monitoring, 
 ## WATCH commands
 
 We are in process of implementing the `.WATCH` commands for all query commands in DiceDB,
-but today we support `GET.WATCH` and `ZRANGE.WATCH`, you can read more about them
+but today we support [`GET.WATCH`](/commands/getwatch), [`ZRANGE.WATCH`](/commands/zrangewatch) and [`PFCOUNT.WATCH`](/commands/pfcountwatch). You can read more about them
 in the commands documentation.
 
 With subsequent releases, we will keep shipping `.WATCH` commands for all the query commands in DiceDB.

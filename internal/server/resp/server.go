@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 import (
@@ -20,14 +36,14 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
 	respparser "github.com/dicedb/dice/internal/clientio/requestparser/resp"
+	"github.com/dicedb/dice/internal/iothread"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/shard"
-	"github.com/dicedb/dice/internal/worker"
 )
 
 var (
-	workerCounter uint64
-	startTime     = time.Now().UnixNano() / int64(time.Millisecond)
+	ioThreadCounter uint64
+	startTime       = time.Now().UnixNano() / int64(time.Millisecond)
 )
 
 var (
@@ -44,7 +60,7 @@ type Server struct {
 	Port                     int
 	serverFD                 int
 	connBacklogSize          int
-	workerManager            *worker.WorkerManager
+	ioThreadManager          *iothread.Manager
 	shardManager             *shard.ShardManager
 	watchManager             *watchmanager.Manager
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
@@ -52,13 +68,13 @@ type Server struct {
 	wl                       wal.AbstractWAL
 }
 
-func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager,
+func NewServer(shardManager *shard.ShardManager, ioThreadManager *iothread.Manager,
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
-		Host:                     config.DiceConfig.AsyncServer.Addr,
-		Port:                     config.DiceConfig.AsyncServer.Port,
+		Host:                     config.DiceConfig.RespServer.Addr,
+		Port:                     config.DiceConfig.RespServer.Port,
 		connBacklogSize:          DefaultConnBacklogSize,
-		workerManager:            workerManager,
+		ioThreadManager:          ioThreadManager,
 		shardManager:             shardManager,
 		watchManager:             watchmanager.NewManager(cmdWatchSubscriptionChan, cmdWatchChan),
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
@@ -95,8 +111,6 @@ func (s *Server) Run(ctx context.Context) (err error) {
 			errChan <- fmt.Errorf("failed to accept connections %w", err)
 		}
 	}(wg)
-
-	slog.Info("ready to accept and serve requests on", slog.Int("port", config.Port))
 
 	select {
 	case <-ctx.Done():
@@ -186,7 +200,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 				return fmt.Errorf("error accepting connection: %w", err)
 			}
 
-			// Register a new worker for the client
+			// Register a new io-thread for the client
 			ioHandler, err := netconn.NewIOHandler(clientFD)
 			if err != nil {
 				slog.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
@@ -198,37 +212,39 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 			responseChan := make(chan *ops.StoreResponse)      // responseChan is used for handling common responses from shards
 			preprocessingChan := make(chan *ops.StoreResponse) // preprocessingChan is specifically for handling responses from shards for commands that require preprocessing
 
-			wID := GenerateUniqueWorkerID()
-			w := worker.NewWorker(wID, responseChan, preprocessingChan, s.cmdWatchSubscriptionChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.wl)
+			ioThreadID := GenerateUniqueIOThreadID()
+			thread := iothread.NewIOThread(ioThreadID, responseChan, preprocessingChan, s.cmdWatchSubscriptionChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.wl)
 
-			// Register the worker with the worker manager
-			err = s.workerManager.RegisterWorker(w)
+			// Register the io-thread with the manager
+			err = s.ioThreadManager.RegisterIOThread(thread)
 			if err != nil {
 				return err
 			}
 
 			wg.Add(1)
-			go func(wID string) {
-				wg.Done()
-				defer func(wm *worker.WorkerManager, workerID string) {
-					err := wm.UnregisterWorker(workerID)
-					if err != nil {
-						slog.Warn("Failed to unregister worker", slog.String("worker-id", wID), slog.Any("error", err))
-					}
-				}(s.workerManager, wID)
-				wctx, cwctx := context.WithCancel(ctx)
-				defer cwctx()
-				err := w.Start(wctx)
-				if err != nil {
-					slog.Debug("Worker stopped", slog.String("worker-id", wID), slog.Any("error", err))
-				}
-			}(wID)
+			go s.startIOThread(ctx, wg, thread)
 		}
 	}
 }
 
-func GenerateUniqueWorkerID() string {
-	count := atomic.AddUint64(&workerCounter, 1)
+func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *iothread.BaseIOThread) {
+	wg.Done()
+	defer func(wm *iothread.Manager, id string) {
+		err := wm.UnregisterIOThread(id)
+		if err != nil {
+			slog.Warn("Failed to unregister io-thread", slog.String("id", id), slog.Any("error", err))
+		}
+	}(s.ioThreadManager, thread.ID())
+	ctx2, cancel := context.WithCancel(ctx)
+	defer cancel()
+	err := thread.Start(ctx2)
+	if err != nil {
+		slog.Debug("IOThread stopped", slog.String("id", thread.ID()), slog.Any("error", err))
+	}
+}
+
+func GenerateUniqueIOThreadID() string {
+	count := atomic.AddUint64(&ioThreadCounter, 1)
 	timestamp := time.Now().UnixNano()/int64(time.Millisecond) - startTime
 	return fmt.Sprintf("W-%d-%d", timestamp, count)
 }

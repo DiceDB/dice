@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package http
 
 import (
@@ -71,15 +87,33 @@ func TestType(t *testing.T) {
 			expected:      []interface{}{float64(0), "string"},
 			errorExpected: false,
 		},
+		// TODO: uncomment when bitop is added
+		// {
+		// 	name: "TYPE for key with value created from BITOP command",
+		// 	commands: []HTTPCommand{
+		// 		{Command: "SET", Body: map[string]interface{}{"key": "key1", "value": "foobar"}},
+		// 		{Command: "SET", Body: map[string]interface{}{"key": "key2", "value": "abcdef"}},
+		// 		{Command: "TYPE", Body: map[string]interface{}{"key": "dest"}},
+		// 	},
+		// 	expected:      []interface{}{"OK", "OK", "string"},
+		// 	errorExpected: false,
+		// },
 		{
-			name: "TYPE for key with value created from BITOP command",
+			name: "TYPE for key with value created from ZADD command",
 			commands: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "key1", "value": "foobar"}},
-				{Command: "SET", Body: map[string]interface{}{"key": "key2", "value": "abcdef"}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "dest", "key1", "key2"}}},
-				{Command: "TYPE", Body: map[string]interface{}{"key": "dest"}},
+				{Command: "ZADD", Body: map[string]interface{}{"key": "k11", "values": [...]string{"1", "member11"}}},
+				{Command: "TYPE", Body: map[string]interface{}{"key": "k11"}},
 			},
-			expected:      []interface{}{"OK", "OK", float64(6), "string"},
+			expected:      []interface{}{float64(1), "zset"},
+			errorExpected: false,
+		},
+		{
+			name: "TYPE for key with value created from GEOADD command",
+			commands: []HTTPCommand{
+				{Command: "GEOADD", Body: map[string]interface{}{"key": "k12", "values": [...]string{"13.361389", "38.115556", "Palermo"}}},
+				{Command: "TYPE", Body: map[string]interface{}{"key": "k12"}},
+			},
+			expected:      []interface{}{float64(1), "zset"},
 			errorExpected: false,
 		},
 	}

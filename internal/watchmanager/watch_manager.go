@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package watchmanager
 
 import (
@@ -12,7 +28,7 @@ import (
 type (
 	WatchSubscription struct {
 		Subscribe    bool                // Subscribe is true for subscribe, false for unsubscribe. Required.
-		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the worker. Required.
+		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the io-thread. Required.
 		WatchCmd     *cmd.DiceDBCmd      // WatchCmd Represents a unique key for each watch artifact, only populated for subscriptions.
 		Fingerprint  uint32              // Fingerprint is a unique identifier for each watch artifact, only populated for unsubscriptions.
 	}
@@ -111,6 +127,9 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 		if len(clients) == 0 {
 			// Remove the fingerprint from tcpSubscriptionMap
 			delete(m.tcpSubscriptionMap, fingerprint)
+		} else {
+			// Other clients still subscribed, no need to remove the fingerprint altogether
+			return
 		}
 	}
 

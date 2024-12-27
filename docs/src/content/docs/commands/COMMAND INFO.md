@@ -15,17 +15,16 @@ COMMAND INFO command-name [command-name ...]
 
 ## Parameters
 
-| Parameter      | Description | Type   | Required |
-|----------------|-------------|--------|----------|
+| Parameter      | Description                                                 | Type   | Required |
+| -------------- | ----------------------------------------------------------- | ------ | -------- |
 | `command-name` | The name of the command for which information is requested. | String | No       |
-
 
 ## Return Values
 
-| Condition | Return Value |
-|-----------|--------------|
+| Condition             | Return Value                                                        |
+| --------------------- | ------------------------------------------------------------------- |
 | Command is successful | Array containing detailed information about the specified commands. |
-| Error | An error is returned if the command fails. |
+| Error                 | An error is returned if the command fails.                          |
 
 The detailed information for each command includes the following fields:
 
@@ -116,7 +115,6 @@ An error is thrown when the command name passed to the `COMMAND INFO` command is
 127.0.0.1:7379> COMMAND INFO UNKNOWNCOMMAND
 1) (nil)
 ```
-
 
 ### Note:
 

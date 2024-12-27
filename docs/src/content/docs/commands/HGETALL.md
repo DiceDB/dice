@@ -81,7 +81,6 @@ OK
 (error) ERROR WRONGTYPE Operation against a key holding the wrong kind of value
 ```
 
-
 Invalid number of arguments are passed
 
 ```bash

@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package cmd
 
 import (
@@ -29,12 +45,12 @@ type DiceDBCmd struct {
 	// This slice allows flexible support for commands with variable arguments.
 	Args []string
 
-	// InternalObj is a pointer to an InternalObj, representing an optional data structure
+	// InternalObjs is a pointer to list of InternalObjs, representing an optional data structure
 	// associated with the command. This contains pointer to the underlying simple
 	// types such as int, string or even complex types
 	// like hashes, sets, or sorted sets, which are stored and manipulated as objects.
 	// WARN: This parameter should be used with caution
-	InternalObj *object.InternalObj
+	InternalObjs []*object.InternalObj
 }
 
 type RedisCmds struct {

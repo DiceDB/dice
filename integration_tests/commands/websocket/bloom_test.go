@@ -1,9 +1,26 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package websocket
 
 import (
 	"testing"
 	"time"
 
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +54,7 @@ func TestBFReserveAddInfoExists(t *testing.T) {
 		{
 			name:    "BF.RESERVE on existent filter returns error",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.RESERVE bf 0.01 1000"},
-			expect:  []interface{}{"OK", "ERR item exists"},
+			expect:  []interface{}{"OK", diceerrors.ErrKeyExists.Error()},
 			cleanUp: []string{"DEL bf"},
 		},
 	}
@@ -126,7 +143,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 		{
 			name:    "BF.INFO on a non-existent filter",
 			cmds:    []string{"BF.INFO bf"},
-			expect:  []interface{}{"ERR not found"},
+			expect:  []interface{}{diceerrors.ErrKeyNotFound.Error()},
 			delays:  []time.Duration{0},
 			cleanUp: []string{"del bf"},
 		},
@@ -161,7 +178,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 		{
 			name:    "BF.RESERVE with duplicate filter name",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.RESERVE bf 0.01 2000"},
-			expect:  []interface{}{"OK", "ERR item exists"},
+			expect:  []interface{}{"OK", diceerrors.ErrKeyExists.Error()},
 			delays:  []time.Duration{0, 0},
 			cleanUp: []string{"del bf"},
 		},

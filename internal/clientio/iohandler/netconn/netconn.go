@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package netconn
 
 import (
@@ -9,6 +25,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"sync"
 	"syscall"
 	"time"
 
@@ -17,24 +34,43 @@ import (
 )
 
 const (
-	maxRequestSize = 512 * 1024 // 512 KB
-	readBufferSize = 4 * 1024   // 4 KB
-	idleTimeout    = 10 * time.Minute
+	maxRequestSize  = 32 * 1024 * 1024 // 32 MB, Redis max request size is 512MB
+	ioBufferSize    = 16 * 1024        // 16 KB
+	idleTimeout     = 30 * time.Minute
+	writeTimeout    = 10 * time.Second
+	keepAlivePeriod = 30 * time.Second
 )
 
 var (
 	ErrRequestTooLarge = errors.New("request too large")
 	ErrIdleTimeout     = errors.New("connection idle timeout")
 	ErrorClosed        = errors.New("connection closed")
+	errReadDeadline    = errors.New("error setting read deadline")
+	errReadRequest     = errors.New("error reading request")
 )
+
+// Pre-allocate the response array
+// WARN: Do not change the ordering of the array elements
+// It is strictly mapped to internal/eval/results.go enum.
+var respArray = [][]byte{
+	clientio.RespNIL,
+	clientio.RespOK,
+	clientio.RespQueued,
+	clientio.RespZero,
+	clientio.RespOne,
+	clientio.RespMinusOne,
+	clientio.RespMinusTwo,
+	clientio.RespEmptyArray,
+}
 
 // IOHandler handles I/O operations for a network connection
 type IOHandler struct {
-	fd     int
-	file   *os.File
-	conn   net.Conn
-	reader *bufio.Reader
-	writer *bufio.Writer
+	fd       int
+	file     *os.File
+	conn     net.Conn
+	reader   *bufio.Reader
+	writer   *bufio.Writer
+	readPool *sync.Pool
 }
 
 var _ iohandler.IOHandler = (*IOHandler)(nil)
@@ -64,12 +100,30 @@ func NewIOHandler(clientFD int) (*IOHandler, error) {
 		return nil, fmt.Errorf("failed to create net.Conn from file descriptor: %w", err)
 	}
 
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		if err := tcpConn.SetNoDelay(true); err != nil {
+			return nil, fmt.Errorf("failed to set TCP_NODELAY: %w", err)
+		}
+		if err := tcpConn.SetKeepAlive(true); err != nil {
+			return nil, fmt.Errorf("failed to set keepalive: %w", err)
+		}
+		if err := tcpConn.SetKeepAlivePeriod(keepAlivePeriod); err != nil {
+			return nil, fmt.Errorf("failed to set keepalive period: %w", err)
+		}
+	}
+
 	return &IOHandler{
 		fd:     clientFD,
 		file:   file,
 		conn:   conn,
-		reader: bufio.NewReader(conn),
-		writer: bufio.NewWriter(conn),
+		reader: bufio.NewReaderSize(conn, ioBufferSize),
+		writer: bufio.NewWriterSize(conn, ioBufferSize),
+		readPool: &sync.Pool{
+			New: func() interface{} {
+				b := make([]byte, ioBufferSize)
+				return &b // Return pointer to avoid interface conversion allocation
+			},
+		},
 	}, nil
 }
 
@@ -78,6 +132,12 @@ func NewIOHandlerWithConn(conn net.Conn) *IOHandler {
 		conn:   conn,
 		reader: bufio.NewReader(conn),
 		writer: bufio.NewWriter(conn),
+		readPool: &sync.Pool{
+			New: func() interface{} {
+				b := make([]byte, ioBufferSize)
+				return &b
+			},
+		},
 	}
 }
 
@@ -87,65 +147,75 @@ func (h *IOHandler) FileDescriptor() int {
 
 // ReadRequest reads data from the network connection
 func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
-	var data []byte
-	buf := make([]byte, readBufferSize)
+	// Get pointer from pool and dereference
+	buf := *h.readPool.Get().(*[]byte)
+	defer h.readPool.Put(&buf) // Put pointer back into pool
+
+	var result []byte
 
 	for {
 		select {
 		case <-ctx.Done():
-			return data, ctx.Err()
+			return result, ctx.Err()
 		default:
 			err := h.conn.SetReadDeadline(time.Now().Add(idleTimeout))
 			if err != nil {
-				return nil, fmt.Errorf("error setting read deadline: %w", err)
+				return nil, errReadDeadline
 			}
 
 			n, err := h.reader.Read(buf)
 			if n > 0 {
-				data = append(data, buf[:n]...)
-			}
-			if err != nil {
-				switch {
-				case errors.Is(err, syscall.EAGAIN), errors.Is(err, syscall.EWOULDBLOCK), errors.Is(err, io.EOF):
-					// No more data to read at this time
-					return data, nil
-				case errors.Is(err, net.ErrClosed), errors.Is(err, syscall.EPIPE), errors.Is(err, syscall.ECONNRESET):
-					slog.Debug("Connection closed", slog.Any("error", err))
-					cerr := h.Close()
-					if cerr != nil {
-						slog.Warn("Error closing connection", slog.Any("error", errors.Join(err, cerr)))
-					}
-					return nil, ErrorClosed
-				case errors.Is(err, syscall.ETIMEDOUT):
-					slog.Info("Connection idle timeout", slog.Any("error", err))
-					cerr := h.Close()
-					if cerr != nil {
-						slog.Warn("Error closing connection", slog.Any("error", errors.Join(err, cerr)))
-					}
-					return nil, ErrIdleTimeout
-				default:
-					slog.Error("Error reading from connection", slog.Any("error", err))
-					return nil, fmt.Errorf("error reading request: %w", err)
+				// Check if adding this chunk would exceed max request size
+				if len(result)+n > maxRequestSize {
+					return nil, ErrRequestTooLarge
 				}
+
+				result = append(result, buf[:n]...)
 			}
 
-			if len(data) > maxRequestSize {
-				slog.Warn("Request too large", slog.Any("size", len(data)))
-				return nil, ErrRequestTooLarge
+			if err != nil {
+				return h.handleReadError(err, result)
 			}
 
 			// If we've read less than the buffer size, we've likely got all the data
 			if n < len(buf) {
-				return data, nil
+				return result, nil
 			}
 		}
 	}
 }
 
+// handleReadError handles various read errors and returns appropriate response
+func (h *IOHandler) handleReadError(err error, data []byte) ([]byte, error) {
+	switch {
+	case errors.Is(err, syscall.EAGAIN), errors.Is(err, syscall.EWOULDBLOCK):
+		return data, nil
+	case errors.Is(err, io.EOF):
+		if len(data) > 0 {
+			return data, nil
+		}
+		return nil, io.EOF
+	case errors.Is(err, net.ErrClosed), errors.Is(err, syscall.EPIPE), errors.Is(err, syscall.ECONNRESET):
+		slog.Debug("Connection closed", slog.Any("error", err))
+		cErr := h.Close()
+		if cErr != nil {
+			slog.Warn("Error closing connection", slog.Any("error", errors.Join(err, cErr)))
+		}
+		return nil, ErrorClosed
+	case errors.Is(err, syscall.ETIMEDOUT):
+		slog.Info("Connection idle timeout", slog.Any("error", err))
+		cerr := h.Close()
+		if cerr != nil {
+			slog.Warn("Error closing connection", slog.Any("error", errors.Join(err, cerr)))
+		}
+		return nil, ErrIdleTimeout
+	default:
+		return nil, fmt.Errorf("%w: %v", errReadRequest, err)
+	}
+}
+
 // WriteResponse writes the response back to the network connection
 func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
-	errChan := make(chan error, 1)
-
 	// Process the incoming response by calling the handleResponse function.
 	// This function checks the response against known RESP formatted values
 	// and returns the corresponding byte array representation. The result
@@ -164,27 +234,38 @@ func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
 		resp = clientio.Encode(response, true)
 	}
 
-	go func(errChan chan error) {
-		_, err := h.writer.Write(resp)
-		if err == nil {
+	deadline := time.Now().Add(writeTimeout)
+	if err := h.conn.SetWriteDeadline(deadline); err != nil {
+		slog.Warn("error setting write deadline", slog.Any("error", err))
+	}
+
+	errChan := make(chan error, 1)
+	go func() {
+		defer close(errChan)
+
+		var err error
+		if _, err = h.writer.Write(resp); err == nil {
 			err = h.writer.Flush()
 		}
 
 		errChan <- err
-	}(errChan)
+	}()
 
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case err := <-errChan:
+	case err, ok := <-errChan:
+		if !ok {
+			slog.Warn("write operation failed: error channel closed unexpectedly")
+		}
+
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
-				cerr := h.Close()
-				if cerr != nil {
-					err = errors.Join(err, cerr)
+				if cErr := h.Close(); cErr != nil {
+					err = errors.Join(err, cErr)
 				}
 
-				slog.Debug("Connection closed", slog.Any("error", err))
+				slog.Debug("connection closed", slog.Any("error", err))
 				return err
 			}
 
@@ -197,8 +278,15 @@ func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
 
 // Close underlying network connection
 func (h *IOHandler) Close() error {
-	slog.Info("Closing connection")
-	return errors.Join(h.conn.Close(), h.file.Close())
+	var err error
+	if h.conn != nil {
+		err = errors.Join(err, h.conn.Close())
+	}
+	if h.file != nil {
+		err = errors.Join(err, h.file.Close())
+	}
+
+	return err
 }
 
 // handleResponse processes the incoming response from a client and returns the corresponding
@@ -220,23 +308,9 @@ func (h *IOHandler) Close() error {
 // predefined RESP responses, making it flexible in handling responses that might include
 // additional content beyond the expected response format.
 func HandlePredefinedResponse(response interface{}) []byte {
-	// WARN: Do not change the ordering of the array elements
-	// It is strictly mapped to internal/eval/results.go enum.
-	respArr := [][]byte{
-		clientio.RespNIL,        // Represents a RESP Nil Bulk String, which indicates a null value.
-		clientio.RespOK,         // Represents a RESP Simple String with value "OK".
-		clientio.RespQueued,     // Represents a Simple String indicating that a command has been queued.
-		clientio.RespZero,       // Represents a RESP Integer with value 0.
-		clientio.RespOne,        // Represents a RESP Integer with value 1.
-		clientio.RespMinusOne,   // Represents a RESP Integer with value -1.
-		clientio.RespMinusTwo,   // Represents a RESP Integer with value -2.
-		clientio.RespEmptyArray, // Represents an empty RESP Array.
+	if val, ok := response.(clientio.RespType); ok {
+		return respArray[val]
 	}
 
-	switch val := response.(type) {
-	case clientio.RespType:
-		return respArr[val]
-	default:
-		return nil
-	}
+	return nil
 }

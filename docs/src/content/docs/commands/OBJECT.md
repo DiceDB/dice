@@ -16,7 +16,6 @@ OBJECT <subcommand> <key>
 - `<subcommand>`: The specific operation you want to perform on the key. The available subcommands are:
 
   - `REFCOUNT`: Returns the number of references of the value associated with the specified key.
-  - `ENCODING`: Returns the internal representation (encoding) used to store the value associated with the specified key.
   - `IDLETIME`: Returns the number of seconds since the object was last accessed.
   - `FREQ`: Returns the access frequency of a key, if the LFU (Least Frequently Used) eviction policy is enabled.
 
@@ -27,7 +26,6 @@ OBJECT <subcommand> <key>
 The return value depends on the subcommand used:
 
 - `REFCOUNT`: Returns an integer representing the reference count of the key.
-- `ENCODING`: Returns a string representing the encoding type of the key.
 - `IDLETIME`: Returns an integer representing the idle time in seconds.
 - `FREQ`: Returns an integer representing the access frequency of the key.
 
@@ -38,7 +36,6 @@ When the `OBJECT` command is executed, DiceDB inspects the specified key and ret
 ### Subcommand Behaviours
 
 - `REFCOUNT`: This subcommand returns the number of references to the key's value. A higher reference count indicates that the value is being shared among multiple keys or clients.
-- `ENCODING`: This subcommand reveals the internal representation of the key's value, such as `int`, `embstr`, `raw`, `ziplist`, `linkedlist`, etc.
 - `IDLETIME`: This subcommand provides the time in seconds since the key was last accessed. It is useful for identifying stale keys.
 - `FREQ`: This subcommand returns the access frequency of the key, which is useful when using the LFU eviction policy.
 
@@ -60,15 +57,6 @@ OBJECT REFCOUNT mykey
 ```
 
 This response indicates that the value associated with `mykey` has a reference count of 1.
-
-### Using the `ENCODING` Subcommand
-
-```bash
-OBJECT ENCODING mykey
-"embstr"
-```
-
-This response indicates that the value associated with `mykey` is stored using the `embstr` encoding.
 
 ### Using the `IDLETIME` Subcommand
 

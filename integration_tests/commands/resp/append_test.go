@@ -1,3 +1,19 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 import (
@@ -8,8 +24,8 @@ import (
 
 func TestAPPEND(t *testing.T) {
 	conn := getLocalConnection()
-	FireCommand(conn, "FLUSHDB")
 	defer conn.Close()
+	FireCommand(conn, "FLUSHDB")
 
 	testCases := []struct {
 		name     string
@@ -21,49 +37,85 @@ func TestAPPEND(t *testing.T) {
 			name:     "APPEND and GET a new Val",
 			commands: []string{"APPEND k newVal", "GET k"},
 			expected: []interface{}{int64(6), "newVal"},
-			cleanup:  []string{"del k"},
+			cleanup:  []string{"DEL k"},
 		},
 		{
 			name:     "APPEND to an existing key and GET",
 			commands: []string{"SET k Bhima", "APPEND k Shankar", "GET k"},
 			expected: []interface{}{"OK", int64(12), "BhimaShankar"},
-			cleanup:  []string{"del k"},
+			cleanup:  []string{"DEL k"},
 		},
 		{
 			name:     "APPEND without input value",
 			commands: []string{"APPEND k"},
 			expected: []interface{}{"ERR wrong number of arguments for 'append' command"},
-			cleanup:  []string{"del k"},
+			cleanup:  []string{"DEL k"},
 		},
 		{
 			name:     "APPEND empty string to an existing key with empty string",
 			commands: []string{"SET k \"\"", "APPEND k \"\""},
 			expected: []interface{}{"OK", int64(0)},
-			cleanup:  []string{"del k"},
+			cleanup:  []string{"DEL k"},
 		},
 		{
 			name:     "APPEND to key created using LPUSH",
 			commands: []string{"LPUSH m bhima", "APPEND m shankar"},
 			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
-			cleanup:  []string{"del m"},
+			cleanup:  []string{"DEL m"},
 		},
 		{
-			name:     "APPEND value with leading zeros",
-			commands: []string{"APPEND z 0043"},
-			expected: []interface{}{int64(4)},
-			cleanup:  []string{"del z"},
+			name:     "APPEND with leading zeros",
+			commands: []string{"DEL key", "APPEND key 0043", "GET key", "APPEND key 0034", "GET key"},
+			expected: []interface{}{int64(0), int64(4), "0043", int64(8), "00430034"},
+			cleanup:  []string{"DEL key"},
 		},
 		{
 			name:     "APPEND to key created using SADD",
 			commands: []string{"SADD key apple", "APPEND key banana"},
 			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
-			cleanup:  []string{"del key"},
+			cleanup:  []string{"DEL key"},
 		},
 		{
 			name:     "APPEND to key created using ZADD",
 			commands: []string{"ZADD key 1 one", "APPEND key two"},
 			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
-			cleanup:  []string{"del key"},
+			cleanup:  []string{"DEL key"},
+		},
+		{
+			name:     "APPEND After SET and DEL",
+			commands: []string{"SET key value", "APPEND key value", "GET key", "APPEND key 100", "GET key", "DEL key", "APPEND key value", "GET key"},
+			expected: []interface{}{"OK", int64(10), "valuevalue", int64(13), "valuevalue100", int64(1), int64(5), "value"},
+			cleanup:  []string{"DEL key"},
+		},
+		{
+			name:     "APPEND to Integer Values",
+			commands: []string{"DEL key", "APPEND key 1", "APPEND key 2", "GET key", "SET key 1", "APPEND key 2", "GET key"},
+			expected: []interface{}{int64(0), int64(1), int64(2), "12", "OK", int64(2), "12"},
+			cleanup:  []string{"DEL key"},
+		},
+		{
+			name: "APPEND with Various Data Types",
+			commands: []string{
+				"LPUSH listKey lValue",
+				"SETBIT bitKey 0 1",
+				"HSET hashKey hKey hValue",
+				"SADD setKey sValue",
+				"APPEND listKey value",
+				"APPEND bitKey value",
+				"APPEND hashKey value",
+				"APPEND setKey value",
+			},
+			expected: []interface{}{
+				int64(1),
+				int64(0),
+				int64(1),
+				int64(1),
+				"WRONGTYPE Operation against a key holding the wrong kind of value",
+				int64(6),
+				"WRONGTYPE Operation against a key holding the wrong kind of value",
+				"WRONGTYPE Operation against a key holding the wrong kind of value",
+			},
+			cleanup: []string{"DEL listKey", "DEL bitKey", "DEL hashKey", "DEL setKey"},
 		},
 		{
 			name:     "APPEND to key created using SETBIT",
@@ -79,6 +131,70 @@ func TestAPPEND(t *testing.T) {
 				result := FireCommand(conn, tc.commands[i])
 				expected := tc.expected[i]
 				assert.Equal(t, expected, result)
+			}
+
+			for _, cmd := range tc.cleanup {
+				FireCommand(conn, cmd)
+			}
+		})
+	}
+
+	setErrorMsg := "WRONGTYPE Operation against a key holding the wrong kind of value"
+	ttlTolerance := int64(2) // Set tolerance in seconds for the TTL checks
+	ttlTestCases := []struct {
+		name     string
+		commands []string
+		expected []interface{}
+		cleanup  []string
+	}{
+		{
+			name: "APPEND with TTL Set",
+			commands: []string{
+				"SET key Hello EX 10", // Set a key with a 10-second TTL
+				"TTL key",             // Check initial TTL
+				"APPEND key World",    // Append a value
+				"GET key",             // Get the final value
+				"SLEEP 2",             // Sleep for 2 seconds
+				"TTL key",             // Check TTL after append.
+			},
+			expected: []interface{}{"OK", int64(10), int64(10), "HelloWorld", "OK", int64(8), setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg},
+			cleanup:  []string{"DEL key"},
+		},
+		{
+			name: "APPEND before near TTL Expiry",
+			commands: []string{
+				"SET key Hello EX 3", // Set a key with a 10-second TTL
+				"TTL key",            // Check initial TTL
+				"APPEND key World",   // Append a value
+				"SLEEP 3",            // Sleep for 5 seconds
+				"GET key",            // Get the final value which should be (nil)
+			},
+			expected: []interface{}{"OK", int64(3), int64(10), "OK", "(nil)", int64(-2), setErrorMsg, setErrorMsg, setErrorMsg, setErrorMsg},
+			cleanup:  []string{"DEL key"},
+		},
+	}
+
+	for _, tc := range ttlTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			FireCommand(conn, "DEL key")
+
+			for i, cmd := range tc.commands {
+				result := FireCommand(conn, cmd)
+				// If checking TTL, apply a tolerance to account for system performance variability
+				if cmd == "TTL key" { // Check if TTL command is executed
+					expectedTTL := tc.expected[i].(int64)
+					actualTTL := result.(int64)
+
+					if actualTTL == -2 { // Key does not exist or is expired
+						assert.Equal(t, tc.expected[i], result)
+					} else {
+						assert.Condition(t, func() bool {
+							return actualTTL >= expectedTTL-ttlTolerance && actualTTL <= expectedTTL+ttlTolerance
+						}, "TTL %d not within expected range [%d, %d]", actualTTL, expectedTTL-ttlTolerance, expectedTTL+ttlTolerance)
+					}
+				} else {
+					assert.Equal(t, tc.expected[i], result)
+				}
 			}
 
 			for _, cmd := range tc.cleanup {

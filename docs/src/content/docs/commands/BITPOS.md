@@ -13,20 +13,20 @@ BITPOS key bit [start] [end]
 
 ## Parameters
 
-| Parameter | Description                                                                                                                          | Type     | Required |
-|-----------|--------------------------------------------------------------------------------------------------------------------------------------|----------|----------|
-| `key`     | The key of the string in which to search for the bit.                                                                                | String   | Yes      |
-| `bit`     | The value to be set for the key.                                                                                                     | Bit      | Yes      |
-| `start`   | (Optional) The starting byte position to begin the search. If not specified, the search starts from the beginning of the string.     | Integer  | No       |
-| `end`     | (Optional) The ending byte position to end the search. If not specified, the search continues until the end of the string.           | Integer  | No       |
+| Parameter | Description                                                                                                                      | Type    | Required |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------- | ------- | -------- |
+| `key`     | The key of the string in which to search for the bit.                                                                            | String  | Yes      |
+| `bit`     | The value to be set for the key.                                                                                                 | Bit     | Yes      |
+| `start`   | (Optional) The starting byte position to begin the search. If not specified, the search starts from the beginning of the string. | Integer | No       |
+| `end`     | (Optional) The ending byte position to end the search. If not specified, the search continues until the end of the string.       | Integer | No       |
 
 ## Return Value
 
-| Condition                                                      | Return Value            |
-|----------------------------------------------------------------|-------------------------|
-| Command is successful                                          | `Integer`               |
-| If the specified bit is not found within the specified range.  | `-1`                    |
-| Syntax or specified constraints are invalid                    | error                   |
+| Condition                                                     | Return Value |
+| ------------------------------------------------------------- | ------------ |
+| Command is successful                                         | `Integer`    |
+| If the specified bit is not found within the specified range. | `-1`         |
+| Syntax or specified constraints are invalid                   | error        |
 
 ## Behaviour
 
@@ -71,6 +71,7 @@ OK
 127.0.0.1:7379> BITPOS mykey 0 2 4
 (integer) 16
 ```
+
 ### Bit Not Found
 
 If the specified bit is not found within the specified range, the command returns -1:

@@ -12,7 +12,7 @@ const recentBlogs = blogs
 
 const title = "DiceDB - a super cache;";
 const description =
-  "DiceDB is a redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.";
+  "DiceDB is an open source, redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.";
 ---
 
 <Layout {title} {description}>
@@ -21,13 +21,21 @@ const description =
     <p>DiceDB is</p>
     <ul>
       <li>
+        open source under <a
+          target="_blank"
+          href="https://github.com/dicedb/dice?tab=AGPL-3.0-1-ov-file#readme"
+          >GNU AGPL 3.0</a
+        >
+      </li>
+      <li>
         Redis-compliant - a drop-in (<a href="/redis-compatability">36.4%</a>)
         replacement of Redis (<a href="/blog/dicedb-is-redis-replacement"
           >here's why</a
         >)
       </li>
       <li>
-        Reactive - native support for query subscriptions and push
+        <a href="/reactivity">Reactive</a> - native support for query subscriptions
+        and push
       </li>
       <li>
         Scalable - scales out and scales in with load <span
@@ -49,6 +57,10 @@ const description =
         architecture <span class="has-text-danger">*</span>
       </li>
     </ul>
+    <p>
+      and we aim to be the high-performance caching backbone for modern
+      architecture.
+    </p>
   </div>
   <div class="section content has-text-centered">
     <p class="has-text-weight-bold has-text-danger">DICEDB BLOG</p>
@@ -62,15 +74,20 @@ const description =
       {
         recentBlogs.map((blog) => {
           return (
-            <div class="column is-4">
-              <div class="box content">
-                <div>
+            <div class="column is-4 hero">
+              <div class="box content" style="height: 100%;">
+                <div
+                  class="is-flex is-flex-direction-column"
+                  style="height: inherit;"
+                >
                   <p class="title is-size-5">
                     <a href={`/blog/${blog.slug}`} class="has-text-danger">
                       {blog.data.title}
                     </a>
                   </p>
-                  <p>{blog.data.description.slice(0, 128)}...</p>
+                  <p class="is-flex-grow-1">
+                    {blog.data.description.slice(0, 128)}...
+                  </p>
                   <p class="has-text-right">
                     <a class="button is-small" href={`/blog/${blog.slug}`}>
                       <span>Read post</span>

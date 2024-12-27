@@ -1,0 +1,112 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+package iothread
+
+import (
+	"github.com/dicedb/dice/internal/cmd"
+	diceerrors "github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/ops"
+)
+
+// preProcessRename prepares the RENAME command for preprocessing by sending a GET command
+// to retrieve the value of the original key. The retrieved value is used later in the
+// decomposeRename function to delete the old key and set the new key.
+func preProcessRename(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
+	if len(diceDBCmd.Args) < 2 {
+		return diceerrors.ErrWrongArgumentCount("RENAME")
+	}
+
+	key := diceDBCmd.Args[0]
+	sid, rc := thread.shardManager.GetShardInfo(key)
+
+	preCmd := cmd.DiceDBCmd{
+		Cmd:  "RENAME",
+		Args: []string{key},
+	}
+
+	rc <- &ops.StoreOp{
+		SeqID:         0,
+		RequestID:     GenerateUniqueRequestID(),
+		Cmd:           &preCmd,
+		IOThreadID:    thread.id,
+		ShardID:       sid,
+		Client:        nil,
+		PreProcessing: true,
+	}
+
+	return nil
+}
+
+// preProcessCopy prepares the COPY command for preprocessing by sending a GET command
+// to retrieve the value of the original key. The retrieved value is used later in the
+// decomposeCopy function to copy the value to the destination key.
+func customProcessCopy(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
+	if len(diceDBCmd.Args) < 2 {
+		return diceerrors.ErrWrongArgumentCount("COPY")
+	}
+
+	sid, rc := thread.shardManager.GetShardInfo(diceDBCmd.Args[0])
+
+	preCmd := cmd.DiceDBCmd{
+		Cmd:  "COPY",
+		Args: []string{diceDBCmd.Args[0]},
+	}
+
+	// Need to get response from both keys to handle Replace or not
+	rc <- &ops.StoreOp{
+		SeqID:         0,
+		RequestID:     GenerateUniqueRequestID(),
+		Cmd:           &preCmd,
+		IOThreadID:    thread.id,
+		ShardID:       sid,
+		Client:        nil,
+		PreProcessing: true,
+	}
+
+	return nil
+}
+
+// preProcessPFMerge prepares the PFMERGE command for preprocessing by sending GETOBJECT commands
+// to retrieve the value of all the keys to be merged with. The retrieved value is used later in the
+// decomposePFMERGE function to merge the hll keys to the new key.
+func preProcessPFMerge(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
+	if len(diceDBCmd.Args) < 1 {
+		return diceerrors.ErrWrongArgumentCount("PFMERGE")
+	}
+
+	// Sending GETOBJECT commands for the keys to be merged, which would be used in
+	// later stages to merge with destination key in PFMERGE command.
+	for i := 1; i < len(diceDBCmd.Args); i++ {
+		sid, rc := thread.shardManager.GetShardInfo(diceDBCmd.Args[i])
+		preCmd := cmd.DiceDBCmd{
+			Cmd:  "GETOBJECT",
+			Args: []string{diceDBCmd.Args[i]},
+		}
+
+		rc <- &ops.StoreOp{
+			SeqID:         0,
+			RequestID:     GenerateUniqueRequestID(),
+			Cmd:           &preCmd,
+			IOThreadID:    thread.id,
+			ShardID:       sid,
+			Client:        nil,
+			PreProcessing: true,
+		}
+	}
+
+	return nil
+}

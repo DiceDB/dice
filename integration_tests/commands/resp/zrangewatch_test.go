@@ -1,14 +1,30 @@
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package resp
 
 import (
 	"context"
 	"fmt"
-	"github.com/dicedb/dice/internal/clientio"
-	dicedb "github.com/dicedb/dicedb-go"
-	"gotest.tools/v3/assert"
 	"net"
 	"testing"
-	"time"
+
+	"github.com/dicedb/dice/internal/clientio"
+	dicedb "github.com/dicedb/dicedb-go"
+	"github.com/stretchr/testify/assert"
 )
 
 type zrangeWatchTestCase struct {
@@ -33,29 +49,21 @@ var zrangeWatchTestCases = []zrangeWatchTestCase{
 func TestZRANGEWATCH(t *testing.T) {
 	publisher := getLocalConnection()
 	subscribers := []net.Conn{getLocalConnection(), getLocalConnection(), getLocalConnection()}
+	defer func() {
+		err := ClosePublisherSubscribers(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
 
 	FireCommand(publisher, fmt.Sprintf("DEL %s", zrangeWatchKey))
-
-	defer func() {
-		if err := publisher.Close(); err != nil {
-			t.Errorf("Error closing publisher connection: %v", err)
-		}
-		for _, sub := range subscribers {
-			time.Sleep(100 * time.Millisecond)
-			if err := sub.Close(); err != nil {
-				t.Errorf("Error closing subscriber connection: %v", err)
-			}
-		}
-	}()
 
 	respParsers := make([]*clientio.RESPParser, len(subscribers))
 	for i, subscriber := range subscribers {
 		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf(zrangeWatchQuery, zrangeWatchKey))
-		assert.Assert(t, rp != nil)
+		assert.NotNil(t, rp)
 		respParsers[i] = rp
 
 		v, err := rp.DecodeOne()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		castedValue, ok := v.([]interface{})
 		if !ok {
 			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
@@ -69,7 +77,7 @@ func TestZRANGEWATCH(t *testing.T) {
 
 		for _, rp := range respParsers {
 			v, err := rp.DecodeOne()
-			assert.NilError(t, err)
+			assert.Nil(t, err)
 			castedValue, ok := v.([]interface{})
 			if !ok {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
@@ -77,9 +85,11 @@ func TestZRANGEWATCH(t *testing.T) {
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "ZRANGE", castedValue[0])
 			assert.Equal(t, "1178068413", castedValue[1])
-			assert.DeepEqual(t, tc.result, castedValue[2])
+			assert.Equal(t, tc.result, castedValue[2])
 		}
 	}
+
+	unsubscribeFromWatchUpdates(t, subscribers, "ZRANGE", "1178068413")
 }
 
 type zrangeWatchSDKTestCase struct {
@@ -113,6 +123,10 @@ var zrangeWatchSDKTestCases = []zrangeWatchSDKTestCase{
 func TestZRANGEWATCHWithSDK(t *testing.T) {
 	publisher := getLocalSdk()
 	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	defer func() {
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
 
 	publisher.Del(context.Background(), zrangeWatchKey)
 
@@ -120,9 +134,9 @@ func TestZRANGEWATCHWithSDK(t *testing.T) {
 	for i, subscriber := range subscribers {
 		watch := subscriber.client.WatchConn(context.Background())
 		subscribers[i].watch = watch
-		assert.Assert(t, watch != nil)
+		assert.NotNil(t, watch)
 		firstMsg, err := watch.Watch(context.Background(), "ZRANGE", zrangeWatchKey, "0", "-1", "REV", "WITHSCORES")
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, "ZRANGE")
 		assert.Equal(t, firstMsg.Fingerprint, "1178068413")
 		channels[i] = watch.Channel()
@@ -133,21 +147,27 @@ func TestZRANGEWATCHWithSDK(t *testing.T) {
 			Score:  tc.score,
 			Member: tc.val,
 		}).Err()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		for _, channel := range channels {
 			v := <-channel
 
 			assert.Equal(t, "ZRANGE", v.Command)         // command
 			assert.Equal(t, "1178068413", v.Fingerprint) // Fingerprint
-			assert.DeepEqual(t, tc.result, v.Data)       // data
+			assert.Equal(t, tc.result, v.Data)           // data
 		}
 	}
+
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, "ZRANGE", "1178068413")
 }
 
 func TestZRANGEWATCHWithSDK2(t *testing.T) {
 	publisher := getLocalSdk()
 	subscribers := []WatchSubscriber{{client: getLocalSdk()}, {client: getLocalSdk()}, {client: getLocalSdk()}}
+	defer func() {
+		err := ClosePublisherSubscribersSDK(publisher, subscribers)
+		assert.Nil(t, err)
+	}()
 
 	publisher.Del(context.Background(), zrangeWatchKey)
 
@@ -156,7 +176,7 @@ func TestZRANGEWATCHWithSDK2(t *testing.T) {
 		conn := subscribers[i].client.WatchConn(context.Background())
 		subscribers[i].watch = conn
 		firstMsg, err := conn.ZRangeWatch(context.Background(), zrangeWatchKey, "0", "-1", "REV", "WITHSCORES")
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, firstMsg.Command, "ZRANGE")
 		assert.Equal(t, firstMsg.Fingerprint, "1178068413")
 		channels[i] = conn.Channel()
@@ -167,14 +187,16 @@ func TestZRANGEWATCHWithSDK2(t *testing.T) {
 			Score:  tc.score,
 			Member: tc.val,
 		}).Err()
-		assert.NilError(t, err)
+		assert.Nil(t, err)
 
 		for _, channel := range channels {
 			v := <-channel
 
 			assert.Equal(t, "ZRANGE", v.Command)
 			assert.Equal(t, "1178068413", v.Fingerprint)
-			assert.DeepEqual(t, tc.result, v.Data)
+			assert.Equal(t, tc.result, v.Data)
 		}
 	}
+
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, "ZRANGE", "1178068413")
 }

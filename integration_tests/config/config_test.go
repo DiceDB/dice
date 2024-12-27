@@ -1,4 +1,20 @@
-package commands
+// This file is part of DiceDB.
+// Copyright (C) 2024 DiceDB (dicedb.io).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+package config_test
 
 import (
 	"os"
@@ -8,123 +24,92 @@ import (
 	"github.com/dicedb/dice/config"
 )
 
-// scenario 1: Create a config file if the directory is provided (-o flag)
-func TestSetupConfig_CreateAndLoadDefault(t *testing.T) {
-	config.ResetConfig()
+const configFileName = "dicedb.conf"
+
+// TestCreateConfigFile_FileExists tests the scenario when config file already exists
+func TestCreateConfigFile_FileExists(t *testing.T) {
 	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, configFileName)
 
-	// Simulate the flag: -o=<dir_path>
-	config.CustomConfigFilePath = tempDir
-	config.SetupConfig()
-
-	if config.DiceConfig.AsyncServer.Addr != config.DefaultHost {
-		t.Fatalf("Expected server addr to be '%s', got '%s'", config.DefaultHost, config.DiceConfig.AsyncServer.Addr)
+	if err := os.WriteFile(configPath, []byte("test config"), 0644); err != nil {
+		t.Fatalf("Failed to create test config file: %v", err)
 	}
-	if config.DiceConfig.AsyncServer.Port != config.DefaultPort {
-		t.Fatalf("Expected server port to be %d, got %d", config.DefaultPort, config.DiceConfig.AsyncServer.Port)
+
+	config.CreateConfigFile(configPath)
+
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to read config file: %v", err)
+	}
+
+	if string(content) != "test config" {
+		t.Error("Config file content was modified when it should have been preserved")
 	}
 }
 
-// scenario 2: Load default config if no config file or directory is provided
-func TestSetupConfig_DefaultConfig(t *testing.T) {
-	// Simulate no flags being set (default config scenario)
-	config.ResetConfig()
-	config.CustomConfigFilePath = ""
-	config.FileLocation = filepath.Join(config.DefaultConfigFilePath, config.DefaultConfigName)
+// TestCreateConfigFile_NewFile tests creating a new config file
+func TestCreateConfigFile_NewFile(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, configFileName)
+	config.CreateConfigFile(configPath)
 
-	// Verify that the configuration was loaded from the default values
-	if config.DiceConfig.AsyncServer.Addr != config.DefaultHost {
-		t.Fatalf("Expected server addr to be '%s', got '%s'", config.DefaultHost, config.DiceConfig.AsyncServer.Addr) // 127.0.0.1
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Error("Config file was not created")
 	}
-	if config.DiceConfig.AsyncServer.Port != config.DefaultPort {
-		t.Fatalf("Expected server port to be %d, got %d", 8739, config.DiceConfig.AsyncServer.Port)
+
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to read created config file: %v", err)
+	}
+
+	if len(content) == 0 {
+		t.Error("Created config file is empty")
 	}
 }
 
-// scenario 3: Config file is present but not well-structured (Malformed)
-func TestSetupConfig_InvalidConfigFile(t *testing.T) {
-	config.DiceConfig = nil
-	tempDir := t.TempDir()
-	configFilePath := filepath.Join(tempDir, "dice.toml")
+// TestCreateConfigFile_InvalidPath tests creation with an invalid file path
+func TestCreateConfigFile_InvalidPath(t *testing.T) {
+	configPath := "/nonexistent/directory/dicedb.conf"
+	config.CreateConfigFile(configPath)
 
-	content := `
-		[asyncserver]
-		addr = 127.0.0.1  // Missing quotes around string value
-		port = abc        // Invalid integer
-	`
-	if err := os.WriteFile(configFilePath, []byte(content), 0666); err != nil {
-		t.Fatalf("Failed to create invalid test config file: %v", err)
-	}
-
-	// Simulate the flag: -c=<configfile_path>
-	config.CustomConfigFilePath = ""
-	config.FileLocation = configFilePath
-
-	config.SetupConfig()
-
-	if config.DiceConfig.AsyncServer.Addr != config.DefaultHost {
-		t.Fatalf("Expected server addr to be '%s' after unmarshal error, got '%s'", config.DefaultHost, config.DiceConfig.AsyncServer.Addr)
-	}
-	if config.DiceConfig.AsyncServer.Port != config.DefaultPort {
-		t.Fatalf("Expected server port to be %d after unmarshal error, got %d", config.DefaultPort, config.DiceConfig.AsyncServer.Port)
+	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
+		t.Error("Config file should not have been created at invalid path")
 	}
 }
 
-// scenario 4: Config file is present with partial content
-func TestSetupConfig_PartialConfigFile(t *testing.T) {
+// TestCreateConfigFile_NoPermission tests creation without write permissions
+func TestCreateConfigFile_NoPermission(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("Skipping test when running as root")
+	}
+
 	tempDir := t.TempDir()
-	configFilePath := filepath.Join(tempDir, "dice.toml")
-
-	content := `
-        [asyncserver]
-        addr = "127.0.0.1"
-    `
-	if err := os.WriteFile(configFilePath, []byte(content), 0666); err != nil {
-		t.Fatalf("Failed to create partial test config file: %v", err)
+	err := os.Chmod(tempDir, 0555) // read + execute only
+	if err != nil {
+		t.Fatalf("Failed to change directory permissions: %v", err)
 	}
+	defer os.Chmod(tempDir, 0755) // restore permissions
 
-	// Simulate the flag: -c=<configfile_path>
-	config.CustomConfigFilePath = ""
-	config.FileLocation = configFilePath
+	configPath := filepath.Join(tempDir, configFileName)
+	config.CreateConfigFile(configPath)
 
-	config.SetupConfig()
-
-	t.Log(config.DiceConfig.AsyncServer.Port)
-
-	if config.DiceConfig.AsyncServer.Addr != "127.0.0.1" {
-		t.Fatalf("Expected server addr to be '127.0.0.1', got '%s'", config.DiceConfig.AsyncServer.Addr)
-	}
-	if config.DiceConfig.AsyncServer.Port != config.DefaultPort {
-		t.Fatalf("Expected server port to be %d (default), got %d", config.DefaultPort, config.DiceConfig.AsyncServer.Port)
+	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
+		t.Error("Config file should not have been created without permissions")
 	}
 }
 
-// scenario 5: Load config from the provided file path
-func TestSetupConfig_LoadFromFile(t *testing.T) {
-	config.ResetConfig()
+// TestCreateConfigFile_ExistingDirectory tests creation in existing directory
+func TestCreateConfigFile_ExistingDirectory(t *testing.T) {
 	tempDir := t.TempDir()
-	configFilePath := filepath.Join(tempDir, "dice.toml")
-
-	content := `
-		[asyncserver]
-		addr = "127.0.0.1"
-		port = 8739
-	`
-	if err := os.WriteFile(configFilePath, []byte(content), 0666); err != nil {
-		t.Fatalf("Failed to write test config file: %v", err)
+	configDir := filepath.Join(tempDir, "config")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
 	}
 
-	// Simulate the flag: -c=<configfile_path>
-	config.CustomConfigFilePath = ""
-	config.FileLocation = configFilePath
+	configPath := filepath.Join(configDir, configFileName)
+	config.CreateConfigFile(configPath)
 
-	config.SetupConfig()
-
-	if config.DiceConfig.AsyncServer.Addr != "127.0.0.1" {
-		t.Fatalf("Expected server addr to be '127.0.0.1', got '%s'", config.DiceConfig.AsyncServer.Addr)
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Error("Config file was not created in existing directory")
 	}
-	if config.DiceConfig.AsyncServer.Port != 8739 {
-		t.Fatalf("Expected server port to be 8374, got %d", config.DiceConfig.AsyncServer.Port)
-	}
-
 }
