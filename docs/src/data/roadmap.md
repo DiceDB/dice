@@ -23,7 +23,7 @@ items in each pod:
 
 > Aiming to scale DiceDB beyond a single machine and ensure resilience.
 
-1. Replication
+1. Replication - [doc](https://docs.google.com/document/d/18ROV_8JK1boxlYT5NE_McZzBbjzBpzCKsPPY3g99AeQ/edit?usp=sharing) / [@gauravsarma1992](https://github.com/gauravsarma1992)
 2. Snapshots
 
 ## Developer Experience
