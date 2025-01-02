@@ -1355,6 +1355,25 @@ var (
 		Arity:      4,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	lindexCmdMeta = DiceCmdMeta {
+		Name: "LINDEX",
+		Info: `
+		Usage: 
+			LINDEX key index
+		Info: 
+			Returns element stored at index in the list stored at a key.
+			Indexing is 0 based.
+
+			Index can be negative. Negative index can be used to start from the end of the list i.e., index = -1 means last element of the list, index = -2 means second last element of the list and so on.
+
+		Returns:
+			Element value present at that index.
+		`,
+		NewEval: evalLINDEX,
+		IsMigrated: true,
+		Arity: 2,
+		KeySpecs: KeySpecs{BeginIndex: 1},
+	}
 )
 
 func init() {
@@ -1485,6 +1504,7 @@ func init() {
 	DiceCmds["LINSERT"] = linsertCmdMeta
 	DiceCmds["LRANGE"] = lrangeCmdMeta
 	DiceCmds["JSON.ARRINDEX"] = jsonArrIndexCmdMeta
+	DiceCmds["LINDEX"] = lindexCmdMeta
 
 	DiceCmds["SINGLETOUCH"] = singleTouchCmdMeta
 	DiceCmds["SINGLEDBSIZE"] = singleDBSizeCmdMeta
