@@ -165,6 +165,7 @@ func TestEval(t *testing.T) {
 	testEvalBFEXISTS(t, store)
 	testEvalBFADD(t, store)
 	testEvalJSONARRINDEX(t, store)
+	testEvalRANDOMKEY(t, store)
 }
 
 func testEvalPING(t *testing.T, store *dstore.Store) {
@@ -1604,6 +1605,67 @@ func BenchmarkEvalJSONOBJLEN(b *testing.B) {
 			}
 		})
 	}
+}
+
+func testEvalRANDOMKEY(t *testing.T, store *dstore.Store) {
+	t.Run("invalid no of args", func(t *testing.T) {
+		response := evalRandomKey([]string{"INVALID_ARG"}, store)
+		expectedErr := errors.New("ERR wrong number of arguments for 'randomkey' command")
+		assert.Equal(t, response.Error, expectedErr)
+	})
+
+	t.Run("some keys present in db", func(t *testing.T) {
+		data := map[string]string{
+			"EXISTING_KEY":   "MOCK_VALUE",
+			"EXISTING_KEY_2": "MOCK_VALUE_2",
+			"EXISTING_KEY_3": "MOCK_VALUE_3",
+		}
+
+		for key, value := range data {
+			obj := &object.Obj{
+				Value:          value,
+				LastAccessedAt: uint32(time.Now().Unix()),
+			}
+			store.Put(key, obj)
+		}
+
+		results := make(map[string]int)
+		for i := 0; i < 10000; i++ {
+			result := evalRandomKey([]string{}, store)
+
+			str, ok := result.Result.(string)
+			assert.True(t, ok)
+			results[str]++
+		}
+
+		for key := range data {
+			if results[key] == 0 {
+				t.Errorf("key %s was never returned", key)
+			}
+		}
+	})
+}
+
+func BenchmarkEvalRANDOMKEY(b *testing.B) {
+	storeSize := 1000000
+	store := dstore.NewStore(nil, nil)
+
+	b.Run(fmt.Sprintf("benchmark_randomkey_with_%d_keys", storeSize), func(b *testing.B) {
+		for i := 0; i < storeSize; i++ {
+			obj := &object.Obj{
+				Value: i,
+			}
+			store.Put(fmt.Sprintf("key%d", i), obj)
+		}
+
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		// Benchmark the evalRandomKey function
+		for i := 0; i < b.N; i++ {
+			_ = evalRandomKey([]string{}, store)
+		}
+	})
 }
 
 func testEvalJSONDEL(t *testing.T, store *dstore.Store) {

@@ -185,15 +185,16 @@ const (
 
 // Multi-shard commands.
 const (
-	CmdMset     = "MSET"
-	CmdMget     = "MGET"
-	CmdSInter   = "SINTER"
-	CmdSDiff    = "SDIFF"
-	CmdJSONMget = "JSON.MGET"
-	CmdKeys     = "KEYS"
-	CmdTouch    = "TOUCH"
-	CmdDBSize   = "DBSIZE"
-	CmdFlushDB  = "FLUSHDB"
+	CmdMset      = "MSET"
+	CmdMget      = "MGET"
+	CmdSInter    = "SINTER"
+	CmdSDiff     = "SDIFF"
+	CmdJSONMget  = "JSON.MGET"
+	CmdKeys      = "KEYS"
+	CmdTouch     = "TOUCH"
+	CmdDBSize    = "DBSIZE"
+	CmdFlushDB   = "FLUSHDB"
+	CmdRandomKey = "RANDOMKEY"
 )
 
 // Multi-Step-Multi-Shard commands
@@ -649,6 +650,11 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:          AllShard,
 		decomposeCommand: decomposeFlushDB,
 		composeResponse:  composeFlushDB,
+	},
+	CmdRandomKey: {
+		CmdType:          AllShard,
+		decomposeCommand: decomposeRandomKey,
+		composeResponse:  composeRandomKey,
 	},
 
 	// Custom commands.
