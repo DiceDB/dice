@@ -127,13 +127,21 @@ var (
 // their implementation for HTTP and WebSocket protocols is still pending.
 // As a result, their Eval functions remained intact.
 var (
-	//TODO: supports only http protocol, needs to be removed once http is migrated to multishard
 	objectCopyCmdMeta = DiceCmdMeta{
 		Name:            "OBJECTCOPY",
 		Info:            `COPY command copies the value stored at the source key to the destination key.`,
 		StoreObjectEval: evalCOPYObject,
 		IsMigrated:      true,
 		Arity:           -2,
+	}
+	pfMergeCmdMeta = DiceCmdMeta{
+		Name: "PFMERGE",
+		Info: `PFMERGE destkey [sourcekey [sourcekey ...]]
+		Merges one or more HyperLogLog values into a single key.`,
+		IsMigrated:      true,
+		Arity:           -2,
+		KeySpecs:        KeySpecs{BeginIndex: 1},
+		StoreObjectEval: evalPFMERGE,
 	}
 )
 
@@ -607,9 +615,9 @@ var (
 		Name: "JSON.ARRINDEX",
 		Info: `JSON.ARRINDEX key path value [start [stop]]
 		Search for the first occurrence of a JSON value in an array`,
-		NewEval:     evalJSONARRINDEX,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONARRINDEX,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 	}
 
@@ -972,15 +980,6 @@ var (
 		Info: `PFCOUNT key [key ...]
 		Returns the approximated cardinality of the set(s) observed by the HyperLogLog key(s).`,
 		NewEval:    evalPFCOUNT,
-		IsMigrated: true,
-		Arity:      -2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
-	}
-	pfMergeCmdMeta = DiceCmdMeta{
-		Name: "PFMERGE",
-		Info: `PFMERGE destkey [sourcekey [sourcekey ...]]
-		Merges one or more HyperLogLog values into a single key.`,
-		NewEval:    evalPFMERGE,
 		IsMigrated: true,
 		Arity:      -2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
@@ -1361,6 +1360,7 @@ var (
 func init() {
 	PreProcessing["COPY"] = evalGetObject
 	PreProcessing["RENAME"] = evalGET
+	PreProcessing["GETOBJECT"] = evalGetObject
 
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta

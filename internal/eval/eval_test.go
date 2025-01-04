@@ -32,6 +32,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
@@ -46,9 +47,16 @@ type evalTestCase struct {
 	setup          func()
 	input          []string
 	output         []byte
-	validator      func(output []byte)
 	newValidator   func(output interface{})
 	migratedOutput EvalResponse
+}
+
+type evalMultiShardTestCase struct {
+	name      string
+	setup     func()
+	input     *cmd.DiceDBCmd
+	validator func(output interface{})
+	output    EvalResponse
 }
 
 func setupTest(store *dstore.Store) *dstore.Store {
@@ -101,7 +109,6 @@ func TestEval(t *testing.T) {
 	testEvalHEXISTS(t, store)
 	testEvalHDEL(t, store)
 	testEvalHSCAN(t, store)
-	testEvalPFMERGE(t, store)
 	testEvalJSONSTRLEN(t, store)
 	testEvalJSONOBJLEN(t, store)
 	testEvalHLEN(t, store)
@@ -3012,12 +3019,14 @@ func testEvalPFCOUNT(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
+	tests := map[string]evalMultiShardTestCase{
 		"PFMERGE nil value": {
 			name:  "PFMERGE nil value",
 			setup: func() {},
-			input: nil,
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd: "PFMERGE",
+			},
+			output: EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
 			},
@@ -3025,8 +3034,11 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 		"PFMERGE empty array": {
 			name:  "PFMERGE empty array",
 			setup: func() {},
-			input: []string{},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{},
+			},
+			output: EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongArgumentCount("PFMERGE"),
 			},
@@ -3042,8 +3054,11 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input: []string{"INVALID_OBJ_DEST_KEY"},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"INVALID_OBJ_DEST_KEY"},
+			},
+			output: EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrInvalidHyperLogLogKey,
 			},
@@ -3051,17 +3066,32 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 		"PFMERGE destKey doesn't exist": {
 			name:  "PFMERGE destKey doesn't exist",
 			setup: func() {},
-			input: []string{"NON_EXISTING_DEST_KEY"},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"NON_EXISTING_DEST_KEY"},
+			},
+			output: EvalResponse{
 				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
 		"PFMERGE destKey exist": {
-			name:  "PFMERGE destKey exist",
-			setup: func() {},
-			input: []string{"NON_EXISTING_DEST_KEY"},
-			migratedOutput: EvalResponse{
+			name: "PFMERGE destKey exist",
+			setup: func() {
+				key := "EXISTING_DEST_KEY"
+				value := hyperloglog.New()
+				value.Insert([]byte("VALUE"))
+				obj := &object.Obj{
+					Value:          value,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(key, obj)
+			},
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"EXISTING_DEST_KEY"},
+			},
+			output: EvalResponse{
 				Result: clientio.OK,
 				Error:  nil,
 			},
@@ -3078,8 +3108,11 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
+			},
+			output: EvalResponse{
 				Result: clientio.OK,
 				Error:  nil,
 			},
@@ -3096,8 +3129,19 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				}
 				store.Put(key, obj)
 			},
-			input: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY"},
+				InternalObjs: []*object.InternalObj{
+					{
+						Obj: &object.Obj{
+							Value: hyperloglog.New(),
+							Type:  object.ObjTypeHLL,
+						},
+					},
+				},
+			},
+			output: EvalResponse{
 				Result: clientio.OK,
 				Error:  nil,
 			},
@@ -3113,7 +3157,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(key, obj)
-				srcKey := "EXISTING_SRC_KEY"
+				srcKey := "EXISTING_SRC_KEY1"
 				srcValue := hyperloglog.New()
 				value.Insert([]byte("SRC_VALUE"))
 				srcKeyObj := &object.Obj{
@@ -3121,16 +3165,41 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 					LastAccessedAt: uint32(time.Now().Unix()),
 				}
 				store.Put(srcKey, srcKeyObj)
+				srcKey2 := "EXISTING_SRC_KEY2"
+				srcValue2 := hyperloglog.New()
+				value.Insert([]byte("SRC_VALUE"))
+				srcKeyObj2 := &object.Obj{
+					Value:          srcValue2,
+					LastAccessedAt: uint32(time.Now().Unix()),
+				}
+				store.Put(srcKey2, srcKeyObj2)
 			},
-			input: []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY"},
-			migratedOutput: EvalResponse{
+			input: &cmd.DiceDBCmd{
+				Cmd:  "PFMERGE",
+				Args: []string{"EXISTING_DEST_KEY", "EXISTING_SRC_KEY1", "EXISTING_SRC_KEY2"},
+				InternalObjs: []*object.InternalObj{
+					{
+						Obj: &object.Obj{
+							Value: hyperloglog.New(),
+							Type:  object.ObjTypeHLL,
+						},
+					},
+					{
+						Obj: &object.Obj{
+							Value: hyperloglog.New(),
+							Type:  object.ObjTypeHLL,
+						},
+					},
+				},
+			},
+			output: EvalResponse{
 				Result: clientio.OK,
 				Error:  nil,
 			},
 		},
 	}
 
-	runMigratedEvalTests(t, tests, evalPFMERGE, store)
+	runEvalTestsMultiShard(t, tests, evalPFMERGE, store)
 }
 
 func testEvalHGET(t *testing.T, store *dstore.Store) {
@@ -4297,11 +4366,7 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 
 			output := evalFunc(tc.input, store)
 
-			if tc.validator != nil {
-				tc.validator(output)
-			} else {
-				assert.Equal(t, string(tc.output), string(output))
-			}
+			assert.Equal(t, string(tc.output), string(output))
 		})
 	}
 }
@@ -4316,7 +4381,6 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			}
 
 			output := evalFunc(tc.input, store)
-
 			if tc.newValidator != nil {
 				if tc.migratedOutput.Error != nil {
 					tc.newValidator(tc.migratedOutput.Error)
@@ -4335,8 +4399,8 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			// TODO: Make this generic so that all kind of slices can be handled
 			if b, ok := output.Result.([]byte); ok && tc.migratedOutput.Result != nil {
 				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
-					fmt.Println(string(b))
-					fmt.Println(string(expectedBytes))
+					// fmt.Println(string(b))
+					// fmt.Println(string(expectedBytes))
 					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else if a, ok := output.Result.([]string); ok && tc.migratedOutput.Result != nil {
@@ -4348,6 +4412,26 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			}
 
 			assert.NoError(t, output.Error)
+		})
+	}
+}
+
+func runEvalTestsMultiShard(t *testing.T, tests map[string]evalMultiShardTestCase, evalFunc func(*cmd.DiceDBCmd, *dstore.Store) *EvalResponse, store *dstore.Store) {
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			store = setupTest(store)
+			if tc.setup != nil {
+				tc.setup()
+			}
+
+			output := evalFunc(tc.input, store)
+			if tc.output.Error != nil {
+				assert.Equal(t, tc.output.Error, output.Error)
+			}
+
+			if tc.output.Result != nil {
+				assert.Equal(t, tc.output.Result, output.Result)
+			}
 		})
 	}
 }
@@ -5184,7 +5268,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "2"},
 			output: []byte(":0\r\n"),
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				key := "MOCK_KEY"
 				obj := store.Get(key)
 				want := []interface{}{float64(0), float64(1), float64(3), float64(4), float64(5)}
@@ -5207,7 +5291,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$.b", "2"},
 			output: []byte("*1\r\n:2\r\n"),
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				key := "MOCK_KEY"
 				path := "$.b"
 				obj := store.Get(key)
@@ -5229,30 +5313,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			store = setupTest(store)
-
-			if tt.setup != nil {
-				tt.setup()
-			}
-			response := evalJSONARRPOP(tt.input, store)
-
-			if tt.migratedOutput.Result != nil {
-				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
-					assert.Equal(t, slice, response.Result)
-				} else {
-					assert.Equal(t, tt.migratedOutput.Result, response.Result)
-				}
-			}
-
-			if tt.migratedOutput.Error != nil {
-				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				assert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, tests, evalJSONARRPOP, store)
 }
 
 func testEvalTYPE(t *testing.T, store *dstore.Store) {
@@ -6657,11 +6718,12 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:          []string{"key", "123"},
 			migratedOutput: EvalResponse{Result: 3, Error: nil},
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				obj := store.Get("key")
 				oType := obj.Type
 				if oType != object.ObjTypeInt {
 					t.Errorf("unexpected encoding")
+					return
 				}
 			},
 		},
@@ -6712,11 +6774,12 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:          []string{"key", "2"},
 			migratedOutput: EvalResponse{Result: 2, Error: nil},
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				obj := store.Get("key")
 				oType := obj.Type
 				if oType != object.ObjTypeString {
 					t.Errorf("unexpected encoding")
+					return
 				}
 			},
 		},
@@ -9266,7 +9329,7 @@ func testEvalLRANGE(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
-	normalArray  := `[0,1,2,3,4,3]`
+	normalArray := `[0,1,2,3,4,3]`
 	tests := []evalTestCase{
 		{
 			name:  "nil value",
@@ -9298,7 +9361,7 @@ func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
 			input: []string{"EXISTING_KEY", "$", "3", "abc"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error: errors.New("ERR Couldn't parse as integer"),
+				Error:  errors.New("ERR Couldn't parse as integer"),
 			},
 		},
 		{
@@ -9313,7 +9376,7 @@ func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
 			input: []string{"EXISTING_KEY", "$", "3", "4", "abc"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error: errors.New("ERR Couldn't parse as integer"),
+				Error:  errors.New("ERR Couldn't parse as integer"),
 			},
 		},
 		{
@@ -9328,7 +9391,7 @@ func testEvalJSONARRINDEX(t *testing.T, store *dstore.Store) {
 			input: []string{"EXISTING_KEY", "$", "4", "4", "5"},
 			migratedOutput: EvalResponse{
 				Result: []interface{}{4},
-				Error: nil,
+				Error:  nil,
 			},
 		},
 	}

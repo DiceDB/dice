@@ -202,7 +202,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 					continue // No more connections to accept at this time
 				}
 
-				return fmt.Errorf("error accepting connection: %thread", err)
+				return fmt.Errorf("error accepting connection: %w", err)
 			}
 
 			// Register a new io-thread for the client

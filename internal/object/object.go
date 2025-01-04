@@ -105,4 +105,5 @@ const (
 	ObjTypeCountMinSketch
 	ObjTypeBF
 	ObjTypeDequeue
+	ObjTypeHLL
 )
