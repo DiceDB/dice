@@ -598,7 +598,7 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:            MultiShard,
 		preProcessing:      true,
 		preProcessResponse: preProcessPFMerge,
-		decomposeCommand:   decomposePFMerge,
+		decomposeCommand:   (*BaseCommandHandler).decomposePFMerge,
 		composeResponse:    composePFMerge,
 	},
 

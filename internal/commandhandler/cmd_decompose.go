@@ -124,14 +124,14 @@ func (h *BaseCommandHandler) decomposeCopy(ctx context.Context, cd *cmd.DiceDBCm
 // decomposePFMerge decomposes the PFMERGE command into individual GET commands for each HLL.
 // For each key it creates a separate GET command to get the value at the given key, and waits for all responses to be
 // returned before proceeding.
-func decomposePFMerge(ctx context.Context, thread *BaseIOThread, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+func (h *BaseCommandHandler) decomposePFMerge(ctx context.Context, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
 	// Waiting for GET command response for all the keys to be merged
 	resp := make([]*object.InternalObj, 0, len(cd.Args)-1)
 	for i := 1; i < len(cd.Args); i++ {
 		select {
 		case <-ctx.Done():
-			slog.Error("IOThread timed out waiting for response from shards", slog.String("id", thread.id), slog.Any("error", ctx.Err()))
-		case preProcessedResp, ok := <-thread.preprocessingChan:
+			slog.Error("CommandHandler timed out waiting for response from shards", slog.String("id", h.id), slog.Any("error", ctx.Err()))
+		case preProcessedResp, ok := <-h.preprocessingChan:
 			if ok {
 				if preProcessedResp.EvalResponse.Error != nil {
 					return nil, diceerrors.ErrInvalidHyperLogLogKey

@@ -83,7 +83,7 @@ func customProcessCopy(h *BaseCommandHandler, diceDBCmd *cmd.DiceDBCmd) error {
 // preProcessPFMerge prepares the PFMERGE command for preprocessing by sending GETOBJECT commands
 // to retrieve the value of all the keys to be merged with. The retrieved value is used later in the
 // decomposePFMERGE function to merge the hll keys to the new key.
-func preProcessPFMerge(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
+func preProcessPFMerge(h *BaseCommandHandler, diceDBCmd *cmd.DiceDBCmd) error {
 	if len(diceDBCmd.Args) < 1 {
 		return diceerrors.ErrWrongArgumentCount("PFMERGE")
 	}
@@ -91,7 +91,7 @@ func preProcessPFMerge(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 	// Sending GETOBJECT commands for the keys to be merged, which would be used in
 	// later stages to merge with destination key in PFMERGE command.
 	for i := 1; i < len(diceDBCmd.Args); i++ {
-		sid, rc := thread.shardManager.GetShardInfo(diceDBCmd.Args[i])
+		sid, rc := h.shardManager.GetShardInfo(diceDBCmd.Args[i])
 		preCmd := cmd.DiceDBCmd{
 			Cmd:  "GETOBJECT",
 			Args: []string{diceDBCmd.Args[i]},
@@ -101,7 +101,7 @@ func preProcessPFMerge(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 			SeqID:         0,
 			RequestID:     GenerateUniqueRequestID(),
 			Cmd:           &preCmd,
-			IOThreadID:    thread.id,
+			CmdHandlerID:  h.id,
 			ShardID:       sid,
 			Client:        nil,
 			PreProcessing: true,
