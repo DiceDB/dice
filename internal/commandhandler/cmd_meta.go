@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package iothread
+package commandhandler
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	"log/slog"
 
 	"github.com/dicedb/dice/internal/cmd"
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
 )
 
@@ -214,12 +215,12 @@ const (
 
 type CmdMeta struct {
 	CmdType
-	Cmd             string
-	IOThreadHandler func([]string) []byte
+	Cmd                string
+	CmdHandlerFunction func([]string) []byte
 
 	// decomposeCommand is a function that takes a DiceDB command and breaks it down into smaller,
 	// manageable DiceDB commands for each shard processing. It returns a slice of DiceDB commands.
-	decomposeCommand func(ctx context.Context, thread *BaseIOThread, DiceDBCmd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error)
+	decomposeCommand func(h *BaseCommandHandler, ctx context.Context, DiceDBCmd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error)
 
 	// composeResponse is a function that combines multiple responses from the execution of commands
 	// into a single response object. It accepts a variadic parameter of EvalResponse objects
@@ -234,10 +235,10 @@ type CmdMeta struct {
 
 	// preProcessResponse is a function that handles the preprocessing of a DiceDB command by
 	// preparing the necessary operations (e.g., fetching values from shards) before the command
-	// is executed. It takes the io-thread and the original DiceDB command as parameters and
+	// is executed. It takes the CommandHandler and the original DiceDB command as parameters and
 	// ensures that any required information is retrieved and processed in advance. Use this when set
 	// preProcessingReq = true.
-	preProcessResponse func(thread *BaseIOThread, DiceDBCmd *cmd.DiceDBCmd) error
+	preProcessResponse func(h *BaseCommandHandler, DiceDBCmd *cmd.DiceDBCmd) error
 }
 
 var CommandsMeta = map[string]CmdMeta{
@@ -581,7 +582,7 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:            MultiShard,
 		preProcessing:      true,
 		preProcessResponse: preProcessRename,
-		decomposeCommand:   decomposeRename,
+		decomposeCommand:   (*BaseCommandHandler).decomposeRename,
 		composeResponse:    composeRename,
 	},
 
@@ -589,7 +590,7 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:            MultiShard,
 		preProcessing:      true,
 		preProcessResponse: customProcessCopy,
-		decomposeCommand:   decomposeCopy,
+		decomposeCommand:   (*BaseCommandHandler).decomposeCopy,
 		composeResponse:    composeCopy,
 	},
 
@@ -597,57 +598,57 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:            MultiShard,
 		preProcessing:      true,
 		preProcessResponse: preProcessPFMerge,
-		decomposeCommand:   decomposePFMerge,
+		decomposeCommand:   (*BaseCommandHandler).decomposePFMerge,
 		composeResponse:    composePFMerge,
 	},
 
 	CmdMset: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeMSet,
+		decomposeCommand: (*BaseCommandHandler).decomposeMSet,
 		composeResponse:  composeMSet,
 	},
 
 	CmdMget: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeMGet,
+		decomposeCommand: (*BaseCommandHandler).decomposeMGet,
 		composeResponse:  composeMGet,
 	},
 
 	CmdSInter: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeSInter,
+		decomposeCommand: (*BaseCommandHandler).decomposeSInter,
 		composeResponse:  composeSInter,
 	},
 
 	CmdSDiff: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeSDiff,
+		decomposeCommand: (*BaseCommandHandler).decomposeSDiff,
 		composeResponse:  composeSDiff,
 	},
 
 	CmdJSONMget: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeJSONMget,
+		decomposeCommand: (*BaseCommandHandler).decomposeJSONMget,
 		composeResponse:  composeJSONMget,
 	},
 	CmdTouch: {
 		CmdType:          MultiShard,
-		decomposeCommand: decomposeTouch,
+		decomposeCommand: (*BaseCommandHandler).decomposeTouch,
 		composeResponse:  composeTouch,
 	},
 	CmdDBSize: {
 		CmdType:          AllShard,
-		decomposeCommand: decomposeDBSize,
+		decomposeCommand: (*BaseCommandHandler).decomposeDBSize,
 		composeResponse:  composeDBSize,
 	},
 	CmdKeys: {
 		CmdType:          AllShard,
-		decomposeCommand: decomposeKeys,
+		decomposeCommand: (*BaseCommandHandler).decomposeKeys,
 		composeResponse:  composeKeys,
 	},
 	CmdFlushDB: {
 		CmdType:          AllShard,
-		decomposeCommand: decomposeFlushDB,
+		decomposeCommand: (*BaseCommandHandler).decomposeFlushDB,
 		composeResponse:  composeFlushDB,
 	},
 
@@ -700,8 +701,9 @@ func init() {
 func validateCmdMeta(c string, meta CmdMeta) error {
 	switch meta.CmdType {
 	case Global:
-		if meta.IOThreadHandler == nil {
-			return fmt.Errorf("global command %s must have IOThreadHandler function", c)
+		if meta.CmdHandlerFunction == nil {
+			slog.Debug("global command %s must have CmdHandlerFunction function", slog.String("command", c))
+			return diceerrors.ErrInternalServer
 		}
 	case MultiShard, AllShard:
 		if meta.decomposeCommand == nil || meta.composeResponse == nil {

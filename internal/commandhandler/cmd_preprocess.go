@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package iothread
+package commandhandler
 
 import (
 	"github.com/dicedb/dice/internal/cmd"
@@ -25,13 +25,13 @@ import (
 // preProcessRename prepares the RENAME command for preprocessing by sending a GET command
 // to retrieve the value of the original key. The retrieved value is used later in the
 // decomposeRename function to delete the old key and set the new key.
-func preProcessRename(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
+func preProcessRename(h *BaseCommandHandler, diceDBCmd *cmd.DiceDBCmd) error {
 	if len(diceDBCmd.Args) < 2 {
 		return diceerrors.ErrWrongArgumentCount("RENAME")
 	}
 
 	key := diceDBCmd.Args[0]
-	sid, rc := thread.shardManager.GetShardInfo(key)
+	sid, rc := h.shardManager.GetShardInfo(key)
 
 	preCmd := cmd.DiceDBCmd{
 		Cmd:  "RENAME",
@@ -42,7 +42,7 @@ func preProcessRename(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 		SeqID:         0,
 		RequestID:     GenerateUniqueRequestID(),
 		Cmd:           &preCmd,
-		IOThreadID:    thread.id,
+		CmdHandlerID:  h.id,
 		ShardID:       sid,
 		Client:        nil,
 		PreProcessing: true,
@@ -54,12 +54,12 @@ func preProcessRename(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 // preProcessCopy prepares the COPY command for preprocessing by sending a GET command
 // to retrieve the value of the original key. The retrieved value is used later in the
 // decomposeCopy function to copy the value to the destination key.
-func customProcessCopy(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
+func customProcessCopy(h *BaseCommandHandler, diceDBCmd *cmd.DiceDBCmd) error {
 	if len(diceDBCmd.Args) < 2 {
 		return diceerrors.ErrWrongArgumentCount("COPY")
 	}
 
-	sid, rc := thread.shardManager.GetShardInfo(diceDBCmd.Args[0])
+	sid, rc := h.shardManager.GetShardInfo(diceDBCmd.Args[0])
 
 	preCmd := cmd.DiceDBCmd{
 		Cmd:  "COPY",
@@ -71,7 +71,7 @@ func customProcessCopy(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 		SeqID:         0,
 		RequestID:     GenerateUniqueRequestID(),
 		Cmd:           &preCmd,
-		IOThreadID:    thread.id,
+		CmdHandlerID:  h.id,
 		ShardID:       sid,
 		Client:        nil,
 		PreProcessing: true,
@@ -83,7 +83,7 @@ func customProcessCopy(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 // preProcessPFMerge prepares the PFMERGE command for preprocessing by sending GETOBJECT commands
 // to retrieve the value of all the keys to be merged with. The retrieved value is used later in the
 // decomposePFMERGE function to merge the hll keys to the new key.
-func preProcessPFMerge(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
+func preProcessPFMerge(h *BaseCommandHandler, diceDBCmd *cmd.DiceDBCmd) error {
 	if len(diceDBCmd.Args) < 1 {
 		return diceerrors.ErrWrongArgumentCount("PFMERGE")
 	}
@@ -91,7 +91,7 @@ func preProcessPFMerge(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 	// Sending GETOBJECT commands for the keys to be merged, which would be used in
 	// later stages to merge with destination key in PFMERGE command.
 	for i := 1; i < len(diceDBCmd.Args); i++ {
-		sid, rc := thread.shardManager.GetShardInfo(diceDBCmd.Args[i])
+		sid, rc := h.shardManager.GetShardInfo(diceDBCmd.Args[i])
 		preCmd := cmd.DiceDBCmd{
 			Cmd:  "GETOBJECT",
 			Args: []string{diceDBCmd.Args[i]},
@@ -101,7 +101,7 @@ func preProcessPFMerge(thread *BaseIOThread, diceDBCmd *cmd.DiceDBCmd) error {
 			SeqID:         0,
 			RequestID:     GenerateUniqueRequestID(),
 			Cmd:           &preCmd,
-			IOThreadID:    thread.id,
+			CmdHandlerID:  h.id,
 			ShardID:       sid,
 			Client:        nil,
 			PreProcessing: true,

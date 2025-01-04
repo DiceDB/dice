@@ -34,6 +34,7 @@ import (
 	"github.com/dicedb/dice/internal/server/httpws"
 
 	"github.com/dicedb/dice/internal/cli"
+	"github.com/dicedb/dice/internal/commandhandler"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
@@ -145,8 +146,10 @@ func main() {
 		}
 		defer stopProfiling()
 	}
-	ioThreadManager := iothread.NewManager(config.DiceConfig.Performance.MaxClients, shardManager)
-	respServer := resp.NewServer(shardManager, ioThreadManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
+	ioThreadManager := iothread.NewManager(config.DiceConfig.Performance.MaxClients)
+	cmdHandlerManager := commandhandler.NewRegistry(config.DiceConfig.Performance.MaxClients, shardManager)
+
+	respServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 	serverWg.Add(1)
 	go runServer(ctx, &serverWg, respServer, serverErrCh)
 

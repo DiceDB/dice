@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package iothread
+package commandhandler
 
 import (
 	"fmt"
@@ -25,34 +25,6 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 )
-
-// RespAuth returns with an encoded "OK" if the user is authenticated
-// If the user is not authenticated, it returns with an encoded error message
-func (t *BaseIOThread) RespAuth(args []string) interface{} {
-	// Check for incorrect number of arguments (arity error).
-	if len(args) < 1 || len(args) > 2 {
-		return diceerrors.ErrWrongArgumentCount("AUTH")
-	}
-
-	if config.DiceConfig.Auth.Password == "" {
-		return diceerrors.ErrAuth
-	}
-
-	username := config.DiceConfig.Auth.UserName
-	var password string
-
-	if len(args) == 1 {
-		password = args[0]
-	} else {
-		username, password = args[0], args[1]
-	}
-
-	if err := t.Session.Validate(username, password); err != nil {
-		return err
-	}
-
-	return clientio.OK
-}
 
 // RespPING evaluates the PING command and returns the appropriate response.
 // If no arguments are provided, it responds with "PONG" (standard behavior).
