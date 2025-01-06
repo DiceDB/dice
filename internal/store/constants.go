@@ -35,4 +35,5 @@ const (
 	SingleShardTouch string = "SINGLETOUCH"
 	SingleShardKeys  string = "SINGLEKEYS"
 	FlushDB          string = "FLUSHDB"
+	HGetAll			 string = "HGETALL"
 )

@@ -50,6 +50,7 @@ var (
 		dstore.ZAdd:    {dstore.ZRange: struct{}{}},
 		dstore.PFADD:   {dstore.PFCOUNT: struct{}{}},
 		dstore.PFMERGE: {dstore.PFCOUNT: struct{}{}},
+		dstore.HSET: 	{dstore.HGETALL: struct{}{}},
 	}
 )
 

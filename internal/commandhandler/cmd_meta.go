@@ -111,6 +111,7 @@ const (
 	CmdCMSIncrBy           = "CMS.INCRBY"
 	CmdHSet                = "HSET"
 	CmdHGet                = "HGET"
+	CmdHGetAll			   = "HGETALL"
 	CmdHSetnx              = "HSETNX"
 	CmdHDel                = "HDEL"
 	CmdHMSet               = "HMSET"
@@ -211,6 +212,8 @@ const (
 	CmdZRangeUnWatch  = "ZRANGE.UNWATCH"
 	CmdPFCountWatch   = "PFCOUNT.WATCH"
 	CmdPFCountUnWatch = "PFCOUNT.UNWATCH"
+	CmdHGetAllWatch   = "HGETALL.WATCH"
+	CmdHGetAllUnWatch = "HGETALL.UNWATCH"
 )
 
 type CmdMeta struct {
@@ -676,6 +679,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdPFCountWatch: {
 		CmdType: Watch,
 	},
+	CmdHGetAllWatch: {
+		CmdType: Watch,
+	},
 
 	// Unwatch commands
 	CmdGetUnWatch: {
@@ -685,6 +691,9 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: Unwatch,
 	},
 	CmdPFCountUnWatch: {
+		CmdType: Unwatch,
+	},
+	CmdHGetAllUnWatch: {
 		CmdType: Unwatch,
 	},
 }
