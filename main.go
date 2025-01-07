@@ -61,20 +61,14 @@ func main() {
 	)
 
 	wl, _ = wal.NewNullWAL()
-	if config.DiceConfig.Persistence.Enabled {
-		if config.DiceConfig.Persistence.WALEngine == WALEngineAOF {
-			_wl, err := wal.NewAOFWAL(config.DiceConfig.WAL.LogDir)
-			if err != nil {
-				slog.Warn("could not create WAL with", slog.String("wal-engine", config.DiceConfig.Persistence.WALEngine), slog.Any("error", err))
-				sigs <- syscall.SIGKILL
-				return
-			}
-			wl = _wl
-		} else {
-			slog.Error("unsupported WAL engine", slog.String("engine", config.DiceConfig.Persistence.WALEngine))
+	if config.DiceConfig.WAL.Enabled {
+		_wl, err := wal.NewAOFWAL(config.DiceConfig.WAL.LogDir)
+		if err != nil {
+			slog.Warn("could not create WAL at", slog.String("wal-dir", config.DiceConfig.WAL.LogDir), slog.Any("error", err))
 			sigs <- syscall.SIGKILL
 			return
 		}
+		wl = _wl
 
 		if err := wl.Init(time.Now()); err != nil {
 			slog.Error("could not initialize WAL", slog.Any("error", err))
@@ -84,7 +78,7 @@ func main() {
 
 		slog.Debug("WAL initialization complete")
 
-		if config.DiceConfig.Persistence.RestoreFromWAL {
+		if config.DiceConfig.WAL.RestoreFromWAL {
 			slog.Info("restoring database from WAL")
 			wal.ReplayWAL(wl)
 			slog.Info("database restored from WAL")
@@ -174,7 +168,7 @@ func main() {
 
 	close(sigs)
 
-	if config.DiceConfig.Persistence.Enabled {
+	if config.DiceConfig.WAL.Enabled {
 		wal.ShutdownBG()
 	}
 

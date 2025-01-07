@@ -138,7 +138,7 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if !config.DiceConfig.Persistence.Enabled || !config.DiceConfig.Persistence.WriteAOFOnCleanup {
+	if !config.DiceConfig.WAL.Enabled || !config.DiceConfig.WAL.WriteToWALOnCleanup {
 		return
 	}
 }
