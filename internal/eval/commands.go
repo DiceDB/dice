@@ -615,9 +615,9 @@ var (
 		Name: "JSON.ARRINDEX",
 		Info: `JSON.ARRINDEX key path value [start [stop]]
 		Search for the first occurrence of a JSON value in an array`,
-		NewEval:     evalJSONARRINDEX,
-		Arity:    -3,
-		KeySpecs: KeySpecs{BeginIndex: 1},
+		NewEval:    evalJSONARRINDEX,
+		Arity:      -3,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
 	}
 

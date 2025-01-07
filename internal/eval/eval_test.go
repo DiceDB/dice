@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/dicedb/dice/internal/cmd"
 	"math"
 	"reflect"
 	"strconv"
@@ -33,6 +32,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
+	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/object"
@@ -47,7 +47,6 @@ type evalTestCase struct {
 	setup          func()
 	input          []string
 	output         []byte
-	validator      func(output []byte)
 	newValidator   func(output interface{})
 	migratedOutput EvalResponse
 }
@@ -4368,11 +4367,7 @@ func runEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc func([]s
 
 			output := evalFunc(tc.input, store)
 
-			if tc.validator != nil {
-				tc.validator(output)
-			} else {
-				assert.Equal(t, string(tc.output), string(output))
-			}
+			assert.Equal(t, string(tc.output), string(output))
 		})
 	}
 }
@@ -4387,7 +4382,6 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			}
 
 			output := evalFunc(tc.input, store)
-
 			if tc.newValidator != nil {
 				if tc.migratedOutput.Error != nil {
 					tc.newValidator(tc.migratedOutput.Error)
@@ -4406,8 +4400,8 @@ func runMigratedEvalTests(t *testing.T, tests map[string]evalTestCase, evalFunc 
 			// TODO: Make this generic so that all kind of slices can be handled
 			if b, ok := output.Result.([]byte); ok && tc.migratedOutput.Result != nil {
 				if expectedBytes, ok := tc.migratedOutput.Result.([]byte); ok {
-					fmt.Println(string(b))
-					fmt.Println(string(expectedBytes))
+					// fmt.Println(string(b))
+					// fmt.Println(string(expectedBytes))
 					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
 				}
 			} else if a, ok := output.Result.([]string); ok && tc.migratedOutput.Result != nil {
@@ -5275,7 +5269,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$", "2"},
 			output: []byte(":0\r\n"),
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				key := "MOCK_KEY"
 				obj := store.Get(key)
 				want := []interface{}{float64(0), float64(1), float64(3), float64(4), float64(5)}
@@ -5298,7 +5292,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 			input:  []string{"MOCK_KEY", "$.b", "2"},
 			output: []byte("*1\r\n:2\r\n"),
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				key := "MOCK_KEY"
 				path := "$.b"
 				obj := store.Get(key)
@@ -5320,30 +5314,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			store = setupTest(store)
-
-			if tt.setup != nil {
-				tt.setup()
-			}
-			response := evalJSONARRPOP(tt.input, store)
-
-			if tt.migratedOutput.Result != nil {
-				if slice, ok := tt.migratedOutput.Result.([]interface{}); ok {
-					assert.Equal(t, slice, response.Result)
-				} else {
-					assert.Equal(t, tt.migratedOutput.Result, response.Result)
-				}
-			}
-
-			if tt.migratedOutput.Error != nil {
-				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				assert.NoError(t, response.Error)
-			}
-		})
-	}
+	runMigratedEvalTests(t, tests, evalJSONARRPOP, store)
 }
 
 func testEvalTYPE(t *testing.T, store *dstore.Store) {
@@ -6748,11 +6719,12 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:          []string{"key", "123"},
 			migratedOutput: EvalResponse{Result: 3, Error: nil},
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				obj := store.Get("key")
 				oType := obj.Type
 				if oType != object.ObjTypeInt {
 					t.Errorf("unexpected encoding")
+					return
 				}
 			},
 		},
@@ -6803,11 +6775,12 @@ func testEvalAPPEND(t *testing.T, store *dstore.Store) {
 			},
 			input:          []string{"key", "2"},
 			migratedOutput: EvalResponse{Result: 2, Error: nil},
-			validator: func(output []byte) {
+			newValidator: func(output interface{}) {
 				obj := store.Get("key")
 				oType := obj.Type
 				if oType != object.ObjTypeString {
 					t.Errorf("unexpected encoding")
+					return
 				}
 			},
 		},

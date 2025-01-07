@@ -36,15 +36,15 @@ func validateConfig(config *Config) error {
 			return fmt.Errorf("unexpected validation error type: %v", err)
 		}
 
-		processedFields := make(map[string]bool)
+		processedFields := make(map[string]struct{})
 
 		for _, validationErr := range validationErrors {
 			fieldName := strings.TrimPrefix(validationErr.Namespace(), "Config.")
 
-			if processedFields[fieldName] {
+			if _, ok := processedFields[fieldName]; ok {
 				continue
 			}
-			processedFields[fieldName] = true
+			processedFields[fieldName] = struct{}{}
 
 			log.Printf("Field %s failed validation: %s", fieldName, validationErr.Tag())
 
@@ -115,7 +115,7 @@ func applyDefaultValuesFromTags(config *Config, fieldName string) error {
 
 func validateWALConfig(sl validator.StructLevel) {
 	config := sl.Current().Interface().(Config)
-	
+
 	// LogDir validation
 	if config.WAL.LogDir == "" {
 		sl.ReportError(config.WAL.LogDir, "LogDir", "LogDir", "required", "cannot be empty")

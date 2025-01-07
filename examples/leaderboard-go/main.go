@@ -20,8 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dicedb/dicedb-go"
 	"log"
+
+	"github.com/dicedb/dicedb-go"
+
 	"math/rand"
 	"net/http"
 	"os"
@@ -65,8 +67,8 @@ func main() {
 		MaxRetries:  10,
 	})
 
-	go updateScores()
 	go watchLeaderboard()
+	go updateScores()
 
 	// Serve static files for the frontend
 	http.Handle("/", http.FileServer(http.Dir(".")))
@@ -78,46 +80,46 @@ func main() {
 
 func updateScores() {
 	ctx := context.Background()
+	key := "match:100"
 	for {
-		entry := LeaderboardEntry{
-			PlayerID:  fmt.Sprintf("player:%d", rand.Intn(10)),
-			Score:     rand.Intn(100),
-			Timestamp: time.Now(),
-		}
-		lentry, _ := json.Marshal(entry)
-		dice.JSONSet(ctx, entry.PlayerID, "$", lentry).Err()
+		dice.ZAdd(ctx, key, dicedb.Z{
+			Score:  rand.Float64() * 100,
+			Member: fmt.Sprintf("player:%d", rand.Intn(5)),
+		})
+		time.Sleep(2 * time.Second)
 	}
 }
 
 func watchLeaderboard() {
 	ctx := context.Background()
-	qwatch := dice.QWatch(ctx)
-	qwatch.WatchQuery(ctx, `SELECT $key, $value
-									WHERE $key LIKE 'player:*' AND '$value.score' > 10
-									ORDER BY $value.score DESC
-									LIMIT 5;`)
-	defer qwatch.Close()
+	watchConn := dice.WatchConn(ctx)
+	key := "match:100"
+	_, err := watchConn.ZRangeWatch(ctx, key, "0", "4", "REV", "WITHSCORES")
+	if err != nil {
+		log.Println("failed to create watch connection:", err)
+		return
+	}
 
-	ch := qwatch.Channel()
+	defer watchConn.Close()
+
+	ch := watchConn.Channel()
 	for {
 		select {
 		case msg := <-ch:
-			entries := toEntries(msg.Updates)
+			var entries []LeaderboardEntry
+			for _, dicedbZ := range msg.Data.([]dicedb.Z) {
+				entry := LeaderboardEntry{
+					Score:     int(dicedbZ.Score),
+					PlayerID:  dicedbZ.Member.(string),
+					Timestamp: time.Now(),
+				}
+				entries = append(entries, entry)
+			}
 			broadcast(entries)
 		case <-ctx.Done():
 			return
 		}
 	}
-}
-
-func toEntries(updates []dicedb.KV) []LeaderboardEntry {
-	var entries []LeaderboardEntry
-	for _, update := range updates {
-		var entry LeaderboardEntry
-		json.Unmarshal([]byte(update.Value.(string)), &entry)
-		entries = append(entries, entry)
-	}
-	return entries
 }
 
 func broadcast(entries []LeaderboardEntry) {
