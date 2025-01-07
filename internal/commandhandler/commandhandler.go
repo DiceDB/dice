@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -242,6 +243,15 @@ func (h *BaseCommandHandler) executeCommand(ctx context.Context, diceDBCmd *cmd.
 	// Unsubscribe Unwatch command type
 	if meta.CmdType == Unwatch {
 		return h.handleCommandUnwatch(cmdList)
+	}
+
+	// Log command to WAL before execution if it's not a read-only command
+	if !meta.ReadOnly && h.wl != nil {
+		// Convert command to bytes for WAL logging
+		cmdBytes := []byte(fmt.Sprintf("%s %s", diceDBCmd.Cmd, strings.Join(diceDBCmd.Args, " ")))
+		if err := h.wl.LogCommand(cmdBytes); err != nil {
+			return nil, fmt.Errorf("failed to log command to WAL: %w", err)
+		}
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
