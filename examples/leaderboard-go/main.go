@@ -82,8 +82,11 @@ func updateScores() {
 	ctx := context.Background()
 	key := "match:100"
 	for {
-		dice.ZAdd(ctx, key, dicedb.Z{Score: rand.Float64() * 100, Member: fmt.Sprintf("player:%d", rand.Intn(5))})
-		time.Sleep(time.Duration(2 * time.Second))
+		dice.ZAdd(ctx, key, dicedb.Z{
+			Score:  rand.Float64() * 100,
+			Member: fmt.Sprintf("player:%d", rand.Intn(5)),
+		})
+		time.Sleep(2 * time.Second)
 	}
 }
 
@@ -105,8 +108,11 @@ func watchLeaderboard() {
 		case msg := <-ch:
 			var entries []LeaderboardEntry
 			for _, dicedbZ := range msg.Data.([]dicedb.Z) {
-				entry := LeaderboardEntry{Score: int(dicedbZ.Score), PlayerID: dicedbZ.Member.(string),
-					Timestamp: time.Now()}
+				entry := LeaderboardEntry{
+					Score:     int(dicedbZ.Score),
+					PlayerID:  dicedbZ.Member.(string),
+					Timestamp: time.Now(),
+				}
 				entries = append(entries, entry)
 			}
 			broadcast(entries)
@@ -114,16 +120,6 @@ func watchLeaderboard() {
 			return
 		}
 	}
-}
-
-func toEntries(updates []dicedb.KV) []LeaderboardEntry {
-	var entries []LeaderboardEntry
-	for _, update := range updates {
-		var entry LeaderboardEntry
-		json.Unmarshal([]byte(update.Value.(string)), &entry)
-		entries = append(entries, entry)
-	}
-	return entries
 }
 
 func broadcast(entries []LeaderboardEntry) {
