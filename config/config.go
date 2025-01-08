@@ -46,12 +46,12 @@ const (
 # Version
 version = "0.1.0"
 
-# Async Server Configuration
-async_server.addr = "0.0.0.0"
-async_server.port = 7379
-async_server.keepalive = 300
-async_server.timeout = 300
-async_server.max_conn = 0
+# RESP Server Configuration
+resp_server.addr = "0.0.0.0"
+resp_server.port = 7379
+resp_server.keepalive = 300
+resp_server.timeout = 300
+resp_server.max_conn = 0
 
 # HTTP Configuration
 http.enabled = false
@@ -103,19 +103,19 @@ network.io_buffer_length = 512
 network.io_buffer_length_max = 51200
 
 # WAL Configuration
-LogDir = "tmp/dicedb-wal"
-Enabled = "true"
-WalMode = "buffered"
-WriteMode = "default"
-BufferSizeMB = 1
-RotationMode = "segemnt-size"
-MaxSegmentSizeMB = 16
-MaxSegmentRotationTime = 60s
-BufferSyncInterval = 200ms
-RetentionMode = "num-segments" 
-MaxSegmentCount = 10
-MaxSegmentRetentionDuration = 600s
-RecoveryMode = "strict"`
+wal.logDir = "tmp/dicedb-wal"
+wal.enabled = true
+wal.mode = "buffered"
+wal.writeMode = "default"
+wal.bufferSizeMB = 1
+wal.rotationMode = "segment-size"
+wal.maxSegmentSizeMB = 16
+wal.maxSegmentRotationTime = 60s
+wal.bufferSyncInterval = 200ms
+wal.retentionMode = "num-segments" 
+wal.maxSegmentCount = 10
+wal.maxSegmentRetentionDuration = 600s
+wal.recoveryMode = "strict"`
 )
 
 var (
@@ -127,7 +127,7 @@ type Config struct {
 	Version     string      `config:"version" default:"0.1.0"`
 	InstanceID  string      `config:"instance_id"`
 	Auth        auth        `config:"auth"`
-	RespServer  respServer  `config:"async_server"`
+	RespServer  respServer  `config:"resp_server"`
 	HTTP        http        `config:"http"`
 	WebSocket   websocket   `config:"websocket"`
 	Performance performance `config:"performance"`
@@ -135,7 +135,7 @@ type Config struct {
 	Persistence persistence `config:"persistence"`
 	Logging     logging     `config:"logging"`
 	Network     network     `config:"network"`
-	WAL         WALConfig   `config:"WAL"`
+	WAL         walConfig   `config:"WAL"`
 }
 
 type auth struct {
@@ -191,19 +191,19 @@ type persistence struct {
 	WALEngine         string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`
 }
 
-type WALConfig struct {
+type walConfig struct {
 	// Directory where WAL log files will be stored
-	LogDir string `config:"log_dir" default:"tmp/dicedb-wal"`
+	LogDir string `config:"log_dir" default:"tmp/dicedb-wal" validate:"dirpath,required"`
 	// Whether WAL is enabled
 	Enabled bool `config:"enabled" default:"true"`
 	// WAL buffering mode: 'buffered' (writes buffered in memory) or 'unbuffered' (immediate disk writes)
-	WalMode string `config:"wal_mode" default:"buffered" validate:"oneof=buffered unbuffered"`
+	Mode string `config:"mode" default:"buffered" validate:"oneof=buffered unbuffered"`
 	// Write mode: 'default' (OS handles syncing) or 'fsync' (explicit fsync after writes)
 	WriteMode string `config:"write_mode" default:"default" validate:"oneof=default fsync"`
 	// Size of the write buffer in megabytes
 	BufferSizeMB int `config:"buffer_size_mb" default:"1" validate:"min=1"`
 	// How WAL rotation is triggered: 'segment-size' (based on file size) or 'time' (based on duration)
-	RotationMode string `config:"rotation_mode" default:"segemnt-size" validate:"oneof=segment-size time"`
+	RotationMode string `config:"rotation_mode" default:"segment-size" validate:"oneof=segment-size time"`
 	// Maximum size of a WAL segment file in megabytes before rotation
 	MaxSegmentSizeMB int `config:"max_segment_size_mb" default:"16" validate:"min=1"`
 	// Time interval in seconds after which WAL segment is rotated when using time-based rotation
