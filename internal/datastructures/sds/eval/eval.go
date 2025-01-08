@@ -1,7 +1,9 @@
 package eval
 
 import (
+	"fmt"
 	"math"
+	"math/bits"
 	"strconv"
 	"strings"
 
@@ -78,6 +80,8 @@ func (e *Eval) Evaluate() *EvalResponse {
 		return e.evalINCR()
 	case "INCRBY":
 		return e.evalINCRBY()
+	case "SETBIT":
+		return e.evalSETBIT()
 	default:
 		return nil
 	}
@@ -286,4 +290,222 @@ func (e *Eval) incrDecrCmd(incr int64) *EvalResponse {
 	i += incr
 	err = sdsObj.Set(strconv.FormatInt(i, 10))
 	return MakeEvalResult(i)
+}
+
+func (e *Eval) evalSETBIT() *EvalResponse {
+	var err error
+	fmt.Println(e.op.Args)
+	if len(e.op.Args) != 3 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  ds.ErrWrongArgumentCount("SETBIT"),
+		}
+	}
+
+	key := e.op.Args[0]
+	offset, err := strconv.ParseInt(e.op.Args[1], 10, 64)
+	if err != nil || offset < 0 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  ds.ErrGeneral("bit offset is not an integer or out of range"),
+		}
+	}
+
+	value, err := strconv.ParseBool(e.op.Args[2])
+
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  ds.ErrGeneral("bit is not an integer or out of range"),
+		}
+	}
+
+	obj := e.store.Get(key)
+	requiredByteArraySize := offset>>3 + 1
+
+	if obj == nil {
+		bytes := make([]byte, requiredByteArraySize)
+		str := sds.NewString(string(bytes))
+
+		obj = e.store.NewObj(str, -1)
+		e.store.Put(key, obj)
+	}
+
+	byteArray, ok := sds.GetIfTypeSDS(obj)
+
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	byteArrayLength := int64(len(byteArray.Get()))
+
+	// check whether resize required or not
+	if requiredByteArraySize > byteArrayLength {
+		// resize as per the offset
+		byteArray.Resize(requiredByteArraySize)
+	}
+	resp := byteArray.GetBit(offset)
+	byteArray.SetBit(offset, value)
+
+	if err != nil {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	if resp == 1 {
+		return &EvalResponse{
+			Result: clientio.IntegerOne,
+			Error:  nil,
+		}
+	}
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+func (e *Eval) evalGETBIT() *EvalResponse {
+	if len(e.op.Args) != 2 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  ds.ErrWrongArgumentCount("GETBIT"),
+		}
+	}
+
+	key := e.op.Args[0]
+	offset, err := strconv.ParseInt(e.op.Args[1], 10, 64)
+	if err != nil || offset < 0 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  ds.ErrGeneral("bit offset is not an integer or out of range"),
+		}
+	}
+
+	obj := e.store.Get(key)
+
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.IntegerZero,
+			Error:  nil,
+		}
+	}
+
+	byteArray, ok := sds.GetIfTypeSDS(obj)
+
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+
+	resp := byteArray.GetBit(offset)
+
+	if resp == 1 {
+		return &EvalResponse{
+			Result: clientio.IntegerOne,
+			Error:  nil,
+		}
+	}
+	return &EvalResponse{
+		Result: clientio.IntegerZero,
+		Error:  nil,
+	}
+}
+
+func (e *Eval) evalBITCOUNT() *EvalResponse {
+	var err error
+	if len(e.op.Args) == 0 || len(e.op.Args) > 4 {
+		return MakeEvalError(ds.ErrWrongArgumentCount("BITCOUNT"))
+	}
+
+	key := e.op.Args[0]
+	obj := e.store.Get(key)
+
+	if obj == nil {
+		return MakeEvalResult(clientio.IntegerZero)
+	}
+
+	byteArray, ok := sds.GetIfTypeSDS(obj)
+
+	if !ok {
+		return MakeEvalError(ds.ErrWrongTypeOperation)
+	}
+	value := []byte(byteArray.Get())
+	valueLength := int64(len(value))
+	start, end := int64(0), valueLength-1
+
+	unit := ds.BYTE
+
+	if len(e.op.Args) > 1 {
+		start, err = strconv.ParseInt(e.op.Args[1], 10, 64)
+		if err != nil {
+			return MakeEvalError(ds.ErrIntegerOutOfRange)
+		}
+		if len(e.op.Args) <= 2 {
+			return MakeEvalError(ds.ErrSyntax)
+		}
+
+		end, err = strconv.ParseInt(e.op.Args[2], 10, 64)
+		if err != nil {
+			return MakeEvalError(ds.ErrIntegerOutOfRange)
+		}
+	}
+
+	if len(e.op.Args) > 3 {
+		unit = strings.ToUpper(e.op.Args[3])
+	}
+
+	switch unit {
+	case ds.BYTE:
+		if start < 0 {
+			start += valueLength
+		}
+		if end < 0 {
+			end += valueLength
+		}
+		if start > end || start >= valueLength {
+			return MakeEvalResult(clientio.IntegerZero)
+		}
+		end = min(end, valueLength-1)
+		bitCount := 0
+		for i := start; i <= end; i++ {
+			bitCount += bits.OnesCount8(value[i])
+		}
+		return MakeEvalResult(bitCount)
+	case ds.BIT:
+		if start < 0 {
+			start += valueLength * 8
+		}
+		if end < 0 {
+			end += valueLength * 8
+		}
+		if start > end {
+			return MakeEvalResult(clientio.IntegerZero)
+		}
+		startByte, endByte := start/8, min(end/8, valueLength-1)
+		startBitOffset, endBitOffset := start%8, end%8
+		if endByte == valueLength-1 {
+			endBitOffset = 7
+		}
+		if startByte >= valueLength {
+			return MakeEvalResult(clientio.IntegerZero)
+		}
+
+		bitCount := 0
+		if startByte == endByte {
+			mask := byte(0xFF >> startBitOffset)
+			mask &= byte(0xFF << (7 - endBitOffset))
+			bitCount = bits.OnesCount8(value[startByte] & mask)
+		} else {
+			firstByteMask := byte(0xFF >> startBitOffset)
+			bitCount += bits.OnesCount8(value[startByte] & firstByteMask)
+
+			for i := startByte + 1; i < endByte; i++ {
+				bitCount += bits.OnesCount8(value[i])
+			}
+
+			lastByteMask := byte(0xFF << (7 - endBitOffset))
+			bitCount += bits.OnesCount8(value[endByte] & lastByteMask)
+		}
+		return MakeEvalResult(bitCount)
+	default:
+		return MakeEvalError(ds.ErrSyntax)
+	}
 }

@@ -123,12 +123,31 @@ func (i *HashItem[T]) Set(val string) error {
 	return errors.New("value out of range or invalid type")
 }
 
+// func (i *HashItem[T]) Get() (string, bool) {
+// 	if i.Expired() {
+// 		return "", false
+// 	}
+// 	switch any(i.Value).(type) {
+// 	case int8, int16, int32, int64, uint8, uint16, uint32, uint64:
+// 		return strconv.Itoa(any(i.Value).(int)), true
+// 	case float32, float64:
+// 		return strconv.FormatFloat(float64(any(i.Value).(float64)), 'f', -1, 64), true
+// 	case []byte:
+// 		return string(any(i.Value).([]byte)), true
+// 	case string:
+// 		return any(i.Value).(string), true
+// 	}
+// 	return "", false
+// }
+
 func (i *HashItem[T]) Get() (string, bool) {
 
 	if i.Expired() {
 		return "", false
 	}
 	switch any(i.Value).(type) {
+	case string:
+		return any(i.Value).(string), true
 	case int8:
 		return strconv.FormatInt(int64(any(i.Value).(int8)), 10), true
 	case int16:
@@ -151,8 +170,6 @@ func (i *HashItem[T]) Get() (string, bool) {
 		return strconv.FormatFloat(any(i.Value).(float64), 'f', -1, 64), true
 	case []byte:
 		return string(any(i.Value).([]byte)), true
-	case string:
-		return any(i.Value).(string), true
 	}
 	return "", false
 }

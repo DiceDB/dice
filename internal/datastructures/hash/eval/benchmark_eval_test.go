@@ -2,10 +2,22 @@ package eval
 
 import (
 	"fmt"
+	"math"
 	"testing"
+	"unsafe"
 
 	dstore "github.com/dicedb/dice/internal/store"
 )
+
+func calculateStringSize(s string) uintptr {
+	// Fixed overhead for the string structure
+	overhead := unsafe.Sizeof(s) // Typically 16 bytes on a 64-bit system
+
+	// Size of the actual string content
+	contentSize := uintptr(len(s))
+
+	return overhead + contentSize
+}
 
 func BenchmarkEvalHSETString(b *testing.B) {
 	// Create a new hash
@@ -19,8 +31,23 @@ func BenchmarkEvalHSETInt(b *testing.B) {
 	// Create a new hash
 	store := dstore.NewStore(nil, nil, nil)
 	for i := 0; i < b.N; i++ {
-		evalHSET([]string{"key", fmt.Sprintf("field%d", i), fmt.Sprintf("%d", i)}, store)
+		evalHSET([]string{"key", fmt.Sprintf("field%d", i), fmt.Sprintf("%d", math.MaxInt)}, store)
 	}
+	// obj := store.Get("key")
+	// hash, ok := hash.GetIfTypeHash(obj)
+
+	// if !ok {
+	// 	b.Fatalf("Error getting hash")
+	// }
+	// totalMem := 0
+	// actaulSize := len(hash.Value)
+	// for _, v := range hash.Value {
+	// 	x, _ := v.Get()
+	// 	totalMem += int(calculateStringSize(x))
+	// }
+	// b.Logf("Total memory: %d", totalMem)
+	// b.Logf("Actual memory: %d", actaulSize)
+
 }
 
 func BenchmarkEvalHGETString(b *testing.B) {

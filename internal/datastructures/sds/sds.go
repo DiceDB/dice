@@ -24,6 +24,9 @@ type SDSInterface interface {
 	ds.DSInterface
 	Set(val string) error
 	Get() string
+	Resize(size int64)
+	GetBit(pos int64) int64
+	SetBit(pos int64, val bool)
 }
 
 func GetIfTypeSDS(ds ds.DSInterface) (SDSInterface, bool) {
@@ -197,4 +200,48 @@ func (s *SDS[T]) Serialize() []byte {
 
 func (s *SDS[T]) Size() int {
 	return len(s.Get())
+}
+
+func (s *SDS[T]) Resize(size int64) {
+	var zero T
+	switch any(zero).(type) {
+	case []byte:
+		if val, ok := any(s.value).([]byte); ok {
+			if size < int64(len(val)) {
+				s.value = any(val[:size]).(T)
+			} else {
+				s.value = any(append(val, make([]byte, size-int64(len(val)))...)).(T)
+			}
+		}
+	default:
+		// handle other types here
+	}
+}
+
+func (s *SDS[T]) GetBit(pos int64) int64 {
+	val := []byte(s.Get())
+	bytePos := pos / 8
+	bitPos := pos % 8
+	if bytePos < int64(len(val)) {
+		return int64((val[bytePos] >> bitPos) & 1)
+	}
+	return 0
+
+}
+
+func (s *SDS[T]) SetBit(pos int64, value bool) {
+	val := []byte(s.Get())
+	bytePos := pos / 8
+	bitIndex := 7 - uint(pos%8)
+
+	if bytePos >= int64(len(val)) {
+		// resize the byte array
+		val = append(val, make([]byte, bytePos-int64(len(val)+1))...)
+	}
+	if value {
+		val[bytePos] |= 1 << bitIndex
+	} else {
+		val[bytePos] &^= 1 << bitIndex
+	}
+	s.Set(string(val))
 }
