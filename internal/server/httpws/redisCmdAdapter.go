@@ -86,17 +86,15 @@ func ParseHTTPRequest(r *http.Request) (*cmd.DiceDBCmd, error) {
 	}
 	// Step 1: Handle JSON body if present
 	if r.Body != nil {
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			return nil, err
-		}
+		decoder := json.NewDecoder(r.Body)
+		decoder.UseNumber() // avoids converting numbers to float64
 
-		if len(body) > 0 {
-			var jsonBody map[string]interface{}
-			if err := json.Unmarshal(body, &jsonBody); err != nil {
+		var jsonBody map[string]interface{}
+		if err := decoder.Decode(&jsonBody); err != nil {
+			if err != io.EOF { // ignore EOF error
 				return nil, err
 			}
-
+		} else {
 			if len(jsonBody) == 0 && command != ABORT {
 				return nil, fmt.Errorf("empty JSON object")
 			}
