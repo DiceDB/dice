@@ -679,6 +679,16 @@ func TestZRANGE(t *testing.T) {
 			commands: []string{"ZADD key 1 member1 2 member2 3 member3 4 member4 5 member5 6 member6", "ZRANGE key -8 -5 WITHSCORES"},
 			expected: []interface{}{float64(6), []interface{}{"member1", "1", "member2", "2"}},
 		},
+		{
+			name:     "ZRANGE with byscore",
+			commands: []string{"ZADD leaderboard 50 Alice 70 Bob 60 Charlie 80 Dave", "ZRANGE leaderboard -1 0", "ZRANGE leaderboard 1 0", "ZRANGE leaderboard (60 80 BYSCORE", "ZRANGE leaderboard (60 (80 BYSCORE"},
+			expected: []interface{}{float64(4), []interface{}{}, []interface{}{}, []interface{}{"Bob", "Dave"}, []interface{}{"Bob"}},
+		},
+		{
+			name:     "ZRANGE with score and limit",
+			commands: []string{"ZADD leaderboard 50 Alice 70 Bob 60 Charlie 80 Dave", "ZRANGE leaderboard 0 3 WITHSCORES REV", "ZRANGE leaderboard (1 +inf BYSCORE LIMIT 0 2"},
+			expected: []interface{}{float64(0), []interface{}{"Dave", "80", "Bob", "70", "Charlie", "60", "Alice", "50"}, []interface{}{"Alice", "Charlie"}},
+		},
 	}
 
 	for _, tc := range testCases {

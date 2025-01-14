@@ -906,6 +906,32 @@ func TestZRANGE_HTTP(t *testing.T) {
 			},
 			expected: []interface{}{float64(6), []interface{}{"member1", "1", "member2", "2"}},
 		},
+		{
+			name: "ZRANGE with byscore option",
+			commands: []HTTPCommand{
+				{Command: "ZADD", Body: map[string]interface{}{"key": "leaderboard", "values": []string{"50", "Alice", "70", "Bob", "60", "Charlie", "80", "Dave"}}},
+				{Command: "ZRANGE", Body: map[string]interface{}{"key": "leaderboard", "values": []string{"-1", "0"}}},
+				{Command: "ZRANGE", Body: map[string]interface{}{"key": "leaderboard", "values": []string{"1", "0"}}},
+				{Command: "ZRANGE", Body: map[string]interface{}{"key": "leaderboard", "values": []string{"(60", "80", "BYSCORE"}}},
+				{Command: "ZRANGE", Body: map[string]interface{}{"key": "leaderboard", "values": []string{"(60", "(80", "BYSCORE"}}},
+			},
+			expected: []interface{}{
+				float64(4),
+				[]interface{}{},
+				[]interface{}{},
+				[]interface{}{"Bob", "Dave"},
+				[]interface{}{"Bob"},
+			},
+		},
+		{
+			name: "ZRANGE with score and limit",
+			commands: []HTTPCommand{
+				{Command: "ZADD", Body: map[string]interface{}{"key": "leaderboard", "values": [...]string{"50", "Alice", "70", "Bob", "60", "Charlie", "80", "Dave"}}},
+				{Command: "ZRANGE", Body: map[string]interface{}{"key": "leaderboard", "values": [...]string{"0", "3", "WITHSCORES", "REV"}}},
+				{Command: "ZRANGE", Body: map[string]interface{}{"key": "leaderboard", "values": [...]string{"(1", "+inf", "BYSCORE", "LIMIT", "0", "2"}}},
+			},
+			expected: []interface{}{float64(0), []interface{}{"Dave", "80", "Bob", "70", "Charlie", "60", "Alice", "50"}, []interface{}{"Alice", "Charlie"}},
+		},
 	}
 
 	for _, tc := range testCases {
