@@ -44,7 +44,7 @@ RPOP key [count]
      - If `count` is greater than the number of elements in the list, all elements are removed and returned.
      - If `count` is less than 0, the following error is returned:
        ```bash
-       (error) ERR value is not an integer or out of range
+       (error) value is out of range, must be positive
        ```
 
 4. **Empty List**:
@@ -66,7 +66,7 @@ RPOP key [count]
 
  3. `Invalid Count`
 
-   - Error Message: `(error) ERR value is not an integer or out of range`
+   - Error Message: `(error) value is out of range, must be positive`
    - Cause: Occurs if the count parameter is less than 0.    
 
 ## Example Usage
@@ -115,14 +115,14 @@ Passing a negative value for count will result in an error:
 
 ```bash
 RPOP mylist -1
-(error) ERR value is not an integer or out of range
+(error) value is out of range, must be positive
 ```
 
 Passing a non integer value as the count paramater will result in an error:
 
 ```bash
 RPOP mylist secondlist
-(error) ERR value is not an integer or a float
+(error) value is out of range, must be positive
 ```
 
 

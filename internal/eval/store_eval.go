@@ -3210,7 +3210,7 @@ func popElements(args []string, store *dstore.Store, direction string) *EvalResp
 		if nos < 0 {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrIntegerOutOfRange,
+				Error:  diceerrors.ErrValueMustBePositive,
 			}
 		}
 		popNumber = nos
