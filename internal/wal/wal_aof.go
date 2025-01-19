@@ -354,7 +354,6 @@ func (wal *AOF) ReplayWAL(callback func(*WALEntry) error) error {
 		if err != nil {
 			return fmt.Errorf("error opening segment file %s: %w", segment, err)
 		}
-		defer file.Close()
 
 		reader := bufio.NewReader(file)
 		for {
@@ -364,12 +363,14 @@ func (wal *AOF) ReplayWAL(callback func(*WALEntry) error) error {
 				if err == io.EOF {
 					break
 				}
+				file.Close()
 				return fmt.Errorf("error reading entry size: %w", err)
 			}
 
 			// Read entry data
 			entryData := make([]byte, entrySize)
 			if _, err := io.ReadFull(reader, entryData); err != nil {
+				file.Close()
 				return fmt.Errorf("error reading entry data: %w", err)
 			}
 
@@ -379,9 +380,11 @@ func (wal *AOF) ReplayWAL(callback func(*WALEntry) error) error {
 
 			// Call provided replay function with parsed command
 			if err := wal.ForEachCommand(&entry, callback); err != nil {
+				file.Close()
 				return fmt.Errorf("error replaying command: %w", err)
 			}
 		}
+		file.Close()
 	}
 
 	return nil
@@ -395,9 +398,5 @@ func (wal *AOF) ForEachCommand(entry *WALEntry, callback func(*WALEntry) error) 
 			entry.LogSequenceNumber, expectedCRC, entry.Crc32)
 	}
 
-	if err := callback(entry); err != nil {
-		return err
-	}
-	
-	return nil
+	return callback(entry)
 }
