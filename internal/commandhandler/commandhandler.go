@@ -585,7 +585,7 @@ func GetWALReplayHandler(shardManager *shard.ShardManager) (*BaseCommandHandler,
 		ioThreadWriteChan,
 		ioThreadErrChan,
 		nil,  // No WAL needed for replay handler
-		true, // isReplayHandler=true
+		true, // isReplayHandler
 	)
 
 	// Register the command handler with the shard manager
