@@ -25,7 +25,7 @@ RPOP key [count]
 | The command is successful    | `String` The value of the last element in the list |
 | The key does not exist       | `nil`                                              |
 | The key is of the wrong type | error                                              |
-| The count is invalid         | error     |
+| The count is invalid         | error                                              |
 
 
 #### Behavior:
@@ -58,6 +58,11 @@ RPOP key [count]
 
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs if the key exists but is not associated with a list.
+
+```bash
+127.0.0.1:7379> RPOP mystring
+(error) WRONGTYPE Operation against a key holding the wrong kind of value
+```
 
 2. `Wrong number of arguments`
 
