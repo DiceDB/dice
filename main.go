@@ -14,10 +14,12 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/server/httpws"
 
 	"github.com/dicedb/dice/internal/cli"
@@ -77,12 +79,6 @@ func main() {
 		}
 
 		slog.Debug("WAL initialization complete")
-
-		if config.DiceConfig.WAL.RestoreFromWAL {
-			slog.Info("restoring database from WAL")
-			wal.ReplayWAL(wl)
-			slog.Info("database restored from WAL")
-		}
 	}
 
 	if config.DiceConfig.Performance.EnableWatch {
@@ -144,6 +140,33 @@ func main() {
 		websocketServer := httpws.NewWebSocketServer(shardManager, config.DiceConfig.WebSocket.Port, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
+	}
+
+	// wal replay here
+	if config.DiceConfig.WAL.RestoreFromWAL {
+		slog.Info("restoring database from WAL")
+		replayHandler, err := commandhandler.GetWALReplayHandler(shardManager)
+		if err != nil {
+			slog.Error("error getting WAL replay handler", slog.Any("error", err))
+			sigs <- syscall.SIGKILL
+			return
+		}
+		callback := func(entry *wal.WALEntry) error {
+			command := strings.Split(string(entry.Data), " ")
+			cmdTemp := cmd.DiceDBCmd{
+				Cmd:  command[0],
+				Args: command[1:],
+			}
+			_, err := replayHandler.ExecuteCommand(context.Background(), &cmdTemp, false)
+			if err != nil {
+				return fmt.Errorf("error handling WAL replay: %w", err)
+			}
+			return nil
+		}
+		if err := wl.ReplayWAL(callback); err != nil {
+			slog.Error("error restoring from WAL", slog.Any("error", err))
+		}
+		slog.Info("database restored from WAL")
 	}
 
 	wg.Add(1)

@@ -214,7 +214,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 
 			handler := commandhandler.NewCommandHandler(cmdHandlerID, responseChan, preprocessingChan,
 				s.cmdWatchSubscriptionChan, parser, s.shardManager, s.globalErrorChan,
-				ioThreadReadChan, ioThreadWriteChan, ioThreadErrChan, s.wl)
+				ioThreadReadChan, ioThreadWriteChan, ioThreadErrChan, s.wl, false)
 
 			// Register the io-thread with the manager
 			err = s.ioThreadManager.RegisterIOThread(thread)

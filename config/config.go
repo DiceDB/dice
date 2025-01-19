@@ -175,7 +175,7 @@ type WALConfig struct {
 	// Directory where WAL log files will be stored
 	LogDir string `config:"log_dir" default:"tmp/dicedb-wal"`
 	// Whether WAL is enabled
-	Enabled bool `config:"enabled" default:"false"`
+	Enabled bool `config:"enabled" default:"true"`
 	// WAL buffering mode: 'buffered' (writes buffered in memory) or 'unbuffered' (immediate disk writes)
 	WalMode string `config:"wal_mode" default:"buffered" validate:"oneof=buffered unbuffered"`
 	// Write mode: 'default' (OS handles syncing) or 'fsync' (explicit fsync after writes)
@@ -199,7 +199,7 @@ type WALConfig struct {
 	// How to handle WAL corruption on recovery: 'strict' (fail), 'truncate' (truncate at corruption), 'ignore' (skip corrupted)
 	RecoveryMode string `config:"recovery_mode" default:"strict" validate:"oneof=strict truncate ignore"`
 	// Whether to restore the database from WAL on startup
-	RestoreFromWAL bool `config:"restore-wal" default:"false"`
+	RestoreFromWAL bool `config:"restore-wal" default:"true"`
 	// Whether to write to WAL on cleanup
 	WriteToWALOnCleanup bool `config:"write-to-wal-on-cleanup" default:"false"`
 }
