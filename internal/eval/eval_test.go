@@ -3957,11 +3957,11 @@ func testEvalLPOP(t *testing.T, store *dstore.Store) {
 		},
 		"non-integer count": {
 			input:          []string{"k", "abc"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or a float")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("value is out of range, must be positive")},
 		},
 		"negative count": {
 			input:          []string{"k", "-1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR value is not an integer or out of range")},
+			migratedOutput: EvalResponse{Result: nil, Error: errors.New("value is out of range, must be positive")},
 		},
 		"key with different type": {
 			setup: func() {

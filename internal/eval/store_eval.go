@@ -3198,7 +3198,7 @@ func popElements(args []string, store *dstore.Store, direction string) *EvalResp
 		if err != nil {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrInvalidNumberFormat,
+				Error:  diceerrors.ErrValueMustBePositive,
 			}
 		}
 		if nos == 0 {
