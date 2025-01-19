@@ -596,8 +596,8 @@ func TestLPOPCount(t *testing.T) {
 				float64(4),
 				[]interface{}{"v1", "v2"},
 				[]interface{}{"v3", "v4"},
-				"ERR value is not an integer or out of range",
-				"ERR value is not an integer or a float",
+				"value is out of range, must be positive",
+				"value is out of range, must be positive",
 				float64(0),
 			},
 		},
@@ -614,4 +614,50 @@ func TestLPOPCount(t *testing.T) {
 	}
 
 	exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": [...]string{"k"}}})
+}
+
+func TestRPOPCount(t *testing.T) {
+	exec := NewHTTPCommandExecutor()
+	exec.FireCommand(HTTPCommand{Command: "FLUSHDB"})
+	testCases := []struct {
+		name   string
+		cmds   []HTTPCommand
+		expect []any
+	}{
+		{
+			name: "RPOP with count argument - valid, invalid, and edge cases",
+			cmds: []HTTPCommand{
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v1"}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v2"}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v3"}},
+				{Command: "RPUSH", Body: map[string]interface{}{"key": "k", "value": "v4"}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k", "value": 2}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k", "value": 2}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k", "value": -1}},
+				{Command: "RPOP", Body: map[string]interface{}{"key": "k", "value": "abc"}},
+				{Command: "LLEN", Body: map[string]interface{}{"key": "k"}},
+			},
+			expect: []any{
+				float64(1),
+				float64(2),
+				float64(3),
+				float64(4),
+				[]interface{}{"v4", "v3"},
+				[]interface{}{"v2", "v1"},
+				"value is out of range, must be positive",
+				"value is out of range, must be positive",
+				float64(0),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			exec.FireCommand(HTTPCommand{Command: "DEL", Body: map[string]interface{}{"keys": []interface{}{"k"}}})
+			for i, cmd := range tc.cmds {
+				result, _ := exec.FireCommand(cmd)
+				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %v", cmd)
+			}
+		})
+	}
 }
