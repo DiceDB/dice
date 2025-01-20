@@ -7,7 +7,9 @@ sidebar:
 
 DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware.
 
-### Setting up DiceDB server
+## Setting up DiceDB server
+
+### Using Docker
 
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
@@ -18,7 +20,20 @@ docker run -p 7379:7379 dicedb/dicedb --enable-watch
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
 to it using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and SDKs.
 
-### Setting up CLI
+### Build from source
+
+```sh
+git clone https://github.com/dicedb/dice
+cd dice
+make build
+```
+
+The above command will create a binary `dicedb`. Execute the binary and that will
+start the DiceDB server.
+
+## Setting up CLI
+
+### Using cURL
 
 The best way to connect to DiceDB is using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and you can install it by running the following command
 
@@ -28,3 +43,14 @@ curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/i
 ```
 
 If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
+
+### Building from source
+
+```sh
+git clone https://github.com/DiceDB/dicedb-cli
+cd dicedb-cli
+make build
+```
+
+The above command will create a binary `dicedb-cli`. Execute the binary will
+start the CLI and will try to connect to the DiceDB server.

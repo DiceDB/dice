@@ -33,14 +33,9 @@ docker run -p 7379:7379 dicedb/dicedb --enable-watch
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
 to it using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and SDKs.
 
-## Supporters
+### Build from source
 
-[![JetBrains logo.](https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
-
-
-### Setting up DiceDB from source for development and contributions
-
-To run DiceDB for local development or running from source, you will need
+To build DiceDB from source, you need to have the following
 
 1. [Golang](https://go.dev/)
 2. Any of the below supported platform environments:
@@ -48,15 +43,49 @@ To run DiceDB for local development or running from source, you will need
     2. [OSX (Darwin) based environment](https://en.wikipedia.org/wiki/MacOS)
     3. WSL under Windows
 
-```bash
+```sh
 git clone https://github.com/dicedb/dice
 cd dice
+make build
+```
+
+The above command will create a binary `dicedb`. Execute the binary and that will
+start the DiceDB server., or, you can run the following command to run like a usual
+Go program
+
+```sh
 go run main.go --enable-watch
 ```
 
 You can skip passing the flag if you are not working with `.WATCH` feature.
 
-1. Install GoLangCI
+## Setting up CLI
+
+### Using cURL
+
+The best way to connect to DiceDB is using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and you can install it by running the following command
+
+```bash
+sudo su
+curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
+```
+
+If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
+
+### Building from source
+
+```sh
+git clone https://github.com/DiceDB/dicedb-cli
+cd dicedb-cli
+make build
+```
+
+The above command will create a binary `dicedb-cli`. Execute the binary will
+start the CLI and will try to connect to the DiceDB server.
+
+## Essentials for Development
+
+### Install GoLangCI
 
 ```bash
 sudo su
@@ -96,15 +125,6 @@ By default, DiceDB will look for the configuration file at `./dicedb.conf`. (Lin
 
 > [!TIP]
 > If you want to use a custom configuration file, you can specify the path using the `-c` flag. and to output the configuration file to a specific location, you can specify the output dir path using the `-o` flag.
-
-### Setting up CLI
-
-The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command
-
-```bash
-sudo su
-curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
-```
 
 ### Running Tests
 
