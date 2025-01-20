@@ -138,7 +138,7 @@ Error When jsonpath is not array object
 127.0.0.1:7379> set b '{"name":"Alice","mobile":[1902,1903,1904]}'
 "OK"
 127.0.0.1:7379> JSON.ARRINDEX b $.mobile 1902
-(error) Existing key has wrong Redis type
+(error) Existing key has wrong type
 ```
 
 ### When the jsonpath is not valid path

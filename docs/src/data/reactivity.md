@@ -33,7 +33,7 @@ This real-time reactivity ensures that clients always receive the latest data wi
 
 ## DiceDB, a reactive database
 
-DiceDB exemplifies the reactive database model. Designed as a [redis-compatible](redis.io), in-memory, scalable, highly available, unified, multi-threaded database, DiceDB also focuses on real-time reactivity and efficiency. In DiceDB, clients can set up query subscriptions for specific keys and queries and when a value tied to a subscribed query changes, the updated result set is pushed directly to the subscribed clients. This push model eliminates the need for clients to continuously poll for updates.
+DiceDB exemplifies the reactive database model and also focuses on real-time reactivity and efficiency. In DiceDB, clients can set up query subscriptions for specific keys and queries and when a value tied to a subscribed query changes, the updated result set is pushed directly to the subscribed clients. This push model eliminates the need for clients to continuously poll for updates.
 
 ### Creating a query subscription
 

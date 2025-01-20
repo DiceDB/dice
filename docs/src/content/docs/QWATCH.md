@@ -8,8 +8,7 @@ data. It operates similarly to the `SUBSCRIBE` command but focuses on SQL-like q
 data modifications affect the query's results, the updated result set is pushed to the subscribed client. This
 eliminates the need for clients to constantly poll for changes.
 
-This command is what makes DiceDB different from Redis and uniquely positions it as the easiest and most intuitive way
-to build real-time reactive applications like leaderboards.
+This command uniquely positions DiceDB as the easiest and most intuitive way to build real-time reactive applications like leaderboards.
 
 ## Protocol Support
 

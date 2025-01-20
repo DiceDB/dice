@@ -4,7 +4,7 @@ description: "Create a gaming leaderboard in the easiest way possible."
 ---
 
 In the world of gaming, leaderboards are essential for tracking player
-rankings and improving engagement. DiceDB is an in-memory, real-time, and reactive database with Redis and SQL support optimized for modern hardware and building real-time applications. In this tutorial, we'll walk through the process of creating a gaming leaderboard using DiceDB CLI commands, without relying on any SDK.
+rankings and improving engagement. DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware. In this tutorial, we'll walk through the process of creating a gaming leaderboard using DiceDB CLI commands, without relying on any SDK.
 
 Prerequisites:
 
@@ -55,7 +55,7 @@ JSON.SET match:1:player:3 $ {"name": "cyclops", "score": 2}
 JSON.SET match:1:player:4 $ {"name": "deadpool", "score": 9}
 ```
 
-Note: If you were using Redis, then you'd need to use Sorted Set to build the leaderboard
+Note: You might think that you need a Sorted Set to build the leaderboard
 but with DiceDB, you can use the [`JSON.SET`](/commands/jsonset) command to store the metadata and score against the player as a top-level key, value pair.
 
 ## Querying the data

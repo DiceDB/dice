@@ -18,11 +18,3 @@ Storm is a series of utility that allows us to fire bulk request to the Dice Dat
 ```
 $ go run storm/set/set.go
 ```
-
-## Monitoring through Prometheus
-
-```
-$ ./redis_exporter  -redis.addr redis://localhost:7379
-$ ./prometheus --web.enable-admin-api
-$ curl -X POST -g 'http://localhost:9090/api/v1/admin/tsdb/delete_series?match[]={instance="localhost:9121"}'
-```

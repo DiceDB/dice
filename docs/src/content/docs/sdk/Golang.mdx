@@ -3,7 +3,7 @@ title: Golang
 description: A golang SDK for building high performance applications with DiceDB.
 ---
 
-The DiceDB Go SDK provides support for all the standard Redis commands plus specialized DiceDB watch commands for monitoring changes to data in real-time.
+The DiceDB Go SDK provides support for all the standard commands plus specialized DiceDB watch commands for monitoring changes to data in real-time.
 
 ## Installation
 
@@ -15,8 +15,6 @@ go get github.com/dicedb/dicedb-go
 
 ## Basic Usage
 
-The SDK maintains compatibility with [go-redis](https://github.com/redis/go-redis) for standard Redis operations. If you're using go-redis, you can transparently switch to dicedb-go with minimal changes to your application code.
-
 ```go
 import "github.com/dicedb/dicedb-go"
 
@@ -26,7 +24,6 @@ func main() {
     })
     defer client.Close()
 
-    // Use like standard go-redis
     err := client.Set(ctx, "key", "value", 0).Err()
     val, err := client.Get(ctx, "key").Result()
 }

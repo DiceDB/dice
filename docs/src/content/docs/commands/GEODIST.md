@@ -1,6 +1,6 @@
 ---
 title: GEODIST
-description: The `GEODIST` command in Redis is used to calculate the distance between two members (geospatial points) stored in a geospatial index(set).
+description: The `GEODIST` command in DiceDB is used to calculate the distance between two members (geospatial points) stored in a geospatial index(set).
 ---
 
 The `GEODIST` command in DiceDB is used to calculate the distance between two members (geospatial points) stored in a geospatial index(set).
