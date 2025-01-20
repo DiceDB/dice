@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package wal
 
@@ -164,7 +151,7 @@ func (wal *AOF) writeEntry(data []byte) error {
 	}
 
 	// if wal-mode unbuffered immediately sync to disk
-	if wal.walMode == WALModeUnbuffered { //nolint:goconst
+	if wal.walMode == WALModeUnbuffered {
 		if err := wal.Sync(); err != nil {
 			return err
 		}
@@ -255,7 +242,7 @@ func (wal *AOF) Sync() error {
 	if err := wal.bufWriter.Flush(); err != nil {
 		return err
 	}
-	if wal.writeMode == "fsync" { //nolint:goconst
+	if wal.writeMode == "fsync" {
 		if err := wal.currentSegmentFile.Sync(); err != nil {
 			return err
 		}

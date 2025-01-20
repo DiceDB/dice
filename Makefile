@@ -81,7 +81,8 @@ format: ## format the code using go fmt
 
 GOLANGCI_LINT_VERSION := 1.60.1
 
-lint: check-golangci-lint ## run golangci-lint
+lint:
+	gofmt -w .
 	golangci-lint run ./...
 
 check-golangci-lint:
@@ -109,3 +110,6 @@ release: ## build and push the Docker image to Docker Hub with the latest tag an
 push-binary-remote:
 	$(MAKE) build
 	scp -i ${SSH_PEM_PATH} ./dicedb ubuntu@${REMOTE_HOST}:.
+
+add-license-notice:
+	./add_license_notice.sh
