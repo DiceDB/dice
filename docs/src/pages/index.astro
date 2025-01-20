@@ -10,9 +10,9 @@ const recentBlogs = blogs
   .sort((a, b) => b.data.published_at - a.data.published_at)
   .slice(0, 3);
 
-const title = "DiceDB - a super cache;";
+const title = "DiceDB - an in-memory database;";
 const description =
-  "DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware.";
+  "DiceDB is an open source in-memory database with query subscriptions.";
 ---
 
 <Layout {title} {description}>
@@ -29,9 +29,11 @@ const description =
       </li>
       <li>
         <a href="/reactivity">Reactive</a> - native support for query subscriptions
-        and push
       </li>
       <li>
+        ... and more as we ship
+      </li>
+      <!-- <li>
         Scalable - scales out and scales in with load <span
           class="has-text-danger">*</span
         >
@@ -49,7 +51,7 @@ const description =
       <li>
         Optimized for modern hardware - multi-threaded with shared-nothing
         architecture <span class="has-text-danger">*</span>
-      </li>
+      </li> -->
     </ul>
     <p>
       and we aim to be the high-performance caching backbone for modern

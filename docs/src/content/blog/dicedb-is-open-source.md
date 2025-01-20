@@ -34,13 +34,6 @@ confidently build, adapt, and contribute back to the project.
 Whether it's improving availability, or performance, or even building advanced connectors,
 every contribution will strengthen DiceDB for everyone.
 
-Additionally, the BSD 3-Clause License is designed to ensure fairness. It prevents
-the "freeloading" problem — where companies take open source software, modify it,
-and deploy it as a proprietary service without contributing back.
-With the BSD 3-Clause License, any modifications made while running DiceDB as a
-service must also be shared under the same license. This keeps the playing
-field level, ensuring that innovation remains a collaborative effort rather than being siloed.
-
 ## What this means for developers
 
 Developers now have the freedom to innovate with DiceDB. You
