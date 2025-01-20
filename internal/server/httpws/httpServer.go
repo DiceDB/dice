@@ -137,7 +137,6 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 }
 
 func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
-	// convert to REDIS cmd
 	diceDBCmd, err := ParseHTTPRequest(request)
 	if err != nil {
 		writeErrorResponse(writer, http.StatusBadRequest, "Invalid HTTP request format",
@@ -180,7 +179,6 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 }
 
 func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
-	// convert to REDIS cmd
 	diceDBCmd, err := ParseHTTPRequest(request)
 	if err != nil {
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)

@@ -1,15 +1,3 @@
 {
-  "redirects": [
-    {
-      "source": "/sys-design",
-      "destination": "/system-design-for-beginners/",
-      "permanent": false
-    },
-    {
-      "source": "/redis",
-      "destination": "/redis-internals/",
-      "permanent": false
-    },
-    { "source": "/course", "destination": "/masterclass/", "permanent": false }
-  ]
+  "redirects": []
 }

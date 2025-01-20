@@ -58,7 +58,7 @@ var (
 // Custom Commands:
 // This command type allows for flexibility in defining and executing specific,
 // non-standard operations. Each command has metadata that specifies its behavior
-// and execution logic (Eval function). While the RESP (Redis Serialization Protocol)
+// and execution logic (Eval function). While the RESP
 // server supports custom logic for these commands and treats them as CUSTOM commands,
 // their implementation for HTTP and WebSocket protocols is still pending.
 // As a result, their Eval functions remain defined but not yet migrated.
@@ -366,7 +366,7 @@ var (
 	jsonrespCmdMeta = DiceCmdMeta{
 		Name: "JSON.RESP",
 		Info: `JSON.RESP key [path]
-		Return the JSON in key in Redis serialization protocol specification form`,
+		Return the JSON present at key`,
 		Arity:      -2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 		IsMigrated: true,
@@ -808,7 +808,7 @@ var (
 	objectCmdMeta = DiceCmdMeta{
 		Name: "OBJECT",
 		Info: `OBJECT subcommand [arguments [arguments ...]]
-		OBJECT command is used to inspect the internals of the Redis objects.`,
+		OBJECT command is used to inspect the internals of the DiceDB objects.`,
 		NewEval:    evalOBJECT,
 		Arity:      -2,
 		KeySpecs:   KeySpecs{BeginIndex: 2},
@@ -998,8 +998,8 @@ var (
 	}
 	dumpkeyCMmdMeta = DiceCmdMeta{
 		Name: "DUMP",
-		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
-				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
+		Info: `Serialize the value stored at key and return it to the user.
+				The returned value can be synthesized back into the key using the RESTORE command.`,
 		NewEval:    evalDUMP,
 		IsMigrated: true,
 		Arity:      1,
@@ -1007,8 +1007,8 @@ var (
 	}
 	restorekeyCmdMeta = DiceCmdMeta{
 		Name: "RESTORE",
-		Info: `Serialize the value stored at key in a Redis-specific format and return it to the user.
-				The returned value can be synthesized back into a Redis key using the RESTORE command.`,
+		Info: `Serialize the value stored at key and return it to the user.
+				The returned value can be synthesized back into a key using the RESTORE command.`,
 		NewEval:    evalRestore,
 		IsMigrated: true,
 		Arity:      2,

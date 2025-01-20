@@ -1,6 +1,6 @@
 ---
 name: Bug in DiceDB command
-about: Use this template to report bug in any command behaviour vs Redis
+about: Use this template to report bug in any command behaviour
 title: 'Inconsistent `{CMD}`: <Describe the error in one concise line>'
 labels: ''
 assignees: ''
@@ -13,7 +13,7 @@ assignees: ''
 
 ## Expected output
 
-The expected output when the above set of commands (maybe when run on Redis)
+The expected output when the above set of commands
 
 ```
 {expected_output}

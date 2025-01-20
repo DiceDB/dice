@@ -151,7 +151,7 @@ func (ss *Set) GetRange(
 			ssi := item.(*Item)
 			result = append(result, ssi.Member)
 			if withScores {
-				// Use 'g' format to match Redis's float formatting
+				// Use 'g' format to match float formatting
 				scoreStr := strings.ToLower(strconv.FormatFloat(ssi.Score, 'g', -1, 64))
 				result = append(result, scoreStr)
 			}

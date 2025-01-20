@@ -600,7 +600,6 @@ func (i *DequeIterator) Next() (string, error) {
 // *************************** deque entry encode/decode ***************************
 
 // EncodeDeqEntry encodes `x` into an entry of Deque. An entry will be encoded as [enc + data + backlen].
-// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 func EncodeDeqEntry(x string) []byte {
 	if len(x) >= 21 {
 		return EncodeDeqStr(x)
@@ -679,7 +678,6 @@ func EncodeDeqInt(v int64) []byte {
 }
 
 // EncodeDeqEntryInPlace encodes `x` into an entry of Deque in place.
-// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 func EncodeDeqEntryInPlace(x string, buf []byte) {
 	if len(x) >= 21 {
 		EncodeDeqStrInPlace(x, buf)
@@ -781,7 +779,6 @@ func GetEncodeDeqIntSize(v int64) uint64 {
 
 // DecodeDeqEntry decode `xb` started from index 0, returns the decoded `x` and the
 // overall length of [enc + data + backlen].
-// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 // TODO possible optimizations:
 // 1. return the string with the underlying array of `xb` to save memory usage?
 // 2. replace strconv with more efficient/memory-saving implementation

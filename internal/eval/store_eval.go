@@ -1138,7 +1138,6 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 
 	// We need to store the new appended value as a string
 	// Even if append is performed on integers, the result will be stored as a string
-	// This is consistent with the redis implementation as append is considered a string operation
 	store.Put(key, store.NewObj(newValue, exDurationMs, object.ObjTypeString))
 	return &EvalResponse{
 		Result: len(newValue),
@@ -2467,8 +2466,6 @@ func incrByFloatCmd(args []string, incr float64, store *dstore.Store) *EvalRespo
 
 	_, oType := getRawStringOrInt(strValue)
 
-	// Remove the trailing decimal for integer values
-	// to maintain consistency with redis
 	strValue = strings.TrimSuffix(strValue, ".0")
 
 	obj.Value = strValue
@@ -2766,7 +2763,6 @@ func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// Note that this implementation has a time complexity of O(N), where N is the number of keys in 'hashMap'.
-	// This is in contrast to Redis, which implements HSCAN in O(1) time complexity by maintaining a cursor.
 	keys := make([]string, 0, len(hashMap))
 	for k := range hashMap {
 		keys = append(keys, k)
@@ -3594,7 +3590,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 	if path == defaultRootPath {
 		arr, ok := jsonData.([]any)
 		// if value can not be converted to array, it is of another type
-		// returns nil in this case similar to redis
+		// returns nil
 		// also, return nil if array is empty
 		if !ok || len(arr) == 0 {
 			return &EvalResponse{
@@ -3635,7 +3631,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 	for _, result := range results {
 		arr, ok := result.([]any)
 		// if value can not be converted to array, it is of another type
-		// returns nil in this case similar to redis
+		// returns nil
 		// also, return nil if array is empty
 		if !ok || len(arr) == 0 {
 			popArr = append(popArr, clientio.NIL)
@@ -4097,7 +4093,6 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) *EvalResponse {
 		// handle error cases
 		if len(results) == 0 {
 			// this block will return '[]' for out of bound index for an array json type
-			// this will maintain consistency with redis
 			isArray := utils.IsArray(obj.Value)
 			if isArray {
 				arr, ok := obj.Value.([]any)

@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	maxRequestSize  = 32 * 1024 * 1024 // 32 MB, Redis max request size is 512MB
+	maxRequestSize  = 32 * 1024 * 1024 // 32 MB
 	ioBufferSize    = 16 * 1024        // 16 KB
 	idleTimeout     = 30 * time.Minute
 	writeTimeout    = 10 * time.Second
@@ -277,7 +277,7 @@ func (h *IOHandler) Close() error {
 }
 
 // handleResponse processes the incoming response from a client and returns the corresponding
-// RESP (REdis Serialization Protocol) formatted byte array based on the response content.
+// RESP formatted byte array based on the response content.
 //
 // The function takes an interface{} as input, attempts to assert it as a byte slice. If successful,
 // it checks the content of the byte slice against predefined RESP responses using the `bytes.Contains`

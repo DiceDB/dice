@@ -6,10 +6,10 @@ DiceDB
 <a target="_blank" href="https://discord.gg/6r8uXWtXh7"><img src="https://dcbadge.limes.pink/api/server/6r8uXWtXh7?style=flat" alt="discord community" /></a>
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
-DiceDB is an open source, redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.
+DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware.
 
 > [!CAUTION]
-> DiceDB is under active development and supports a subset of Redis commands. Inconsistent behavior is expected. Feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
+> DiceDB is under active development and supports a wide [range of commands](https://dicedb.io/commands/get/). Inconsistent behavior is expected. Feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
 
 ## Want to contribute?
 
@@ -32,9 +32,6 @@ docker run -p 7379:7379 dicedb/dicedb --enable-watch
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
 to it using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and SDKs.
-
-> [!TIP]
-> Since DiceDB is a drop-in replacement for Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
 
 ## Supporters
 
@@ -109,14 +106,6 @@ sudo su
 curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
 ```
 
-### Client Compatibility
-
-DiceDB is fully compatible with Redis protocol, allowing you to connect using any existing Redis client or SDK.
-
-> [!NOTE]
-> The `.WATCH` feature is only accessible through the DiceDB CLI.
-> If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
-
 ### Running Tests
 
 Unit tests and integration tests are essential for ensuring correctness and in the case of DiceDB, both types of tests are available to validate its functionality.
@@ -151,9 +140,6 @@ TEST_FUNC=TestSet make test-one
 make test
 ```
 
-> Work to add more tests in DiceDB is in progress, and we will soon port the
-> test [Redis suite](https://github.com/redis/redis/tree/f60370ce28b946c1146dcea77c9c399d39601aaa) to this codebase to ensure full compatibility.
-
 ## Running Benchmark
 
 ```bash
@@ -180,10 +166,6 @@ Once the server starts, visit http://localhost:4321/ in your favourite browser. 
 
 1. `docs/src/content/docs/commands` is where all the commands are documented
 2. `docs/src/content/docs/tutorials` is where all the tutorials are documented
-
-## The Story
-
-DiceDB started as a re-implementation of Redis in Golang with the idea of building a DB from scratch to understand the micro-nuances that come with its implementation. DiceDB isn’t just another database; it’s a platform purpose-built for the real-time era. As real-time systems become increasingly prevalent in modern applications, DiceDB’s hyper-optimized architecture is positioned to power the next generation of user experiences.
 
 ## How to contribute
 

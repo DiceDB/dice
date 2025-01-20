@@ -1,6 +1,6 @@
 ---
-name: Bug in DiceDB command vs Redis TCL Test
-about: Use this template to report any issue in command behaviour vs Redis
+name: Bug in DiceDB command
+about: Use this template to report any issue in command behaviour
 title: 'Inconsistent `{CMD}`: <Describe the error in one concise line>'
 labels: ''
 assignees: ''
@@ -13,7 +13,7 @@ assignees: ''
 
 ## Expected output
 
-The expected output when the above set of commands when run on Redis
+The expected output when the above set of commands
 
 ```
 {expected_output}

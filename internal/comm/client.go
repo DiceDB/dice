@@ -27,7 +27,7 @@ type Client struct {
 	io.ReadWriter
 	HTTPQwatchResponseChan chan QwatchResponse // Response channel to send back the operation response
 	Fd                     int
-	Cqueue                 cmd.RedisCmds
+	Cqueue                 cmd.DiceDBCmds
 	IsTxn                  bool
 	Session                *auth.Session
 	ClientIdentifierID     uint32
@@ -58,7 +58,7 @@ func NewClient(fd int) *Client {
 	cmds := make([]*cmd.DiceDBCmd, 0)
 	return &Client{
 		Fd: fd,
-		Cqueue: cmd.RedisCmds{
+		Cqueue: cmd.DiceDBCmds{
 			Cmds: cmds,
 		},
 		Session: auth.NewSession(),
@@ -68,7 +68,7 @@ func NewClient(fd int) *Client {
 func NewHTTPQwatchClient(qwatchResponseChan chan QwatchResponse, clientIdentifierID uint32) *Client {
 	cmds := make([]*cmd.DiceDBCmd, 0)
 	return &Client{
-		Cqueue:                 cmd.RedisCmds{Cmds: cmds},
+		Cqueue:                 cmd.DiceDBCmds{Cmds: cmds},
 		Session:                auth.NewSession(),
 		ClientIdentifierID:     clientIdentifierID,
 		HTTPQwatchResponseChan: qwatchResponseChan,

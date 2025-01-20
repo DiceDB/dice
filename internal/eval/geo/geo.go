@@ -13,10 +13,10 @@ import (
 // Earth's radius in meters
 const earthRadius float64 = 6372797.560856
 
-// Bit precision for geohash - picked up to match redis
+// Bit precision for geohash
 const bitPrecision = 52
 
-// Bit precision for geohash string - picked up to match redis
+// Bit precision for geohash string
 const bitPrecisionString = 10
 
 func DegToRad(deg float64) float64 {

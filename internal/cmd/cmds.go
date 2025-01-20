@@ -40,7 +40,7 @@ type DiceDBCmd struct {
 	InternalObjs []*object.InternalObj
 }
 
-type RedisCmds struct {
+type DiceDBCmds struct {
 	Cmds      []*DiceDBCmd
 	RequestID uint32
 }
