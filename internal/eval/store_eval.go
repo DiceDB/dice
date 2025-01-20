@@ -967,71 +967,212 @@ func evalZCOUNT(args []string, store *dstore.Store) *EvalResponse {
 // The elements are considered to be ordered from the lowest to the highest score.
 func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 3 {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongArgumentCount("ZRANGE"),
+		return &EvalResponse{Result: nil, Error: diceerrors.ErrWrongArgumentCount("ZRANGE")}
+	}
+
+	opts := parseOptions(args[3:])
+	if opts.error != nil {
+		return &EvalResponse{Result: nil, Error: opts.error}
+	}
+
+	if opts.byScore && opts.byLex {
+		return &EvalResponse{Result: nil, Error: diceerrors.ErrSyntax}
+	}
+
+	if opts.limit && !opts.byScore && !opts.byLex {
+		return &EvalResponse{Result: nil, Error: diceerrors.NewErr("ERR syntax error, LIMIT is only supported in combination with either BYSCORE or BYLEX")}
+	}
+
+	startStr, stopStr := args[1], args[2]
+	if !opts.byScore {
+		if err := validateRange(startStr, stopStr, opts.byScore, opts.byLex); err != nil {
+			return &EvalResponse{Result: nil, Error: err}
+		}
+	} else {
+		_, _, err := parseScoreRange(startStr, stopStr)
+		if err != nil {
+			return &EvalResponse{Result: nil, Error: err}
 		}
 	}
 
-	key := args[0]
-	startStr := args[1]
-	stopStr := args[2]
+	obj := store.Get(args[0])
+	if obj == nil {
+		return &EvalResponse{Result: []string{}, Error: nil}
+	}
 
-	withScores := false
-	reverse := false
-	for i := 3; i < len(args); i++ {
-		arg := strings.ToUpper(args[i])
-		if arg == WithScores {
-			withScores = true
-		} else if arg == REV {
-			reverse = true
+	sortedSet, errMsg := sortedset.FromObject(obj)
+	if errMsg != nil {
+		return &EvalResponse{Result: nil, Error: diceerrors.ErrWrongTypeOperation}
+	}
+
+	result := getRange(sortedSet, startStr, stopStr, opts)
+
+	if opts.limit && !opts.byScore && !opts.byLex && opts.offset >= 0 {
+		if opts.offset < len(result) {
+			end := opts.offset + opts.count
+			if end > len(result) || opts.count < 0 {
+				end = len(result)
+			}
+			result = result[opts.offset:end]
 		} else {
-			return &EvalResponse{
-				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+			result = []string{}
+		}
+	}
+
+	return &EvalResponse{Result: result, Error: nil}
+}
+
+type rangeOptions struct {
+	withScores bool
+	reverse    bool
+	byScore    bool
+	byLex      bool
+	limit      bool
+	offset     int
+	count      int
+	error      error
+}
+
+func parseOptions(args []string) rangeOptions {
+	opts := rangeOptions{count: -1}
+
+	for i := 0; i < len(args); i++ {
+		switch strings.ToUpper(args[i]) {
+		case WithScores:
+			opts.withScores = true
+		case REV:
+			opts.reverse = true
+		case BYSCORE:
+			opts.byScore = true
+		case BYLEX:
+			opts.byLex = true
+		case LIMIT:
+			if i+2 >= len(args) {
+				opts.error = diceerrors.ErrSyntax
+				return opts
+			}
+
+			var err error
+			opts.offset, err = strconv.Atoi(args[i+1])
+			if err != nil {
+				opts.error = diceerrors.ErrIntegerOutOfRange
+				return opts
+			}
+
+			opts.count, err = strconv.Atoi(args[i+2])
+			if err != nil {
+				opts.error = diceerrors.ErrIntegerOutOfRange
+				return opts
+			}
+
+			opts.limit = true
+			i += 2
+		default:
+			opts.error = diceerrors.ErrSyntax
+			return opts
+		}
+	}
+
+	return opts
+}
+
+func validateRange(start, stop string, byScore, byLex bool) error {
+	if !byScore && !isValidRangeFormat(start, stop) {
+		return diceerrors.ErrIntegerOutOfRange
+	}
+
+	if !byLex {
+		if !isValidNumber(stripPrefix(start)) || !isValidNumber(stripPrefix(stop)) {
+			return diceerrors.ErrIntegerOutOfRange
+		}
+	}
+
+	return nil
+}
+
+func isValidRangeFormat(start, stop string) bool {
+	return isSpecialRange(start) && isSpecialRange(stop)
+}
+
+func isSpecialRange(s string) bool {
+	return strings.HasPrefix(s, "(") || strings.HasPrefix(s, "[") ||
+		s == "-" || s == "+" || s == MINUSINF || s == PLUSINF ||
+		!(len(s) > 1 && s[0] == '0')
+}
+
+func stripPrefix(s string) string {
+	if strings.HasPrefix(s, "(") || strings.HasPrefix(s, "[") {
+		return s[1:]
+	}
+	return s
+}
+
+func isValidNumber(s string) bool {
+	if s == PLUSINF || s == MINUSINF {
+		return true
+	}
+	_, err := strconv.ParseInt(s, 10, 64)
+	return err == nil
+}
+
+func getRange(set *sortedset.Set, start, stop string, opts rangeOptions) []string {
+	if opts.byScore {
+		if opts.reverse {
+			start, stop = stop, start
+		}
+		rangeStart, rangeStop, err := parseScoreRange(start, stop)
+		if err != nil {
+			return []string{}
+		}
+		return set.GetRangeByScore(rangeStart, rangeStop, opts.withScores, opts.reverse, opts.offset, opts.count)
+	}
+
+	startIdx, err := strconv.Atoi(start)
+	if err != nil {
+		return []string{}
+	}
+	stopIdx, err := strconv.Atoi(stop)
+	if err != nil {
+		return []string{}
+	}
+	return set.GetRange(startIdx, stopIdx, opts.withScores, opts.reverse)
+}
+
+func parseScoreRange(minStr, maxStr string) (minScore, maxScore float64, err error) {
+	minScore = math.Inf(-1)
+	maxScore = math.Inf(1)
+
+	if minStr != MINUSINF {
+		if minStr[0] == '(' {
+			minScore, err = strconv.ParseFloat(minStr[1:], 64)
+			if err != nil {
+				return 0, 0, fmt.Errorf("ERR min or max is not a float")
+			}
+			minScore = math.Nextafter(minScore, math.Inf(1))
+		} else {
+			minScore, err = strconv.ParseFloat(minStr, 64)
+			if err != nil {
+				return 0, 0, fmt.Errorf("ERR min or max is not a float")
 			}
 		}
 	}
 
-	start, err := strconv.Atoi(startStr)
-	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrInvalidNumberFormat,
+	if maxStr != PLUSINF {
+		if maxStr[0] == '(' {
+			maxScore, err = strconv.ParseFloat(maxStr[1:], 64)
+			if err != nil {
+				return 0, 0, fmt.Errorf("ERR min or max is not a float")
+			}
+			maxScore = math.Nextafter(maxScore, math.Inf(-1))
+		} else {
+			maxScore, err = strconv.ParseFloat(maxStr, 64)
+			if err != nil {
+				return 0, 0, fmt.Errorf("ERR min or max is not a float")
+			}
 		}
 	}
 
-	stop, err := strconv.Atoi(stopStr)
-	if err != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrInvalidNumberFormat,
-		}
-	}
-
-	obj := store.Get(key)
-	if obj == nil {
-		return &EvalResponse{
-			Result: []string{},
-			Error:  nil,
-		}
-	}
-
-	sortedSet, errMsg := sortedset.FromObject(obj)
-
-	if errMsg != nil {
-		return &EvalResponse{
-			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
-		}
-	}
-
-	result := sortedSet.GetRange(start, stop, withScores, reverse)
-
-	return &EvalResponse{
-		Result: result,
-		Error:  nil,
-	}
+	return minScore, maxScore, nil
 }
 
 // evalZREM removes the specified members from the sorted set stored at key.
