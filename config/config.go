@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -317,4 +319,35 @@ func MergeFlags(flags *Config) {
 			DiceConfig.Memory.EvictionRatio = flags.Memory.EvictionRatio
 		}
 	})
+}
+
+type DiceDBConfig struct {
+	Host       string `mapstructure:"host" description:"the host address to bind to" default:"0.0.0.0"`
+	Port       int    `mapstructure:"port" description:"the port to bind to" default:"7379"`
+	EnableHTTP bool   `mapstructure:"enable-http" description:"enable http server" default:"false"`
+}
+
+var GlobalDiceDBConfig *DiceDBConfig
+
+func Init(flags *pflag.FlagSet) {
+	viper.SetConfigName("dicedb")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("/etc/dicedb")
+
+	err := viper.ReadInConfig()
+	if _, ok := err.(viper.ConfigFileNotFoundError); !ok && err != nil {
+		panic(err)
+	}
+
+	flags.VisitAll(func(flag *pflag.Flag) {
+		if flag.Name == "help" {
+			return
+		}
+		viper.Set(flag.Name, flag.Value.String())
+	})
+
+	if err := viper.Unmarshal(&GlobalDiceDBConfig); err != nil {
+		panic(err)
+	}
 }
