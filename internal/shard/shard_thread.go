@@ -6,6 +6,7 @@ package shard
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -122,7 +123,10 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 		return
 	}
 
+	start := time.Now()
 	resp := e.ExecuteCommand()
+	slog.Debug("command execution complete", slog.Any("cmd", op.Cmd), slog.Int64("time_ms", time.Now().UnixMilli()), slog.Any("took", time.Since(start)))
+
 	if ok {
 		sp.EvalResponse = resp
 	} else {

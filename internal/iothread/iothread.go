@@ -6,6 +6,7 @@ package iothread
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
@@ -45,6 +46,7 @@ func (t *BaseIOThread) ID() string {
 }
 
 func (t *BaseIOThread) Start(ctx context.Context) error {
+	slog.Debug("starting io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
 	// local channels to communicate between Start and startInputReader goroutine
 	incomingDataChan := make(chan []byte) // data channel
 	readErrChan := make(chan error)       // error channel
@@ -74,6 +76,7 @@ func (t *BaseIOThread) Start(ctx context.Context) error {
 			if err != nil {
 				slog.Debug("Error sending response to client", slog.String("id", t.id), slog.Any("error", err))
 			}
+			slog.Debug("wrote response to client", slog.Int64("time_ms", time.Now().UnixMilli()))
 		}
 	}
 }

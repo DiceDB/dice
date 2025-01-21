@@ -43,8 +43,12 @@ const (
 func main() {
 	iid := observability.GetOrCreateInstanceID()
 	config.DiceConfig.InstanceID = iid
-	slog.SetDefault(logger.New())
+
+	// This is counter intuitive, but it's the first thing that should be done
+	// because this function parses the flags and prepares the config,
 	cli.Execute()
+
+	slog.SetDefault(logger.New())
 	go observability.Ping()
 
 	ctx, cancel := context.WithCancel(context.Background())
