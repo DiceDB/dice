@@ -91,7 +91,7 @@ func Execute() {
 	flag.BoolVar(&flagsConfig.Performance.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
 
 	flag.StringVar(&tempStr, "log-level", "info", "log level, values: info, debug")
-	flag.StringVar(&config.DiceConfig.Logging.LogDir, "log-dir", "/tmp/dicedb", "log directory path")
+	flag.StringVar(&tempStr, "log-dir", "/tmp/dicedb", "log directory path")
 
 	flag.BoolVar(&flagsConfig.Persistence.Enabled, "enable-persistence", false, "enable write-ahead logging")
 	flag.BoolVar(&flagsConfig.Persistence.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")

@@ -45,7 +45,6 @@ type Config struct {
 	Performance performance `config:"performance"`
 	Memory      memory      `config:"memory"`
 	Persistence persistence `config:"persistence"`
-	Logging     logging     `config:"logging"`
 	WAL         WALConfig   `config:"WAL"`
 }
 
@@ -126,10 +125,6 @@ type WALConfig struct {
 	RecoveryMode string `config:"recovery_mode" default:"strict" validate:"oneof=strict truncate ignore"`
 }
 
-type logging struct {
-	LogDir string `config:"log_dir" default:"/tmp/dicedb" validate:"dirpath"`
-}
-
 // DiceConfig is the global configuration object for dice
 var DiceConfig = &Config{}
 
@@ -208,8 +203,6 @@ func MergeFlags(flags *Config) {
 			DiceConfig.Performance.EnableWatch = flags.Performance.EnableWatch
 		case "enable-profiling":
 			DiceConfig.Performance.EnableProfiling = flags.Performance.EnableProfiling
-		case "log-dir":
-			DiceConfig.Logging.LogDir = flags.Logging.LogDir
 		case "enable-persistence":
 			DiceConfig.Persistence.Enabled = flags.Persistence.Enabled
 		case "restore-from-wal":
