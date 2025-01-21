@@ -13,7 +13,7 @@ import (
 )
 
 func getSLogLevel() slog.Level {
-	switch config.DiceConfig.Logging.LogLevel {
+	switch config.GlobalDiceDBConfig.LogLevel {
 	case "debug":
 		return slog.LevelDebug
 	case "info":

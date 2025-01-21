@@ -127,8 +127,7 @@ type WALConfig struct {
 }
 
 type logging struct {
-	LogLevel string `config:"log_level" default:"info" validate:"oneof=debug info warn error"`
-	LogDir   string `config:"log_dir" default:"/tmp/dicedb" validate:"dirpath"`
+	LogDir string `config:"log_dir" default:"/tmp/dicedb" validate:"dirpath"`
 }
 
 // DiceConfig is the global configuration object for dice
@@ -209,8 +208,6 @@ func MergeFlags(flags *Config) {
 			DiceConfig.Performance.EnableWatch = flags.Performance.EnableWatch
 		case "enable-profiling":
 			DiceConfig.Performance.EnableProfiling = flags.Performance.EnableProfiling
-		case "log-level":
-			DiceConfig.Logging.LogLevel = flags.Logging.LogLevel
 		case "log-dir":
 			DiceConfig.Logging.LogDir = flags.Logging.LogDir
 		case "enable-persistence":
@@ -234,6 +231,8 @@ type DiceDBConfig struct {
 
 	Username string `mapstructure:"username" default:"dicedb" description:"the username to use for authentication"`
 	Password string `mapstructure:"password" default:"" description:"the password to use for authentication"`
+
+	LogLevel string `mapstructure:"log-level" default:"info" description:"the log level"`
 }
 
 var GlobalDiceDBConfig *DiceDBConfig
