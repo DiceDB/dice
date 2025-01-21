@@ -16,7 +16,7 @@ var initConfigCmd = &cobra.Command{
 	Short: "creates a config file at dicedb.yaml with default values",
 	Run: func(cmd *cobra.Command, args []string) {
 		config.Init(cmd.Flags())
-		viper.WriteConfigAs("dicedb.yaml")
+		_ = viper.WriteConfigAs("dicedb.yaml")
 		fmt.Println("config created at dicedb.yaml")
 	},
 }

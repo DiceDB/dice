@@ -108,7 +108,7 @@ func NewSession() (session *Session) {
 }
 
 func (session *Session) IsActive() (isActive bool) {
-	if config.DiceConfig.Auth.Password == utils.EmptyStr && session.Status != SessionStatusActive {
+	if config.GlobalDiceDBConfig.Password == utils.EmptyStr && session.Status != SessionStatusActive {
 		session.Activate(session.User)
 	}
 	isActive = session.Status == SessionStatusActive
@@ -133,7 +133,7 @@ func (session *Session) Validate(username, password string) error {
 	if user, err = UserStore.Get(username); err != nil {
 		return err
 	}
-	if username == config.DiceConfig.Auth.UserName && len(user.Passwords) == 0 {
+	if username == config.GlobalDiceDBConfig.Username && len(user.Passwords) == 0 {
 		session.Activate(user)
 		return nil
 	}

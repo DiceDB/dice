@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/server/httpws"
 
 	"github.com/dicedb/dice/internal/cli"
@@ -43,6 +44,13 @@ const (
 func Start() {
 	iid := observability.GetOrCreateInstanceID()
 	config.DiceConfig.InstanceID = iid
+
+	// TODO: Handle the addition of the default user
+	// and new users in a much better way. Doing this using
+	// and empty password check is not a good solution.
+	if config.GlobalDiceDBConfig.Password != "" {
+		_, _ = auth.UserStore.Add(config.GlobalDiceDBConfig.Username)
+	}
 
 	// This is counter intuitive, but it's the first thing that should be done
 	// because this function parses the flags and prepares the config,
@@ -71,12 +79,14 @@ func Start() {
 			if err != nil {
 				slog.Warn("could not create WAL with", slog.String("wal-engine", config.DiceConfig.Persistence.WALEngine), slog.Any("error", err))
 				sigs <- syscall.SIGKILL
+				cancel()
 				return
 			}
 			wl = _wl
 		} else {
 			slog.Error("unsupported WAL engine", slog.String("engine", config.DiceConfig.Persistence.WALEngine))
 			sigs <- syscall.SIGKILL
+			cancel()
 			return
 		}
 

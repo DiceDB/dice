@@ -11,10 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/fatih/color"
 )
 
@@ -72,6 +70,11 @@ func render() {
 
 func Execute() {
 	flagsConfig := config.Config{}
+	var tempStr string
+
+	flag.StringVar(&tempStr, "username", "dicedb", "deleted")
+	flag.StringVar(&tempStr, "password", "dicedb", "deleted")
+
 	flag.StringVar(&flagsConfig.RespServer.Addr, "host", "0.0.0.0", "host for the DiceDB server")
 
 	flag.IntVar(&flagsConfig.RespServer.Port, "port", 7379, "port for the DiceDB server")
@@ -94,7 +97,6 @@ func Execute() {
 	flag.BoolVar(&flagsConfig.Persistence.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
 	flag.StringVar(&flagsConfig.Persistence.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
 
-	flag.StringVar(&flagsConfig.Auth.Password, "requirepass", utils.EmptyStr, "enable authentication for the default user")
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the flagsConfig file")
 	flag.StringVar(&config.CustomConfigDirPath, "c", config.CustomConfigDirPath, "file path of the config file")
 
@@ -140,94 +142,6 @@ func Execute() {
 	}
 
 	flag.Parse()
-
-	if len(os.Args) > 2 {
-		switch os.Args[1] {
-		case "-v", "--version":
-			fmt.Println("dicedb version", config.DiceDBVersion)
-			os.Exit(0)
-
-		case "-":
-			parser := config.NewConfigParser()
-			if err := parser.ParseFromStdin(); err != nil {
-				log.Fatal(err)
-			}
-			if err := parser.Loadconfig(config.DiceConfig); err != nil {
-				log.Fatal(err)
-			}
-			fmt.Println(config.DiceConfig.Version)
-		case "-o", "--output":
-			if len(os.Args) < 3 {
-				log.Fatal("Output file path not provided")
-			} else {
-				dirPath := os.Args[2]
-				if dirPath == "" {
-					log.Fatal("Output file path not provided")
-				}
-
-				info, err := os.Stat(dirPath)
-				switch {
-				case os.IsNotExist(err):
-					log.Fatal("Output file path does not exist")
-				case err != nil:
-					log.Fatalf("Error checking output file path: %v", err)
-				case !info.IsDir():
-					log.Fatal("Output file path is not a directory")
-				}
-
-				filePath := filepath.Join(dirPath, config.DefaultConfigName)
-				if _, err := os.Stat(filePath); err == nil {
-					slog.Warn("Config file already exists at the specified path", slog.String("path", filePath), slog.String("action", "skipping file creation"))
-					return
-				}
-				if err := config.CreateConfigFile(filePath); err != nil {
-					log.Fatal(err)
-				}
-
-				config.MergeFlags(&flagsConfig)
-				render()
-			}
-		case "-c", "--config":
-			if len(os.Args) >= 3 {
-				filePath := os.Args[2]
-				if filePath == "" {
-					log.Fatal("Error: Config file path not provided")
-				}
-
-				info, err := os.Stat(filePath)
-				switch {
-				case os.IsNotExist(err):
-					log.Fatalf("Config file does not exist: %s", filePath)
-				case err != nil:
-					log.Fatalf("Unable to check config file: %v", err)
-				}
-
-				if info.IsDir() {
-					log.Fatalf("Config file path points to a directory: %s", filePath)
-				}
-
-				if !strings.HasSuffix(filePath, ".conf") {
-					log.Fatalf("Config file must have a .conf extension: %s", filePath)
-				}
-
-				parser := config.NewConfigParser()
-				if err := parser.ParseFromFile(filePath); err != nil {
-					log.Fatal(err)
-				}
-				if err := parser.Loadconfig(config.DiceConfig); err != nil {
-					log.Fatal(err)
-				}
-
-				config.MergeFlags(&flagsConfig)
-				render()
-			} else {
-				log.Fatal("Config file path not provided")
-			}
-		default:
-			defaultConfig(&flagsConfig)
-		}
-	}
-
 	defaultConfig(&flagsConfig)
 }
 
