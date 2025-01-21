@@ -184,7 +184,6 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 
 	// #1261: Added here to prevent resp integration tests from failing on lower-spec machines

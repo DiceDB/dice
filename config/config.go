@@ -46,7 +46,6 @@ type Config struct {
 	Memory      memory      `config:"memory"`
 	Persistence persistence `config:"persistence"`
 	Logging     logging     `config:"logging"`
-	Network     network     `config:"network"`
 	WAL         WALConfig   `config:"WAL"`
 }
 
@@ -130,11 +129,6 @@ type WALConfig struct {
 type logging struct {
 	LogLevel string `config:"log_level" default:"info" validate:"oneof=debug info warn error"`
 	LogDir   string `config:"log_dir" default:"/tmp/dicedb" validate:"dirpath"`
-}
-
-type network struct {
-	IOBufferLengthMAX int `config:"io_buffer_length_max" default:"51200" validate:"min=0,max=1048576"` // max is 1MB'
-	IOBufferLength    int `config:"io_buffer_length" default:"512" validate:"min=0"`
 }
 
 // DiceConfig is the global configuration object for dice

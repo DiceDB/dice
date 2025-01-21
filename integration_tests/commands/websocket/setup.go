@@ -110,7 +110,6 @@ func (e *WebsocketCommandExecutor) Name() string {
 }
 
 func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Network.IOBufferLength = 16
 	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
 
 	// Initialize WebsocketServer
