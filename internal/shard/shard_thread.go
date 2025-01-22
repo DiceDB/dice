@@ -142,7 +142,7 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if !config.GlobalDiceDBConfig.EnableWAL {
+	if !config.Config.EnableWAL {
 		return
 	}
 }

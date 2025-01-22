@@ -29,7 +29,7 @@ var (
 
 func NewRegistry(sm *shard.ShardManager) *Registry {
 	return &Registry{
-		maxCmdHandlers: uint32(config.GlobalDiceDBConfig.MaxClients),
+		maxCmdHandlers: uint32(config.Config.MaxClients),
 		ShardManager:   sm,
 	}
 }

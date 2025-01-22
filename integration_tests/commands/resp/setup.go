@@ -37,7 +37,7 @@ type TestServerOptions struct {
 
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.GlobalDiceDBConfig.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.Config.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -93,7 +93,7 @@ func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 //nolint:unused
 func getLocalSdk() *dicedb.Client {
 	return dicedb.NewClient(&dicedb.Options{
-		Addr: fmt.Sprintf(":%d", config.GlobalDiceDBConfig.Port),
+		Addr: fmt.Sprintf(":%d", config.Config.Port),
 
 		DialTimeout:           10 * time.Second,
 		ReadTimeout:           30 * time.Second,
@@ -177,9 +177,9 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	// #1261: Added here to prevent resp integration tests from failing on lower-spec machines
 	if opt.Port != 0 {
-		config.GlobalDiceDBConfig.Port = opt.Port
+		config.Config.Port = opt.Port
 	} else {
-		config.GlobalDiceDBConfig.Port = 9739
+		config.Config.Port = 9739
 	}
 
 	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.WatchChanBufSize)
@@ -194,7 +194,7 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	testServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, wl)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fmt.Println("Starting the test server on port", config.GlobalDiceDBConfig.Port)
+	fmt.Println("Starting the test server on port", config.Config.Port)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)

@@ -536,11 +536,11 @@ func (h *BaseCommandHandler) RespAuth(args []string) interface{} {
 		return diceerrors.ErrWrongArgumentCount("AUTH")
 	}
 
-	if config.GlobalDiceDBConfig.Password == "" {
+	if config.Config.Password == "" {
 		return diceerrors.ErrAuth
 	}
 
-	username := config.GlobalDiceDBConfig.Username
+	username := config.Config.Username
 	var password string
 
 	if len(args) == 1 {

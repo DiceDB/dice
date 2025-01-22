@@ -12,6 +12,8 @@ const (
 	DiceDBVersion = "0.1.0"
 )
 
+var Config *DiceDBConfig
+
 type DiceDBConfig struct {
 	Host string `mapstructure:"host" default:"0.0.0.0" description:"the host address to bind to"`
 	Port int    `mapstructure:"port" default:"7379" description:"the port to bind to"`
@@ -41,8 +43,6 @@ type DiceDBConfig struct {
 	WALRecoveryMode                   string `mapstructure:"wal-recovery-mode" default:"strict" description:"wal recovery mode in case of a corruption, values: strict, truncate, ignore"`
 }
 
-var GlobalDiceDBConfig *DiceDBConfig
-
 func Init(flags *pflag.FlagSet) {
 	viper.SetConfigName("dicedb")
 	viper.SetConfigType("yaml")
@@ -61,7 +61,7 @@ func Init(flags *pflag.FlagSet) {
 		viper.Set(flag.Name, flag.Value.String())
 	})
 
-	if err := viper.Unmarshal(&GlobalDiceDBConfig); err != nil {
+	if err := viper.Unmarshal(&Config); err != nil {
 		panic(err)
 	}
 }

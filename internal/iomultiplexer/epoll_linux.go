@@ -24,7 +24,7 @@ type Epoll struct {
 
 // New creates a new Epoll instance
 func New() (*Epoll, error) {
-	if config.GlobalDiceDBConfig.MaxClients == 0 {
+	if config.Config.MaxClients == 0 {
 		return nil, ErrInvalidMaxClients
 	}
 
@@ -35,8 +35,8 @@ func New() (*Epoll, error) {
 
 	return &Epoll{
 		fd:          fd,
-		ePollEvents: make([]syscall.EpollEvent, config.GlobalDiceDBConfig.MaxClients),
-		diceEvents:  make([]Event, config.GlobalDiceDBConfig.MaxClients),
+		ePollEvents: make([]syscall.EpollEvent, config.Config.MaxClients),
+		diceEvents:  make([]Event, config.Config.MaxClients),
 	}, nil
 }
 

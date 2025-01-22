@@ -30,7 +30,7 @@ func (m *Manager) RegisterIOThread(ioThread IOThread) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.IOThreadCount() >= uint32(config.GlobalDiceDBConfig.MaxClients) {
+	if m.IOThreadCount() >= uint32(config.Config.MaxClients) {
 		return ErrMaxClientsReached
 	}
 

@@ -37,13 +37,13 @@ import (
 
 func printConfiguration() {
 	slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))
-	slog.Info("running with", slog.Int("port", config.GlobalDiceDBConfig.Port))
+	slog.Info("running with", slog.Int("port", config.Config.Port))
 	slog.Info("running on", slog.Int("cores", runtime.NumCPU()))
 
 	// Conditionally add the number of shards to be used for DiceDB
 	numShards := runtime.NumCPU()
-	if config.GlobalDiceDBConfig.NumShards > 0 {
-		numShards = config.GlobalDiceDBConfig.NumShards
+	if config.Config.NumShards > 0 {
+		numShards = config.Config.NumShards
 	}
 	slog.Info("running with", slog.Int("shards", numShards))
 }
@@ -67,8 +67,8 @@ func Start() {
 	// TODO: Handle the addition of the default user
 	// and new users in a much better way. Doing this using
 	// and empty password check is not a good solution.
-	if config.GlobalDiceDBConfig.Password != "" {
-		_, _ = auth.UserStore.Add(config.GlobalDiceDBConfig.Username)
+	if config.Config.Password != "" {
+		_, _ = auth.UserStore.Add(config.Config.Username)
 	}
 
 	slog.SetDefault(logger.New())
@@ -87,18 +87,18 @@ func Start() {
 	)
 
 	wl, _ = wal.NewNullWAL()
-	if config.GlobalDiceDBConfig.EnableWAL {
-		if config.GlobalDiceDBConfig.WALEngine == "aof" {
-			_wl, err := wal.NewAOFWAL(config.GlobalDiceDBConfig.WALDir)
+	if config.Config.EnableWAL {
+		if config.Config.WALEngine == "aof" {
+			_wl, err := wal.NewAOFWAL(config.Config.WALDir)
 			if err != nil {
-				slog.Warn("could not create WAL with", slog.String("wal-engine", config.GlobalDiceDBConfig.WALEngine), slog.Any("error", err))
+				slog.Warn("could not create WAL with", slog.String("wal-engine", config.Config.WALEngine), slog.Any("error", err))
 				sigs <- syscall.SIGKILL
 				cancel()
 				return
 			}
 			wl = _wl
 		} else {
-			slog.Error("unsupported WAL engine", slog.String("engine", config.GlobalDiceDBConfig.WALEngine))
+			slog.Error("unsupported WAL engine", slog.String("engine", config.Config.WALEngine))
 			sigs <- syscall.SIGKILL
 			cancel()
 			return
@@ -112,14 +112,14 @@ func Start() {
 
 		slog.Debug("WAL initialization complete")
 
-		if config.GlobalDiceDBConfig.EnableWAL {
+		if config.Config.EnableWAL {
 			slog.Info("restoring database from WAL")
 			wal.ReplayWAL(wl)
 			slog.Info("database restored from WAL")
 		}
 	}
 
-	if config.GlobalDiceDBConfig.EnableWatch {
+	if config.Config.EnableWatch {
 		bufSize := config.WatchChanBufSize
 		cmdWatchChan = make(chan dstore.CmdWatchEvent, bufSize)
 	}
@@ -130,8 +130,8 @@ func Start() {
 	// core count ensures the application can make full use of all available hardware.
 	var numShards int
 	numShards = runtime.NumCPU()
-	if config.GlobalDiceDBConfig.NumShards > 0 {
-		numShards = config.GlobalDiceDBConfig.NumShards
+	if config.Config.NumShards > 0 {
+		numShards = config.Config.NumShards
 	}
 
 	// The runtime.GOMAXPROCS(numShards) call limits the number of operating system
@@ -202,7 +202,7 @@ func Start() {
 
 	close(sigs)
 
-	if config.GlobalDiceDBConfig.EnableWAL {
+	if config.Config.EnableWAL {
 		wal.ShutdownBG()
 	}
 

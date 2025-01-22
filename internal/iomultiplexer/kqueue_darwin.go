@@ -24,7 +24,7 @@ type KQueue struct {
 
 // New creates a new KQueue instance
 func New() (*KQueue, error) {
-	if config.GlobalDiceDBConfig.MaxClients < 0 {
+	if config.Config.MaxClients < 0 {
 		return nil, ErrInvalidMaxClients
 	}
 
@@ -35,8 +35,8 @@ func New() (*KQueue, error) {
 
 	return &KQueue{
 		fd:         fd,
-		kQEvents:   make([]syscall.Kevent_t, config.GlobalDiceDBConfig.MaxClients),
-		diceEvents: make([]Event, config.GlobalDiceDBConfig.MaxClients),
+		kQEvents:   make([]syscall.Kevent_t, config.Config.MaxClients),
+		diceEvents: make([]Event, config.Config.MaxClients),
 	}, nil
 }
 
