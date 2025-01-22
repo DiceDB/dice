@@ -19,10 +19,10 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/auth"
+	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/httpws"
 
 	"github.com/dicedb/dice/internal/commandhandler"
-	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dice/internal/watchmanager"
@@ -60,6 +60,10 @@ func printBanner() {
 `)
 }
 
+func Init() {
+	slog.SetDefault(logger.New())
+}
+
 func Start() {
 	printBanner()
 	printConfiguration()
@@ -70,8 +74,6 @@ func Start() {
 	if config.Config.Password != "" {
 		_, _ = auth.UserStore.Add(config.Config.Username)
 	}
-
-	slog.SetDefault(logger.New())
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -113,9 +115,9 @@ func Start() {
 		slog.Debug("WAL initialization complete")
 
 		if config.Config.EnableWAL {
-			slog.Info("restoring database from WAL")
+			slog.Info("initializing wal restoration. this may take a while...")
 			wal.ReplayWAL(wl)
-			slog.Info("database restored from WAL")
+			slog.Info("in-memory state restored. process complete")
 		}
 	}
 

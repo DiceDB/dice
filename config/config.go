@@ -27,7 +27,7 @@ type DiceDBConfig struct {
 	MaxClients  int  `mapstructure:"max-clients" default:"20000" description:"the maximum number of clients to accept"`
 	NumShards   int  `mapstructure:"num-shards" default:"-1" description:"number of shards to create. defaults to number of cores"`
 
-	EnableWAL                         bool   `mapstructure:"enable-wal" default:"true" description:"enable write-ahead logging"`
+	EnableWAL                         bool   `mapstructure:"enable-wal" default:"false" description:"enable write-ahead logging"`
 	WALEngine                         string `mapstructure:"wal-engine" default:"aof" description:"wal engine to use, values: sqlite, aof"`
 	WALDir                            string `mapstructure:"wal-dir" default:"/var/log/dicedb" description:"the directory to store WAL segments"`
 	WALMode                           string `mapstructure:"wal-mode" default:"buffered" description:"wal mode to use, values: buffered, unbuffered"`

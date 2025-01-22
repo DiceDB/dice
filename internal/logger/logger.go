@@ -27,7 +27,7 @@ func New() *slog.Logger {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerologLogger := zerolog.New(zerolog.ConsoleWriter{
 		Out:        os.Stderr,
-		NoColor:    true,
+		NoColor:    false,
 		TimeFormat: time.RFC3339,
 	}).Level(toZerologLevel(getSLogLevel())).With().Timestamp().Logger()
 	return slog.New(newZerologHandler(&zerologLogger))

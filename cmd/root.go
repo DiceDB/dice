@@ -41,6 +41,7 @@ var rootCmd = &cobra.Command{
 	Short: "an in-memory database;",
 	Run: func(cmd *cobra.Command, args []string) {
 		config.Init(cmd.Flags())
+		server.Init()
 		server.Start()
 	},
 }
