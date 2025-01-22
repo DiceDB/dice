@@ -72,7 +72,11 @@ func Start() {
 	// and new users in a much better way. Doing this using
 	// and empty password check is not a good solution.
 	if config.Config.Password != "" {
-		_, _ = auth.UserStore.Add(config.Config.Username)
+		user, _ := auth.UserStore.Add(config.Config.Username)
+		if err:= user.SetPassword(config.Config.Password); err != nil {
+			slog.Error("Could not set password", slog.String("password", config.Config.Password), slog.Any("error", err))
+			return
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
