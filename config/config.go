@@ -91,7 +91,7 @@ network.io_buffer_length_max = 51200
 
 # WAL Configuration
 LogDir = "tmp/dicedb-wal"
-Enabled = "false"
+Enabled = "true"
 WalMode = "buffered"
 WriteMode = "default"
 BufferSizeMB = 1
@@ -102,9 +102,7 @@ BufferSyncInterval = 200ms
 RetentionMode = "num-segments" 
 MaxSegmentCount = 10
 MaxSegmentRetentionDuration = 600s
-RecoveryMode = "strict"
-RestoreFromWAL = "false"
-WriteToWALOnCleanup = "false"`
+RecoveryMode = "strict"`
 )
 
 var (
@@ -121,6 +119,7 @@ type Config struct {
 	WebSocket   websocket   `config:"websocket"`
 	Performance performance `config:"performance"`
 	Memory      memory      `config:"memory"`
+	Persistence persistence `config:"persistence"`
 	Logging     logging     `config:"logging"`
 	Network     network     `config:"network"`
 	WAL         WALConfig   `config:"WAL"`
@@ -171,6 +170,14 @@ type memory struct {
 	LFULogFactor   int     `config:"lfu_log_factor" default:"10" validate:"min=0"`
 }
 
+type persistence struct {
+	Enabled           bool   `config:"enabled" default:"false"`
+	AOFFile           string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
+	WriteAOFOnCleanup bool   `config:"write_aof_on_cleanup" default:"false"`
+	RestoreFromWAL    bool   `config:"restore-wal" default:"false"`
+	WALEngine         string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`
+}
+
 type WALConfig struct {
 	// Directory where WAL log files will be stored
 	LogDir string `config:"log_dir" default:"tmp/dicedb-wal"`
@@ -198,10 +205,6 @@ type WALConfig struct {
 	MaxSegmentRetentionDuration time.Duration `config:"max_segment_retention_duration" default:"600s" validate:"min=1s"`
 	// How to handle WAL corruption on recovery: 'strict' (fail), 'truncate' (truncate at corruption), 'ignore' (skip corrupted)
 	RecoveryMode string `config:"recovery_mode" default:"strict" validate:"oneof=strict truncate ignore"`
-	// Whether to restore the database from WAL on startup
-	RestoreFromWAL bool `config:"restore-wal" default:"true"`
-	// Whether to write to WAL on cleanup
-	WriteToWALOnCleanup bool `config:"write-to-wal-on-cleanup" default:"false"`
 }
 
 type logging struct {
@@ -300,10 +303,12 @@ func MergeFlags(flags *Config) {
 			DiceConfig.Logging.LogLevel = flags.Logging.LogLevel
 		case "log-dir":
 			DiceConfig.Logging.LogDir = flags.Logging.LogDir
-		case "enable-wal":
-			DiceConfig.WAL.Enabled = flags.WAL.Enabled
+		case "enable-persistence":
+			DiceConfig.Persistence.Enabled = flags.Persistence.Enabled
 		case "restore-from-wal":
-			DiceConfig.WAL.RestoreFromWAL = flags.WAL.RestoreFromWAL
+			DiceConfig.Persistence.RestoreFromWAL = flags.Persistence.RestoreFromWAL
+		case "wal-engine":
+			DiceConfig.Persistence.WALEngine = flags.Persistence.WALEngine
 		case "require-pass":
 			DiceConfig.Auth.Password = flags.Auth.Password
 		case "keys-limit":
