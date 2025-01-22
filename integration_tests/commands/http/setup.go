@@ -17,7 +17,6 @@ import (
 
 	"github.com/dicedb/dice/internal/server/httpws"
 
-	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shard"
 )
@@ -34,13 +33,6 @@ type CommandExecutor interface {
 type HTTPCommandExecutor struct {
 	httpClient *http.Client
 	baseURL    string
-}
-
-func init() {
-	parser := config.NewConfigParser()
-	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
-	}
 }
 
 func NewHTTPCommandExecutor() *HTTPCommandExecutor {

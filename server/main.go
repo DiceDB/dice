@@ -21,7 +21,6 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/server/httpws"
 
-	"github.com/dicedb/dice/internal/cli"
 	"github.com/dicedb/dice/internal/commandhandler"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/abstractserver"
@@ -31,15 +30,39 @@ import (
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/iothread"
-	"github.com/dicedb/dice/internal/observability"
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
+func printConfiguration() {
+	slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))
+	slog.Info("running with", slog.Int("port", config.GlobalDiceDBConfig.Port))
+	slog.Info("running on", slog.Int("cores", runtime.NumCPU()))
+
+	// Conditionally add the number of shards to be used for DiceDB
+	numShards := runtime.NumCPU()
+	if config.GlobalDiceDBConfig.NumShards > 0 {
+		numShards = config.GlobalDiceDBConfig.NumShards
+	}
+	slog.Info("running with", slog.Int("shards", numShards))
+}
+
+func printBanner() {
+	fmt.Print(`
+	██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
+	██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
+	██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
+	██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
+	██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
+	╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
+			
+`)
+}
+
 func Start() {
-	iid := observability.GetOrCreateInstanceID()
-	config.DiceConfig.InstanceID = iid
+	printBanner()
+	printConfiguration()
 
 	// TODO: Handle the addition of the default user
 	// and new users in a much better way. Doing this using
@@ -48,12 +71,7 @@ func Start() {
 		_, _ = auth.UserStore.Add(config.GlobalDiceDBConfig.Username)
 	}
 
-	// This is counter intuitive, but it's the first thing that should be done
-	// because this function parses the flags and prepares the config,
-	cli.Execute()
-
 	slog.SetDefault(logger.New())
-	go observability.Ping()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -71,7 +89,7 @@ func Start() {
 	wl, _ = wal.NewNullWAL()
 	if config.GlobalDiceDBConfig.EnableWAL {
 		if config.GlobalDiceDBConfig.WALEngine == "aof" {
-			_wl, err := wal.NewAOFWAL(config.DiceConfig.WAL.LogDir)
+			_wl, err := wal.NewAOFWAL(config.GlobalDiceDBConfig.WALDir)
 			if err != nil {
 				slog.Warn("could not create WAL with", slog.String("wal-engine", config.GlobalDiceDBConfig.WALEngine), slog.Any("error", err))
 				sigs <- syscall.SIGKILL

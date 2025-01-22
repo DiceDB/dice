@@ -17,7 +17,7 @@ func TestHello(t *testing.T) {
 
 	expected := []interface{}{
 		"proto", int64(2),
-		"id", fmt.Sprintf("%s:%d", config.DiceConfig.RespServer.Addr, config.DiceConfig.RespServer.Port),
+		"id", fmt.Sprintf("%s:%d", config.GlobalDiceDBConfig.Host, config.GlobalDiceDBConfig.Port),
 		"mode", "standalone",
 		"role", "master",
 		"modules", []interface{}{},

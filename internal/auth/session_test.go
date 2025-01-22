@@ -86,7 +86,7 @@ func TestSessionIsActive(t *testing.T) {
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
 
-	config.DiceConfig.Auth.Password = "testpassword"
+	config.GlobalDiceDBConfig.Password = "testpassword"
 	session := NewSession()
 	if session.IsActive() {
 		t.Error("New session should not be active")
@@ -104,12 +104,12 @@ func TestSessionIsActive(t *testing.T) {
 	if !session.LastAccessedAt.After(oldLastAccessed) {
 		t.Error("IsActive() should update LastAccessedAt")
 	}
-	config.DiceConfig.Auth.Password = utils.EmptyStr
+	config.GlobalDiceDBConfig.Password = utils.EmptyStr
 }
 
 func TestSessionActivate(t *testing.T) {
 	session := NewSession()
-	user := &User{Username: config.DiceConfig.Auth.UserName}
+	user := &User{Username: config.GlobalDiceDBConfig.Username}
 
 	session.Activate(user)
 
@@ -122,7 +122,7 @@ func TestSessionActivate(t *testing.T) {
 }
 
 func TestSessionValidate(t *testing.T) {
-	username := config.DiceConfig.Auth.UserName
+	username := config.GlobalDiceDBConfig.Username
 	password := "testpassword"
 
 	user, _ := UserStore.Add(username)

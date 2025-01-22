@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net"
 	"os"
@@ -36,16 +35,9 @@ type TestServerOptions struct {
 	Port int
 }
 
-func init() {
-	parser := config.NewConfigParser()
-	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
-	}
-}
-
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.RespServer.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.GlobalDiceDBConfig.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -101,7 +93,7 @@ func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 //nolint:unused
 func getLocalSdk() *dicedb.Client {
 	return dicedb.NewClient(&dicedb.Options{
-		Addr: fmt.Sprintf(":%d", config.DiceConfig.RespServer.Port),
+		Addr: fmt.Sprintf(":%d", config.GlobalDiceDBConfig.Port),
 
 		DialTimeout:           10 * time.Second,
 		ReadTimeout:           30 * time.Second,
@@ -185,9 +177,9 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	// #1261: Added here to prevent resp integration tests from failing on lower-spec machines
 	if opt.Port != 0 {
-		config.DiceConfig.RespServer.Port = opt.Port
+		config.GlobalDiceDBConfig.Port = opt.Port
 	} else {
-		config.DiceConfig.RespServer.Port = 9739
+		config.GlobalDiceDBConfig.Port = 9739
 	}
 
 	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.WatchChanBufSize)
@@ -202,7 +194,7 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 	testServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, wl)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fmt.Println("Starting the test server on port", config.DiceConfig.RespServer.Port)
+	fmt.Println("Starting the test server on port", config.GlobalDiceDBConfig.Port)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)

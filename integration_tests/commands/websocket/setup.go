@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -16,7 +15,6 @@ import (
 
 	"github.com/dicedb/dice/internal/server/httpws"
 
-	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shard"
 	"github.com/gorilla/websocket"
@@ -41,13 +39,6 @@ type WebsocketCommandExecutor struct {
 	baseURL         string
 	websocketClient *http.Client
 	upgrader        websocket.Upgrader
-}
-
-func init() {
-	parser := config.NewConfigParser()
-	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
-	}
 }
 
 func NewWebsocketCommandExecutor() *WebsocketCommandExecutor {

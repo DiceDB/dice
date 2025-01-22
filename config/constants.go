@@ -12,4 +12,7 @@ const (
 	EnableProfile                    bool          = false
 	WebSocketWriteResponseTimeout    time.Duration = 10 * time.Second
 	WebSocketMaxWriteResponseRetries int           = 3
+
+	KeepAlive int32 = 300
+	Timeout   int32 = 300
 )

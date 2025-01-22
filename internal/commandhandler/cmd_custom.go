@@ -45,7 +45,7 @@ func RespHello(args []string) interface{} {
 	}
 
 	var resp []interface{}
-	serverID := fmt.Sprintf("%s:%d", config.DiceConfig.RespServer.Addr, config.DiceConfig.RespServer.Port)
+	serverID := fmt.Sprintf("%s:%d", config.GlobalDiceDBConfig.Host, config.GlobalDiceDBConfig.Port)
 	resp = append(resp,
 		"proto", 2,
 		"id", serverID,
