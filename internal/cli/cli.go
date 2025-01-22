@@ -49,9 +49,6 @@ func printConfiguration() {
 
 	// Add whether the watch feature is enabled
 	slog.Info("running with", slog.Bool("profiling", config.DiceConfig.Performance.EnableProfiling))
-
-	// Add whether the persistence feature is enabled
-	slog.Info("running with", slog.Bool("persistence", config.DiceConfig.Persistence.Enabled))
 }
 
 // printConfigTable prints key-value pairs in a vertical table format.
@@ -71,6 +68,7 @@ func render() {
 func Execute() {
 	flagsConfig := config.Config{}
 	var tempStr string
+	var tempBool bool
 
 	flag.StringVar(&tempStr, "username", "dicedb", "deleted")
 	flag.StringVar(&tempStr, "password", "dicedb", "deleted")
@@ -93,9 +91,9 @@ func Execute() {
 	flag.StringVar(&tempStr, "log-level", "info", "log level, values: info, debug")
 	flag.StringVar(&tempStr, "log-dir", "/tmp/dicedb", "log directory path")
 
-	flag.BoolVar(&flagsConfig.Persistence.Enabled, "enable-persistence", false, "enable write-ahead logging")
-	flag.BoolVar(&flagsConfig.Persistence.RestoreFromWAL, "restore-wal", false, "restore the database from the WAL files")
-	flag.StringVar(&flagsConfig.Persistence.WALEngine, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
+	flag.BoolVar(&tempBool, "enable-persistence", false, "enable write-ahead logging")
+	flag.BoolVar(&tempBool, "restore-wal", false, "restore the database from the WAL files")
+	flag.StringVar(&tempStr, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
 
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the flagsConfig file")
 	flag.StringVar(&config.CustomConfigDirPath, "c", config.CustomConfigDirPath, "file path of the config file")

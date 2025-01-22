@@ -73,12 +73,8 @@ type memory struct {
 }
 
 type persistence struct {
-	AOFFile            string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
 	PersistenceEnabled bool   `config:"persistence_enabled" default:"true"`
-	WriteAOFOnCleanup  bool   `config:"write_aof_on_cleanup" default:"false"`
 	WALDir             string `config:"wal-dir" default:"./" validate:"dirpath"`
-	RestoreFromWAL     bool   `config:"restore-wal" default:"false"`
-	WALEngine          string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`
 }
 
 type logging struct {

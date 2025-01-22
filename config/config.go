@@ -44,7 +44,6 @@ type Config struct {
 	WebSocket   websocket   `config:"websocket"`
 	Performance performance `config:"performance"`
 	Memory      memory      `config:"memory"`
-	Persistence persistence `config:"persistence"`
 	WAL         WALConfig   `config:"WAL"`
 }
 
@@ -88,19 +87,9 @@ type memory struct {
 	LFULogFactor   int     `config:"lfu_log_factor" default:"10" validate:"min=0"`
 }
 
-type persistence struct {
-	Enabled           bool   `config:"enabled" default:"false"`
-	AOFFile           string `config:"aof_file" default:"./dice-master.aof" validate:"filepath"`
-	WriteAOFOnCleanup bool   `config:"write_aof_on_cleanup" default:"false"`
-	RestoreFromWAL    bool   `config:"restore-wal" default:"false"`
-	WALEngine         string `config:"wal-engine" default:"aof" validate:"oneof=sqlite aof"`
-}
-
 type WALConfig struct {
 	// Directory where WAL log files will be stored
 	LogDir string `config:"log_dir" default:"tmp/dicedb-wal"`
-	// Whether WAL is enabled
-	Enabled bool `config:"enabled" default:"true"`
 	// WAL buffering mode: 'buffered' (writes buffered in memory) or 'unbuffered' (immediate disk writes)
 	WalMode string `config:"wal_mode" default:"buffered" validate:"oneof=buffered unbuffered"`
 	// Write mode: 'default' (OS handles syncing) or 'fsync' (explicit fsync after writes)
@@ -203,12 +192,6 @@ func MergeFlags(flags *Config) {
 			DiceConfig.Performance.EnableWatch = flags.Performance.EnableWatch
 		case "enable-profiling":
 			DiceConfig.Performance.EnableProfiling = flags.Performance.EnableProfiling
-		case "enable-persistence":
-			DiceConfig.Persistence.Enabled = flags.Persistence.Enabled
-		case "restore-from-wal":
-			DiceConfig.Persistence.RestoreFromWAL = flags.Persistence.RestoreFromWAL
-		case "wal-engine":
-			DiceConfig.Persistence.WALEngine = flags.Persistence.WALEngine
 		case "keys-limit":
 			DiceConfig.Memory.KeysLimit = flags.Memory.KeysLimit
 		case "eviction-ratio":
@@ -226,6 +209,9 @@ type DiceDBConfig struct {
 	Password string `mapstructure:"password" default:"" description:"the password to use for authentication"`
 
 	LogLevel string `mapstructure:"log-level" default:"info" description:"the log level"`
+
+	EnableWAL bool   `mapstructure:"enable-wal" default:"true" description:"enable write-ahead logging"`
+	WALEngine string `mapstructure:"wal-engine" default:"aof" description:"wal engine to use, values: sqlite, aof"`
 }
 
 var GlobalDiceDBConfig *DiceDBConfig

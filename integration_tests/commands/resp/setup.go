@@ -184,8 +184,6 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
-
 	// #1261: Added here to prevent resp integration tests from failing on lower-spec machines
 	config.DiceConfig.Memory.KeysLimit = 2000
 	if opt.Port != 0 {

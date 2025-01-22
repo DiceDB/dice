@@ -37,10 +37,6 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-const (
-	WALEngineAOF = "aof"
-)
-
 func Start() {
 	iid := observability.GetOrCreateInstanceID()
 	config.DiceConfig.InstanceID = iid
@@ -73,18 +69,18 @@ func Start() {
 	)
 
 	wl, _ = wal.NewNullWAL()
-	if config.DiceConfig.Persistence.Enabled {
-		if config.DiceConfig.Persistence.WALEngine == WALEngineAOF {
+	if config.GlobalDiceDBConfig.EnableWAL {
+		if config.GlobalDiceDBConfig.WALEngine == "aof" {
 			_wl, err := wal.NewAOFWAL(config.DiceConfig.WAL.LogDir)
 			if err != nil {
-				slog.Warn("could not create WAL with", slog.String("wal-engine", config.DiceConfig.Persistence.WALEngine), slog.Any("error", err))
+				slog.Warn("could not create WAL with", slog.String("wal-engine", config.GlobalDiceDBConfig.WALEngine), slog.Any("error", err))
 				sigs <- syscall.SIGKILL
 				cancel()
 				return
 			}
 			wl = _wl
 		} else {
-			slog.Error("unsupported WAL engine", slog.String("engine", config.DiceConfig.Persistence.WALEngine))
+			slog.Error("unsupported WAL engine", slog.String("engine", config.GlobalDiceDBConfig.WALEngine))
 			sigs <- syscall.SIGKILL
 			cancel()
 			return
@@ -98,7 +94,7 @@ func Start() {
 
 		slog.Debug("WAL initialization complete")
 
-		if config.DiceConfig.Persistence.RestoreFromWAL {
+		if config.GlobalDiceDBConfig.EnableWAL {
 			slog.Info("restoring database from WAL")
 			wal.ReplayWAL(wl)
 			slog.Info("database restored from WAL")
@@ -188,7 +184,7 @@ func Start() {
 
 	close(sigs)
 
-	if config.DiceConfig.Persistence.Enabled {
+	if config.GlobalDiceDBConfig.EnableWAL {
 		wal.ShutdownBG()
 	}
 

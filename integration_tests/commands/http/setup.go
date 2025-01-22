@@ -110,8 +110,6 @@ func (e *HTTPCommandExecutor) Name() string {
 }
 
 func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
-
 	globalErrChannel := make(chan error)
 	shardManager := shard.NewShardManager(1, nil, globalErrChannel)
 
