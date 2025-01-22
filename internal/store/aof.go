@@ -113,12 +113,12 @@ func DumpAllAOF(store *Store) error {
 		aof *AOF
 		err error
 	)
-	if aof, err = NewAOF(config.DiceConfig.Persistence.AOFFile); err != nil {
+	if aof, err = NewAOF(config.DiceConfig.WAL.WalMode); err != nil {
 		return err
 	}
 	defer aof.Close()
 
-	log.Println("rewriting AOF file at", config.DiceConfig.Persistence.AOFFile)
+	log.Println("rewriting AOF file at", config.DiceConfig.WAL.WalMode)
 
 	store.store.All(func(k string, obj *object.Obj) bool {
 		err = dumpKey(aof, k, obj)
