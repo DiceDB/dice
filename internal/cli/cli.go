@@ -39,16 +39,10 @@ func printConfiguration() {
 
 	// Conditionally add the number of shards to be used for DiceDB
 	numShards := runtime.NumCPU()
-	if config.DiceConfig.Performance.NumShards > 0 {
-		numShards = config.DiceConfig.Performance.NumShards
+	if config.GlobalDiceDBConfig.NumShards > 0 {
+		numShards = config.GlobalDiceDBConfig.NumShards
 	}
 	slog.Info("running with", slog.Int("shards", numShards))
-
-	// Add whether the watch feature is enabled
-	slog.Info("running with", slog.Bool("watch", config.DiceConfig.Performance.EnableWatch))
-
-	// Add whether the watch feature is enabled
-	slog.Info("running with", slog.Bool("profiling", config.DiceConfig.Performance.EnableProfiling))
 }
 
 // printConfigTable prints key-value pairs in a vertical table format.
@@ -85,10 +79,9 @@ func Execute() {
 	flag.IntVar(&flagsConfig.WebSocket.Port, "websocket-port", 8379, "port for accepting requets over WebSocket")
 	flag.BoolVar(&flagsConfig.WebSocket.Enabled, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
 
-	flag.IntVar(&flagsConfig.Performance.NumShards, "num-shards", -1, "number shards to create. defaults to number of cores")
+	flag.IntVar(&tempInt, "num-shards", -1, "number shards to create. defaults to number of cores")
 
-	flag.BoolVar(&flagsConfig.Performance.EnableWatch, "enable-watch", false, "enable support for .WATCH commands and real-time reactivity")
-	flag.BoolVar(&flagsConfig.Performance.EnableProfiling, "enable-profiling", false, "enable profiling and capture critical metrics and traces in .prof files")
+	flag.BoolVar(&tempBool, "enable-watch", false, "enable support for .WATCH commands and real-time reactivity")
 
 	flag.StringVar(&tempStr, "log-level", "info", "log level, values: info, debug")
 	flag.StringVar(&tempStr, "log-dir", "/tmp/dicedb", "log directory path")
@@ -96,6 +89,8 @@ func Execute() {
 	flag.BoolVar(&tempBool, "enable-persistence", false, "enable write-ahead logging")
 	flag.BoolVar(&tempBool, "restore-wal", false, "restore the database from the WAL files")
 	flag.StringVar(&tempStr, "wal-engine", "null", "wal engine to use, values: sqlite, aof")
+	flag.BoolVar(&tempBool, "enable-wal", false, "enable wal")
+	flag.IntVar(&tempInt, "max-clients", 200000, "max clients")
 
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the flagsConfig file")
 	flag.StringVar(&config.CustomConfigDirPath, "c", config.CustomConfigDirPath, "file path of the config file")

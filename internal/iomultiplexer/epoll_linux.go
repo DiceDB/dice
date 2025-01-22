@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/config"
 )
 
 // Epoll implements the IOMultiplexer interface for Linux-based systems
@@ -21,8 +23,8 @@ type Epoll struct {
 }
 
 // New creates a new Epoll instance
-func New(maxClients int32) (*Epoll, error) {
-	if maxClients < 0 {
+func New() (*Epoll, error) {
+	if config.GlobalDiceDBConfig.MaxClients == 0 {
 		return nil, ErrInvalidMaxClients
 	}
 
@@ -33,8 +35,8 @@ func New(maxClients int32) (*Epoll, error) {
 
 	return &Epoll{
 		fd:          fd,
-		ePollEvents: make([]syscall.EpollEvent, maxClients),
-		diceEvents:  make([]Event, maxClients),
+		ePollEvents: make([]syscall.EpollEvent, config.GlobalDiceDBConfig.MaxClients),
+		diceEvents:  make([]Event, config.GlobalDiceDBConfig.MaxClients),
 	}, nil
 }
 

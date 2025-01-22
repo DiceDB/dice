@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/shard"
 )
 
@@ -26,9 +27,9 @@ var (
 	ErrCmdHandlerResponseChanNil = errors.New("command handler response channel is nil")
 )
 
-func NewRegistry(maxClients uint32, sm *shard.ShardManager) *Registry {
+func NewRegistry(sm *shard.ShardManager) *Registry {
 	return &Registry{
-		maxCmdHandlers: maxClients,
+		maxCmdHandlers: uint32(config.GlobalDiceDBConfig.MaxClients),
 		ShardManager:   sm,
 	}
 }

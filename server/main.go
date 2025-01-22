@@ -101,8 +101,8 @@ func Start() {
 		}
 	}
 
-	if config.DiceConfig.Performance.EnableWatch {
-		bufSize := config.DiceConfig.Performance.WatchChanBufSize
+	if config.GlobalDiceDBConfig.EnableWatch {
+		bufSize := config.WatchChanBufSize
 		cmdWatchChan = make(chan dstore.CmdWatchEvent, bufSize)
 	}
 
@@ -112,8 +112,8 @@ func Start() {
 	// core count ensures the application can make full use of all available hardware.
 	var numShards int
 	numShards = runtime.NumCPU()
-	if config.DiceConfig.Performance.NumShards > 0 {
-		numShards = config.DiceConfig.Performance.NumShards
+	if config.GlobalDiceDBConfig.NumShards > 0 {
+		numShards = config.GlobalDiceDBConfig.NumShards
 	}
 
 	// The runtime.GOMAXPROCS(numShards) call limits the number of operating system
@@ -135,7 +135,7 @@ func Start() {
 
 	var serverWg sync.WaitGroup
 
-	if config.DiceConfig.Performance.EnableProfiling {
+	if config.EnableProfile {
 		stopProfiling, err := startProfiling()
 		if err != nil {
 			slog.Error("Profiling could not be started", slog.Any("error", err))
@@ -143,8 +143,8 @@ func Start() {
 		}
 		defer stopProfiling()
 	}
-	ioThreadManager := iothread.NewManager(config.DiceConfig.Performance.MaxClients)
-	cmdHandlerManager := commandhandler.NewRegistry(config.DiceConfig.Performance.MaxClients, shardManager)
+	ioThreadManager := iothread.NewManager()
+	cmdHandlerManager := commandhandler.NewRegistry(shardManager)
 
 	respServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 	serverWg.Add(1)

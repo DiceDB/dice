@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/config"
 )
 
 // KQueue implements the IOMultiplexer interface for Darwin-based systems
@@ -21,8 +23,8 @@ type KQueue struct {
 }
 
 // New creates a new KQueue instance
-func New(maxClients int32) (*KQueue, error) {
-	if maxClients < 0 {
+func New() (*KQueue, error) {
+	if config.GlobalDiceDBConfig.MaxClients < 0 {
 		return nil, ErrInvalidMaxClients
 	}
 
@@ -33,8 +35,8 @@ func New(maxClients int32) (*KQueue, error) {
 
 	return &KQueue{
 		fd:         fd,
-		kQEvents:   make([]syscall.Kevent_t, maxClients),
-		diceEvents: make([]Event, maxClients),
+		kQEvents:   make([]syscall.Kevent_t, config.GlobalDiceDBConfig.MaxClients),
+		diceEvents: make([]Event, config.GlobalDiceDBConfig.MaxClients),
 	}, nil
 }
 

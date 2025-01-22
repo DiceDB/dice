@@ -44,9 +44,8 @@ func validateConfig(config *Config) error {
 }
 
 func validateShardCount(sl validator.StructLevel) {
-	config := sl.Current().Interface().(Config)
-	if config.Performance.NumShards <= 0 && config.Performance.NumShards != -1 {
-		sl.ReportError(config.Performance.NumShards, "NumShards", "NumShards", "invalidValue", "must be -1 or greater than 0")
+	if GlobalDiceDBConfig.NumShards <= 0 && GlobalDiceDBConfig.NumShards != -1 {
+		sl.ReportError(GlobalDiceDBConfig.NumShards, "NumShards", "NumShards", "invalidValue", "must be -1 or greater than 0")
 	}
 }
 

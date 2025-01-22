@@ -56,7 +56,7 @@ func NewShardThread(id ShardID, gec chan error, sec chan *ShardError,
 		globalErrorChan:  gec,
 		shardErrorChan:   sec,
 		lastCronExecTime: utils.GetCurrentTime(),
-		cronFrequency:    config.DiceConfig.Performance.ShardCronFrequency,
+		cronFrequency:    config.ShardCronFrequency,
 	}
 }
 

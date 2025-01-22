@@ -33,8 +33,7 @@ import (
 )
 
 type TestServerOptions struct {
-	Port       int
-	MaxClients int32
+	Port int
 }
 
 func init() {
@@ -191,12 +190,12 @@ func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
 		config.DiceConfig.RespServer.Port = 9739
 	}
 
-	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
+	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.WatchChanBufSize)
 	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, cmdWatchChan, gec)
-	ioThreadManager := iothread.NewManager(config.DiceConfig.Performance.MaxClients)
-	cmdHandlerManager := commandhandler.NewRegistry(config.DiceConfig.Performance.MaxClients, shardManager)
+	ioThreadManager := iothread.NewManager()
+	cmdHandlerManager := commandhandler.NewRegistry(shardManager)
 
 	// Initialize the RESP Server
 	wl, _ := wal.NewNullWAL()

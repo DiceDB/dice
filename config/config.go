@@ -34,13 +34,12 @@ var (
 )
 
 type Config struct {
-	Version     string      `config:"version" default:"0.1.0"`
-	InstanceID  string      `config:"instance_id"`
-	RespServer  respServer  `config:"async_server"`
-	HTTP        http        `config:"http"`
-	WebSocket   websocket   `config:"websocket"`
-	Performance performance `config:"performance"`
-	WAL         WALConfig   `config:"WAL"`
+	Version    string     `config:"version" default:"0.1.0"`
+	InstanceID string     `config:"instance_id"`
+	RespServer respServer `config:"async_server"`
+	HTTP       http       `config:"http"`
+	WebSocket  websocket  `config:"websocket"`
+	WAL        WALConfig  `config:"WAL"`
 }
 
 type respServer struct {
@@ -61,18 +60,6 @@ type websocket struct {
 	Port                    int           `config:"port" default:"8379" validate:"number,gte=0,lte=65535"`
 	MaxWriteResponseRetries int           `config:"max_write_response_retries" default:"3" validate:"min=0"`
 	WriteResponseTimeout    time.Duration `config:"write_response_timeout" default:"10s"`
-}
-
-type performance struct {
-	WatchChanBufSize       int           `config:"watch_chan_buf_size" default:"20000"`
-	ShardCronFrequency     time.Duration `config:"shard_cron_frequency" default:"1s"`
-	MultiplexerPollTimeout time.Duration `config:"multiplexer_poll_timeout" default:"100ms"`
-	MaxClients             uint32        `config:"max_clients" default:"20000" validate:"min=0"`
-	StoreMapInitSize       int           `config:"store_map_init_size" default:"1024000"`
-	AdhocReqChanBufSize    int           `config:"adhoc_req_chan_buf_size" default:"20"`
-	EnableProfiling        bool          `config:"profiling" default:"false"`
-	EnableWatch            bool          `config:"enable_watch" default:"false"`
-	NumShards              int           `config:"num_shards" default:"-1" validate:"oneof=-1|min=1,lte=128"`
 }
 
 type WALConfig struct {
@@ -174,12 +161,6 @@ func MergeFlags(flags *Config) {
 			DiceConfig.WebSocket.Enabled = flags.WebSocket.Enabled
 		case "websocket-port":
 			DiceConfig.WebSocket.Port = flags.WebSocket.Port
-		case "num-shards":
-			DiceConfig.Performance.NumShards = flags.Performance.NumShards
-		case "enable-watch":
-			DiceConfig.Performance.EnableWatch = flags.Performance.EnableWatch
-		case "enable-profiling":
-			DiceConfig.Performance.EnableProfiling = flags.Performance.EnableProfiling
 		}
 	})
 }
@@ -196,6 +177,10 @@ type DiceDBConfig struct {
 
 	EnableWAL bool   `mapstructure:"enable-wal" default:"true" description:"enable write-ahead logging"`
 	WALEngine string `mapstructure:"wal-engine" default:"aof" description:"wal engine to use, values: sqlite, aof"`
+
+	EnableWatch bool `mapstructure:"enable-watch" default:"false" description:"enable support for .WATCH commands and real-time reactivity"`
+	MaxClients  int  `mapstructure:"max-clients" default:"20000" description:"the maximum number of clients to accept"`
+	NumShards   int  `mapstructure:"num-shards" default:"-1" description:"number of shards to create. defaults to number of cores"`
 }
 
 var GlobalDiceDBConfig *DiceDBConfig

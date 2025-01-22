@@ -65,7 +65,7 @@ func NewCommandHandler(id string, responseChan, preprocessingChan chan *ops.Stor
 		id:                       id,
 		parser:                   parser,
 		shardManager:             shardManager,
-		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.AdhocReqChanBufSize),
 		Session:                  auth.NewSession(),
 		globalErrorChan:          gec,
 		ioThreadReadChan:         ioThreadReadChan,

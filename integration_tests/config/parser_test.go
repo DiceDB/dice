@@ -53,15 +53,6 @@ type websocket struct {
 }
 
 type performance struct {
-	WatchChanBufSize       int           `config:"watch_chan_buf_size" default:"20000"`
-	ShardCronFrequency     time.Duration `config:"shard_cron_frequency" default:"1s"`
-	MultiplexerPollTimeout time.Duration `config:"multiplexer_poll_timeout" default:"100ms"`
-	MaxClients             int32         `config:"max_clients" default:"20000" validate:"min=0"`
-	StoreMapInitSize       int           `config:"store_map_init_size" default:"1024000"`
-	AdhocReqChanBufSize    int           `config:"adhoc_req_chan_buf_size" default:"20"`
-	EnableProfiling        bool          `config:"profiling" default:"false"`
-	EnableWatch            bool          `config:"enable_watch" default:"false"`
-	NumShards              int           `config:"num_shards" default:"-1" validate:"oneof=-1|min=1,lte=128"`
 }
 
 type memory struct {

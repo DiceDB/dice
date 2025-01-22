@@ -26,15 +26,15 @@ func getConnection(port int) (net.Conn, error) {
 
 func TestMaxConnection(t *testing.T) {
 	var wg sync.WaitGroup
+	var maxClients uint32 = 50
 	var maxConnTestOptions = commands.TestServerOptions{
-		Port:       8741,
-		MaxClients: 50,
+		Port: 8741,
 	}
 	commands.RunTestServer(&wg, maxConnTestOptions)
 
 	time.Sleep(2 * time.Second)
 
-	var maxConnLimit = maxConnTestOptions.MaxClients + 2
+	var maxConnLimit = maxClients + 2
 	connections := make([]net.Conn, maxConnLimit)
 	defer func() {
 		// Ensure all connections are closed at the end of the test
@@ -45,7 +45,7 @@ func TestMaxConnection(t *testing.T) {
 		}
 	}()
 
-	for i := int32(0); i < maxConnLimit; i++ {
+	for i := uint32(0); i < maxConnLimit; i++ {
 		conn, err := getConnection(maxConnTestOptions.Port)
 		if err == nil {
 			connections[i] = conn
