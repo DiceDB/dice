@@ -6,8 +6,6 @@ package store
 import (
 	"path"
 
-	"github.com/dicedb/dice/config"
-
 	"github.com/dicedb/dice/internal/common"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
@@ -34,10 +32,7 @@ func NewExpireMap() common.ITable[*object.Obj, uint64] {
 }
 
 func NewDefaultEviction() EvictionStrategy {
-	return &BatchEvictionLRU{
-		maxKeys:       config.DefaultKeysLimit,
-		evictionRatio: config.DefaultEvictionRatio,
-	}
+	return &PrimitiveEvictionStrategy{}
 }
 
 // QueryWatchEvent represents a change in a watched key.

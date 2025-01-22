@@ -65,11 +65,6 @@ type performance struct {
 }
 
 type memory struct {
-	MaxMemory      int64   `config:"max_memory" default:"0"`
-	EvictionPolicy string  `config:"eviction_policy" default:"allkeys-lfu" validate:"oneof=simple-first allkeys-random allkeys-lru allkeys-lfu"`
-	EvictionRatio  float64 `config:"eviction_ratio" default:"0.9" validate:"min=0,lte=1"`
-	KeysLimit      int     `config:"keys_limit" default:"200000000" validate:"min=0"`
-	LFULogFactor   int     `config:"lfu_log_factor" default:"10" validate:"min=0"`
 }
 
 type persistence struct {

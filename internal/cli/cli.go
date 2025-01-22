@@ -69,6 +69,8 @@ func Execute() {
 	flagsConfig := config.Config{}
 	var tempStr string
 	var tempBool bool
+	var tempFloat float64
+	var tempInt int
 
 	flag.StringVar(&tempStr, "username", "dicedb", "deleted")
 	flag.StringVar(&tempStr, "password", "dicedb", "deleted")
@@ -98,10 +100,10 @@ func Execute() {
 	flag.StringVar(&config.CustomConfigFilePath, "o", config.CustomConfigFilePath, "dir path to create the flagsConfig file")
 	flag.StringVar(&config.CustomConfigDirPath, "c", config.CustomConfigDirPath, "file path of the config file")
 
-	flag.IntVar(&flagsConfig.Memory.KeysLimit, "keys-limit", config.DefaultKeysLimit, "keys limit for the DiceDB server. "+
+	flag.IntVar(&tempInt, "keys-limit", config.DefaultKeysLimit, "keys limit for the DiceDB server. "+
 		"This flag controls the number of keys each shard holds at startup. You can multiply this number with the "+
 		"total number of shard threads to estimate how much memory will be required at system start up.")
-	flag.Float64Var(&flagsConfig.Memory.EvictionRatio, "eviction-ratio", 0.9, "ratio of keys to evict when the "+
+	flag.Float64Var(&tempFloat, "eviction-ratio", 0.9, "ratio of keys to evict when the "+
 		"keys limit is reached")
 
 	flag.Usage = func() {

@@ -26,9 +26,6 @@ const (
 	EvictAllKeysLRU    = "allkeys-lru"
 	EvictAllKeysLFU    = "allkeys-lfu"
 	EvictBatchKeysLRU  = "batch_keys_lru"
-
-	DefaultKeysLimit     int     = 200000000
-	DefaultEvictionRatio float64 = 0.1
 )
 
 var (
@@ -43,7 +40,6 @@ type Config struct {
 	HTTP        http        `config:"http"`
 	WebSocket   websocket   `config:"websocket"`
 	Performance performance `config:"performance"`
-	Memory      memory      `config:"memory"`
 	WAL         WALConfig   `config:"WAL"`
 }
 
@@ -77,14 +73,6 @@ type performance struct {
 	EnableProfiling        bool          `config:"profiling" default:"false"`
 	EnableWatch            bool          `config:"enable_watch" default:"false"`
 	NumShards              int           `config:"num_shards" default:"-1" validate:"oneof=-1|min=1,lte=128"`
-}
-
-type memory struct {
-	MaxMemory      int64   `config:"max_memory" default:"0" validate:"min=0"`
-	EvictionPolicy string  `config:"eviction_policy" default:"allkeys-lfu" validate:"oneof=simple-first allkeys-random allkeys-lru allkeys-lfu"`
-	EvictionRatio  float64 `config:"eviction_ratio" default:"0.9" validate:"min=0,lte=1"`
-	KeysLimit      int     `config:"keys_limit" default:"200000000" validate:"min=10"`
-	LFULogFactor   int     `config:"lfu_log_factor" default:"10" validate:"min=0"`
 }
 
 type WALConfig struct {
@@ -192,10 +180,6 @@ func MergeFlags(flags *Config) {
 			DiceConfig.Performance.EnableWatch = flags.Performance.EnableWatch
 		case "enable-profiling":
 			DiceConfig.Performance.EnableProfiling = flags.Performance.EnableProfiling
-		case "keys-limit":
-			DiceConfig.Memory.KeysLimit = flags.Memory.KeysLimit
-		case "eviction-ratio":
-			DiceConfig.Memory.EvictionRatio = flags.Memory.EvictionRatio
 		}
 	})
 }

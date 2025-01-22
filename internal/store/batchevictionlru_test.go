@@ -14,7 +14,7 @@ import (
 )
 
 func TestEvictVictims_BelowMaxKeys(t *testing.T) {
-	eviction := NewBatchEvictionLRU(5, 0.2)
+	eviction := NewPrimitiveEvictionStrategy(5, 0.2)
 	s := NewStore(nil, eviction)
 
 	// Add 3 keys (below maxKeys of 5)
@@ -36,8 +36,7 @@ func TestEvictVictims_BelowMaxKeys(t *testing.T) {
 
 func TestEvictVictims_ExceedsMaxKeys(t *testing.T) {
 	maxKeys := 5
-	evictionRatio := 0.4
-	eviction := NewBatchEvictionLRU(maxKeys, evictionRatio)
+	eviction := NewPrimitiveEvictionStrategy(maxKeys)
 	s := NewStore(nil, eviction)
 
 	// Add 10 keys, exceeding maxKeys of 5
@@ -59,7 +58,7 @@ func TestEvictVictims_EvictsLRU(t *testing.T) {
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
 
-	eviction := NewBatchEvictionLRU(10, 0.4)
+	eviction := NewPrimitiveEvictionStrategy(10, 0.4)
 	s := NewStore(nil, eviction)
 
 	// Add keys with varying LastAccessedAt
@@ -89,7 +88,7 @@ func TestEvictVictims_IdenticalLastAccessedAt(t *testing.T) {
 	currentTime := time.Now()
 	mockTime := &utils.MockClock{CurrTime: currentTime}
 	utils.CurrentTime = mockTime
-	eviction := NewBatchEvictionLRU(10, 0.5)
+	eviction := NewPrimitiveEvictionStrategy(10, 0.5)
 	s := NewStore(nil, eviction)
 
 	// Add 10 keys with identical LastAccessedAt
@@ -105,7 +104,7 @@ func TestEvictVictims_IdenticalLastAccessedAt(t *testing.T) {
 }
 
 func TestEvictVictims_EvictsAtLeastOne(t *testing.T) {
-	eviction := NewBatchEvictionLRU(10, 0.000) // 0% eviction rate
+	eviction := NewPrimitiveEvictionStrategy(10, 0.000) // 0% eviction rate
 	s := NewStore(nil, eviction)
 
 	// Add 10 keys (equals maxKeys)
@@ -120,7 +119,7 @@ func TestEvictVictims_EvictsAtLeastOne(t *testing.T) {
 }
 
 func TestEvictVictims_EmptyStore(t *testing.T) { // Handles Empty Store Gracefully
-	eviction := NewBatchEvictionLRU(5, 0.2)
+	eviction := NewPrimitiveEvictionStrategy(5)
 	s := NewStore(nil, eviction)
 
 	toEvict := eviction.ShouldEvict(s)
@@ -134,7 +133,7 @@ func TestEvictVictims_LastAccessedAtUpdated(t *testing.T) {
 	currentTime := time.Now()
 	mockTime := &utils.MockClock{CurrTime: currentTime}
 	utils.CurrentTime = mockTime
-	eviction := NewBatchEvictionLRU(10, 0.4)
+	eviction := NewPrimitiveEvictionStrategy(10, 0.4)
 	s := NewStore(nil, eviction)
 
 	// Add keys with initial LastAccessedAt
