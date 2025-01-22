@@ -17,7 +17,6 @@ import (
 
 	"github.com/dicedb/dice/internal/server/httpws"
 
-	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shard"
 )
@@ -34,13 +33,6 @@ type CommandExecutor interface {
 type HTTPCommandExecutor struct {
 	httpClient *http.Client
 	baseURL    string
-}
-
-func init() {
-	parser := config.NewConfigParser()
-	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
-	}
 }
 
 func NewHTTPCommandExecutor() *HTTPCommandExecutor {
@@ -110,17 +102,12 @@ func (e *HTTPCommandExecutor) Name() string {
 }
 
 func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
-
 	globalErrChannel := make(chan error)
 	shardManager := shard.NewShardManager(1, nil, globalErrChannel)
 
-	config.DiceConfig.HTTP.Port = opt.Port
 	// Initialize the HTTPServer
 	testServer := httpws.NewHTTPServer(shardManager, nil)
 	// Inform the user that the server is starting
-	fmt.Println("Starting the test server on port", config.DiceConfig.HTTP.Port)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)
 	go func() {

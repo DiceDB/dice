@@ -7,12 +7,13 @@ import (
 	"errors"
 	"sync"
 	"sync/atomic"
+
+	"github.com/dicedb/dice/config"
 )
 
 type Manager struct {
 	connectedClients sync.Map
 	numIOThreads     atomic.Uint32
-	maxClients       uint32
 	mu               sync.Mutex
 }
 
@@ -21,17 +22,15 @@ var (
 	ErrIOThreadNotFound  = errors.New("io-thread not found")
 )
 
-func NewManager(maxClients uint32) *Manager {
-	return &Manager{
-		maxClients: maxClients,
-	}
+func NewManager() *Manager {
+	return &Manager{}
 }
 
 func (m *Manager) RegisterIOThread(ioThread IOThread) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.IOThreadCount() >= m.maxClients {
+	if m.IOThreadCount() >= uint32(config.Config.MaxClients) {
 		return ErrMaxClientsReached
 	}
 

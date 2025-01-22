@@ -21,7 +21,6 @@ import (
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
 
-	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
@@ -70,7 +69,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, wl wal.AbstractWAL) *HTTPSe
 	mux := http.NewServeMux()
 	caseInsensitiveMux := &CaseInsensitiveMux{mux: mux}
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%d", config.DiceConfig.HTTP.Port),
+		Addr:              fmt.Sprintf(":%d", 7381),
 		Handler:           caseInsensitiveMux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}

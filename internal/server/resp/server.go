@@ -62,8 +62,8 @@ func NewServer(shardManager *shard.ShardManager, ioThreadManager *iothread.Manag
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent,
 	globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
-		Host:                     config.DiceConfig.RespServer.Addr,
-		Port:                     config.DiceConfig.RespServer.Port,
+		Host:                     config.Config.Host,
+		Port:                     config.Config.Port,
 		connBacklogSize:          DefaultConnBacklogSize,
 		ioThreadManager:          ioThreadManager,
 		cmdHandlerManager:        cmdHandlerManager,

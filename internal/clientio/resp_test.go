@@ -6,22 +6,13 @@ package clientio_test
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"math"
 	"testing"
 
-	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/stretchr/testify/assert"
 )
-
-func init() {
-	parser := config.NewConfigParser()
-	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
-	}
-}
 
 func TestSimpleStringDecode(t *testing.T) {
 	cases := map[string]string{

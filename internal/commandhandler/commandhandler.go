@@ -65,7 +65,7 @@ func NewCommandHandler(id string, responseChan, preprocessingChan chan *ops.Stor
 		id:                       id,
 		parser:                   parser,
 		shardManager:             shardManager,
-		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.AdhocReqChanBufSize),
 		Session:                  auth.NewSession(),
 		globalErrorChan:          gec,
 		ioThreadReadChan:         ioThreadReadChan,
@@ -504,8 +504,14 @@ func (h *BaseCommandHandler) sendResponseToIOThread(resp interface{}, err error)
 	h.ioThreadWriteChan <- resp
 }
 
-func (h *BaseCommandHandler) isAuthenticated(diceDBCmd *cmd.DiceDBCmd) error {
-	if diceDBCmd.Cmd != auth.Cmd && !h.Session.IsActive() {
+func (h *BaseCommandHandler) isAuthenticated(c *cmd.DiceDBCmd) error {
+	// TODO: Revisit the flow and check the need of explicitly whitelisting PING and CLIENT commands here.
+	// We might not need this special case handling for other commands.
+	if c.Cmd == "PING" || c.Cmd == "CLIENT" {
+		return nil
+	}
+
+	if c.Cmd != auth.Cmd && !h.Session.IsActive() {
 		return errors.New("NOAUTH Authentication required")
 	}
 
@@ -530,11 +536,11 @@ func (h *BaseCommandHandler) RespAuth(args []string) interface{} {
 		return diceerrors.ErrWrongArgumentCount("AUTH")
 	}
 
-	if config.DiceConfig.Auth.Password == "" {
+	if config.Config.Password == "" {
 		return diceerrors.ErrAuth
 	}
 
-	username := config.DiceConfig.Auth.UserName
+	username := config.Config.Username
 	var password string
 
 	if len(args) == 1 {

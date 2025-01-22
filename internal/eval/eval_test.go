@@ -177,7 +177,7 @@ func testEvalECHO(t *testing.T, store *dstore.Store) {
 }
 
 func testEvalHELLO(t *testing.T, store *dstore.Store) {
-	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.RespServer.Addr, config.DiceConfig.RespServer.Port)
+	serverID = fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port)
 	resp := []interface{}{
 		"proto", 2,
 		"id", serverID,

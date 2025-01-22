@@ -56,7 +56,7 @@ func NewShardThread(id ShardID, gec chan error, sec chan *ShardError,
 		globalErrorChan:  gec,
 		shardErrorChan:   sec,
 		lastCronExecTime: utils.GetCurrentTime(),
-		cronFrequency:    config.DiceConfig.Performance.ShardCronFrequency,
+		cronFrequency:    config.ShardCronFrequency,
 	}
 }
 
@@ -142,7 +142,7 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if !config.DiceConfig.Persistence.Enabled || !config.DiceConfig.Persistence.WriteAOFOnCleanup {
+	if !config.Config.EnableWAL {
 		return
 	}
 }

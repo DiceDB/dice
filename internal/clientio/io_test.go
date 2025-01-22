@@ -121,7 +121,7 @@ func TestDecodeOneEmptyMessage(t *testing.T) {
 }
 
 func TestDecodeOneHighVolumeData(t *testing.T) {
-	largeString := bytes.Repeat([]byte("a"), 10*config.DiceConfig.Network.IOBufferLength)
+	largeString := bytes.Repeat([]byte("a"), 10*config.IOBufferLength)
 	mockRW := &MockReadWriter{
 		ReadChunks: [][]byte{
 			[]byte("$" + strconv.Itoa(len(largeString)) + "\r\n"),
@@ -178,7 +178,7 @@ func TestDecodeOnePartialMessages(t *testing.T) {
 }
 
 func TestDecodeOneVeryLargeMessage(t *testing.T) {
-	largeString := bytes.Repeat([]byte("a"), 10*config.DiceConfig.Network.IOBufferLength)
+	largeString := bytes.Repeat([]byte("a"), 10*config.IOBufferLength)
 	mockRW := &MockReadWriter{
 		ReadChunks: [][]byte{
 			[]byte("$" + strconv.Itoa(len(largeString)) + "\r\n"),

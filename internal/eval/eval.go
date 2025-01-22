@@ -117,11 +117,11 @@ func evalECHO(args []string, store *dstore.Store) []byte {
 func EvalAUTH(args []string, c *comm.Client) []byte {
 	var err error
 
-	if config.DiceConfig.Auth.Password == "" {
+	if config.Config.Password == "" {
 		return diceerrors.NewErrWithMessage("AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?")
 	}
 
-	username := config.DiceConfig.Auth.UserName
+	username := config.Config.Username
 	var password string
 
 	if len(args) == 1 {
@@ -144,7 +144,7 @@ func evalHELLO(args []string, store *dstore.Store) []byte {
 	}
 
 	var resp []interface{}
-	serverID = fmt.Sprintf("%s:%d", config.DiceConfig.RespServer.Addr, config.DiceConfig.RespServer.Port)
+	serverID = fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port)
 	resp = append(resp,
 		"proto", 2,
 		"id", serverID,
