@@ -25,15 +25,6 @@ func printConfiguration() {
 	// Add the port number on which DiceDB is running
 	slog.Info("running with", slog.Int("port", config.DiceConfig.RespServer.Port))
 
-	//	 HTTP and WebSocket server configuration
-	if config.DiceConfig.HTTP.Enabled {
-		slog.Info("running with", slog.Int("http-port", config.DiceConfig.HTTP.Port))
-	}
-
-	if config.DiceConfig.WebSocket.Enabled {
-		slog.Info("running with", slog.Int("websocket-port", config.DiceConfig.WebSocket.Port))
-	}
-
 	// Add the number of CPU cores available on the machine
 	slog.Info("running with", slog.Int("cores", runtime.NumCPU()))
 
@@ -73,11 +64,7 @@ func Execute() {
 
 	flag.IntVar(&flagsConfig.RespServer.Port, "port", 7379, "port for the DiceDB server")
 
-	flag.IntVar(&flagsConfig.HTTP.Port, "http-port", 8082, "port for accepting requets over HTTP")
-	flag.BoolVar(&flagsConfig.HTTP.Enabled, "enable-http", false, "enable DiceDB to listen, accept, and process HTTP")
-
-	flag.IntVar(&flagsConfig.WebSocket.Port, "websocket-port", 8379, "port for accepting requets over WebSocket")
-	flag.BoolVar(&flagsConfig.WebSocket.Enabled, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
+	flag.BoolVar(&tempBool, "enable-websocket", false, "enable DiceDB to listen, accept, and process WebSocket")
 
 	flag.IntVar(&tempInt, "num-shards", -1, "number shards to create. defaults to number of cores")
 
@@ -137,14 +124,13 @@ func Execute() {
 	}
 
 	flag.Parse()
-	defaultConfig(&flagsConfig)
+	defaultConfig()
 }
 
-func defaultConfig(flags *config.Config) {
+func defaultConfig() {
 	if err := config.CreateConfigFile(filepath.Join(config.DefaultConfigDir, config.DefaultConfigName)); err != nil {
 		log.Fatal(err)
 	}
 
-	config.MergeFlags(flags)
 	render()
 }

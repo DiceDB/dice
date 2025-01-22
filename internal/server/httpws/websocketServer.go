@@ -135,7 +135,7 @@ func (s *WebsocketServer) WebsocketHandler(w http.ResponseWriter, r *http.Reques
 		conn.Close()
 	}()
 
-	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
+	maxRetries := config.WebSocketMaxWriteResponseRetries
 	for {
 		// read incoming message
 		_, msg, err := conn.ReadMessage()
@@ -224,7 +224,7 @@ func (s *WebsocketServer) processQwatchUpdates(clientIdentifierID uint32, conn *
 func (s *WebsocketServer) processQwatchResponse(conn *websocket.Conn, response interface{}) error {
 	var result interface{}
 	var err error
-	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
+	maxRetries := config.WebSocketMaxWriteResponseRetries
 
 	// check response type
 	switch resp := response.(type) {
@@ -270,7 +270,7 @@ func (s *WebsocketServer) processQwatchResponse(conn *websocket.Conn, response i
 
 	// success
 	// Write response with retries for transient errors
-	if err := WriteResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
+	if err := WriteResponseWithRetries(conn, respBytes, config.WebSocketMaxWriteResponseRetries); err != nil {
 		slog.Debug(fmt.Sprintf("Error writing message: %v", err))
 		return fmt.Errorf("error writing response: %v", err)
 	}
@@ -280,7 +280,7 @@ func (s *WebsocketServer) processQwatchResponse(conn *websocket.Conn, response i
 
 func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.DiceDBCmd, response *ops.StoreResponse) error {
 	var err error
-	maxRetries := config.DiceConfig.WebSocket.MaxWriteResponseRetries
+	maxRetries := config.WebSocketMaxWriteResponseRetries
 
 	var responseValue interface{}
 	// Check if the command is migrated, if it is we use EvalResponse values
@@ -319,7 +319,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 
 	// success
 	// Write response with retries for transient errors
-	if err := WriteResponseWithRetries(conn, respBytes, config.DiceConfig.WebSocket.MaxWriteResponseRetries); err != nil {
+	if err := WriteResponseWithRetries(conn, respBytes, config.WebSocketMaxWriteResponseRetries); err != nil {
 		slog.Debug(fmt.Sprintf("Error writing message: %v", err))
 		return fmt.Errorf("error writing response: %v", err)
 	}
@@ -330,7 +330,7 @@ func (s *WebsocketServer) processResponse(conn *websocket.Conn, diceDBCmd *cmd.D
 func WriteResponseWithRetries(conn *websocket.Conn, text []byte, maxRetries int) error {
 	for attempts := 0; attempts < maxRetries; attempts++ {
 		// Set a write deadline
-		if err := conn.SetWriteDeadline(time.Now().Add(config.DiceConfig.WebSocket.WriteResponseTimeout)); err != nil {
+		if err := conn.SetWriteDeadline(time.Now().Add(config.WebSocketWriteResponseTimeout)); err != nil {
 			slog.Error(fmt.Sprintf("Error setting write deadline: %v", err))
 			return err
 		}

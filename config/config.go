@@ -4,7 +4,6 @@
 package config
 
 import (
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -37,8 +36,6 @@ type Config struct {
 	Version    string     `config:"version" default:"0.1.0"`
 	InstanceID string     `config:"instance_id"`
 	RespServer respServer `config:"async_server"`
-	HTTP       http       `config:"http"`
-	WebSocket  websocket  `config:"websocket"`
 	WAL        WALConfig  `config:"WAL"`
 }
 
@@ -48,18 +45,6 @@ type respServer struct {
 	KeepAlive int32  `config:"keepalive" default:"300"`
 	Timeout   int32  `config:"timeout" default:"300"`
 	MaxConn   int32  `config:"max_conn" default:"0"`
-}
-
-type http struct {
-	Enabled bool `config:"enabled" default:"true"`
-	Port    int  `config:"port" default:"8082" validate:"number,gte=0,lte=65535"`
-}
-
-type websocket struct {
-	Enabled                 bool          `config:"enabled" default:"true"`
-	Port                    int           `config:"port" default:"8379" validate:"number,gte=0,lte=65535"`
-	MaxWriteResponseRetries int           `config:"max_write_response_retries" default:"3" validate:"min=0"`
-	WriteResponseTimeout    time.Duration `config:"write_response_timeout" default:"10s"`
 }
 
 type WALConfig struct {
@@ -142,27 +127,6 @@ func loadDiceConfig(configFilePath string) error {
 	}
 
 	return parser.Loadconfig(DiceConfig)
-}
-
-func MergeFlags(flags *Config) {
-	flagset := flag.CommandLine
-	flagset.Visit(func(f *flag.Flag) {
-		// updating values for flags that were explicitly set by the user
-		switch f.Name {
-		case "host":
-			DiceConfig.RespServer.Addr = flags.RespServer.Addr
-		case "port":
-			DiceConfig.RespServer.Port = flags.RespServer.Port
-		case "enable-http":
-			DiceConfig.HTTP.Enabled = flags.HTTP.Enabled
-		case "http-port":
-			DiceConfig.HTTP.Port = flags.HTTP.Port
-		case "enable-websocket":
-			DiceConfig.WebSocket.Enabled = flags.WebSocket.Enabled
-		case "websocket-port":
-			DiceConfig.WebSocket.Port = flags.WebSocket.Port
-		}
-	})
 }
 
 type DiceDBConfig struct {

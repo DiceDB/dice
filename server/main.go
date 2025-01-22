@@ -150,14 +150,14 @@ func Start() {
 	serverWg.Add(1)
 	go runServer(ctx, &serverWg, respServer, serverErrCh)
 
-	if config.DiceConfig.HTTP.Enabled {
+	if false {
 		httpServer := httpws.NewHTTPServer(shardManager, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, httpServer, serverErrCh)
 	}
 
-	if config.DiceConfig.WebSocket.Enabled {
-		websocketServer := httpws.NewWebSocketServer(shardManager, config.DiceConfig.WebSocket.Port, wl)
+	if false {
+		websocketServer := httpws.NewWebSocketServer(shardManager, 7380, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
 	}

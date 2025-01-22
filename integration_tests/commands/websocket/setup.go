@@ -113,7 +113,6 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	// Initialize WebsocketServer
 	globalErrChannel := make(chan error)
 	shardManager := shard.NewShardManager(1, nil, globalErrChannel)
-	config.DiceConfig.WebSocket.Port = opt.Port
 	testServer := httpws.NewWebSocketServer(shardManager, testPort1, nil)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 

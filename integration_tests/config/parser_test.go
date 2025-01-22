@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/dicedb/dice/config"
 )
@@ -46,10 +45,8 @@ type http struct {
 }
 
 type websocket struct {
-	Enabled                 bool          `config:"enabled" default:"true"`
-	Port                    int           `config:"port" default:"8379" validate:"min=1024,max=65535"`
-	MaxWriteResponseRetries int           `config:"max_write_response_retries" default:"3" validate:"min=0"`
-	WriteResponseTimeout    time.Duration `config:"write_response_timeout" default:"10s"`
+	Enabled bool `config:"enabled" default:"true"`
+	Port    int  `config:"port" default:"8379" validate:"min=1024,max=65535"`
 }
 
 type performance struct {
