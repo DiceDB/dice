@@ -14,11 +14,13 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/dicedb/dice/internal/auth"
+	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/httpws"
 
@@ -90,21 +92,14 @@ func Start() {
 
 	wl, _ = wal.NewNullWAL()
 	if config.Config.EnableWAL {
-		if config.Config.WALEngine == "aof" {
-			_wl, err := wal.NewAOFWAL(config.Config.WALDir)
-			if err != nil {
-				slog.Warn("could not create WAL with", slog.String("wal-engine", config.Config.WALEngine), slog.Any("error", err))
-				sigs <- syscall.SIGKILL
-				cancel()
-				return
-			}
-			wl = _wl
-		} else {
-			slog.Error("unsupported WAL engine", slog.String("engine", config.Config.WALEngine))
+		_wl, err := wal.NewAOFWAL(config.Config.WALDir)
+		if err != nil {
+			slog.Warn("could not create WAL at", slog.String("wal-dir", config.Config.WALDir), slog.Any("error", err))
 			sigs <- syscall.SIGKILL
 			cancel()
 			return
 		}
+		wl = _wl
 
 		if err := wl.Init(time.Now()); err != nil {
 			slog.Error("could not initialize WAL", slog.Any("error", err))
@@ -113,12 +108,6 @@ func Start() {
 		}
 
 		slog.Debug("WAL initialization complete")
-
-		if config.Config.EnableWAL {
-			slog.Info("initializing wal restoration. this may take a while...")
-			wal.ReplayWAL(wl)
-			slog.Info("in-memory state restored. process complete")
-		}
 	}
 
 	if config.Config.EnableWatch {
@@ -180,6 +169,34 @@ func Start() {
 		websocketServer := httpws.NewWebSocketServer(shardManager, 7380, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
+	}
+
+	// Recovery from WAL logs
+	if config.Config.WALRecovery {
+		slog.Info("restoring database from WAL")
+		replayHandler, err := commandhandler.GetWALReplayHandler(shardManager)
+		if err != nil {
+			slog.Error("error getting WAL replay handler", slog.Any("error", err))
+			sigs <- syscall.SIGKILL
+			cancel()
+			return
+		}
+		callback := func(entry *wal.WALEntry) error {
+			command := strings.Split(string(entry.Data), " ")
+			cmdTemp := cmd.DiceDBCmd{
+				Cmd:  command[0],
+				Args: command[1:],
+			}
+			_, err := replayHandler.ExecuteCommand(context.Background(), &cmdTemp, false)
+			if err != nil {
+				return fmt.Errorf("error handling WAL replay: %w", err)
+			}
+			return nil
+		}
+		if err := wl.ReplayWAL(callback); err != nil {
+			slog.Error("error restoring from WAL", slog.Any("error", err))
+		}
+		slog.Info("database restored from WAL")
 	}
 
 	wg.Add(1)
