@@ -72,7 +72,8 @@ func Start() {
 	// and new users in a much better way. Doing this using
 	// and empty password check is not a good solution.
 	if config.Config.Password != "" {
-		_, _ = auth.UserStore.Add(config.Config.Username)
+		user, _ := auth.UserStore.Add(config.Config.Username)
+		_ = user.SetPassword(config.Config.Password)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
