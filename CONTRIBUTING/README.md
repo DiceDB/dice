@@ -30,7 +30,8 @@ Make the necessary changes. If the changes you plan to make are too big, make su
 
 Follow the best practices when you are making changes.
 
-- [Logging Best Practices](logging.md)
+- [Logging best practices](logging.md)
+- [Golang best practices](go.md)
 
 ### Code documentation
 
