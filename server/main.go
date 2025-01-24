@@ -172,9 +172,10 @@ func Start() {
 	}
 
 	// Recovery from WAL logs
-	if config.Config.WALRecovery {
+	if config.Config.EnableWAL {
 		slog.Info("restoring database from WAL")
-		replayHandler, err := commandhandler.GetWALReplayHandler(shardManager)
+		replayHandler, err := commandhandler.NewWALReplayHandler(ctx, shardManager)
+
 		if err != nil {
 			slog.Error("error getting WAL replay handler", slog.Any("error", err))
 			sigs <- syscall.SIGKILL
@@ -193,7 +194,7 @@ func Start() {
 			}
 			return nil
 		}
-		if err := wl.ReplayWAL(callback); err != nil {
+		if err := wl.Replay(callback); err != nil {
 			slog.Error("error restoring from WAL", slog.Any("error", err))
 		}
 		slog.Info("database restored from WAL")

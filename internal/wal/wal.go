@@ -13,7 +13,7 @@ type AbstractWAL interface {
 	LogCommand([]byte) error
 	Close() error
 	Init(t time.Time) error
-	ReplayWAL(c func(*WALEntry) error) error
+	Replay(c func(*WALEntry) error) error
 	ForEachCommand(e *WALEntry, c func(*WALEntry) error) error
 }
 

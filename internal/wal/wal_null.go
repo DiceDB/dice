@@ -31,6 +31,6 @@ func (w *WALNull) ForEachCommand(entry *WALEntry, callback func(*WALEntry) error
 	return nil
 }
 
-func (w *WALNull) ReplayWAL(callback func(*WALEntry) error) error {
+func (w *WALNull) Replay(callback func(*WALEntry) error) error {
 	return nil
 }

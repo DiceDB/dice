@@ -28,8 +28,7 @@ type DiceDBConfig struct {
 	NumShards   int  `mapstructure:"num-shards" default:"-1" description:"number of shards to create. defaults to number of cores"`
 
 	EnableWAL                         bool   `mapstructure:"enable-wal" default:"false" description:"enable write-ahead logging"`
-	WALEngine                         string `mapstructure:"wal-engine" default:"aof" description:"wal engine to use, values: sqlite, aof"`
-	WALDir                            string `mapstructure:"wal-dir" default:"/var/log/dicedb" description:"the directory to store WAL segments"`
+	WALDir                            string `mapstructure:"wal-dir" default:"/var/logdicedb" description:"the directory to store WAL segments"`
 	WALMode                           string `mapstructure:"wal-mode" default:"buffered" description:"wal mode to use, values: buffered, unbuffered"`
 	WALWriteMode                      string `mapstructure:"wal-write-mode" default:"default" description:"wal file write mode to use, values: default, fsync"`
 	WALBufferSizeMB                   int    `mapstructure:"wal-buffer-size-mb" default:"1" description:"the size of the wal write buffer in megabytes"`
@@ -40,7 +39,6 @@ type DiceDBConfig struct {
 	WALRetentionMode                  string `mapstructure:"wal-retention-mode" default:"num-segments" description:"the new horizon for wal segment post cleanup. values: num-segments, time, checkpoint"`
 	WALMaxSegmentCount                int    `mapstructure:"wal-max-segment-count" default:"10" description:"the maximum number of segments to retain, if the retention mode is 'num-segments'"`
 	WALMaxSegmentRetentionDurationSec int    `mapstructure:"wal-max-segment-retention-duration-sec" default:"600" description:"the maximum duration (in seconds) for wal segments retention"`
-	WALRecovery                       bool   `mapstructure:"wal-recovery" default:"true" description:"enable recovery from wal"`
 	WALRecoveryMode                   string `mapstructure:"wal-recovery-mode" default:"strict" description:"wal recovery mode in case of a corruption, values: strict, truncate, ignore"`
 }
 

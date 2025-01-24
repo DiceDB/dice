@@ -568,7 +568,7 @@ func (h *BaseCommandHandler) RespAuth(args []string) interface{} {
 	return clientio.OK
 }
 
-func GetWALReplayHandler(shardManager *shard.ShardManager) (*BaseCommandHandler, error) {
+func NewWALReplayHandler(ctx context.Context, shardManager *shard.ShardManager) (*BaseCommandHandler, error) {
 	// Create channels for the replay handler
 	responseChan := make(chan *ops.StoreResponse)
 	preprocessingChan := make(chan *ops.StoreResponse)
@@ -594,16 +594,6 @@ func GetWALReplayHandler(shardManager *shard.ShardManager) (*BaseCommandHandler,
 		true, // isReplayHandler
 	)
 
-	// Register the command handler with the shard manager
 	shardManager.RegisterCommandHandler(replayHandler.ID(), responseChan, preprocessingChan)
-
-	// Start the command handler in a background goroutine
-	ctx := context.Background()
-	go func() {
-		if err := replayHandler.Start(ctx); err != nil {
-			slog.Error("WAL replay handler failed", slog.Any("error", err))
-		}
-	}()
-
 	return replayHandler, nil
 }

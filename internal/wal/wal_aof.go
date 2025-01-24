@@ -258,13 +258,12 @@ func (wal *AOF) keepSyncingBuffer() {
 	for {
 		select {
 		case <-wal.bufferSyncTicker.C:
-
 			wal.mu.Lock()
 			err := wal.Sync()
 			wal.mu.Unlock()
 
 			if err != nil {
-				log.Printf("Error while performing sync: %v", err)
+				slog.Error("failed to sync buffer", slog.String("error", err.Error()))
 			}
 
 		case <-wal.ctx.Done():
@@ -277,12 +276,11 @@ func (wal *AOF) rotateSegmentPeriodically() {
 	for {
 		select {
 		case <-wal.segmentRotationTicker.C:
-
 			wal.mu.Lock()
 			err := wal.rotateLog()
 			wal.mu.Unlock()
 			if err != nil {
-				log.Printf("Error while performing sync: %v", err)
+				slog.Error("failed to rotate segment", slog.String("error", err.Error()))
 			}
 
 		case <-wal.ctx.Done():
@@ -295,12 +293,11 @@ func (wal *AOF) deleteSegmentPeriodically() {
 	for {
 		select {
 		case <-wal.segmentRetentionTicker.C:
-
 			wal.mu.Lock()
 			err := wal.deleteOldestSegment()
 			wal.mu.Unlock()
 			if err != nil {
-				log.Printf("Error while deleting segment: %v", err)
+				slog.Error("failed to delete segment", slog.String("error", err.Error()))
 			}
 		case <-wal.ctx.Done():
 			return
@@ -308,7 +305,7 @@ func (wal *AOF) deleteSegmentPeriodically() {
 	}
 }
 
-func (wal *AOF) getSegmentFiles() ([]string, error) {
+func (wal *AOF) segmentFiles() ([]string, error) {
 	// Get all segment files matching the pattern
 	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"+segmentSuffix))
 	if err != nil {
@@ -328,18 +325,18 @@ func (wal *AOF) getSegmentFiles() ([]string, error) {
 	return files, nil
 }
 
-func (wal *AOF) ReplayWAL(callback func(*WALEntry) error) error {
+func (wal *AOF) Replay(callback func(*WALEntry) error) error {
 	// Get list of segment files sorted by timestamp
-	segments, err := wal.getSegmentFiles()
+	segments, err := wal.segmentFiles()
 	if err != nil {
-		return fmt.Errorf("error getting segment files: %w", err)
+		return fmt.Errorf("error getting wal-segment files: %w", err)
 	}
 
 	// Process each segment file in order
 	for _, segment := range segments {
 		file, err := os.Open(segment)
 		if err != nil {
-			return fmt.Errorf("error opening segment file %s: %w", segment, err)
+			return fmt.Errorf("error opening wal-segment file %s: %w", segment, err)
 		}
 
 		reader := bufio.NewReader(file)
@@ -351,14 +348,14 @@ func (wal *AOF) ReplayWAL(callback func(*WALEntry) error) error {
 					break
 				}
 				file.Close()
-				return fmt.Errorf("error reading entry size: %w", err)
+				return fmt.Errorf("error reading wal entry size: %w", err)
 			}
 
 			// Read entry data
 			entryData := make([]byte, entrySize)
 			if _, err := io.ReadFull(reader, entryData); err != nil {
 				file.Close()
-				return fmt.Errorf("error reading entry data: %w", err)
+				return fmt.Errorf("error reading wal entry data: %w", err)
 			}
 
 			// Unmarshal entry
@@ -381,7 +378,7 @@ func (wal *AOF) ForEachCommand(entry *WALEntry, callback func(*WALEntry) error) 
 	// Validate CRC
 	expectedCRC := crc32.ChecksumIEEE(append(entry.Data, byte(entry.LogSequenceNumber)))
 	if entry.Crc32 != expectedCRC {
-		return fmt.Errorf("CRC mismatch for log sequence %d: expected %d, got %d",
+		return fmt.Errorf("checksum mismatch for log sequence %d: expected %d, got %d",
 			entry.LogSequenceNumber, expectedCRC, entry.Crc32)
 	}
 
