@@ -44,7 +44,6 @@ type BaseCommandHandler struct {
 	id     string
 	parser requestparser.Parser
 	wl     wal.AbstractWAL
-	replay bool
 
 	shardManager             *shard.ShardManager
 	Session                  *auth.Session
@@ -164,7 +163,7 @@ func (h *BaseCommandHandler) executeCommandHandler(execCtx context.Context, gec 
 	return resp, err
 }
 
-func (h *BaseCommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchNotification bool, shouldLog bool) (interface{}, error) {
+func (h *BaseCommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchNotification, shouldLog bool) (interface{}, error) {
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
 	cmdList := make([]*cmd.DiceDBCmd, 0)
@@ -589,7 +588,7 @@ func NewWALReplayHandler(ctx context.Context, shardManager *shard.ShardManager) 
 		ioThreadReadChan,
 		ioThreadWriteChan,
 		ioThreadErrChan,
-		nil,  // No WAL needed for replay handler
+		nil, // No WAL needed for replay handler
 	)
 
 	shardManager.RegisterCommandHandler(replayHandler.ID(), responseChan, preprocessingChan)
