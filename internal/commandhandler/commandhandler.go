@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -92,8 +93,8 @@ func (h *BaseCommandHandler) Start(ctx context.Context) error {
 		case err := <-h.ioThreadErrChan:
 			return err
 		case cmdReq := <-h.adhocReqChan:
-			resp, err := h.handleCmdRequestWithTimeout(ctx, errChan, []*cmd.DiceDBCmd{cmdReq}, true, defaultRequestTimeout)
-			h.sendResponseToIOThread(resp, err)
+			resp, err := h.handleCmdRequestWithTimeout(ctx, errChan, cmdReq, true, defaultRequestTimeout)
+			h.sendResponseToIOThread([]interface{}{resp}, []error{err})
 		case err := <-errChan:
 			return h.handleError(err)
 		case data := <-h.ioThreadReadChan:
@@ -104,26 +105,57 @@ func (h *BaseCommandHandler) Start(ctx context.Context) error {
 }
 
 // processCommand processes commands recevied from io thread
-func (h *BaseCommandHandler) processCommand(ctx context.Context, data *[]byte, gec chan error) (interface{}, error) {
+func (h *BaseCommandHandler) processCommand(ctx context.Context, data *[]byte, gec chan error) ([]interface{}, []error) {
 	commands, err := h.parser.Parse(*data)
 
 	if err != nil {
 		slog.Debug("error parsing commands from io thread", slog.String("id", h.id), slog.Any("error", err))
-		return nil, err
+		return nil, []error{err}
 	}
 
 	if len(commands) == 0 {
 		slog.Debug("invalid request from io thread with zero length", slog.String("id", h.id))
-		return nil, fmt.Errorf("ERR: Invalid request")
+		return nil, []error{fmt.Errorf("ERR: Invalid request")}
 	}
 
 	// DiceDB supports clients to send only one request at a time
 	// We also need to ensure that the client is blocked until the response is received
 	if len(commands) > 1 {
-		return nil, fmt.Errorf("ERR: Multiple commands not supported")
+		return commandParallelExecution(ctx, gec, commands, h)
 	}
 
-	err = h.isAuthenticated(commands[0])
+	resp, err := h.authenticateAndHandkeCmdRequest(ctx, gec, commands[0])
+
+	return []interface{}{resp}, []error{err}
+}
+
+func commandParallelExecution(ctx context.Context, gec chan error, commands []*cmd.DiceDBCmd, h *BaseCommandHandler) ([]interface{}, []error) {
+	results := make([]interface{}, len(commands))
+	var errs []error
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	for i, command := range commands {
+		wg.Add(1)
+		go func(i int, command *cmd.DiceDBCmd) {
+			defer wg.Done()
+			resp, err := h.authenticateAndHandkeCmdRequest(ctx, gec, command)
+			mu.Lock()
+			results[i] = resp
+			if err != nil {
+				errs = append(errs, err)
+			}
+			mu.Unlock()
+		}(i, command)
+	}
+
+	wg.Wait()
+
+	return results, errs
+}
+
+func (h *BaseCommandHandler) authenticateAndHandkeCmdRequest(ctx context.Context, gec chan error, commands *cmd.DiceDBCmd) (interface{}, error) {
+	err := h.isAuthenticated(commands)
 	if err != nil {
 		slog.Debug("command handler authentication failed", slog.String("id", h.id), slog.Any("error", err))
 		return nil, err
@@ -132,23 +164,23 @@ func (h *BaseCommandHandler) processCommand(ctx context.Context, data *[]byte, g
 	return h.handleCmdRequestWithTimeout(ctx, gec, commands, false, defaultRequestTimeout)
 }
 
-func (h *BaseCommandHandler) handleCmdRequestWithTimeout(ctx context.Context, gec chan error, commands []*cmd.DiceDBCmd, isWatchNotification bool, timeout time.Duration) (interface{}, error) {
+func (h *BaseCommandHandler) handleCmdRequestWithTimeout(ctx context.Context, gec chan error, command *cmd.DiceDBCmd, isWatchNotification bool, timeout time.Duration) (interface{}, error) {
 	execCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	return h.executeCommandHandler(execCtx, gec, commands, isWatchNotification)
+	return h.executeCommandHandler(execCtx, gec, command, isWatchNotification)
 }
 
-func (h *BaseCommandHandler) executeCommandHandler(execCtx context.Context, gec chan error, commands []*cmd.DiceDBCmd, isWatchNotification bool) (interface{}, error) {
+func (h *BaseCommandHandler) executeCommandHandler(execCtx context.Context, gec chan error, command *cmd.DiceDBCmd, isWatchNotification bool) (interface{}, error) {
 	// Retrieve metadata for the command to determine if multisharding is supported.
-	meta, ok := CommandsMeta[commands[0].Cmd]
+	meta, ok := CommandsMeta[command.Cmd]
 	if ok && meta.preProcessing {
-		if err := meta.preProcessResponse(h, commands[0]); err != nil {
+		if err := meta.preProcessResponse(h, command); err != nil {
 			slog.Debug("error pre processing response", slog.String("id", h.id), slog.Any("error", err))
 			return nil, err
 		}
 	}
 
-	resp, err := h.executeCommand(execCtx, commands[0], isWatchNotification)
+	resp, err := h.executeCommand(execCtx, command, isWatchNotification)
 
 	// log error and send to global error channel if it's a connection error
 	if err != nil {
@@ -492,16 +524,18 @@ func (h *BaseCommandHandler) handleError(err error) error {
 	return fmt.Errorf("error writing response: %v", err)
 }
 
-func (h *BaseCommandHandler) sendResponseToIOThread(resp interface{}, err error) {
-	if err != nil {
-		var customErr *diceerrors.PreProcessError
-		if errors.As(err, &customErr) {
-			h.ioThreadWriteChan <- customErr.Result
+func (h *BaseCommandHandler) sendResponseToIOThread(resp []interface{}, err []error) {
+	for i := 0; i < len(resp); i++ {
+		if err[i] != nil {
+			var customErr *diceerrors.PreProcessError
+			if errors.As(err[i], &customErr) {
+				h.ioThreadWriteChan <- customErr.Result
+			}
+			h.ioThreadWriteChan <- err[i]
+			continue
 		}
-		h.ioThreadWriteChan <- err
-		return
+		h.ioThreadWriteChan <- resp[i]
 	}
-	h.ioThreadWriteChan <- resp
 }
 
 func (h *BaseCommandHandler) isAuthenticated(c *cmd.DiceDBCmd) error {
