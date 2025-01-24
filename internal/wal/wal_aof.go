@@ -79,13 +79,13 @@ func (wal *AOF) Init(t time.Time) error {
 
 	// Create the directory if it doesn't exist
 	if err := os.MkdirAll(wal.logDir, 0755); err != nil {
-		return nil
+		return err
 	}
 
 	// Get the list of log segment files in the directory
 	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"))
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if len(files) > 0 {
@@ -279,7 +279,7 @@ func (wal *AOF) rotateSegmentPeriodically() {
 			err := wal.rotateLog()
 			wal.mu.Unlock()
 			if err != nil {
-				log.Printf("Error while performing sync: %v", err)
+				log.Printf("Error while rotating segment periodically: %v", err)
 			}
 
 		case <-wal.ctx.Done():
