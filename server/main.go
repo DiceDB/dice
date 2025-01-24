@@ -188,7 +188,7 @@ func Start() {
 				Cmd:  command[0],
 				Args: command[1:],
 			}
-			_, err := replayHandler.ExecuteCommand(context.Background(), &cmdTemp, false)
+			_, err := replayHandler.ExecuteCommand(context.Background(), &cmdTemp, false, false)
 			if err != nil {
 				return fmt.Errorf("error handling WAL replay: %w", err)
 			}

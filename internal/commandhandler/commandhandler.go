@@ -62,7 +62,7 @@ func NewCommandHandler(id string, responseChan, preprocessingChan chan *ops.Stor
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription,
 	parser requestparser.Parser, shardManager *shard.ShardManager, gec chan error,
 	ioThreadReadChan chan []byte, ioThreadWriteChan chan interface{}, ioThreadErrChan chan error,
-	wl wal.AbstractWAL, replay bool) *BaseCommandHandler {
+	wl wal.AbstractWAL) *BaseCommandHandler {
 	return &BaseCommandHandler{
 		id:                       id,
 		parser:                   parser,
@@ -77,7 +77,6 @@ func NewCommandHandler(id string, responseChan, preprocessingChan chan *ops.Stor
 		preprocessingChan:        preprocessingChan,
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
 		wl:                       wl,
-		replay:                   replay,
 	}
 }
 
@@ -151,7 +150,7 @@ func (h *BaseCommandHandler) executeCommandHandler(execCtx context.Context, gec 
 		}
 	}
 
-	resp, err := h.ExecuteCommand(execCtx, commands[0], isWatchNotification)
+	resp, err := h.ExecuteCommand(execCtx, commands[0], isWatchNotification, true)
 
 	// log error and send to global error channel if it's a connection error
 	if err != nil {
@@ -165,7 +164,7 @@ func (h *BaseCommandHandler) executeCommandHandler(execCtx context.Context, gec 
 	return resp, err
 }
 
-func (h *BaseCommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchNotification bool) (interface{}, error) {
+func (h *BaseCommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchNotification bool, shouldLog bool) (interface{}, error) {
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
 	cmdList := make([]*cmd.DiceDBCmd, 0)
@@ -248,7 +247,7 @@ func (h *BaseCommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.
 	}
 
 	// Log command to WAL before execution if it's not a read-only command
-	if !meta.ReadOnly && h.wl != nil && !h.replay {
+	if !meta.ReadOnly && h.wl != nil && shouldLog {
 		// Convert command to bytes for WAL logging
 		cmdBytes := []byte(fmt.Sprintf("%s %s", diceDBCmd.Cmd, strings.Join(diceDBCmd.Args, " ")))
 		if err := h.wl.LogCommand(cmdBytes); err != nil {
@@ -591,7 +590,6 @@ func NewWALReplayHandler(ctx context.Context, shardManager *shard.ShardManager) 
 		ioThreadWriteChan,
 		ioThreadErrChan,
 		nil,  // No WAL needed for replay handler
-		true, // isReplayHandler
 	)
 
 	shardManager.RegisterCommandHandler(replayHandler.ID(), responseChan, preprocessingChan)
