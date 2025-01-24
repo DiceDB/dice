@@ -105,7 +105,7 @@ func (t *BaseIOThread) startInputReader(ctx context.Context, incomingDataChan ch
 }
 
 func (t *BaseIOThread) Stop() error {
-	slog.Info("Stopping io-thread", slog.String("id", t.id))
+	slog.Debug("stopping io thread", slog.String("id", t.id))
 	t.Session.Expire()
 	return nil
 }

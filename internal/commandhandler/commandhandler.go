@@ -519,7 +519,7 @@ func (h *BaseCommandHandler) isAuthenticated(c *cmd.DiceDBCmd) error {
 }
 
 func (h *BaseCommandHandler) Stop() error {
-	slog.Info("Stopping command handler", slog.String("id", h.id))
+	slog.Debug("stopping command handler", slog.String("id", h.id))
 	h.Session.Expire()
 	return nil
 }
