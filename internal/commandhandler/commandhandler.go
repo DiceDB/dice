@@ -44,7 +44,6 @@ type BaseCommandHandler struct {
 	id     string
 	parser requestparser.Parser
 	wl     wal.AbstractWAL
-	replay bool
 
 	shardManager             *shard.ShardManager
 	Session                  *auth.Session
@@ -62,7 +61,7 @@ func NewCommandHandler(id string, responseChan, preprocessingChan chan *ops.Stor
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription,
 	parser requestparser.Parser, shardManager *shard.ShardManager, gec chan error,
 	ioThreadReadChan chan []byte, ioThreadWriteChan chan interface{}, ioThreadErrChan chan error,
-	wl wal.AbstractWAL, replay bool) *BaseCommandHandler {
+	wl wal.AbstractWAL) *BaseCommandHandler {
 	return &BaseCommandHandler{
 		id:                       id,
 		parser:                   parser,
@@ -77,7 +76,6 @@ func NewCommandHandler(id string, responseChan, preprocessingChan chan *ops.Stor
 		preprocessingChan:        preprocessingChan,
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
 		wl:                       wl,
-		replay:                   replay,
 	}
 }
 
