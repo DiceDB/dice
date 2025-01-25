@@ -28,7 +28,6 @@ type DiceDBConfig struct {
 	NumShards   int  `mapstructure:"num-shards" default:"-1" description:"number of shards to create. defaults to number of cores"`
 
 	EnableWAL                         bool   `mapstructure:"enable-wal" default:"false" description:"enable write-ahead logging"`
-	WALEngine                         string `mapstructure:"wal-engine" default:"aof" description:"wal engine to use, values: sqlite, aof"`
 	WALDir                            string `mapstructure:"wal-dir" default:"/var/log/dicedb" description:"the directory to store WAL segments"`
 	WALMode                           string `mapstructure:"wal-mode" default:"buffered" description:"wal mode to use, values: buffered, unbuffered"`
 	WALWriteMode                      string `mapstructure:"wal-write-mode" default:"default" description:"wal file write mode to use, values: default, fsync"`

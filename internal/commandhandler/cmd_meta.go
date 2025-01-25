@@ -226,342 +226,456 @@ type CmdMeta struct {
 	// ensures that any required information is retrieved and processed in advance. Use this when set
 	// preProcessingReq = true.
 	preProcessResponse func(h *BaseCommandHandler, DiceDBCmd *cmd.DiceDBCmd) error
+
+	// ReadOnly indicates whether the command modifies the database state.
+	// If true, the command only reads data and doesn't need to be logged in WAL.
+	ReadOnly bool
 }
 
 var CommandsMeta = map[string]CmdMeta{
 	// Single-shard commands.
 	CmdSet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdExpire: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdExpireAt: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdExpireTime: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdGet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdGetSet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdGetEx: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdGetDel: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdSadd: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdSrem: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdScard: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdSmembers: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdHExists: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdHKeys: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdHVals: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdJSONArrAppend: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdJSONArrInsert: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdJSONArrTrim: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdJSONArrLen: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdJSONArrPop: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdJSONClear: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdJSONSet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdJSONObjKeys: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdJSONDel: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdDel: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdExists: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdPersist: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdTypeOf: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdJSONForget: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdJSONGet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdJSONStrlen: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdJSONObjlen: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdJSONNumIncrBY: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdJSONNumMultBy: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdJSONType: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdJSONToggle: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdJSONDebug: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdJSONResp: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdGetRange: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdPFAdd: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdPFCount: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdTTL: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdPTTL: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdHLen: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdHStrLen: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdHScan: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdHIncrBy: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdHIncrByFloat: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdHRandField: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdSetBit: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdGetBit: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdBitCount: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdBitField: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdBitPos: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdBitFieldRO: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdLrange: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdLinsert: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdLPush: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdRPush: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdLPop: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdRPop: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdLLEN: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCMSQuery: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCMSInfo: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCMSIncrBy: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdCMSInitByDim: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdCMSInitByProb: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdCMSMerge: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdHSet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdHGet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdHSetnx: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdHDel: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdHMSet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdHMGet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	// Sorted set commands
 	CmdZAdd: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdZCount: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdZRank: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdZRange: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdZCard: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdZRem: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdAppend: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdIncr: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdIncrBy: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdDecr: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdDecrBy: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdIncrByFloat: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdZPopMin: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdZPopMax: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	// Bloom Filter
 	CmdBFAdd: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdBFInfo: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdBFExists: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdBFReserve: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdDump: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdRestore: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	// geoCommands
 	CmdGeoAdd: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: false,
 	},
 	CmdGeoDist: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdGeoPos: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdGeoHash: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdClient: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdLatency: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdObject: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCommand: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCommandCount: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCommandHelp: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCommandInfo: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCommandList: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCommandDocs: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCommandGetKeys: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdCommandGetKeysFlags: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 	CmdJSONArrIndex: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		ReadOnly: true,
 	},
 
 	// Multi-shard commands.
@@ -571,6 +685,7 @@ var CommandsMeta = map[string]CmdMeta{
 		preProcessResponse: preProcessRename,
 		decomposeCommand:   (*BaseCommandHandler).decomposeRename,
 		composeResponse:    composeRename,
+		ReadOnly:           false,
 	},
 
 	CmdCopy: {
@@ -579,6 +694,7 @@ var CommandsMeta = map[string]CmdMeta{
 		preProcessResponse: customProcessCopy,
 		decomposeCommand:   (*BaseCommandHandler).decomposeCopy,
 		composeResponse:    composeCopy,
+		ReadOnly:           false,
 	},
 
 	CmdPFMerge: {
@@ -587,92 +703,112 @@ var CommandsMeta = map[string]CmdMeta{
 		preProcessResponse: preProcessPFMerge,
 		decomposeCommand:   (*BaseCommandHandler).decomposePFMerge,
 		composeResponse:    composePFMerge,
+		ReadOnly:           false,
 	},
 
 	CmdMset: {
 		CmdType:          MultiShard,
 		decomposeCommand: (*BaseCommandHandler).decomposeMSet,
 		composeResponse:  composeMSet,
+		ReadOnly:         false,
 	},
 
 	CmdMget: {
 		CmdType:          MultiShard,
 		decomposeCommand: (*BaseCommandHandler).decomposeMGet,
 		composeResponse:  composeMGet,
+		ReadOnly:         true,
 	},
 
 	CmdSInter: {
 		CmdType:          MultiShard,
 		decomposeCommand: (*BaseCommandHandler).decomposeSInter,
 		composeResponse:  composeSInter,
+		ReadOnly:         true,
 	},
 
 	CmdSDiff: {
 		CmdType:          MultiShard,
 		decomposeCommand: (*BaseCommandHandler).decomposeSDiff,
 		composeResponse:  composeSDiff,
+		ReadOnly:         true,
 	},
 
 	CmdJSONMget: {
 		CmdType:          MultiShard,
 		decomposeCommand: (*BaseCommandHandler).decomposeJSONMget,
 		composeResponse:  composeJSONMget,
+		ReadOnly:         true,
 	},
 	CmdTouch: {
 		CmdType:          MultiShard,
 		decomposeCommand: (*BaseCommandHandler).decomposeTouch,
 		composeResponse:  composeTouch,
+		ReadOnly:         false,
 	},
 	CmdDBSize: {
 		CmdType:          AllShard,
 		decomposeCommand: (*BaseCommandHandler).decomposeDBSize,
 		composeResponse:  composeDBSize,
+		ReadOnly:         true,
 	},
 	CmdKeys: {
 		CmdType:          AllShard,
 		decomposeCommand: (*BaseCommandHandler).decomposeKeys,
 		composeResponse:  composeKeys,
+		ReadOnly:         true,
 	},
 	CmdFlushDB: {
 		CmdType:          AllShard,
 		decomposeCommand: (*BaseCommandHandler).decomposeFlushDB,
 		composeResponse:  composeFlushDB,
+		ReadOnly:         false,
 	},
 
 	// Custom commands.
 	CmdAbort: {
-		CmdType: Custom,
+		CmdType:  Custom,
+		ReadOnly: true,
 	},
 	CmdAuth: {
-		CmdType: Custom,
+		CmdType:  Custom,
+		ReadOnly: true,
 	},
 	CmdEcho: {
-		CmdType: Custom,
+		CmdType:  Custom,
+		ReadOnly: true,
 	},
 	CmdPing: {
-		CmdType: Custom,
+		CmdType:  Custom,
+		ReadOnly: true,
 	},
 
 	// Watch commands
 	CmdGetWatch: {
-		CmdType: Watch,
+		CmdType:  Watch,
+		ReadOnly: true,
 	},
 	CmdZRangeWatch: {
-		CmdType: Watch,
+		CmdType:  Watch,
+		ReadOnly: true,
 	},
 	CmdPFCountWatch: {
-		CmdType: Watch,
+		CmdType:  Watch,
+		ReadOnly: true,
 	},
 
 	// Unwatch commands
 	CmdGetUnWatch: {
-		CmdType: Unwatch,
+		CmdType:  Unwatch,
+		ReadOnly: true,
 	},
 	CmdZRangeUnWatch: {
-		CmdType: Unwatch,
+		CmdType:  Unwatch,
+		ReadOnly: true,
 	},
 	CmdPFCountUnWatch: {
-		CmdType: Unwatch,
+		CmdType:  Unwatch,
+		ReadOnly: true,
 	},
 }
 
