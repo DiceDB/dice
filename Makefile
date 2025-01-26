@@ -113,3 +113,6 @@ push-binary-remote:
 
 add-license-notice:
 	./add_license_notice.sh
+
+kill:
+	@lsof -t -i :7379 | xargs -r kill -9

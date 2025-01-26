@@ -21,6 +21,8 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/httpws"
+	"github.com/dicedb/dice/internal/server/ironhawk"
+	"github.com/dicedb/dice/internal/server/resp"
 
 	"github.com/dicedb/dice/internal/commandhandler"
 	"github.com/dicedb/dice/internal/server/abstractserver"
@@ -30,13 +32,13 @@ import (
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/iothread"
-	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
 func printConfiguration() {
 	slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))
+	slog.Info("running with", slog.String("engine", config.Config.Engine))
 	slog.Info("running with", slog.Int("port", config.Config.Port))
 	slog.Info("running on", slog.Int("cores", runtime.NumCPU()))
 
@@ -166,9 +168,15 @@ func Start() {
 	ioThreadManager := iothread.NewManager()
 	cmdHandlerManager := commandhandler.NewRegistry(shardManager)
 
-	respServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
-	serverWg.Add(1)
-	go runServer(ctx, &serverWg, respServer, serverErrCh)
+	if config.Config.Engine == "resp" {
+		respServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
+		serverWg.Add(1)
+		go runServer(ctx, &serverWg, respServer, serverErrCh)
+	} else if config.Config.Engine == "ironhawk" {
+		ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
+		serverWg.Add(1)
+		go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
+	}
 
 	if false {
 		httpServer := httpws.NewHTTPServer(shardManager, wl)

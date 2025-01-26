@@ -55,12 +55,12 @@ func (cmd *DiceDBCmd) GetFingerprint() uint32 {
 	return farm.Fingerprint32([]byte(cmd.Repr()))
 }
 
-// GetKey Returns the key which the command operates on.
+// Key Returns the key which the command operates on.
 //
 // TODO: This is a naive implementation which assumes that the first argument is the key.
 // This is not true for all commands, however, for now this is only used by the watch manager,
 // which as of now only supports a small subset of commands (all of which fit this implementation).
-func (cmd *DiceDBCmd) GetKey() string {
+func (cmd *DiceDBCmd) Key() string {
 	var c string
 	if len(cmd.Args) > 0 {
 		c = cmd.Args[0]
