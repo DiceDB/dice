@@ -5,10 +5,13 @@ package iohandler
 
 import (
 	"context"
+
+	"github.com/dicedb/dice/wire"
 )
 
 type IOHandler interface {
 	Read(ctx context.Context) ([]byte, error)
+	ReadSync() (*wire.Command, error)
 	Write(ctx context.Context, response interface{}) error
 	Close() error
 }

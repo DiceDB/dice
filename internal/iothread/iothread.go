@@ -5,11 +5,13 @@ package iothread
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
+	"github.com/dicedb/dice/wire"
 )
 
 // IOThread interface
@@ -82,6 +84,20 @@ func (t *BaseIOThread) Start(ctx context.Context) error {
 				slog.Int64("time_ms", time.Now().UnixMilli()))
 		}
 	}
+}
+
+func (t *BaseIOThread) StartSync(_ context.Context) error {
+	slog.Debug("starting sync io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
+	cmd, err := t.ReadCommandSync()
+	if err != nil {
+		return err
+	}
+	fmt.Println(cmd)
+	return nil
+}
+
+func (t *BaseIOThread) ReadCommandSync() (*wire.Command, error) {
+	return t.ioHandler.ReadSync()
 }
 
 // startInputReader continuously reads input data from the ioHandler and sends it to the incomingDataChan.
