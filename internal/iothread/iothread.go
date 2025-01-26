@@ -14,15 +14,7 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 )
 
-// IOThread interface
-type IOThread interface {
-	ID() string
-	Start(context.Context) error
-	Stop() error
-}
-
-type BaseIOThread struct {
-	IOThread
+type IOThread struct {
 	id                string
 	ioHandler         iohandler.IOHandler
 	Session           *auth.Session
@@ -33,8 +25,8 @@ type BaseIOThread struct {
 
 func NewIOThread(id string, ioHandler iohandler.IOHandler,
 	ioThreadReadChan chan []byte, ioThreadWriteChan chan interface{},
-	ioThreadErrChan chan error) *BaseIOThread {
-	return &BaseIOThread{
+	ioThreadErrChan chan error) *IOThread {
+	return &IOThread{
 		id:                id,
 		ioHandler:         ioHandler,
 		Session:           auth.NewSession(),
@@ -44,11 +36,11 @@ func NewIOThread(id string, ioHandler iohandler.IOHandler,
 	}
 }
 
-func (t *BaseIOThread) ID() string {
+func (t *IOThread) ID() string {
 	return t.id
 }
 
-func (t *BaseIOThread) Start(ctx context.Context) error {
+func (t *IOThread) Start(ctx context.Context) error {
 	slog.Debug("starting io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
 	// local channels to communicate between Start and startInputReader goroutine
 	incomingDataChan := make(chan []byte) // data channel
@@ -87,7 +79,7 @@ func (t *BaseIOThread) Start(ctx context.Context) error {
 	}
 }
 
-func (t *BaseIOThread) StartSync(_ context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) error {
+func (t *IOThread) StartSync(_ context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) error {
 	slog.Debug("starting sync io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
 	c, err := t.ioHandler.ReadSync()
 	if err != nil {
@@ -99,7 +91,7 @@ func (t *BaseIOThread) StartSync(_ context.Context, execute func(c *cmd.Cmd) (*c
 }
 
 // startInputReader continuously reads input data from the ioHandler and sends it to the incomingDataChan.
-func (t *BaseIOThread) startInputReader(ctx context.Context, incomingDataChan chan []byte, readErrChan chan error) {
+func (t *IOThread) startInputReader(ctx context.Context, incomingDataChan chan []byte, readErrChan chan error) {
 	defer close(incomingDataChan)
 	defer close(readErrChan)
 
@@ -121,7 +113,7 @@ func (t *BaseIOThread) startInputReader(ctx context.Context, incomingDataChan ch
 	}
 }
 
-func (t *BaseIOThread) Stop() error {
+func (t *IOThread) Stop() error {
 	slog.Debug("stopping io thread", slog.String("id", t.id))
 	t.Session.Expire()
 	return nil

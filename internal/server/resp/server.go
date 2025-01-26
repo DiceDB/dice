@@ -238,7 +238,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 	}
 }
 
-func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *iothread.BaseIOThread) {
+func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *iothread.IOThread) {
 	wg.Done()
 	defer func(wm *iothread.Manager, id string) {
 		err := wm.UnregisterIOThread(id)

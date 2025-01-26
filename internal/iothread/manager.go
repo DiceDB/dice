@@ -26,7 +26,7 @@ func NewManager() *Manager {
 	return &Manager{}
 }
 
-func (m *Manager) RegisterIOThread(ioThread IOThread) error {
+func (m *Manager) RegisterIOThread(ioThread *IOThread) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -44,17 +44,9 @@ func (m *Manager) IOThreadCount() uint32 {
 	return m.numIOThreads.Load()
 }
 
-func (m *Manager) GetIOThread(id string) (IOThread, bool) {
-	client, ok := m.connectedClients.Load(id)
-	if !ok {
-		return nil, false
-	}
-	return client.(IOThread), true
-}
-
 func (m *Manager) UnregisterIOThread(id string) error {
 	if client, loaded := m.connectedClients.LoadAndDelete(id); loaded {
-		w := client.(IOThread)
+		w := client.(*IOThread)
 		if err := w.Stop(); err != nil {
 			return err
 		}
