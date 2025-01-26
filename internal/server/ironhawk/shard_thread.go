@@ -5,14 +5,10 @@ package ironhawk
 
 import (
 	"context"
-	"log/slog"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/eval"
-	"github.com/dicedb/dice/internal/ops"
+	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -20,7 +16,6 @@ import (
 type ShardThread struct {
 	id               int           // id is the unique identifier for the shard.
 	store            *dstore.Store // store that the shard is responsible for.
-	mu               sync.RWMutex  // mu is the cmdHandlerMap's mutex for thread safety.
 	globalErrorChan  chan error    // globalErrorChan is the channel for sending system-level errors.
 	lastCronExecTime time.Time     // lastCronExecTime is the last time the shard executed cron tasks.
 	cronFrequency    time.Duration // cronFrequency is the frequency at which the shard executes cron tasks.
@@ -60,21 +55,8 @@ func (shard *ShardThread) runCronTasks() {
 }
 
 // processRequest processes a Store operation for the shard.
-func (shard *ShardThread) processRequest(op *ops.StoreOp) *eval.EvalResponse {
-	shard.mu.Lock()
-	defer shard.mu.Unlock()
-
-	e := eval.NewEval(op.Cmd, op.Client, shard.store, op.HTTPOp, op.WebsocketOp, op.PreProcessing)
-
-	start := time.Now()
-	resp := e.ExecuteCommand()
-	slog.Debug("command executed",
-		slog.Any("cmd", op.Cmd.Cmd),
-		slog.String("args", strings.Join(op.Cmd.Args, " ")),
-		slog.Int64("time_ms", time.Now().UnixMilli()),
-		slog.Any("took", time.Since(start)))
-
-	return resp
+func (shard *ShardThread) processRequest(c *cmd.Cmd) (*cmd.CmdRes, error) {
+	return cmd.Execute(c, shard.store)
 }
 
 // cleanup handles cleanup logic when the shard stops.

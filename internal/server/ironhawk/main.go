@@ -196,15 +196,13 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 
 func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *iothread.BaseIOThread) {
 	wg.Done()
-	fmt.Println("starting io thread", thread.ID())
 	defer func(wm *iothread.Manager, id string) {
 		err := wm.UnregisterIOThread(id)
 		if err != nil {
 			slog.Warn("Failed to unregister io-thread", slog.String("id", id), slog.Any("error", err))
 		}
 	}(s.ioThreadManager, thread.ID())
-	fmt.Println("starting io thread syncccc", thread.ID())
-	err := thread.StartSync(ctx)
+	err := thread.StartSync(ctx, GShardManager.Execute)
 	if err != nil {
 		slog.Debug("IOThread stopped", slog.String("id", thread.ID()), slog.Any("error", err))
 	}

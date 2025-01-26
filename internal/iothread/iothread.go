@@ -11,7 +11,7 @@ import (
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
-	"github.com/dicedb/dice/wire"
+	"github.com/dicedb/dice/internal/cmd"
 )
 
 // IOThread interface
@@ -32,7 +32,8 @@ type BaseIOThread struct {
 }
 
 func NewIOThread(id string, ioHandler iohandler.IOHandler,
-	ioThreadReadChan chan []byte, ioThreadWriteChan chan interface{}, ioThreadErrChan chan error) *BaseIOThread {
+	ioThreadReadChan chan []byte, ioThreadWriteChan chan interface{},
+	ioThreadErrChan chan error) *BaseIOThread {
 	return &BaseIOThread{
 		id:                id,
 		ioHandler:         ioHandler,
@@ -86,17 +87,18 @@ func (t *BaseIOThread) Start(ctx context.Context) error {
 	}
 }
 
-func (t *BaseIOThread) StartSync(_ context.Context) error {
+func (t *BaseIOThread) StartSync(_ context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) error {
 	slog.Debug("starting sync io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
-	cmd, err := t.ReadCommandSync()
+	c, err := t.ReadCommandSync()
 	if err != nil {
 		return err
 	}
-	fmt.Println(cmd)
+	res, err := execute(c)
+	fmt.Println(res, err)
 	return nil
 }
 
-func (t *BaseIOThread) ReadCommandSync() (*wire.Command, error) {
+func (t *BaseIOThread) ReadCommandSync() (*cmd.Cmd, error) {
 	return t.ioHandler.ReadSync()
 }
 

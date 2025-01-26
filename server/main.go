@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/auth"
+	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/httpws"
 	"github.com/dicedb/dice/internal/server/ironhawk"
@@ -38,6 +39,7 @@ import (
 
 func printConfiguration() {
 	slog.Info("starting DiceDB", slog.String("version", config.DiceDBVersion))
+	slog.Info("running with", slog.Int("total_commands", cmd.Total()))
 	slog.Info("running with", slog.String("engine", config.Config.Engine))
 	slog.Info("running with", slog.Int("port", config.Config.Port))
 	slog.Info("running on", slog.Int("cores", runtime.NumCPU()))

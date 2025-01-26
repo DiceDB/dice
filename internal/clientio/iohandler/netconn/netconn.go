@@ -19,6 +19,7 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
+	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/wire"
 	"google.golang.org/protobuf/proto"
 )
@@ -174,7 +175,7 @@ func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 }
 
 // ReadRequest reads data from the network connection
-func (h *IOHandler) ReadSync() (*wire.Command, error) {
+func (h *IOHandler) ReadSync() (*cmd.Cmd, error) {
 	var result []byte
 	buf := make([]byte, ioBufferSize)
 
@@ -209,11 +210,11 @@ func (h *IOHandler) ReadSync() (*wire.Command, error) {
 		return nil, io.EOF
 	}
 
-	cmd := &wire.Command{}
-	if err := proto.Unmarshal(result, cmd); err != nil {
+	c := &wire.Command{}
+	if err := proto.Unmarshal(result, c); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal command: %w", err)
 	}
-	return cmd, nil
+	return &cmd.Cmd{C: c}, nil
 }
 
 // handleReadError handles various read errors and returns appropriate response

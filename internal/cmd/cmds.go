@@ -4,12 +4,63 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/dgryski/go-farm"
 	"github.com/dicedb/dice/internal/object"
+	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/wire"
 )
+
+type Cmd struct {
+	C *wire.Command
+}
+
+type CmdRes struct {
+	r *wire.Response
+}
+
+type DiceDBCommand struct {
+	Name      string
+	HelpShort string
+	Eval      func(c *Cmd, s *dstore.Store) (*CmdRes, error)
+}
+
+type CmdRegistry struct {
+	cmds []*DiceDBCommand
+}
+
+func Total() int {
+	return len(commandRegistry.cmds)
+}
+
+func (r *CmdRegistry) AddCommand(cmd *DiceDBCommand) {
+	r.cmds = append(r.cmds, cmd)
+}
+
+var commandRegistry CmdRegistry = CmdRegistry{
+	cmds: []*DiceDBCommand{},
+}
+
+func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
+	for _, cmd := range commandRegistry.cmds {
+		if cmd.Name == c.C.Cmd {
+			start := time.Now()
+			resp, err := cmd.Eval(c, s)
+			slog.Debug("command executed",
+				slog.Any("cmd", c.C.Cmd),
+				slog.String("args", strings.Join(c.C.Args, " ")),
+				slog.Int64("time_ms", time.Now().UnixMilli()),
+				slog.Any("took", time.Since(start)))
+			return resp, err
+		}
+	}
+	return nil, errors.New("command not found")
+}
 
 // DiceDBCmd represents a command structure to be executed
 // within a DiceDB system. This struct emulates the way DiceDB commands

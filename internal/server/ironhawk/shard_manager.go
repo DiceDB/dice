@@ -13,8 +13,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/dicedb/dice/config"
 
-	"github.com/dicedb/dice/internal/eval"
-	"github.com/dicedb/dice/internal/ops"
+	"github.com/dicedb/dice/internal/cmd"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -26,6 +25,12 @@ type Shard struct {
 type ShardManager struct {
 	shards  []*Shard
 	sigChan chan os.Signal // sigChan is the signal channel for the shard manager
+}
+
+var GShardManager *ShardManager
+
+func init() {
+	GShardManager = NewShardManager(1, nil, nil)
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
@@ -46,9 +51,12 @@ func NewShardManager(shardCount int, cmdWatchChan chan dstore.CmdWatchEvent, glo
 }
 
 // Execute executes a command on the appropriate shard.
-func (manager *ShardManager) Execute(op *ops.StoreOp) *eval.EvalResponse {
-	shard := manager.getShardForKey(op.Cmd.Key())
-	return shard.Thread.processRequest(op)
+func (manager *ShardManager) Execute(c *cmd.Cmd) (*cmd.CmdRes, error) {
+	var shard *Shard = manager.shards[0]
+	if len(c.C.Args) > 0 {
+		shard = manager.getShardForKey(c.C.Args[0])
+	}
+	return shard.Thread.processRequest(c)
 }
 
 // Run starts the ShardManager, manages its lifecycle, and listens for errors.
