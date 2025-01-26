@@ -74,9 +74,12 @@ func (t *BaseIOThread) Start(ctx context.Context) error {
 		case resp := <-t.ioThreadWriteChan:
 			err := t.ioHandler.Write(ctx, resp)
 			if err != nil {
-				slog.Debug("Error sending response to client", slog.String("id", t.id), slog.Any("error", err))
+				slog.Debug("error while sending response to the client", slog.String("id", t.id), slog.Any("error", err))
+				continue
 			}
-			slog.Debug("wrote response to client", slog.Int64("time_ms", time.Now().UnixMilli()))
+			slog.Debug("wrote response to client",
+				slog.Any("resp", resp),
+				slog.Int64("time_ms", time.Now().UnixMilli()))
 		}
 	}
 }

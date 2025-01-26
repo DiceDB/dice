@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -125,7 +126,11 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 
 	start := time.Now()
 	resp := e.ExecuteCommand()
-	slog.Debug("command execution complete", slog.Any("cmd", op.Cmd), slog.Int64("time_ms", time.Now().UnixMilli()), slog.Any("took", time.Since(start)))
+	slog.Debug("command executed",
+		slog.Any("cmd", op.Cmd.Cmd),
+		slog.String("args", strings.Join(op.Cmd.Args, " ")),
+		slog.Int64("time_ms", time.Now().UnixMilli()),
+		slog.Any("took", time.Since(start)))
 
 	if ok {
 		sp.EvalResponse = resp

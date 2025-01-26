@@ -6,6 +6,7 @@ package watchmanager
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"sync"
 
 	"github.com/dicedb/dice/internal/cmd"
@@ -86,6 +87,11 @@ func (m *Manager) listenForEvents(ctx context.Context) {
 func (m *Manager) handleSubscription(sub WatchSubscription) {
 	fingerprint := sub.WatchCmd.GetFingerprint()
 	key := sub.WatchCmd.GetKey()
+	slog.Debug("creating a new subscription",
+		slog.String("key", key),
+		slog.String("cmd", sub.WatchCmd.Cmd),
+		slog.String("args", strings.Join(sub.WatchCmd.Args, " ")),
+		slog.Any("fingerprint", fingerprint))
 
 	// Add fingerprint to querySubscriptionMap
 	if _, exists := m.querySubscriptionMap[key]; !exists {
