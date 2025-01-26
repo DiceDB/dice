@@ -21,7 +21,7 @@ type Cmd struct {
 }
 
 type CmdRes struct {
-	r *wire.Response
+	R *wire.Response
 }
 
 type DiceDBCommand struct {

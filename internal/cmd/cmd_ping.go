@@ -22,7 +22,7 @@ func evalPING(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return nil, errors.New("invalid number of arguments in PING command")
 	}
 	if len(c.C.Args) == 0 {
-		return &CmdRes{r: &wire.Response{Msg: "PONG"}}, nil
+		return &CmdRes{R: &wire.Response{Msg: "PONG"}}, nil
 	}
-	return &CmdRes{r: &wire.Response{Msg: c.C.Args[0]}}, nil
+	return &CmdRes{R: &wire.Response{Msg: c.C.Args[0]}}, nil
 }

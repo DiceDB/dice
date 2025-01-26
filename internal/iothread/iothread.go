@@ -89,17 +89,13 @@ func (t *BaseIOThread) Start(ctx context.Context) error {
 
 func (t *BaseIOThread) StartSync(_ context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) error {
 	slog.Debug("starting sync io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
-	c, err := t.ReadCommandSync()
+	c, err := t.ioHandler.ReadSync()
 	if err != nil {
 		return err
 	}
 	res, err := execute(c)
-	fmt.Println(res, err)
+	fmt.Println(res.R.Msg, err)
 	return nil
-}
-
-func (t *BaseIOThread) ReadCommandSync() (*cmd.Cmd, error) {
-	return t.ioHandler.ReadSync()
 }
 
 // startInputReader continuously reads input data from the ioHandler and sends it to the incomingDataChan.
