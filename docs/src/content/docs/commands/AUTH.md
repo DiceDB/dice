@@ -42,7 +42,7 @@ Once authenticated, the client can execute commands on the DiceDB server that re
 
 2. `(error) NOAUTH Authentication required`: This error occurs when a client attempts to execute a command without authenticating first. The client must use the `AUTH` command to authenticate before executing any other commands.
 
-3. `(error) ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?`: This error will be raised if the DiceDB server is not configured to use a password (i.e., the `requirepass` directive in the DiceDB.conf file is empty or commented out), and a client attempts to authenticate using the `AUTH` command.
+3. `(error) ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?`: This error will be raised if the DiceDB server is not configured to use a password (i.e., the `requirepass` directive in the `dicedb.yaml` file is empty or commented out), and a client attempts to authenticate using the `AUTH` command.
 
 ## Example Usage
 
