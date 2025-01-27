@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"sync"
@@ -210,7 +211,11 @@ func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *
 	}(s.ioThreadManager, thread.ID())
 	err := thread.StartSync(ctx, GShardManager.Execute)
 	if err != nil {
-		slog.Debug("IOThread stopped", slog.String("id", thread.ID()), slog.Any("error", err))
+		if err == io.EOF {
+			slog.Debug("client disconnected. io-thread stopped", slog.String("id", thread.ID()))
+		} else {
+			slog.Debug("io-thread errored out", slog.String("id", thread.ID()), slog.Any("error", err))
+		}
 	}
 }
 

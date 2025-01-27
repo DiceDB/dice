@@ -80,19 +80,20 @@ func (t *IOThread) Start(ctx context.Context) error {
 
 func (t *IOThread) StartSync(ctx context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) error {
 	slog.Debug("starting sync io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
-	c, err := t.ioHandler.ReadSync()
-	if err != nil {
-		return err
+	for {
+		c, err := t.ioHandler.ReadSync()
+		if err != nil {
+			return err
+		}
+		res, err := execute(c)
+		if err != nil {
+			return err
+		}
+		err = t.ioHandler.WriteSync(ctx, res)
+		if err != nil {
+			return err
+		}
 	}
-	res, err := execute(c)
-	if err != nil {
-		return err
-	}
-	err = t.ioHandler.WriteSync(ctx, res)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // startInputReader continuously reads input data from the ioHandler and sends it to the incomingDataChan.
@@ -119,7 +120,6 @@ func (t *IOThread) startInputReader(ctx context.Context, incomingDataChan chan [
 }
 
 func (t *IOThread) Stop() error {
-	slog.Debug("stopping io thread", slog.String("id", t.id))
 	t.Session.Expire()
 	return nil
 }
