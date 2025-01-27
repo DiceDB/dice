@@ -23,8 +23,9 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/cmd"
+	sds "github.com/dicedb/dice/internal/datastructures/sds/eval"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -35,6 +36,14 @@ type ShardID = uint8
 type ShardError struct {
 	ShardID ShardID // ShardID is the ID of the shard that encountered the error
 	Error   error   // Error is the error that occurred
+}
+
+type Eval struct {
+	op                    *cmd.DiceDBCmd
+	store                 *dstore.Store
+	isHTTPOperation       bool
+	isWebSocketOperation  bool
+	isPreprocessOperation bool
 }
 
 // CmdHandlerChannels holds the communication channels for a Command Handler.
@@ -126,7 +135,11 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 		SeqID:     op.SeqID,
 	}
 
-	e := eval.NewEval(op.Cmd, op.Client, shard.store, op.HTTPOp, op.WebsocketOp, op.PreProcessing)
+	var e *sds.Eval
+	switch op.Cmd.DataType {
+	case "SDS":
+		e = sds.NewEval(op.Cmd, shard.store, op.HTTPOp, op.WebsocketOp, op.PreProcessing)
+	}
 
 	if op.PreProcessing {
 		resp := e.PreProcessCommand()

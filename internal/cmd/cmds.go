@@ -38,6 +38,8 @@ type DiceDBCmd struct {
 	// - "EXPIRE": To set a time-to-live for a key.
 	Cmd string
 
+	DataType string
+
 	// Args holds any additional parameters required by the command.
 	// For example:
 	// - If Cmd is "SET", Args might contain ["key", "value"].

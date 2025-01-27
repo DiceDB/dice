@@ -28,6 +28,8 @@ import (
 
 type CmdType int
 
+type DataType int
+
 const (
 	// Global represents a command that applies globally across all shards or nodes.
 	// This type of command doesn't target a specific shard but affects the entire system.
@@ -56,6 +58,10 @@ const (
 	// Unwatch represents a command that is used to stop monitoring changes or events.
 	// This type of command stops listening for changes on specific keys or resources.
 	Unwatch
+)
+
+const (
+	Sds DataType = iota
 )
 
 // Global commands
@@ -215,6 +221,7 @@ const (
 
 type CmdMeta struct {
 	CmdType
+	DataType
 	Cmd                string
 	CmdHandlerFunction func([]string) []byte
 
@@ -244,7 +251,8 @@ type CmdMeta struct {
 var CommandsMeta = map[string]CmdMeta{
 	// Single-shard commands.
 	CmdSet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		DataType: Sds,
 	},
 	CmdExpire: {
 		CmdType: SingleShard,
@@ -256,7 +264,8 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType: SingleShard,
 	},
 	CmdGet: {
-		CmdType: SingleShard,
+		CmdType:  SingleShard,
+		DataType: Sds,
 	},
 	CmdGetSet: {
 		CmdType: SingleShard,

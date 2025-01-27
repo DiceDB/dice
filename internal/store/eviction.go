@@ -19,7 +19,7 @@ package store
 import (
 	"time"
 
-	"github.com/dicedb/dice/internal/object"
+	ds "github.com/dicedb/dice/internal/datastructures"
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
@@ -40,8 +40,8 @@ func (s *EvictionStats) recordEviction(count int64) {
 
 // EvictionResult represents the outcome of an eviction operation
 type EvictionResult struct {
-	Victims map[string]*object.Obj // Keys and objects that were selected for eviction
-	Count   int64                  // Number of items selected for eviction
+	Victims map[string]ds.DSInterface // Keys and objects that were selected for eviction
+	Count   int64                     // Number of items selected for eviction
 }
 
 // AccessType represents different types of access to a key
@@ -74,7 +74,7 @@ type EvictionStrategy interface {
 
 	// OnAccess is called when an item is accessed (get/set)
 	// This allows strategies to update access patterns/statistics
-	OnAccess(key string, obj *object.Obj, accessType AccessType)
+	OnAccess(key string, obj *ds.DSInterface, accessType AccessType)
 }
 
 // BaseEvictionStrategy provides common functionality for all eviction strategies

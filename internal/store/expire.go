@@ -19,8 +19,8 @@ package store
 import (
 	"strings"
 
+	ds "github.com/dicedb/dice/internal/datastructures"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 )
 
@@ -31,7 +31,7 @@ const (
 	LT string = "LT"
 )
 
-func hasExpired(obj *object.Obj, store *Store) bool {
+func hasExpired(obj *ds.DSInterface, store *Store) bool {
 	exp, ok := store.expires.Get(obj)
 	if !ok {
 		return false
@@ -39,12 +39,12 @@ func hasExpired(obj *object.Obj, store *Store) bool {
 	return exp <= uint64(utils.GetCurrentTime().UnixMilli())
 }
 
-func GetExpiry(obj *object.Obj, store *Store) (uint64, bool) {
+func GetExpiry(obj *ds.DSInterface, store *Store) (uint64, bool) {
 	exp, ok := store.expires.Get(obj)
 	return exp, ok
 }
 
-func DelExpiry(obj *object.Obj, store *Store) {
+func DelExpiry(obj *ds.DSInterface, store *Store) {
 	store.expires.Delete(obj)
 }
 
@@ -57,9 +57,9 @@ func expireSample(store *Store) float32 {
 	var keysToDelete []string
 
 	// Collect keys to be deleted
-	store.store.All(func(keyPtr string, obj *object.Obj) bool {
+	store.store.All(func(keyPtr string, obj ds.DSInterface) bool {
 		limit--
-		if hasExpired(obj, store) {
+		if hasExpired(&obj, store) {
 			keysToDelete = append(keysToDelete, keyPtr)
 			expiredCount++
 		}
@@ -110,11 +110,11 @@ func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 	shouldSetExpiry = true
 	// if no condition exists
 	if len(subCommands) == 0 {
-		store.SetUnixTimeExpiry(obj, newExpiry)
+		store.SetUnixTimeExpiry(&obj, newExpiry)
 		return shouldSetExpiry, nil
 	}
 
-	expireTime, ok := GetExpiry(obj, store)
+	expireTime, ok := GetExpiry(&obj, store)
 	if ok {
 		prevExpiry = &expireTime
 	}
@@ -158,7 +158,7 @@ func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 	}
 
 	if shouldSetExpiry {
-		store.SetUnixTimeExpiry(obj, newExpiry)
+		store.SetUnixTimeExpiry(&obj, newExpiry)
 	}
 	return shouldSetExpiry, nil
 }

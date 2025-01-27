@@ -1,26 +1,10 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
-
 package store
 
 import (
 	"container/heap"
 	"math"
 
-	"github.com/dicedb/dice/internal/object"
+	ds "github.com/dicedb/dice/internal/datastructures"
 )
 
 // evictionItemHeap is a max-heap of evictionItems based on lastAccessed.
@@ -99,10 +83,10 @@ func (e *BatchEvictionLRU) EvictVictims(store *Store, toEvict int) {
 	h := make(evictionItemHeap, 0, toEvict)
 	heap.Init(&h)
 
-	store.GetStore().All(func(k string, obj *object.Obj) bool {
+	store.GetStore().All(func(k string, obj ds.DSInterface) bool {
 		item := evictionItem{
 			key:          k,
-			lastAccessed: obj.LastAccessedAt,
+			lastAccessed: obj.GetLastAccessedAt(),
 		}
 		if h.Len() < toEvict {
 			h.push(item)
@@ -124,6 +108,6 @@ func (e *BatchEvictionLRU) EvictVictims(store *Store, toEvict int) {
 	e.stats.recordEviction(int64(toEvict))
 }
 
-func (e *BatchEvictionLRU) OnAccess(key string, obj *object.Obj, accessType AccessType) {
+func (e *BatchEvictionLRU) OnAccess(key string, obj *ds.DSInterface, accessType AccessType) {
 	// Nothing to do for LRU batch eviction
 }

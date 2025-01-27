@@ -19,7 +19,7 @@ package ops
 import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
-	"github.com/dicedb/dice/internal/eval"
+	ds "github.com/dicedb/dice/internal/datastructures"
 )
 
 type StoreOp struct {
@@ -36,7 +36,7 @@ type StoreOp struct {
 
 // StoreResponse represents the response of a Store operation.
 type StoreResponse struct {
-	RequestID    uint32             // RequestID that this StoreResponse belongs to
-	EvalResponse *eval.EvalResponse // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
-	SeqID        uint8              // Sequence ID to maintain the order of responses, used to track the sequence in which operations are processed or received.
+	RequestID    uint32           // RequestID that this StoreResponse belongs to
+	EvalResponse *ds.EvalResponse // Result of the Store operation, for now the type is set to []byte, but this can change in the future.
+	SeqID        uint8            // Sequence ID to maintain the order of responses, used to track the sequence in which operations are processed or received.
 }

@@ -30,7 +30,6 @@ import (
 
 	"github.com/dicedb/dice/internal/commandhandler"
 
-	"github.com/dicedb/dice/internal/eval"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
 
@@ -38,6 +37,7 @@ import (
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
+	ds "github.com/dicedb/dice/internal/datastructures"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/shard"
@@ -470,7 +470,7 @@ func generateUniqueInt32(r *http.Request) uint32 {
 }
 
 // DecodeEvalResponse Helper function to decode EvalResponse based on the error or result
-func DecodeEvalResponse(evalResp *eval.EvalResponse) (interface{}, error) {
+func DecodeEvalResponse(evalResp *ds.EvalResponse) (interface{}, error) {
 	var rp *clientio.RESPParser
 
 	if evalResp.Error != nil {
