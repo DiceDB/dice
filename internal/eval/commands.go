@@ -70,6 +70,14 @@ var (
 		Arity: 1,
 	}
 
+	pingCmdMeta = DiceCmdMeta{
+		Name:  "PING",
+		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
+		Arity: -1,
+		// TODO: Move this to true once compatible with HTTP server
+		IsMigrated: false,
+		Eval:       evalPING,
+	}
 	helloCmdMeta = DiceCmdMeta{
 		Name:  "HELLO",
 		Info:  `HELLO always replies with a list of current server and connection properties, such as: versions, modules loaded, client ID, replication role and so forth`,
@@ -1431,6 +1439,7 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
+	DiceCmds["PING"] = pingCmdMeta
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta

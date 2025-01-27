@@ -83,6 +83,25 @@ func init() {
 	TxnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 }
 
+// evalPING returns with an encoded "PONG"
+// If any message is added with the ping command,
+// the message will be returned.
+func evalPING(args []string, store *dstore.Store) []byte {
+	var b []byte
+
+	if len(args) >= 2 {
+		return diceerrors.NewErrArity("PING")
+	}
+
+	if len(args) == 0 {
+		b = clientio.Encode("PONG", true)
+	} else {
+		b = clientio.Encode(args[0], false)
+	}
+
+	return b
+}
+
 // evalECHO returns the argument passed by the user
 func evalECHO(args []string, store *dstore.Store) []byte {
 	if len(args) != 1 {
