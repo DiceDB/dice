@@ -13,13 +13,13 @@ DiceDB supports 3 ways to connect to the database:
 
 ## TCP-RESP
 
-RESP is a standard protocol over TCP, developed by redis. This is the default mode of communication with dicedb and allows dice to be a drop-in replacement for Redis.
+RESP is a protocol over TCP. This is the default mode of communication with dicedb.
 
 | Name         | Value | Configuration                |
 | ------------ | ----- | ---------------------------- |
 | Default Port | 7379  | `server.port` in config file |
 
-To use Dice over TCP/RESP, you can use the official [DiceDB CLI](https://github.com/DiceDB/cli) or use any Redis CLI/SDKs for non-dice features.
+To use Dice over TCP/RESP, you can and should use the official [DiceDB CLI](https://github.com/DiceDB/cli).
 
 ## HTTP
 

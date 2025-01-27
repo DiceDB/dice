@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package comm
 
@@ -40,7 +27,7 @@ type Client struct {
 	io.ReadWriter
 	HTTPQwatchResponseChan chan QwatchResponse // Response channel to send back the operation response
 	Fd                     int
-	Cqueue                 cmd.RedisCmds
+	Cqueue                 cmd.DiceDBCmds
 	IsTxn                  bool
 	Session                *auth.Session
 	ClientIdentifierID     uint32
@@ -71,7 +58,7 @@ func NewClient(fd int) *Client {
 	cmds := make([]*cmd.DiceDBCmd, 0)
 	return &Client{
 		Fd: fd,
-		Cqueue: cmd.RedisCmds{
+		Cqueue: cmd.DiceDBCmds{
 			Cmds: cmds,
 		},
 		Session: auth.NewSession(),
@@ -81,7 +68,7 @@ func NewClient(fd int) *Client {
 func NewHTTPQwatchClient(qwatchResponseChan chan QwatchResponse, clientIdentifierID uint32) *Client {
 	cmds := make([]*cmd.DiceDBCmd, 0)
 	return &Client{
-		Cqueue:                 cmd.RedisCmds{Cmds: cmds},
+		Cqueue:                 cmd.DiceDBCmds{Cmds: cmds},
 		Session:                auth.NewSession(),
 		ClientIdentifierID:     clientIdentifierID,
 		HTTPQwatchResponseChan: qwatchResponseChan,

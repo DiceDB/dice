@@ -3,7 +3,7 @@ title: JSON.RESP
 description: Documentation for the DiceDB command JSON.RESP
 ---
 
-The `JSON.RESP` command in DiceDB is part of the DiceDBJSON module, which returns the JSON in the specified key in Redis Serialization Protocol Specification (RESP) form.
+The `JSON.RESP` command in DiceDB is part of the DiceDBJSON module, which returns the JSON in the specified key in RESP.
 
 ## Syntax
 

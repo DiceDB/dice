@@ -1,40 +1,18 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package clientio_test
 
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"math"
 	"testing"
 
-	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/stretchr/testify/assert"
 )
-
-func init() {
-	parser := config.NewConfigParser()
-	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
-	}
-}
 
 func TestSimpleStringDecode(t *testing.T) {
 	cases := map[string]string{

@@ -10,7 +10,7 @@ sidebar:
 The `GET.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
 It allows clients to subscribe to a key and receive notifications whenever the key is updated.
 
-This command is what makes DiceDB different from Redis and uniquely positions it as the easiest and most intuitive way
+This command uniquely positions DiceDB as the easiest and most intuitive way
 to build real-time reactive applications like leaderboards, documents etc.
 
 ## Protocol Support

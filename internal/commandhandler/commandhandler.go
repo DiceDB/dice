@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package commandhandler
 
 import (
@@ -7,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -62,7 +66,7 @@ func NewCommandHandler(id string, responseChan, preprocessingChan chan *ops.Stor
 		id:                       id,
 		parser:                   parser,
 		shardManager:             shardManager,
-		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.DiceConfig.Performance.AdhocReqChanBufSize),
+		adhocReqChan:             make(chan *cmd.DiceDBCmd, config.AdhocReqChanBufSize),
 		Session:                  auth.NewSession(),
 		globalErrorChan:          gec,
 		ioThreadReadChan:         ioThreadReadChan,
@@ -145,7 +149,7 @@ func (h *BaseCommandHandler) executeCommandHandler(execCtx context.Context, gec 
 		}
 	}
 
-	resp, err := h.executeCommand(execCtx, commands[0], isWatchNotification)
+	resp, err := h.ExecuteCommand(execCtx, commands[0], isWatchNotification, true)
 
 	// log error and send to global error channel if it's a connection error
 	if err != nil {
@@ -159,7 +163,7 @@ func (h *BaseCommandHandler) executeCommandHandler(execCtx context.Context, gec 
 	return resp, err
 }
 
-func (h *BaseCommandHandler) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchNotification bool) (interface{}, error) {
+func (h *BaseCommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchNotification, shouldLog bool) (interface{}, error) {
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
 	cmdList := make([]*cmd.DiceDBCmd, 0)
@@ -239,6 +243,15 @@ func (h *BaseCommandHandler) executeCommand(ctx context.Context, diceDBCmd *cmd.
 	// Unsubscribe Unwatch command type
 	if meta.CmdType == Unwatch {
 		return h.handleCommandUnwatch(cmdList)
+	}
+
+	// Log command to WAL before execution if it's not a read-only command
+	if !meta.ReadOnly && h.wl != nil && shouldLog {
+		// Convert command to bytes for WAL logging
+		cmdBytes := []byte(fmt.Sprintf("%s %s", diceDBCmd.Cmd, strings.Join(diceDBCmd.Args, " ")))
+		if err := h.wl.LogCommand(cmdBytes); err != nil {
+			return nil, fmt.Errorf("failed to log command to WAL: %w", err)
+		}
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
@@ -501,8 +514,14 @@ func (h *BaseCommandHandler) sendResponseToIOThread(resp interface{}, err error)
 	h.ioThreadWriteChan <- resp
 }
 
-func (h *BaseCommandHandler) isAuthenticated(diceDBCmd *cmd.DiceDBCmd) error {
-	if diceDBCmd.Cmd != auth.Cmd && !h.Session.IsActive() {
+func (h *BaseCommandHandler) isAuthenticated(c *cmd.DiceDBCmd) error {
+	// TODO: Revisit the flow and check the need of explicitly whitelisting PING and CLIENT commands here.
+	// We might not need this special case handling for other commands.
+	if c.Cmd == "PING" || c.Cmd == "CLIENT" {
+		return nil
+	}
+
+	if c.Cmd != auth.Cmd && !h.Session.IsActive() {
 		return errors.New("NOAUTH Authentication required")
 	}
 
@@ -527,11 +546,11 @@ func (h *BaseCommandHandler) RespAuth(args []string) interface{} {
 		return diceerrors.ErrWrongArgumentCount("AUTH")
 	}
 
-	if config.DiceConfig.Auth.Password == "" {
+	if config.Config.Password == "" {
 		return diceerrors.ErrAuth
 	}
 
-	username := config.DiceConfig.Auth.UserName
+	username := config.Config.Username
 	var password string
 
 	if len(args) == 1 {
@@ -545,4 +564,33 @@ func (h *BaseCommandHandler) RespAuth(args []string) interface{} {
 	}
 
 	return clientio.OK
+}
+
+func NewWALReplayHandler(ctx context.Context, shardManager *shard.ShardManager) (*BaseCommandHandler, error) {
+	// Create channels for the replay handler
+	responseChan := make(chan *ops.StoreResponse)
+	preprocessingChan := make(chan *ops.StoreResponse)
+	watchSubscriptionChan := make(chan watchmanager.WatchSubscription)
+	globalErrorChan := make(chan error)
+	ioThreadReadChan := make(chan []byte)
+	ioThreadWriteChan := make(chan interface{})
+	ioThreadErrChan := make(chan error)
+
+	// Create a new command handler for WAL replay
+	replayHandler := NewCommandHandler(
+		"wal-replay",
+		responseChan,
+		preprocessingChan,
+		watchSubscriptionChan,
+		nil, // No parser needed for replay
+		shardManager,
+		globalErrorChan,
+		ioThreadReadChan,
+		ioThreadWriteChan,
+		ioThreadErrChan,
+		nil, // No WAL needed for replay handler
+	)
+
+	shardManager.RegisterCommandHandler(replayHandler.ID(), responseChan, preprocessingChan)
+	return replayHandler, nil
 }

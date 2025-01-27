@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package shard
 
@@ -48,9 +35,9 @@ func NewShardManager(shardCount uint8, cmdWatchChan chan dstore.CmdWatchEvent, g
 	shardReqMap := make(map[ShardID]chan *ops.StoreOp)
 	shardErrorChan := make(chan *ShardError)
 
-	maxKeysPerShard := config.DiceConfig.Memory.KeysLimit / int(shardCount)
+	maxKeysPerShard := config.DefaultKeysLimit / int(shardCount)
 	for i := uint8(0); i < shardCount; i++ {
-		evictionStrategy := dstore.NewBatchEvictionLRU(maxKeysPerShard, config.DiceConfig.Memory.EvictionRatio)
+		evictionStrategy := dstore.NewPrimitiveEvictionStrategy(maxKeysPerShard)
 		// Shards are numbered from 0 to shardCount-1
 		shard := NewShardThread(i, globalErrorChan, shardErrorChan, cmdWatchChan, evictionStrategy)
 		shards[i] = shard

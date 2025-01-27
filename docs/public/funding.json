@@ -6,7 +6,7 @@
     "name": "DiceDB",
     "email": "arpit@dicedb.io",
     "phone": "",
-    "description": "DiceDB is an open source, redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.",
+    "description": "DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware.",
     "webpageUrl": {
       "url": "https://dicedb.io"
     }
@@ -15,14 +15,14 @@
     {
       "guid": "dicedb",
       "name": "DiceDB",
-      "description": "DiceDB is an open source, redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.",
+      "description": "DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware.",
       "webpageUrl": {
         "url": "https://dicedb.io"
       },
       "repositoryUrl": {
         "url": "https://dicedb.io"
       },
-      "licenses": ["AGPL-3.0"],
+      "licenses": ["BSD 3-Clause License"],
       "tags": ["database", "high-performance", "key-value-store"]
     }
   ],

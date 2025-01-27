@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package eval
 
@@ -622,7 +609,6 @@ func (i *DequeIterator) Value() (string, error) {
 // *************************** deque entry encode/decode ***************************
 
 // EncodeDeqEntry encodes `x` into an entry of Deque. An entry will be encoded as [enc + data + backlen].
-// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 func EncodeDeqEntry(x string) []byte {
 	if len(x) >= 21 {
 		return EncodeDeqStr(x)
@@ -701,7 +687,6 @@ func EncodeDeqInt(v int64) []byte {
 }
 
 // EncodeDeqEntryInPlace encodes `x` into an entry of Deque in place.
-// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 func EncodeDeqEntryInPlace(x string, buf []byte) {
 	if len(x) >= 21 {
 		EncodeDeqStrInPlace(x, buf)
@@ -803,7 +788,6 @@ func GetEncodeDeqIntSize(v int64) uint64 {
 
 // DecodeDeqEntry decode `xb` started from index 0, returns the decoded `x` and the
 // overall length of [enc + data + backlen].
-// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 // TODO possible optimizations:
 // 1. return the string with the underlying array of `xb` to save memory usage?
 // 2. replace strconv with more efficient/memory-saving implementation

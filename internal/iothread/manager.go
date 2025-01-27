@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package iothread
 
@@ -20,12 +7,13 @@ import (
 	"errors"
 	"sync"
 	"sync/atomic"
+
+	"github.com/dicedb/dice/config"
 )
 
 type Manager struct {
 	connectedClients sync.Map
 	numIOThreads     atomic.Uint32
-	maxClients       uint32
 	mu               sync.Mutex
 }
 
@@ -34,17 +22,15 @@ var (
 	ErrIOThreadNotFound  = errors.New("io-thread not found")
 )
 
-func NewManager(maxClients uint32) *Manager {
-	return &Manager{
-		maxClients: maxClients,
-	}
+func NewManager() *Manager {
+	return &Manager{}
 }
 
 func (m *Manager) RegisterIOThread(ioThread IOThread) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.IOThreadCount() >= m.maxClients {
+	if m.IOThreadCount() >= uint32(config.Config.MaxClients) {
 		return ErrMaxClientsReached
 	}
 

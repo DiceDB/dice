@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package resp
 
@@ -21,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net"
 	"os"
@@ -46,20 +32,12 @@ import (
 )
 
 type TestServerOptions struct {
-	Port       int
-	MaxClients int32
-}
-
-func init() {
-	parser := config.NewConfigParser()
-	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
-	}
+	Port int
 }
 
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.RespServer.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.Config.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -115,7 +93,7 @@ func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 //nolint:unused
 func getLocalSdk() *dicedb.Client {
 	return dicedb.NewClient(&dicedb.Options{
-		Addr: fmt.Sprintf(":%d", config.DiceConfig.RespServer.Port),
+		Addr: fmt.Sprintf(":%d", config.Config.Port),
 
 		DialTimeout:           10 * time.Second,
 		ReadTimeout:           30 * time.Second,
@@ -197,30 +175,26 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
-
 	// #1261: Added here to prevent resp integration tests from failing on lower-spec machines
-	config.DiceConfig.Memory.KeysLimit = 2000
 	if opt.Port != 0 {
-		config.DiceConfig.RespServer.Port = opt.Port
+		config.Config.Port = opt.Port
 	} else {
-		config.DiceConfig.RespServer.Port = 9739
+		config.Config.Port = 9739
 	}
 
-	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
+	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.WatchChanBufSize)
 	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
 	shardManager := shard.NewShardManager(1, cmdWatchChan, gec)
-	ioThreadManager := iothread.NewManager(config.DiceConfig.Performance.MaxClients)
-	cmdHandlerManager := commandhandler.NewRegistry(config.DiceConfig.Performance.MaxClients, shardManager)
+	ioThreadManager := iothread.NewManager()
+	cmdHandlerManager := commandhandler.NewRegistry(shardManager)
 
 	// Initialize the RESP Server
 	wl, _ := wal.NewNullWAL()
 	testServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, wl)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fmt.Println("Starting the test server on port", config.DiceConfig.RespServer.Port)
+	fmt.Println("Starting the test server on port", config.Config.Port)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)

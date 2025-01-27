@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package wal
 
@@ -27,15 +14,18 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
 	sync "sync"
 	"time"
 
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/cmd"
 )
 
 const (
 	segmentPrefix     = "seg-"
+	segmentSuffix     = ".wal"
 	defaultVersion    = "v0.0.1"
 	RotationModeTime  = "time"
 	RetentionModeTime = "time"
@@ -71,17 +61,17 @@ func NewAOFWAL(directory string) (*AOF, error) {
 
 	return &AOF{
 		logDir:                 directory,
-		walMode:                config.DiceConfig.WAL.WalMode,
-		bufferSyncTicker:       time.NewTicker(config.DiceConfig.WAL.BufferSyncInterval),
-		segmentRotationTicker:  time.NewTicker(config.DiceConfig.WAL.MaxSegmentRotationTime),
-		segmentRetentionTicker: time.NewTicker(config.DiceConfig.WAL.MaxSegmentRetentionDuration),
-		writeMode:              config.DiceConfig.WAL.WriteMode,
-		maxSegmentSize:         config.DiceConfig.WAL.MaxSegmentSizeMB * 1024 * 1024,
-		maxSegmentCount:        config.DiceConfig.WAL.MaxSegmentCount,
-		bufferSize:             config.DiceConfig.WAL.BufferSizeMB * 1024 * 1024,
-		retentionMode:          config.DiceConfig.WAL.RetentionMode,
-		recoveryMode:           config.DiceConfig.WAL.RecoveryMode,
-		rotationMode:           config.DiceConfig.WAL.RotationMode,
+		walMode:                config.Config.WALMode,
+		bufferSyncTicker:       time.NewTicker(time.Duration(config.Config.WALBufferSyncIntervalMillis) * time.Millisecond),
+		segmentRotationTicker:  time.NewTicker(time.Duration(config.Config.WALMaxSegmentRotationTimeSec) * time.Second),
+		segmentRetentionTicker: time.NewTicker(time.Duration(config.Config.WALMaxSegmentRetentionDurationSec) * time.Second),
+		writeMode:              config.Config.WALWriteMode,
+		maxSegmentSize:         config.Config.WALMaxSegmentSizeMB * 1024 * 1024,
+		maxSegmentCount:        config.Config.WALMaxSegmentCount,
+		bufferSize:             config.Config.WALBufferSizeMB * 1024 * 1024,
+		retentionMode:          config.Config.WALRetentionMode,
+		recoveryMode:           config.Config.WALRecoveryMode,
+		rotationMode:           config.Config.WALRotationMode,
 		ctx:                    ctx,
 		cancel:                 cancel,
 	}, nil
@@ -96,7 +86,7 @@ func (wal *AOF) Init(t time.Time) error {
 	}
 
 	// Get the list of log segment files in the directory
-	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"))
+	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"+segmentSuffix))
 	if err != nil {
 		return nil
 	}
@@ -110,7 +100,7 @@ func (wal *AOF) Init(t time.Time) error {
 	wal.currentSegmentIndex = 0
 	wal.oldestSegmentIndex = 0
 	wal.byteOffset = 0
-	newFile, err := os.OpenFile(filepath.Join(wal.logDir, "seg-0"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	newFile, err := os.OpenFile(filepath.Join(wal.logDir, segmentPrefix+"0"+segmentSuffix), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
@@ -164,7 +154,7 @@ func (wal *AOF) writeEntry(data []byte) error {
 	}
 
 	// if wal-mode unbuffered immediately sync to disk
-	if wal.walMode == WALModeUnbuffered { //nolint:goconst
+	if wal.walMode == WALModeUnbuffered {
 		if err := wal.Sync(); err != nil {
 			return err
 		}
@@ -214,7 +204,7 @@ func (wal *AOF) rotateLog() error {
 		wal.oldestSegmentIndex++
 	}
 
-	newFile, err := os.OpenFile(filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("-%d", wal.currentSegmentIndex)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	newFile, err := os.OpenFile(filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("%d", wal.currentSegmentIndex)+segmentSuffix), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("failed opening file: %s", err)
 	}
@@ -228,7 +218,7 @@ func (wal *AOF) rotateLog() error {
 }
 
 func (wal *AOF) deleteOldestSegment() error {
-	oldestSegmentFilePath := filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("%d", wal.oldestSegmentIndex))
+	oldestSegmentFilePath := filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("%d", wal.oldestSegmentIndex)+segmentSuffix)
 
 	// TODO: checkpoint before deleting the file
 
@@ -255,7 +245,7 @@ func (wal *AOF) Sync() error {
 	if err := wal.bufWriter.Flush(); err != nil {
 		return err
 	}
-	if wal.writeMode == "fsync" { //nolint:goconst
+	if wal.writeMode == "fsync" {
 		if err := wal.currentSegmentFile.Sync(); err != nil {
 			return err
 		}
@@ -268,13 +258,12 @@ func (wal *AOF) keepSyncingBuffer() {
 	for {
 		select {
 		case <-wal.bufferSyncTicker.C:
-
 			wal.mu.Lock()
 			err := wal.Sync()
 			wal.mu.Unlock()
 
 			if err != nil {
-				log.Printf("Error while performing sync: %v", err)
+				slog.Error("failed to sync buffer", slog.String("error", err.Error()))
 			}
 
 		case <-wal.ctx.Done():
@@ -287,12 +276,11 @@ func (wal *AOF) rotateSegmentPeriodically() {
 	for {
 		select {
 		case <-wal.segmentRotationTicker.C:
-
 			wal.mu.Lock()
 			err := wal.rotateLog()
 			wal.mu.Unlock()
 			if err != nil {
-				log.Printf("Error while performing sync: %v", err)
+				slog.Error("failed to rotate segment", slog.String("error", err.Error()))
 			}
 
 		case <-wal.ctx.Done():
@@ -305,12 +293,11 @@ func (wal *AOF) deleteSegmentPeriodically() {
 	for {
 		select {
 		case <-wal.segmentRetentionTicker.C:
-
 			wal.mu.Lock()
 			err := wal.deleteOldestSegment()
 			wal.mu.Unlock()
 			if err != nil {
-				log.Printf("Error while deleting segment: %v", err)
+				slog.Error("failed to delete segment", slog.String("error", err.Error()))
 			}
 		case <-wal.ctx.Done():
 			return
@@ -318,7 +305,82 @@ func (wal *AOF) deleteSegmentPeriodically() {
 	}
 }
 
-func (wal *AOF) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
-	// TODO: implement this method
+func (wal *AOF) segmentFiles() ([]string, error) {
+	// Get all segment files matching the pattern
+	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"+segmentSuffix))
+	if err != nil {
+		return nil, err
+	}
+
+	// Sort files by numeric suffix
+	sort.Slice(files, func(i, j int) bool {
+		parseSuffix := func(name string) int64 {
+			num, _ := strconv.ParseInt(
+				strings.TrimPrefix(strings.TrimSuffix(filepath.Base(name), segmentSuffix), segmentPrefix), 10, 64)
+			return num
+		}
+		return parseSuffix(files[i]) < parseSuffix(files[j])
+	})
+
+	return files, nil
+}
+
+func (wal *AOF) Replay(callback func(*WALEntry) error) error {
+	// Get list of segment files sorted by timestamp
+	segments, err := wal.segmentFiles()
+	if err != nil {
+		return fmt.Errorf("error getting wal-segment files: %w", err)
+	}
+
+	// Process each segment file in order
+	for _, segment := range segments {
+		file, err := os.Open(segment)
+		if err != nil {
+			return fmt.Errorf("error opening wal-segment file %s: %w", segment, err)
+		}
+
+		reader := bufio.NewReader(file)
+		for {
+			// Read entry size
+			var entrySize int32
+			if err := binary.Read(reader, binary.LittleEndian, &entrySize); err != nil {
+				if err == io.EOF {
+					break
+				}
+				file.Close()
+				return fmt.Errorf("error reading wal entry size: %w", err)
+			}
+
+			// Read entry data
+			entryData := make([]byte, entrySize)
+			if _, err := io.ReadFull(reader, entryData); err != nil {
+				file.Close()
+				return fmt.Errorf("error reading wal entry data: %w", err)
+			}
+
+			// Unmarshal entry
+			var entry WALEntry
+			MustUnmarshal(entryData, &entry)
+
+			// Call provided replay function with parsed command
+			if err := wal.ForEachCommand(&entry, callback); err != nil {
+				file.Close()
+				return fmt.Errorf("error replaying command: %w", err)
+			}
+		}
+		file.Close()
+	}
+
 	return nil
+}
+
+func (wal *AOF) ForEachCommand(entry *WALEntry, callback func(*WALEntry) error) error {
+	// Validate CRC
+	expectedCRC := crc32.ChecksumIEEE(append(entry.Data, byte(entry.LogSequenceNumber)))
+	if entry.Crc32 != expectedCRC {
+		return fmt.Errorf("checksum mismatch for log sequence %d: expected %d, got %d",
+			entry.LogSequenceNumber, expectedCRC, entry.Crc32)
+	}
+
+	return callback(entry)
 }

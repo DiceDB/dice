@@ -1,34 +1,13 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package store
 
 import (
 	"bufio"
-	"bytes"
-	"fmt"
 	"io/fs"
-	"log"
 	"os"
-	"strings"
 	"sync"
-
-	"github.com/dicedb/dice/internal/object"
-
-	"github.com/dicedb/dice/config"
 )
 
 type AOF struct {
@@ -96,49 +75,4 @@ func (a *AOF) Load() ([]string, error) {
 	}
 
 	return operations, nil
-}
-
-func encodeString(v string) []byte {
-	return []byte(fmt.Sprintf("$%d\r\n%s\r\n", len(v), v))
-}
-
-func encode(strs []string) []byte {
-	var b []byte
-	buf := bytes.NewBuffer(b)
-	for _, b := range strs {
-		buf.Write(encodeString(b))
-	}
-	return []byte(fmt.Sprintf("*%d\r\n%s", len(strs), buf.Bytes()))
-}
-
-// TODO: Support Expiration
-// TODO: Support non-kv data structures
-// TODO: Support sync write
-func dumpKey(aof *AOF, key string, obj *object.Obj) (err error) {
-	cmd := fmt.Sprintf("SET %s %s", key, obj.Value)
-	tokens := strings.Split(cmd, " ")
-	return aof.Write(string(encode(tokens)))
-}
-
-// DumpAllAOF dumps all keys in the store to the AOF file
-func DumpAllAOF(store *Store) error {
-	var (
-		aof *AOF
-		err error
-	)
-	if aof, err = NewAOF(config.DiceConfig.Persistence.AOFFile); err != nil {
-		return err
-	}
-	defer aof.Close()
-
-	log.Println("rewriting AOF file at", config.DiceConfig.Persistence.AOFFile)
-
-	store.store.All(func(k string, obj *object.Obj) bool {
-		err = dumpKey(aof, k, obj)
-		// continue if no error
-		return err == nil
-	})
-
-	log.Println("AOF file rewrite complete")
-	return err
 }

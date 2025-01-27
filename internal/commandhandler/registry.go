@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package commandhandler
 
 import (
@@ -5,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/shard"
 )
 
@@ -23,9 +27,9 @@ var (
 	ErrCmdHandlerResponseChanNil = errors.New("command handler response channel is nil")
 )
 
-func NewRegistry(maxClients uint32, sm *shard.ShardManager) *Registry {
+func NewRegistry(sm *shard.ShardManager) *Registry {
 	return &Registry{
-		maxCmdHandlers: maxClients,
+		maxCmdHandlers: uint32(config.Config.MaxClients),
 		ShardManager:   sm,
 	}
 }

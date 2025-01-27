@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package http
 
@@ -30,7 +17,6 @@ import (
 
 	"github.com/dicedb/dice/internal/server/httpws"
 
-	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shard"
 )
@@ -47,13 +33,6 @@ type CommandExecutor interface {
 type HTTPCommandExecutor struct {
 	httpClient *http.Client
 	baseURL    string
-}
-
-func init() {
-	parser := config.NewConfigParser()
-	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
-	}
 }
 
 func NewHTTPCommandExecutor() *HTTPCommandExecutor {
@@ -123,17 +102,12 @@ func (e *HTTPCommandExecutor) Name() string {
 }
 
 func RunHTTPServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
-
 	globalErrChannel := make(chan error)
 	shardManager := shard.NewShardManager(1, nil, globalErrChannel)
 
-	config.DiceConfig.HTTP.Port = opt.Port
 	// Initialize the HTTPServer
 	testServer := httpws.NewHTTPServer(shardManager, nil)
 	// Inform the user that the server is starting
-	fmt.Println("Starting the test server on port", config.DiceConfig.HTTP.Port)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)
 	go func() {

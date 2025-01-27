@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package httpws
 
@@ -34,7 +21,6 @@ import (
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
 
-	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
@@ -83,7 +69,7 @@ func NewHTTPServer(shardManager *shard.ShardManager, wl wal.AbstractWAL) *HTTPSe
 	mux := http.NewServeMux()
 	caseInsensitiveMux := &CaseInsensitiveMux{mux: mux}
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%d", config.DiceConfig.HTTP.Port),
+		Addr:              fmt.Sprintf(":%d", 7381),
 		Handler:           caseInsensitiveMux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
@@ -150,7 +136,6 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 }
 
 func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.Request) {
-	// convert to REDIS cmd
 	diceDBCmd, err := ParseHTTPRequest(request)
 	if err != nil {
 		writeErrorResponse(writer, http.StatusBadRequest, "Invalid HTTP request format",
@@ -193,7 +178,6 @@ func (s *HTTPServer) DiceHTTPHandler(writer http.ResponseWriter, request *http.R
 }
 
 func (s *HTTPServer) DiceHTTPQwatchHandler(writer http.ResponseWriter, request *http.Request) {
-	// convert to REDIS cmd
 	diceDBCmd, err := ParseHTTPRequest(request)
 	if err != nil {
 		http.Error(writer, "Error parsing HTTP request", http.StatusBadRequest)

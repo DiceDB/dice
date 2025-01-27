@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package iomultiplexer
 
@@ -20,6 +7,8 @@ import (
 	"fmt"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/config"
 )
 
 // KQueue implements the IOMultiplexer interface for Darwin-based systems
@@ -34,8 +23,8 @@ type KQueue struct {
 }
 
 // New creates a new KQueue instance
-func New(maxClients int32) (*KQueue, error) {
-	if maxClients < 0 {
+func New() (*KQueue, error) {
+	if config.Config.MaxClients < 0 {
 		return nil, ErrInvalidMaxClients
 	}
 
@@ -46,8 +35,8 @@ func New(maxClients int32) (*KQueue, error) {
 
 	return &KQueue{
 		fd:         fd,
-		kQEvents:   make([]syscall.Kevent_t, maxClients),
-		diceEvents: make([]Event, maxClients),
+		kQEvents:   make([]syscall.Kevent_t, config.Config.MaxClients),
+		diceEvents: make([]Event, config.Config.MaxClients),
 	}, nil
 }
 

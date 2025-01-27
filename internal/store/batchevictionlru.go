@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package store
 
@@ -20,6 +7,7 @@ import (
 	"container/heap"
 	"math"
 
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/object"
 )
 
@@ -56,21 +44,19 @@ func (h *evictionItemHeap) pop() evictionItem {
 	return heap.Pop(h).(evictionItem)
 }
 
-// BatchEvictionLRU implements batch eviction of least recently used keys
-type BatchEvictionLRU struct {
+// PrimitiveEvictionStrategy implements batch eviction of least recently used keys
+type PrimitiveEvictionStrategy struct {
 	BaseEvictionStrategy
-	maxKeys       int
-	evictionRatio float64
+	maxKeys int
 }
 
-func NewBatchEvictionLRU(maxKeys int, evictionRatio float64) *BatchEvictionLRU {
-	return &BatchEvictionLRU{
-		maxKeys:       maxKeys,
-		evictionRatio: evictionRatio,
+func NewPrimitiveEvictionStrategy(maxKeys int) *PrimitiveEvictionStrategy {
+	return &PrimitiveEvictionStrategy{
+		maxKeys: maxKeys,
 	}
 }
 
-func (e *BatchEvictionLRU) ShouldEvict(store *Store) int {
+func (e *PrimitiveEvictionStrategy) ShouldEvict(store *Store) int {
 	currentKeyCount := store.GetKeyCount()
 
 	// Check if eviction is necessary only till the number of keys remains less than maxKeys
@@ -79,7 +65,7 @@ func (e *BatchEvictionLRU) ShouldEvict(store *Store) int {
 	}
 
 	// Calculate target key count after eviction
-	targetKeyCount := int(math.Ceil(float64(e.maxKeys) * (1 - e.evictionRatio)))
+	targetKeyCount := int(math.Ceil(float64(e.maxKeys) * (1 - config.EvictionRatio)))
 
 	// Calculate the number of keys to evict to reach the target key count
 	toEvict := currentKeyCount - targetKeyCount
@@ -91,7 +77,7 @@ func (e *BatchEvictionLRU) ShouldEvict(store *Store) int {
 }
 
 // EvictVictims deletes keys with the lowest LastAccessedAt values from the store.
-func (e *BatchEvictionLRU) EvictVictims(store *Store, toEvict int) {
+func (e *PrimitiveEvictionStrategy) EvictVictims(store *Store, toEvict int) {
 	if toEvict <= 0 {
 		return
 	}
@@ -124,6 +110,6 @@ func (e *BatchEvictionLRU) EvictVictims(store *Store, toEvict int) {
 	e.stats.recordEviction(int64(toEvict))
 }
 
-func (e *BatchEvictionLRU) OnAccess(key string, obj *object.Obj, accessType AccessType) {
+func (e *PrimitiveEvictionStrategy) OnAccess(key string, obj *object.Obj, accessType AccessType) {
 	// Nothing to do for LRU batch eviction
 }

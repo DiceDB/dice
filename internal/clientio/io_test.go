@@ -1,18 +1,5 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package clientio
 
@@ -134,7 +121,7 @@ func TestDecodeOneEmptyMessage(t *testing.T) {
 }
 
 func TestDecodeOneHighVolumeData(t *testing.T) {
-	largeString := bytes.Repeat([]byte("a"), 10*config.DiceConfig.Network.IOBufferLength)
+	largeString := bytes.Repeat([]byte("a"), 10*config.IOBufferLength)
 	mockRW := &MockReadWriter{
 		ReadChunks: [][]byte{
 			[]byte("$" + strconv.Itoa(len(largeString)) + "\r\n"),
@@ -191,7 +178,7 @@ func TestDecodeOnePartialMessages(t *testing.T) {
 }
 
 func TestDecodeOneVeryLargeMessage(t *testing.T) {
-	largeString := bytes.Repeat([]byte("a"), 10*config.DiceConfig.Network.IOBufferLength)
+	largeString := bytes.Repeat([]byte("a"), 10*config.IOBufferLength)
 	mockRW := &MockReadWriter{
 		ReadChunks: [][]byte{
 			[]byte("$" + strconv.Itoa(len(largeString)) + "\r\n"),

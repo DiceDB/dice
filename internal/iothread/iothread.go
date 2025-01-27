@@ -1,24 +1,12 @@
-// This file is part of DiceDB.
-// Copyright (C) 2024 DiceDB (dicedb.io).
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
 package iothread
 
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
@@ -58,6 +46,7 @@ func (t *BaseIOThread) ID() string {
 }
 
 func (t *BaseIOThread) Start(ctx context.Context) error {
+	slog.Debug("starting io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
 	// local channels to communicate between Start and startInputReader goroutine
 	incomingDataChan := make(chan []byte) // data channel
 	readErrChan := make(chan error)       // error channel
@@ -87,6 +76,7 @@ func (t *BaseIOThread) Start(ctx context.Context) error {
 			if err != nil {
 				slog.Debug("Error sending response to client", slog.String("id", t.id), slog.Any("error", err))
 			}
+			slog.Debug("wrote response to client", slog.Int64("time_ms", time.Now().UnixMilli()))
 		}
 	}
 }
