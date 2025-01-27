@@ -121,7 +121,7 @@ air
 
 ### Local Setup with Custom Config
 
-By default, DiceDB will look for the configuration file at `./dicedb.conf`. (Linux, Darwin, and WSL)
+By default, DiceDB will look for the configuration file at `./dicedb.yaml`. (Linux, Darwin, and WSL)
 
 > [!TIP]
 > If you want to use a custom configuration file, you can specify the path using the `-c` flag. and to output the configuration file to a specific location, you can specify the output dir path using the `-o` flag.
@@ -210,4 +210,3 @@ This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICEN
 ```
 $ sudo netstat -atlpn | grep :7379
 $ sudo kill -9 <process_id>
-```
