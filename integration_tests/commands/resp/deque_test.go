@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	diceerrors "github.com/dicedb/dice/internal/errors"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -481,6 +483,39 @@ func TestLInsert(t *testing.T) {
 				result := FireCommand(conn, cmd)
 				// assert.DeepEqual(t, tc.expect[i], result)
 				assert.EqualValues(t, tc.expect[i], result)
+			}
+		})
+	}
+
+	deqCleanUp(conn, "k")
+}
+
+func TestLIndex(t *testing.T) {
+	conn := getLocalConnection()
+	defer conn.Close()
+
+	testcases := []struct {
+		name   string
+		cmds   []string
+		expect []any
+	}{
+		{
+			name:   "LINDEX from start",
+			cmds:   []string{"RPUSH k v1 v2 v3 v4", "LINDEX k 0", "LINDEX k 1", "LINDEX k 2", "LINDEX k 3", "LINDEX k 4"},
+			expect: []any{int64(4), "v1", "v2", "v3", "v4", diceerrors.ErrIndexOutOfRange.Error()},
+		},
+		{
+			name:   "LINDEX from end",
+			cmds:   []string{"LINDEX k -1", "LINDEX k -2", "LINDEX k -3", "LINDEX k -4", "LINDEX k -5"},
+			expect: []any{"v4", "v3", "v2", "v1", diceerrors.ErrIndexOutOfRange.Error()},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, cmd := range tc.cmds {
+				result := FireCommand(conn, cmd)
+				assert.Equal(t, tc.expect[i], result)
 			}
 		})
 	}

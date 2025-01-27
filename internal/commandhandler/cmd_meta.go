@@ -135,6 +135,7 @@ const (
 	CmdGetDel              = "GETDEL"
 	CmdLrange              = "LRANGE"
 	CmdLinsert             = "LINSERT"
+	CmdLindex              = "LINDEX"
 	CmdJSONArrInsert       = "JSON.ARRINSERT"
 	CmdJSONArrTrim         = "JSON.ARRTRIM"
 	CmdJSONArrAppend       = "JSON.ARRAPPEND"
@@ -481,6 +482,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdLLEN: {
 		CmdType:  SingleShard,
 		ReadOnly: true,
+	},
+	CmdLindex: {
+		CmdType: SingleShard,
 	},
 	CmdCMSQuery: {
 		CmdType:  SingleShard,
