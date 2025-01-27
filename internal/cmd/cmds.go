@@ -51,6 +51,13 @@ func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		if cmd.Name == c.C.Cmd {
 			start := time.Now()
 			resp, err := cmd.Eval(c, s)
+			if err != nil {
+				resp.R.Err = err.Error()
+				resp.R.Success = false
+			} else {
+				resp.R.Success = true
+			}
+
 			slog.Debug("command executed",
 				slog.Any("cmd", c.C.Cmd),
 				slog.String("args", strings.Join(c.C.Args, " ")),
