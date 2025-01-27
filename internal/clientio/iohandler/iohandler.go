@@ -13,5 +13,6 @@ type IOHandler interface {
 	Read(ctx context.Context) ([]byte, error)
 	ReadSync() (*cmd.Cmd, error)
 	Write(ctx context.Context, response interface{}) error
+	WriteSync(ctx context.Context, r *cmd.CmdRes) error
 	Close() error
 }

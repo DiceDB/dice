@@ -20,7 +20,9 @@ import (
 	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/clientio/iohandler"
 	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
+	"github.com/dicedb/dice/internal/clientio/iohandler/netconn2"
 	"github.com/dicedb/dice/internal/iothread"
 	"github.com/dicedb/dice/internal/shard"
 )
@@ -168,8 +170,12 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 				return fmt.Errorf("error accepting connection: %w", err)
 			}
 
-			// Register a new io-thread for the client
-			ioHandler, err := netconn.NewIOHandler(clientFD)
+			var ioHandler iohandler.IOHandler
+			if config.Config.Engine == "ironhawk" {
+				ioHandler, err = netconn2.NewIOHandler(clientFD)
+			} else {
+				ioHandler, err = netconn.NewIOHandler(clientFD)
+			}
 			if err != nil {
 				slog.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
 				return err

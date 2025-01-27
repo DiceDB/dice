@@ -5,7 +5,6 @@ package iothread
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -79,14 +78,20 @@ func (t *IOThread) Start(ctx context.Context) error {
 	}
 }
 
-func (t *IOThread) StartSync(_ context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) error {
+func (t *IOThread) StartSync(ctx context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) error {
 	slog.Debug("starting sync io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
 	c, err := t.ioHandler.ReadSync()
 	if err != nil {
 		return err
 	}
 	res, err := execute(c)
-	fmt.Println(res.R.Msg, err)
+	if err != nil {
+		return err
+	}
+	err = t.ioHandler.WriteSync(ctx, res)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

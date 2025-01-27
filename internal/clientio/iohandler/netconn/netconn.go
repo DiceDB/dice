@@ -308,6 +308,10 @@ func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
 	return nil
 }
 
+func (h *IOHandler) WriteSync(ctx context.Context, r *cmd.CmdRes) error {
+	return h.Write(ctx, r)
+}
+
 // Close underlying network connection
 func (h *IOHandler) Close() error {
 	var err error
