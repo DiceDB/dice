@@ -16,6 +16,8 @@ LPOP key
 | Parameter | Description                                                                    | Type   | Required |
 | --------- | ------------------------------------------------------------------------------ | ------ | -------- |
 | `key`     | The key of the list from which the first element will be removed and returned. | String | Yes      |
+| `count`   | The count of elemments to be removed.                                          | Number | No       |
+
 
 ## Return Value
 
@@ -24,14 +26,32 @@ LPOP key
 | Command is successful        | `String` The value of the first element in the list. |
 | If the key does not exist    | `nil`                                                |
 | The key is of the wrong type | error                                                |
+| The count is invalid         | error                                                |
+
 
 ## Behavior
 
-- When the `LPOP` command is executed, DiceDB checks if the key exists and is associated with a list.
-- If the list has elements, the first element is removed and returned.
-- If the key does not exist, the command treats it as an empty list and returns `nil`.
-- If the key exists but is not associated with a list, a `WRONGTYPE` error is returned.
-- If more than one key is passed, an error is returned.
+1. **Key Existence and Type**:
+   - If the key does not exist, the command treats it as an empty list and returns `nil`.
+   - If the key exists but is not associated with a list, a `WRONGTYPE` error is returned.
+   - If more than one key is provided, an error is returned.
+
+2. **Without `count` Parameter**:
+   - If the list has elements and the optional `count` parameter is not provided, the first element of the list is removed and returned.
+
+3. **With `count` Parameter**:
+   - If the `count` parameter is provided:
+     - If the list has elements, up to `count` elements are removed from the start of the list and returned in order (from the first to the last removed element).
+     - If `count` is greater than the number of elements in the list, all elements are removed and returned.
+     - If `count` is less than 0, the following error is returned:
+       ```bash
+       (error) value is out of range, must be positive
+       ```
+
+4. **Empty List**:
+   - If the list is empty, the command returns `nil`.
+
+
 
 ## Errors
 
@@ -104,7 +124,7 @@ Passing more than one key will result in an error:
 
 ```bash
 LPOP mylist secondlist
-(error) ERR wrong number of arguments for 'lpop' command
+(error) value is out of range, must be positive
 ```
 
 ## Best Practices
