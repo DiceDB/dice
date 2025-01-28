@@ -6,7 +6,6 @@ package iothread
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
@@ -40,7 +39,6 @@ func (t *IOThread) ID() string {
 }
 
 func (t *IOThread) Start(ctx context.Context) error {
-	slog.Debug("starting io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
 	// local channels to communicate between Start and startInputReader goroutine
 	incomingDataChan := make(chan []byte) // data channel
 	readErrChan := make(chan error)       // error channel
@@ -71,20 +69,19 @@ func (t *IOThread) Start(ctx context.Context) error {
 				slog.Debug("error while sending response to the client", slog.String("id", t.id), slog.Any("error", err))
 				continue
 			}
-			slog.Debug("wrote response to client",
-				slog.Any("resp", resp),
-				slog.Int64("time_ms", time.Now().UnixMilli()))
+			slog.Debug("wrote response to client", slog.Any("resp", resp))
 		}
 	}
 }
 
 func (t *IOThread) StartSync(ctx context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) error {
-	slog.Debug("starting sync io thread", slog.Int64("time_ms", time.Now().UnixMilli()))
+	slog.Debug("io thread started", slog.String("id", t.id))
 	for {
 		c, err := t.ioHandler.ReadSync()
 		if err != nil {
 			return err
 		}
+		c.ThreadID = t.id
 		res, err := execute(c)
 		if err != nil {
 			return err

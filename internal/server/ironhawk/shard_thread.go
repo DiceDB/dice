@@ -25,7 +25,7 @@ type ShardThread struct {
 func NewShardThread(id int, gec chan error, evictionStrategy dstore.EvictionStrategy) *ShardThread {
 	return &ShardThread{
 		id:               id,
-		store:            dstore.NewStore(nil, evictionStrategy),
+		store:            dstore.NewStore(nil, evictionStrategy, id),
 		globalErrorChan:  gec,
 		lastCronExecTime: utils.GetCurrentTime(),
 		cronFrequency:    config.ShardCronFrequency,

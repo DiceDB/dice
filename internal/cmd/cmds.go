@@ -17,11 +17,13 @@ import (
 )
 
 type Cmd struct {
-	C *wire.Command
+	C        *wire.Command
+	ThreadID string
 }
 
 type CmdRes struct {
-	R *wire.Response
+	R        *wire.Response
+	ThreadID string
 }
 
 type DiceDBCommand struct {
@@ -61,8 +63,9 @@ func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			slog.Debug("command executed",
 				slog.Any("cmd", c.C.Cmd),
 				slog.String("args", strings.Join(c.C.Args, " ")),
-				slog.Int64("time_ms", time.Now().UnixMilli()),
-				slog.Any("took", time.Since(start)))
+				slog.String("thread_id", c.ThreadID),
+				slog.Int("shard_id", s.ShardID),
+				slog.Any("took_ns", time.Since(start).Nanoseconds()))
 			return resp, err
 		}
 	}

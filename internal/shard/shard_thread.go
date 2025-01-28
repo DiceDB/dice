@@ -51,7 +51,7 @@ func NewShardThread(id ShardID, gec chan error, sec chan *ShardError,
 	cmdWatchChan chan dstore.CmdWatchEvent, evictionStrategy dstore.EvictionStrategy) *ShardThread {
 	return &ShardThread{
 		id:               id,
-		store:            dstore.NewStore(cmdWatchChan, evictionStrategy),
+		store:            dstore.NewStore(cmdWatchChan, evictionStrategy, int(id)),
 		ReqChan:          make(chan *ops.StoreOp, 1000),
 		cmdHandlerMap:    make(map[string]CmdHandlerChannels),
 		globalErrorChan:  gec,
@@ -126,11 +126,10 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 
 	start := time.Now()
 	resp := e.ExecuteCommand()
-	slog.Debug("command executed",
+	slog.Debug("2 command executed",
 		slog.Any("cmd", op.Cmd.Cmd),
 		slog.String("args", strings.Join(op.Cmd.Args, " ")),
-		slog.Int64("time_ms", time.Now().UnixMilli()),
-		slog.Any("took", time.Since(start)))
+		slog.Any("took_ns", time.Since(start).Nanoseconds()))
 
 	if ok {
 		sp.EvalResponse = resp
