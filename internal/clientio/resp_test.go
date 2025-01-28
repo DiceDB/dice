@@ -224,3 +224,28 @@ func TestInteger(t *testing.T) {
 		assert.Equal(t, ev, v.output)
 	}
 }
+
+func TestRespTypes(t *testing.T) {
+	tests := []struct {
+		input  clientio.RespType
+		output []byte
+	}{
+		{
+			input:  clientio.OK,
+			output: clientio.RespOK,
+		},
+		{
+			input:  clientio.NIL,
+			output: clientio.RespNIL,
+		},
+		{
+			input:  clientio.EmptyArray,
+			output: clientio.RespEmptyArray,
+		},
+	}
+
+	for _, v := range tests {
+		ev := clientio.Encode(v.input, false)
+		assert.Equal(t, ev, v.output)
+	}
+}

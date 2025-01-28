@@ -40,6 +40,29 @@ var RespMinusOne = []byte(":-1\r\n")
 var RespMinusTwo = []byte(":-2\r\n")
 var RespEmptyArray = []byte("*0\r\n")
 
+func (t RespType) Bytes() []byte {
+	switch t {
+	case NIL:
+		return RespNIL
+	case OK:
+		return RespOK
+	case CommandQueued:
+		return RespQueued
+	case IntegerZero:
+		return RespZero
+	case IntegerOne:
+		return RespOne
+	case IntegerNegativeOne:
+		return RespMinusOne
+	case IntegerNegativeTwo:
+		return RespMinusTwo
+	case EmptyArray:
+		return RespEmptyArray
+	default:
+		return []byte(fmt.Sprintf("Unknown RespType: %d", t))
+	}
+}
+
 func readLength(buf *bytes.Buffer) (int64, error) {
 	s, err := readStringUntilSr(buf)
 	if err != nil {
@@ -283,11 +306,12 @@ func Encode(value interface{}, isSimple bool) []byte {
 		buf.Write(Encode(fmt.Sprintf("key:%s", we.Key), false))
 		buf.Write(Encode(fmt.Sprintf("op:%s", we.Operation), false))
 		return []byte(fmt.Sprintf("*2\r\n%s", buf.Bytes()))
-
+	// For all available Response Type
+	case RespType:
+		return v.Bytes()
 	// Handle map[string]bool and return a nil response indicating unsupported types.
 	case map[string]bool:
 		return RespNIL // Return nil response for unsupported type.
-
 	// For all other unsupported types, return a nil response.
 	default:
 		return RespNIL // Return nil response for unsupported types.

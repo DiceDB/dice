@@ -4,6 +4,7 @@
 package commandhandler
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -121,7 +122,7 @@ func (h *BaseCommandHandler) processCommand(ctx context.Context, data *[]byte, g
 	// DiceDB supports clients to send only one request at a time
 	// We also need to ensure that the client is blocked until the response is received
 	if len(commands) > 1 {
-		return nil, fmt.Errorf("ERR: Multiple commands not supported")
+		return h.handleMultiCommandWithTimeout(ctx, gec, commands, false, defaultRequestTimeout)
 	}
 
 	err = h.isAuthenticated(commands[0])
@@ -131,6 +132,31 @@ func (h *BaseCommandHandler) processCommand(ctx context.Context, data *[]byte, g
 	}
 
 	return h.handleCmdRequestWithTimeout(ctx, gec, commands, false, defaultRequestTimeout)
+}
+
+// This function will handle multiple commands as they are received in an ordered manner
+func (h *BaseCommandHandler) handleMultiCommandWithTimeout(ctx context.Context, gec chan error, commands []*cmd.DiceDBCmd, isWatchNotification bool, timeout time.Duration) (interface{}, error) {
+	results := bytes.NewBuffer(nil)
+	for _, command := range commands {
+		if err := h.isAuthenticated(command); err != nil {
+			slog.Debug("command handler authentication failed", slog.String("id", h.id), slog.Any("error", err))
+			return nil, err
+		}
+		execCtx, cancel := context.WithTimeout(ctx, timeout)
+		res, err := h.executeCommandHandler(execCtx, gec, []*cmd.DiceDBCmd{command}, isWatchNotification)
+		cancel()
+		var writeErr error
+		if err != nil {
+			_, writeErr = results.Write(clientio.Encode(err, false))
+		} else {
+			_, writeErr = results.Write(clientio.Encode(res, false))
+		}
+		if writeErr != nil {
+			slog.Debug("Failed to write result", slog.String("id", h.id), slog.Any("error", err))
+			return nil, err
+		}
+	}
+	return results.Bytes(), nil
 }
 
 func (h *BaseCommandHandler) handleCmdRequestWithTimeout(ctx context.Context, gec chan error, commands []*cmd.DiceDBCmd, isWatchNotification bool, timeout time.Duration) (interface{}, error) {
