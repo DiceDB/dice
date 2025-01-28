@@ -132,6 +132,18 @@ func errWrongArgumentCount(command string) error {
 
 var errUnknownObjectType = errors.New("unknown object type")
 
+func errInvalidSyntax(command string) error {
+	return fmt.Errorf("invalid syntax for '%s' command", strings.ToUpper(command))
+}
+
+func errInvalidValue(command, param string) error {
+	return fmt.Errorf("invalid value for a parameter in '%s' command for %s parameter", strings.ToUpper(command), strings.ToUpper(param))
+}
+
 var cmdResNil = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VNil{VNil: true},
+}}
+
+var cmdResOK = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VStr{VStr: "OK"},
 }}
