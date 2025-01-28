@@ -55,9 +55,6 @@ func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			resp, err := cmd.Eval(c, s)
 			if err != nil {
 				resp.R.Err = err.Error()
-				resp.R.Success = false
-			} else {
-				resp.R.Success = true
 			}
 
 			slog.Debug("command executed",
@@ -128,3 +125,13 @@ func (cmd *DiceDBCmd) Key() string {
 	}
 	return c
 }
+
+func errWrongArgumentCount(command string) error {
+	return fmt.Errorf("wrong number of arguments for '%s' command", strings.ToUpper(command))
+}
+
+var errUnknownObjectType = errors.New("unknown object type")
+
+var cmdResNil = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VNil{VNil: true},
+}}
