@@ -147,7 +147,13 @@ func Start() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// Initialize the ShardManager
-	shardManager := shard.NewShardManager(uint8(numShards), cmdWatchChan, serverErrCh)
+	var shardManager *shard.ShardManager
+	var iShardManager *ironhawk.ShardManager
+	if config.Config.Engine == "ironhawk" {
+		iShardManager = ironhawk.NewShardManager(numShards, cmdWatchChan, serverErrCh)
+	} else {
+		shardManager = shard.NewShardManager(uint8(numShards), cmdWatchChan, serverErrCh)
+	}
 
 	wg := sync.WaitGroup{}
 
@@ -170,12 +176,12 @@ func Start() {
 	ioThreadManager := iothread.NewManager()
 	cmdHandlerManager := commandhandler.NewRegistry(shardManager)
 
-	if config.Config.Engine == "resp" {
+	if config.Config.Engine == "resp" || config.Config.Engine == "silverpine" {
 		respServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, respServer, serverErrCh)
 	} else if config.Config.Engine == "ironhawk" {
-		ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
+		ironhawkServer := ironhawk.NewServer(iShardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
 	}

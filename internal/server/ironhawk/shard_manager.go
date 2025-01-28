@@ -27,12 +27,6 @@ type ShardManager struct {
 	sigChan chan os.Signal // sigChan is the signal channel for the shard manager
 }
 
-var GShardManager *ShardManager
-
-func init() {
-	GShardManager = NewShardManager(1, nil, nil)
-}
-
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
 func NewShardManager(shardCount int, cmdWatchChan chan dstore.CmdWatchEvent, globalErrorChan chan error) *ShardManager {
 	shards := make([]*Shard, shardCount)

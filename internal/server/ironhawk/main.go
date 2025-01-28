@@ -25,7 +25,6 @@ import (
 	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
 	"github.com/dicedb/dice/internal/clientio/iohandler/netconn2"
 	"github.com/dicedb/dice/internal/iothread"
-	"github.com/dicedb/dice/internal/shard"
 )
 
 const (
@@ -40,13 +39,13 @@ type Server struct {
 	connBacklogSize   int
 	ioThreadManager   *iothread.Manager
 	cmdHandlerManager *commandhandler.Registry
-	shardManager      *shard.ShardManager
+	shardManager      *ShardManager
 	watchManager      *watchmanager.Manager
 	globalErrorChan   chan error
 	wl                wal.AbstractWAL
 }
 
-func NewServer(shardManager *shard.ShardManager, ioThreadManager *iothread.Manager, cmdHandlerManager *commandhandler.Registry,
+func NewServer(shardManager *ShardManager, ioThreadManager *iothread.Manager, cmdHandlerManager *commandhandler.Registry,
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent,
 	globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
@@ -203,13 +202,13 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 
 func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *iothread.IOThread) {
 	wg.Done()
-	defer func(wm *iothread.Manager, id string) {
-		err := wm.UnregisterIOThread(id)
-		if err != nil {
-			slog.Warn("Failed to unregister io-thread", slog.String("id", id), slog.Any("error", err))
-		}
-	}(s.ioThreadManager, thread.ID())
-	err := thread.StartSync(ctx, GShardManager.Execute)
+	// defer func(wm *iothread.Manager, id string) {
+	// 	err := wm.UnregisterIOThread(id)
+	// 	if err != nil {
+	// 		slog.Warn("Failed to unregister io-thread", slog.String("id", id), slog.Any("error", err))
+	// 	}
+	// }(s.ioThreadManager, thread.ID())
+	err := thread.StartSync(ctx, s.shardManager.Execute)
 	if err != nil {
 		if err == io.EOF {
 			slog.Debug("client disconnected. io-thread stopped", slog.String("id", thread.ID()))
