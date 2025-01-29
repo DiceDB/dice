@@ -19,7 +19,7 @@ func init() {
 
 func evalPING(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) >= 2 {
-		return nil, errors.New("invalid number of arguments in PING command")
+		return cmdResNil, errors.New("invalid number of arguments in PING command")
 	}
 	if len(c.C.Args) == 0 {
 		return &CmdRes{R: &wire.Response{

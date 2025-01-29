@@ -1384,7 +1384,7 @@ func init() {
 	DiceCmds["GEODIST"] = geoDistCmdMeta
 	DiceCmds["GEOPOS"] = geoPosCmdMeta
 	DiceCmds["GEOHASH"] = geoHashCmdMeta
-	DiceCmds["GET"] = getCmdMeta
+	DiceCmds["GET"] = getCmdMeta // moved to ironhawk
 	DiceCmds["GETBIT"] = getBitCmdMeta
 	DiceCmds["GETDEL"] = getDelCmdMeta
 	DiceCmds["GETEX"] = getexCmdMeta
@@ -1439,14 +1439,14 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
-	DiceCmds["PING"] = pingCmdMeta
+	DiceCmds["PING"] = pingCmdMeta // moved to ironhawk
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta
 	DiceCmds["RPUSH"] = rpushCmdMeta
 	DiceCmds["SADD"] = saddCmdMeta
 	DiceCmds["SCARD"] = scardCmdMeta
-	DiceCmds["SET"] = setCmdMeta
+	DiceCmds["SET"] = setCmdMeta // moved to ironhawk
 	DiceCmds["SETBIT"] = setBitCmdMeta
 	DiceCmds["SETEX"] = setexCmdMeta
 	DiceCmds["SLEEP"] = sleepCmdMeta
