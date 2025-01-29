@@ -202,12 +202,6 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 
 func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *iothread.IOThread) {
 	wg.Done()
-	// defer func(wm *iothread.Manager, id string) {
-	// 	err := wm.UnregisterIOThread(id)
-	// 	if err != nil {
-	// 		slog.Warn("Failed to unregister io-thread", slog.String("id", id), slog.Any("error", err))
-	// 	}
-	// }(s.ioThreadManager, thread.ID())
 	err := thread.StartSync(ctx, s.shardManager.Execute)
 	if err != nil {
 		if err == io.EOF {

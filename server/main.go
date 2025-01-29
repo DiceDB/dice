@@ -68,6 +68,10 @@ func Init() {
 	slog.SetDefault(logger.New())
 }
 
+const EngineRESP = "resp"
+const EngineIRONHAWK = "ironhawk"
+const EngineSILVERPINE = "silverpine"
+
 func Start() {
 	printBanner()
 	printConfiguration()
@@ -149,7 +153,7 @@ func Start() {
 	// Initialize the ShardManager
 	var shardManager *shard.ShardManager
 	var iShardManager *ironhawk.ShardManager
-	if config.Config.Engine == "ironhawk" {
+	if config.Config.Engine == EngineIRONHAWK {
 		iShardManager = ironhawk.NewShardManager(numShards, cmdWatchChan, serverErrCh)
 	} else {
 		shardManager = shard.NewShardManager(uint8(numShards), cmdWatchChan, serverErrCh)
@@ -176,11 +180,11 @@ func Start() {
 	ioThreadManager := iothread.NewManager()
 	cmdHandlerManager := commandhandler.NewRegistry(shardManager)
 
-	if config.Config.Engine == "resp" || config.Config.Engine == "silverpine" {
+	if config.Config.Engine == EngineRESP || config.Config.Engine == EngineSILVERPINE {
 		respServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, respServer, serverErrCh)
-	} else if config.Config.Engine == "ironhawk" {
+	} else if config.Config.Engine == EngineIRONHAWK {
 		ironhawkServer := ironhawk.NewServer(iShardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
