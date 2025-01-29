@@ -5,8 +5,6 @@ package wal
 
 import (
 	"time"
-
-	"github.com/dicedb/dice/internal/cmd"
 )
 
 type WALNull struct {
@@ -29,6 +27,10 @@ func (w *WALNull) Close() error {
 	return nil
 }
 
-func (w *WALNull) ForEachCommand(f func(c cmd.DiceDBCmd) error) error {
+func (w *WALNull) ForEachCommand(entry *WALEntry, callback func(*WALEntry) error) error {
+	return nil
+}
+
+func (w *WALNull) Replay(callback func(*WALEntry) error) error {
 	return nil
 }

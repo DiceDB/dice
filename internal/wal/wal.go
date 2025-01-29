@@ -4,19 +4,17 @@
 package wal
 
 import (
-	"fmt"
 	"log/slog"
 	sync "sync"
 	"time"
-
-	"github.com/dicedb/dice/internal/cmd"
 )
 
 type AbstractWAL interface {
 	LogCommand([]byte) error
 	Close() error
 	Init(t time.Time) error
-	ForEachCommand(f func(c cmd.DiceDBCmd) error) error
+	Replay(c func(*WALEntry) error) error
+	ForEachCommand(e *WALEntry, c func(*WALEntry) error) error
 }
 
 var (
@@ -61,15 +59,4 @@ func InitBG(wl AbstractWAL) {
 func ShutdownBG() {
 	close(stopCh)
 	ticker.Stop()
-}
-
-func ReplayWAL(wl AbstractWAL) {
-	err := wl.ForEachCommand(func(c cmd.DiceDBCmd) error {
-		fmt.Println("replaying", c.Cmd, c.Args)
-		return nil
-	})
-
-	if err != nil {
-		slog.Warn("error replaying WAL", slog.Any("error", err))
-	}
 }

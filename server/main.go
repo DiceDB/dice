@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -80,7 +81,8 @@ func Start() {
 	// and new users in a much better way. Doing this using
 	// and empty password check is not a good solution.
 	if config.Config.Password != "" {
-		_, _ = auth.UserStore.Add(config.Config.Username)
+		user, _ := auth.UserStore.Add(config.Config.Username)
+		_ = user.SetPassword(config.Config.Password)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -98,21 +100,14 @@ func Start() {
 
 	wl, _ = wal.NewNullWAL()
 	if config.Config.EnableWAL {
-		if config.Config.WALEngine == "aof" {
-			_wl, err := wal.NewAOFWAL(config.Config.WALDir)
-			if err != nil {
-				slog.Warn("could not create WAL with", slog.String("wal-engine", config.Config.WALEngine), slog.Any("error", err))
-				sigs <- syscall.SIGKILL
-				cancel()
-				return
-			}
-			wl = _wl
-		} else {
-			slog.Error("unsupported WAL engine", slog.String("engine", config.Config.WALEngine))
+		_wl, err := wal.NewAOFWAL(config.Config.WALDir)
+		if err != nil {
+			slog.Warn("could not create WAL at", slog.String("wal-dir", config.Config.WALDir), slog.Any("error", err))
 			sigs <- syscall.SIGKILL
 			cancel()
 			return
 		}
+		wl = _wl
 
 		if err := wl.Init(time.Now()); err != nil {
 			slog.Error("could not initialize WAL", slog.Any("error", err))
@@ -121,12 +116,6 @@ func Start() {
 		}
 
 		slog.Debug("WAL initialization complete")
-
-		if config.Config.EnableWAL {
-			slog.Info("initializing wal restoration. this may take a while...")
-			wal.ReplayWAL(wl)
-			slog.Info("in-memory state restored. process complete")
-		}
 	}
 
 	if config.Config.EnableWatch {
@@ -200,6 +189,35 @@ func Start() {
 		websocketServer := httpws.NewWebSocketServer(shardManager, 7380, wl)
 		serverWg.Add(1)
 		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
+	}
+
+	// Recovery from WAL logs
+	if config.Config.EnableWAL {
+		slog.Info("restoring database from WAL")
+		replayHandler, err := commandhandler.NewWALReplayHandler(ctx, shardManager)
+
+		if err != nil {
+			slog.Error("error getting WAL replay handler", slog.Any("error", err))
+			sigs <- syscall.SIGKILL
+			cancel()
+			return
+		}
+		callback := func(entry *wal.WALEntry) error {
+			command := strings.Split(string(entry.Data), " ")
+			cmdTemp := cmd.DiceDBCmd{
+				Cmd:  command[0],
+				Args: command[1:],
+			}
+			_, err := replayHandler.ExecuteCommand(context.Background(), &cmdTemp, false, false)
+			if err != nil {
+				return fmt.Errorf("error handling WAL replay: %w", err)
+			}
+			return nil
+		}
+		if err := wl.Replay(callback); err != nil {
+			slog.Error("error restoring from WAL", slog.Any("error", err))
+		}
+		slog.Info("database restored from WAL")
 	}
 
 	wg.Add(1)

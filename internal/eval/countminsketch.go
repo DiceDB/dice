@@ -100,9 +100,9 @@ func newCountMinSketch(opts *CountMinSketchOpts) *CountMinSketch {
 	}
 
 	cms.matrix = make([][]uint64, opts.depth)
-
+	flatMatrix := make([]uint64, opts.depth*opts.width) // single memory allocation
 	for row := uint64(0); row < opts.depth; row++ {
-		cms.matrix[row] = make([]uint64, opts.width)
+		cms.matrix[row] = flatMatrix[row*opts.width : (row+1)*opts.width : (row+1)*opts.width]
 	}
 
 	return cms

@@ -158,6 +158,7 @@ func (h *BaseCommandHandler) executeCommandHandler(execCtx context.Context, gec 
 	}
 
 	resp, err := h.executeCommand(execCtx, commands[0], isWatchNotification)
+
 	// log error and send to global error channel if it's a connection error
 	if err != nil {
 		slog.Error("Error executing command", slog.String("id", h.id), slog.Any("error", err))
@@ -170,7 +171,7 @@ func (h *BaseCommandHandler) executeCommandHandler(execCtx context.Context, gec 
 	return resp, err
 }
 
-func (h *BaseCommandHandler) executeCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchNotification bool) (interface{}, error) {
+func (h *BaseCommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.DiceDBCmd, isWatchNotification, shouldLog bool) (interface{}, error) {
 	// Break down the single command into multiple commands if multisharding is supported.
 	// The length of cmdList helps determine how many shards to wait for responses.
 	cmdList := make([]*cmd.DiceDBCmd, 0)
@@ -250,6 +251,15 @@ func (h *BaseCommandHandler) executeCommand(ctx context.Context, diceDBCmd *cmd.
 	// Unsubscribe Unwatch command type
 	if meta.CmdType == Unwatch {
 		return h.handleCommandUnwatch(cmdList)
+	}
+
+	// Log command to WAL before execution if it's not a read-only command
+	if !meta.ReadOnly && h.wl != nil && shouldLog {
+		// Convert command to bytes for WAL logging
+		cmdBytes := []byte(fmt.Sprintf("%s %s", diceDBCmd.Cmd, strings.Join(diceDBCmd.Args, " ")))
+		if err := h.wl.LogCommand(cmdBytes); err != nil {
+			return nil, fmt.Errorf("failed to log command to WAL: %w", err)
+		}
 	}
 
 	// Scatter the broken-down commands to the appropriate shards.
@@ -563,4 +573,33 @@ func (h *BaseCommandHandler) RespAuth(args []string) interface{} {
 	}
 
 	return clientio.OK
+}
+
+func NewWALReplayHandler(ctx context.Context, shardManager *shard.ShardManager) (*BaseCommandHandler, error) {
+	// Create channels for the replay handler
+	responseChan := make(chan *ops.StoreResponse)
+	preprocessingChan := make(chan *ops.StoreResponse)
+	watchSubscriptionChan := make(chan watchmanager.WatchSubscription)
+	globalErrorChan := make(chan error)
+	ioThreadReadChan := make(chan []byte)
+	ioThreadWriteChan := make(chan interface{})
+	ioThreadErrChan := make(chan error)
+
+	// Create a new command handler for WAL replay
+	replayHandler := NewCommandHandler(
+		"wal-replay",
+		responseChan,
+		preprocessingChan,
+		watchSubscriptionChan,
+		nil, // No parser needed for replay
+		shardManager,
+		globalErrorChan,
+		ioThreadReadChan,
+		ioThreadWriteChan,
+		ioThreadErrChan,
+		nil, // No WAL needed for replay handler
+	)
+
+	shardManager.RegisterCommandHandler(replayHandler.ID(), responseChan, preprocessingChan)
+	return replayHandler, nil
 }
