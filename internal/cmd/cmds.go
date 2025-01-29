@@ -132,10 +132,12 @@ func errWrongArgumentCount(command string) error {
 
 var errUnknownObjectType = errors.New("unknown object type")
 
+//nolint:unparam
 func errInvalidSyntax(command string) error {
 	return fmt.Errorf("invalid syntax for '%s' command", strings.ToUpper(command))
 }
 
+//nolint:unparam
 func errInvalidValue(command, param string) error {
 	return fmt.Errorf("invalid value for a parameter in '%s' command for %s parameter", strings.ToUpper(command), strings.ToUpper(param))
 }

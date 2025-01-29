@@ -157,7 +157,7 @@ func (h *BaseCommandHandler) executeCommandHandler(execCtx context.Context, gec 
 		}
 	}
 
-	resp, err := h.executeCommand(execCtx, commands[0], isWatchNotification)
+	resp, err := h.ExecuteCommand(execCtx, commands[0], isWatchNotification, true)
 
 	// log error and send to global error channel if it's a connection error
 	if err != nil {
