@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
@@ -100,9 +101,10 @@ func Start() {
 
 	wl, _ = wal.NewNullWAL()
 	if config.Config.EnableWAL {
-		_wl, err := wal.NewAOFWAL(config.Config.WALDir)
+		WALDir := filepath.Join(config.DefaultParentDir, config.Config.WALDir)
+		_wl, err := wal.NewAOFWAL(WALDir)
 		if err != nil {
-			slog.Warn("could not create WAL at", slog.String("wal-dir", config.Config.WALDir), slog.Any("error", err))
+			slog.Warn("could not create WAL at", slog.String("wal-dir", WALDir), slog.Any("error", err))
 			sigs <- syscall.SIGKILL
 			cancel()
 			return

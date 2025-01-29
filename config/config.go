@@ -4,15 +4,27 @@
 package config
 
 import (
+	"fmt"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"runtime"
 )
 
 const (
 	DiceDBVersion = "0.1.0"
+
+	linuxPath   = "/var/lib/dicedb"
+	darwinPath  = "~/Library/Application Support/dicedb"
+	windowsPath = "C:\\ProgramData\\dicedb"
 )
 
-var Config *DiceDBConfig
+var (
+	Config           *DiceDBConfig
+	DefaultParentDir = "."
+)
 
 type DiceDBConfig struct {
 	Host string `mapstructure:"host" default:"0.0.0.0" description:"the host address to bind to"`
@@ -45,10 +57,10 @@ type DiceDBConfig struct {
 }
 
 func Init(flags *pflag.FlagSet) {
+	configureParentDirPaths()
 	viper.SetConfigName("dicedb")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("/etc/dicedb")
+	viper.AddConfigPath(DefaultParentDir)
 
 	err := viper.ReadInConfig()
 	if _, ok := err.(viper.ConfigFileNotFoundError); !ok && err != nil {
@@ -65,4 +77,49 @@ func Init(flags *pflag.FlagSet) {
 	if err := viper.Unmarshal(&Config); err != nil {
 		panic(err)
 	}
+}
+
+// ConfigureParentDirPaths Creates the default parent directory which can be used for logs and persistent data
+func configureParentDirPaths() {
+	var err error
+	DefaultParentDir, err = createDefaultParentDir()
+	if err != nil {
+		slog.Warn("Failed to create default preferences directory", slog.String("error", err.Error()))
+	}
+}
+
+func createDefaultParentDir() (string, error) {
+	// Get the default directory path for the OS
+	prefDir := GetDefaultParentDirPath()
+	// Create the directory (MkdirAll handles "already exists" gracefully)
+	if err := os.MkdirAll(prefDir, os.ModePerm); err != nil {
+		return "", fmt.Errorf("failed to create preferences directory: %w", err)
+	}
+
+	return prefDir, nil
+}
+
+func GetDefaultParentDirPath() string {
+	switch runtime.GOOS {
+	case "linux":
+		return linuxPath
+	case "darwin":
+		return expandHomeDirDarwin(darwinPath)
+	case "windows":
+		return windowsPath
+	default:
+		slog.Warn("unsupported OS, defaulting to current directory")
+		return DefaultParentDir
+	}
+}
+
+func expandHomeDirDarwin(path string) string {
+	if path != "" && path[0] == '~' {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return path // Fallback if home directory can't be resolved
+		}
+		return filepath.Join(home, path[1:])
+	}
+	return path
 }
