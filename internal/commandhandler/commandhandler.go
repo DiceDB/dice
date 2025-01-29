@@ -120,8 +120,16 @@ func (h *BaseCommandHandler) processCommand(ctx context.Context, data *[]byte, g
 
 	// DiceDB supports clients to send only one request at a time
 	// We also need to ensure that the client is blocked until the response is received
+	// TODO: Remove this once we have a way to handle multiple commands
 	if len(commands) > 1 {
-		return nil, fmt.Errorf("ERR: Multiple commands not supported")
+		slog.Debug("received multiple commands, proceeding with the first command", slog.Int("count", len(commands)))
+		for _, cmd := range commands {
+			slog.Debug("command in multiple commands",
+				slog.String("cmd", cmd.Cmd),
+				slog.String("args", strings.Join(cmd.Args, " ")),
+			)
+		}
+		commands = commands[:1]
 	}
 
 	err = h.isAuthenticated(commands[0])
@@ -267,7 +275,7 @@ func (h *BaseCommandHandler) ExecuteCommand(ctx context.Context, diceDBCmd *cmd.
 
 	// Proceed to subscribe after successful execution
 	if meta.CmdType == Watch {
-		h.handleCommandWatch(cmdList)
+		h.registerWatchSubscription(cmdList)
 	}
 
 	return resp, nil
@@ -295,8 +303,8 @@ func (h *BaseCommandHandler) handleCustomCommands(diceDBCmd *cmd.DiceDBCmd) (int
 	}
 }
 
-// handleCommandWatch sends a watch subscription request to the watch manager.
-func (h *BaseCommandHandler) handleCommandWatch(cmdList []*cmd.DiceDBCmd) {
+// registerWatchSubscription sends a watch subscription request to the watch manager.
+func (h *BaseCommandHandler) registerWatchSubscription(cmdList []*cmd.DiceDBCmd) {
 	h.cmdWatchSubscriptionChan <- watchmanager.WatchSubscription{
 		Subscribe:    true,
 		WatchCmd:     cmdList[len(cmdList)-1],
@@ -511,6 +519,7 @@ func (h *BaseCommandHandler) sendResponseToIOThread(resp interface{}, err error)
 		h.ioThreadWriteChan <- err
 		return
 	}
+
 	h.ioThreadWriteChan <- resp
 }
 
@@ -529,7 +538,7 @@ func (h *BaseCommandHandler) isAuthenticated(c *cmd.DiceDBCmd) error {
 }
 
 func (h *BaseCommandHandler) Stop() error {
-	slog.Info("Stopping command handler", slog.String("id", h.id))
+	slog.Debug("stopping command handler", slog.String("id", h.id))
 	h.Session.Expire()
 	return nil
 }

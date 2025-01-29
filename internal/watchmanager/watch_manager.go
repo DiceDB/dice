@@ -6,6 +6,7 @@ package watchmanager
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"sync"
 
 	"github.com/dicedb/dice/internal/cmd"
@@ -85,7 +86,12 @@ func (m *Manager) listenForEvents(ctx context.Context) {
 // handleSubscription processes a new subscription request
 func (m *Manager) handleSubscription(sub WatchSubscription) {
 	fingerprint := sub.WatchCmd.GetFingerprint()
-	key := sub.WatchCmd.GetKey()
+	key := sub.WatchCmd.Key()
+	slog.Debug("creating a new subscription",
+		slog.String("key", key),
+		slog.String("cmd", sub.WatchCmd.Cmd),
+		slog.String("args", strings.Join(sub.WatchCmd.Args, " ")),
+		slog.Any("fingerprint", fingerprint))
 
 	// Add fingerprint to querySubscriptionMap
 	if _, exists := m.querySubscriptionMap[key]; !exists {
@@ -122,7 +128,7 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 
 	// Remove fingerprint from querySubscriptionMap
 	if diceDBCmd, ok := m.fingerprintCmdMap[fingerprint]; ok {
-		key := diceDBCmd.GetKey()
+		key := diceDBCmd.Key()
 		if fingerprints, ok := m.querySubscriptionMap[key]; ok {
 			// Remove the fingerprint from the list of fingerprints listening to this key
 			delete(fingerprints, fingerprint)
