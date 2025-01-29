@@ -19,6 +19,7 @@ func init() {
 }
 
 func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
+	cmdResNil := NewCmdResNil()
 	if len(c.C.Args) != 1 {
 		return cmdResNil, errWrongArgumentCount("GET")
 	}

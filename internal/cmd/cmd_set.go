@@ -34,6 +34,10 @@ func init() {
 
 //nolint:gocyclo
 func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
+	var (
+		cmdResNil *CmdRes = NewCmdResNil()
+		cmdResOk  *CmdRes = NewCmdResOK()
+	)
 	if len(c.C.Args) <= 1 {
 		return cmdResNil, errWrongArgumentCount("SET")
 	}
@@ -186,5 +190,5 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		}
 	}
 
-	return cmdResOK, nil
+	return cmdResOk, nil
 }

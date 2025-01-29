@@ -66,7 +66,7 @@ func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			return resp, err
 		}
 	}
-	return cmdResNil, errors.New("command not found")
+	return NewCmdResOK(), errors.New("command not found")
 }
 
 // DiceDBCmd represents a command structure to be executed
@@ -142,10 +142,37 @@ func errInvalidValue(command, param string) error {
 	return fmt.Errorf("invalid value for a parameter in '%s' command for %s parameter", strings.ToUpper(command), strings.ToUpper(param))
 }
 
-var cmdResNil = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VNil{VNil: true},
-}}
+// NewCmdResNil creates a new CmdRes instance with a nil response.
+// This function is used to represent a nil response in the DiceDB command execution.
+//
+// The function returns a pointer to a CmdRes struct, where the Response field is populated with a wire.Response
+// containing a nil value. This is achieved by setting the Value field of the wire.Response to a wire.Response_VNil
+// with VNil set to true.
+//
+// Parameters:
+// None
+//
+// Return:
+// *CmdRes - A pointer to a CmdRes struct with a nil response.
+func NewCmdResNil() *CmdRes {
+    return &CmdRes{R: &wire.Response{
+        Value: &wire.Response_VNil{VNil: true},
+    }}
+}
 
-var cmdResOK = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VStr{VStr: "OK"},
-}}
+// NewCmdResOK creates a new CmdRes instance with an "OK" response.
+//
+// This function is used to generate a standard "OK" response for successful
+// DiceDB command executions. It creates and returns a CmdRes struct with
+// a wire.Response that contains a string value "OK".
+//
+// Parameters:
+// None
+//
+// Returns:
+// *CmdRes: A pointer to a CmdRes struct containing a wire.Response with "OK" as the value.
+func NewCmdResOK() *CmdRes {
+    return &CmdRes{R: &wire.Response{
+        Value: &wire.Response_VStr{VStr: "OK"},
+    }}
+}
