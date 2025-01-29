@@ -71,7 +71,7 @@ run-benchmark-large: ## run the memtier benchmark with large parameters
 
 ##@ Development
 run: ## run dicedb with the default configuration
-	go run main.go
+	go run main.go --engine ironhawk --log-level debug
 
 run-docker: ## run dicedb in a Docker container
 	docker run -p 7379:7379 dicedb/dicedb:latest

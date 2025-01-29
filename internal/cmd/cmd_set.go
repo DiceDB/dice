@@ -72,8 +72,13 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return cmdResNil, errInvalidSyntax("SET")
 	}
 
-	var exDurationSec, exDurationMs int64
 	var err error
+	var exDurationSec, exDurationMs int64
+
+	// Default to -1 to indicate that the value is not set
+	// and the key will not expire
+	exDurationMs = -1
+
 	if params[EX] != "" {
 		exDurationSec, err = strconv.ParseInt(params[EX], 10, 64)
 		if err != nil {
