@@ -93,4 +93,5 @@ const (
 	ObjTypeBF
 	ObjTypeDequeue
 	ObjTypeHLL
+	ObjTypeFloat
 )

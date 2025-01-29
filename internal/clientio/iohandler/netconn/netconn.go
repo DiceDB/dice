@@ -19,6 +19,9 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
+	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/wire"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -171,6 +174,49 @@ func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 	}
 }
 
+// ReadRequest reads data from the network connection
+func (h *IOHandler) ReadSync() (*cmd.Cmd, error) {
+	var result []byte
+	buf := make([]byte, ioBufferSize)
+
+	for {
+		err := h.conn.SetReadDeadline(time.Now().Add(idleTimeout))
+		if err != nil {
+			return nil, errReadDeadline
+		}
+
+		n, err := h.reader.Read(buf)
+		if n > 0 {
+			if len(result)+n > maxRequestSize {
+				return nil, ErrRequestTooLarge
+			}
+			result = append(result, buf[:n]...)
+		}
+
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+
+		// If we've read less than the buffer size, we've got all the data
+		if n < len(buf) {
+			break
+		}
+	}
+
+	if len(result) == 0 {
+		return nil, io.EOF
+	}
+
+	c := &wire.Command{}
+	if err := proto.Unmarshal(result, c); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal command: %w", err)
+	}
+	return &cmd.Cmd{C: c}, nil
+}
+
 // handleReadError handles various read errors and returns appropriate response
 func (h *IOHandler) handleReadError(err error, data []byte) ([]byte, error) {
 	switch {
@@ -260,6 +306,10 @@ func (h *IOHandler) Write(ctx context.Context, response interface{}) error {
 	}
 
 	return nil
+}
+
+func (h *IOHandler) WriteSync(ctx context.Context, r *cmd.CmdRes) error {
+	return h.Write(ctx, r)
 }
 
 // Close underlying network connection

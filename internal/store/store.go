@@ -53,14 +53,16 @@ type Store struct {
 	numKeys          int
 	cmdWatchChan     chan CmdWatchEvent
 	evictionStrategy EvictionStrategy
+	ShardID          int
 }
 
-func NewStore(cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy) *Store {
+func NewStore(cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy, shardID int) *Store {
 	store := &Store{
 		store:            NewStoreRegMap(),
 		expires:          NewExpireRegMap(),
 		cmdWatchChan:     cmdWatchChan,
 		evictionStrategy: evictionStrategy,
+		ShardID:          shardID,
 	}
 	if evictionStrategy == nil {
 		store.evictionStrategy = NewDefaultEviction()

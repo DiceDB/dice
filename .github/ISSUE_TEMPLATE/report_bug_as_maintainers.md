@@ -6,8 +6,6 @@ labels: ''
 assignees: ''
 ---
 
-> Delete the following line if there is no prior dependency on any existing PR
-
 > Pick this issue only after #{PR_NUM} is merged.
 
 {details of the issue}

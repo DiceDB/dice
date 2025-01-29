@@ -56,6 +56,9 @@ func NewShardManager(shardCount uint8, cmdWatchChan chan dstore.CmdWatchEvent, g
 
 // Run starts the ShardManager, manages its lifecycle, and listens for errors.
 func (manager *ShardManager) Run(ctx context.Context) {
+	if manager == nil {
+		return
+	}
 	signal.Notify(manager.sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	var wg sync.WaitGroup

@@ -71,7 +71,7 @@ run-benchmark-large: ## run the memtier benchmark with large parameters
 
 ##@ Development
 run: ## run dicedb with the default configuration
-	go run main.go
+	go run main.go --engine ironhawk --log-level debug
 
 run-docker: ## run dicedb in a Docker container
 	docker run -p 7379:7379 dicedb/dicedb:latest
@@ -113,3 +113,13 @@ push-binary-remote:
 
 add-license-notice:
 	./add_license_notice.sh
+
+kill:
+	@lsof -t -i :7379 | xargs -r kill -9
+
+generate:
+	protoc --go_out=. --go-grpc_out=. protos/cmd.proto
+
+update:
+	git submodule update --remote
+	git submodule update --init --recursive
