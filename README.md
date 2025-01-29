@@ -6,7 +6,7 @@ DiceDB
 <a target="_blank" href="https://discord.gg/6r8uXWtXh7"><img src="https://dcbadge.limes.pink/api/server/6r8uXWtXh7?style=flat" alt="discord community" /></a>
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
-DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware.
+DiceDB is an open-source in-memory database with query subscriptions.
 
 > [!CAUTION]
 > DiceDB is under active development and supports a wide [range of commands](https://dicedb.io/commands/get/). Inconsistent behavior is expected. Feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
