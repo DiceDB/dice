@@ -96,7 +96,6 @@ func configureParentDirPaths() {
 func createDefaultParentDir() (string, error) {
 	// Get the default directory path for the OS
 	prefDir := GetDefaultParentDirPath()
-	// Create the directory (MkdirAll handles "already exists" gracefully)
 	if err := os.MkdirAll(prefDir, os.ModePerm); err != nil {
 		return "", fmt.Errorf("failed to create preferences directory: %w", err)
 	}
