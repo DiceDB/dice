@@ -121,10 +121,14 @@ air
 
 ### Local Setup with Custom Config
 
-By default, DiceDB will look for the configuration file at `./dicedb.conf`. (Linux, Darwin, and WSL)
+Follow below steps to generate config file and can be updated: 
+1. Run below commands to generate the config file
+```
+make build
+dicedb init-config
+```
 
-> [!TIP]
-> If you want to use a custom configuration file, you can specify the path using the `-c` flag. and to output the configuration file to a specific location, you can specify the output dir path using the `-o` flag.
+2. Update config changes in file generated i.e. `dicedb.yaml` in current directory.
 
 ### Running Tests
 

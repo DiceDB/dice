@@ -60,6 +60,7 @@ func Init(flags *pflag.FlagSet) {
 	configureParentDirPaths()
 	viper.SetConfigName("dicedb")
 	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
 	viper.AddConfigPath(DefaultParentDir)
 
 	err := viper.ReadInConfig()
@@ -71,7 +72,11 @@ func Init(flags *pflag.FlagSet) {
 		if flag.Name == "help" {
 			return
 		}
-		viper.Set(flag.Name, flag.Value.String())
+
+		// Only updated parsed configs if the user sets value
+		if flag.Changed {
+			viper.Set(flag.Name, flag.Value.String())
+		}
 	})
 
 	if err := viper.Unmarshal(&Config); err != nil {
