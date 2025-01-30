@@ -66,7 +66,7 @@ func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			return resp, err
 		}
 	}
-	return NewCmdResOK(), errors.New("command not found")
+	return NewCmdResNil(), errors.New("command not found")
 }
 
 // DiceDBCmd represents a command structure to be executed
