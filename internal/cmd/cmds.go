@@ -155,9 +155,9 @@ func errInvalidValue(command, param string) error {
 // Return:
 // *CmdRes - A pointer to a CmdRes struct with a nil response.
 func NewCmdResNil() *CmdRes {
-    return &CmdRes{R: &wire.Response{
-        Value: &wire.Response_VNil{VNil: true},
-    }}
+	return &CmdRes{R: &wire.Response{
+		Value: &wire.Response_VNil{VNil: true},
+	}}
 }
 
 // NewCmdResOK creates a new CmdRes instance with an "OK" response.
@@ -172,7 +172,7 @@ func NewCmdResNil() *CmdRes {
 // Returns:
 // *CmdRes: A pointer to a CmdRes struct containing a wire.Response with "OK" as the value.
 func NewCmdResOK() *CmdRes {
-    return &CmdRes{R: &wire.Response{
-        Value: &wire.Response_VStr{VStr: "OK"},
-    }}
+	return &CmdRes{R: &wire.Response{
+		Value: &wire.Response_VStr{VStr: "OK"},
+	}}
 }
