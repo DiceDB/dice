@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/wire"
 )
@@ -18,9 +16,6 @@ func init() {
 }
 
 func evalECHO(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	for _, arg := range c.C.Args {
-		fmt.Println(arg)
-	}
 	if len(c.C.Args) != 1 {
 		return cmdResNil, errWrongArgumentCount("ECHO")
 	}
