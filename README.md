@@ -122,13 +122,14 @@ air
 ### Local Setup with Custom Config
 
 Follow below steps to generate config file and can be updated: 
-1. Run below commands to generate the config file
+
+1. Run below commands to generate the config file after you have built the binary
+
 ```
-make build
-dicedb init-config
+./dicedb init-config
 ```
 
-2. Update config changes in file generated i.e. `dicedb.yaml` in current directory.
+2. Update config changes in the freshly generated file i.e. `dicedb.yaml`.
 
 ### Running Tests
 
