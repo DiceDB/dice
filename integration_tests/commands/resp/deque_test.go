@@ -239,12 +239,12 @@ func TestLPushRPop(t *testing.T) {
 		{
 			name:   "LPUSH RPOP normal values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqNormalValues, " ")}, getPops(deqNormalValues)...),
-			expect: append(append([]any{int64(14)}, getPopExpects(deqNormalValues)...), "(nil)"),
+			expect: append(append([]any{int64(len(deqNormalValues))}, getPopExpects(deqNormalValues)...), "(nil)"),
 		},
 		{
 			name:   "LPUSH RPOP edge values",
 			cmds:   append([]string{"LPUSH k " + strings.Join(deqEdgeValues, " ")}, getPops(deqEdgeValues)...),
-			expect: append(append([]any{int64(17)}, getPopExpects(deqEdgeValues)...), "(nil)"),
+			expect: append(append([]any{int64(len(deqEdgeValues))}, getPopExpects(deqEdgeValues)...), "(nil)"),
 		},
 	}
 
@@ -563,8 +563,8 @@ func TestLPOPCount(t *testing.T) {
 				int64(2),
 				[]interface{}{"v3", "v4"},
 				int64(0),
-				"ERR value is not an integer or out of range",
-				"ERR value is not an integer or a float",
+				"value is out of range, must be positive",
+				"value is out of range, must be positive",
 				int64(0),
 			},
 		},
