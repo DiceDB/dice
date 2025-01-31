@@ -142,6 +142,21 @@ func errInvalidValue(command, param string) error {
 	return fmt.Errorf("invalid value for a parameter in '%s' command for %s parameter", strings.ToUpper(command), strings.ToUpper(param))
 }
 
+//nolint:unparam
+func errIntegerOutOfRange(command string) error {
+	return fmt.Errorf("integer out of range for '%s' command", strings.ToUpper(command))
+}
+
+//nolint:unparam
+func errWrongTypeOperation(command string) error {
+	return fmt.Errorf("wrong type operation for '%s' command", strings.ToUpper(command))
+}
+
+//nolint:unparam
+func errOverflow(command string) error {
+	return fmt.Errorf("overflow for '%s' command", strings.ToUpper(command))
+}
+
 var cmdResNil = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VNil{VNil: true},
 }}
