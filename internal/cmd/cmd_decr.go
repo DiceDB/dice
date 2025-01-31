@@ -25,8 +25,7 @@ func evalDECR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 	incr := int64(-1)
 
-	args := c.C.Args
-	key := args[0]
+	key := c.C.Args[0]
 	obj := s.Get(key)
 	if obj == nil {
 		obj = s.NewObj(incr, -1, object.ObjTypeInt)
