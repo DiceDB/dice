@@ -32,12 +32,12 @@ func evalDECRBY(c *Cmd, s *dstore.Store)  (*CmdRes, error) {
 	return incrDecrCmd(c.C.Args, -decrAmount, s)
 }
 
-func incrDecrCmd(args []string, incr int64, store *dstore.Store) (*CmdRes, error) {
+func incrDecrCmd(args []string, incr int64, s *dstore.Store) (*CmdRes, error) {
 	key := args[0]
-	obj := store.Get(key)
+	obj := s.Get(key)
 	if obj == nil {
-		obj = store.NewObj(incr, -1, object.ObjTypeInt)
-		store.Put(key, obj)
+		obj = s.NewObj(incr, -1, object.ObjTypeInt)
+		s.Put(key, obj)
 		return &CmdRes{R: &wire.Response{
 			Value: &wire.Response_VInt{VInt: incr},
 		}}, nil
