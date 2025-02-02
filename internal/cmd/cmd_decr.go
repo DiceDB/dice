@@ -23,12 +23,12 @@ func evalDECR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return cmdResNil, errWrongArgumentCount("DECR")
 	}
 
-	incr := INFINITE_EXPIRATION
+	incr := int64(-1)
 
 	key := c.C.Args[0]
 	obj := s.Get(key)
 	if obj == nil {
-		obj = s.NewObj(incr, -1, object.ObjTypeInt)
+		obj = s.NewObj(incr, INFINITE_EXPIRATION, object.ObjTypeInt)
 		s.Put(key, obj)
 		return &CmdRes{R: &wire.Response{
 			Value: &wire.Response_VInt{VInt: incr},
