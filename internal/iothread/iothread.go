@@ -87,6 +87,7 @@ func (t *IOThread) StartSync(ctx context.Context, execute func(c *cmd.Cmd) (*cmd
 			res.R.Err = err.Error()
 		}
 		err = t.ioHandler.WriteSync(ctx, res)
+		res.ResetErr()
 		if err != nil {
 			return err
 		}

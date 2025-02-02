@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"sync"
+
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/wire"
 )
@@ -17,14 +19,14 @@ func init() {
 
 func evalPING(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) >= 2 {
-		return NewCmdResNil(), errWrongArgumentCount("PING")
+		return cmdResOK, errWrongArgumentCount("PING")
 	}
 	if len(c.C.Args) == 0 {
 		return &CmdRes{R: &wire.Response{
 			Value: &wire.Response_VStr{VStr: "PONG"},
-		}}, nil
+		}, Mu: &sync.Mutex{}}, nil
 	}
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VStr{VStr: c.C.Args[0]},
-	}}, nil
+	}, Mu: &sync.Mutex{}}, nil
 }
