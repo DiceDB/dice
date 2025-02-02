@@ -18,12 +18,12 @@ func init() {
 	commandRegistry.AddCommand(cDECR)
 }
 
-//nolint:gocyclo
 func evalDECR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
 		return cmdResNil, errWrongArgumentCount("DECR")
 	}
-	incr := int64(-1)
+
+	incr := INFINITE_EXPIRATION
 
 	key := c.C.Args[0]
 	obj := s.Get(key)
@@ -35,20 +35,17 @@ func evalDECR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		}}, nil
 	}
 
-	// if the type is not KV : return wrong type error
-	// if the encoding or type is not int : return value is not an int error
-	if err := object.AssertTypeWithError(obj.Type, object.ObjTypeString); err == nil {
-		return cmdResNil, errIntegerOutOfRange("DECR")
-	}
-
-	if errTypeInt := object.AssertType(obj.Type, object.ObjTypeInt); errTypeInt != nil {
+	switch obj.Type {
+	case object.ObjTypeString:
+		return cmdResNil, errIntegerOutOfRange
+	case object.ObjTypeInt:
 		return cmdResNil, errWrongTypeOperation("DECR")
 	}
 
 	i, _ := obj.Value.(int64)
 	if (incr < 0 && i < 0 && incr < (math.MinInt64-i)) ||
 		(incr > 0 && i > 0 && incr > (math.MaxInt64-i)) {
-		return cmdResNil, errOverflow("DECR")
+		return cmdResNil, errIntegerOutOfRange
 	}
 
 	i += incr
