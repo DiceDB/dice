@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package eval
 
 import (
@@ -13,7 +16,7 @@ import (
 )
 
 func TestBloomFilter(t *testing.T) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 	// This test only contains some basic checks for all the bloom filter
 	// operations like BFRESERVE, BFADD, BFEXISTS. It assumes that the
 	// functions called in the main function are working correctly and
@@ -94,25 +97,25 @@ func TestBloomFilter(t *testing.T) {
 }
 
 func TestGetOrCreateBloomFilter(t *testing.T) {
-	store := dstore.NewStore(nil, nil, nil)
+	store := dstore.NewStore(nil, nil)
 	// Create a key and default opts
 	key := "bf"
 	opts := defaultBloomOpts()
 
 	// Should create a new filter under the key `key`.
-	bloom, err := getOrCreateBloomFilter(key, store, opts)
+	bloom, err := GetOrCreateBloomFilter(key, store, opts)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while creating new filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter (which was created above)
-	bloom, err = getOrCreateBloomFilter(key, store, opts)
+	bloom, err = GetOrCreateBloomFilter(key, store, opts)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
 
 	// Should get the filter with nil opts
-	bloom, err = getOrCreateBloomFilter(key, store, nil)
+	bloom, err = GetOrCreateBloomFilter(key, store, nil)
 	if bloom == nil || err != nil {
 		t.Errorf("nil bloom or non-nil error returned while fetching existing filter - key: %s, opts: %+v, err: %v", key, opts, err)
 	}
@@ -122,7 +125,7 @@ func TestUpdateIndexes(t *testing.T) {
 	// Create a value, default opts and initialize all params of the filter
 	value := "hello"
 	opts := defaultBloomOpts()
-	bloom := newBloomFilter(opts)
+	bloom := NewBloomFilter(opts)
 
 	err := opts.updateIndexes(value)
 	if err != nil {

@@ -1,9 +1,14 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package iomultiplexer
 
 import (
 	"fmt"
 	"syscall"
 	"time"
+
+	"github.com/dicedb/dice/config"
 )
 
 // Epoll implements the IOMultiplexer interface for Linux-based systems
@@ -18,8 +23,8 @@ type Epoll struct {
 }
 
 // New creates a new Epoll instance
-func New(maxClients int32) (*Epoll, error) {
-	if maxClients < 0 {
+func New() (*Epoll, error) {
+	if config.Config.MaxClients == 0 {
 		return nil, ErrInvalidMaxClients
 	}
 
@@ -30,8 +35,8 @@ func New(maxClients int32) (*Epoll, error) {
 
 	return &Epoll{
 		fd:          fd,
-		ePollEvents: make([]syscall.EpollEvent, maxClients),
-		diceEvents:  make([]Event, maxClients),
+		ePollEvents: make([]syscall.EpollEvent, config.Config.MaxClients),
+		diceEvents:  make([]Event, config.Config.MaxClients),
 	}, nil
 }
 

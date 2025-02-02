@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package resp
 
 import (
@@ -11,6 +14,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dicedb/dice/internal/commandhandler"
+	"github.com/dicedb/dice/internal/ops"
 	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
 
@@ -20,14 +25,14 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
 	respparser "github.com/dicedb/dice/internal/clientio/requestparser/resp"
-	"github.com/dicedb/dice/internal/ops"
+	"github.com/dicedb/dice/internal/iothread"
 	"github.com/dicedb/dice/internal/shard"
-	"github.com/dicedb/dice/internal/worker"
 )
 
 var (
-	workerCounter uint64
-	startTime     = time.Now().UnixNano() / int64(time.Millisecond)
+	ioThreadCounter   uint64
+	cmdHandlerCounter uint64
+	startTime         = time.Now().UnixNano() / int64(time.Millisecond)
 )
 
 var (
@@ -44,7 +49,8 @@ type Server struct {
 	Port                     int
 	serverFD                 int
 	connBacklogSize          int
-	workerManager            *worker.WorkerManager
+	ioThreadManager          *iothread.Manager
+	cmdHandlerManager        *commandhandler.Registry
 	shardManager             *shard.ShardManager
 	watchManager             *watchmanager.Manager
 	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription
@@ -52,13 +58,15 @@ type Server struct {
 	wl                       wal.AbstractWAL
 }
 
-func NewServer(shardManager *shard.ShardManager, workerManager *worker.WorkerManager,
-	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent, globalErrChan chan error, wl wal.AbstractWAL) *Server {
+func NewServer(shardManager *shard.ShardManager, ioThreadManager *iothread.Manager, cmdHandlerManager *commandhandler.Registry,
+	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent,
+	globalErrChan chan error, wl wal.AbstractWAL) *Server {
 	return &Server{
-		Host:                     config.DiceConfig.AsyncServer.Addr,
-		Port:                     config.DiceConfig.AsyncServer.Port,
+		Host:                     config.Config.Host,
+		Port:                     config.Config.Port,
 		connBacklogSize:          DefaultConnBacklogSize,
-		workerManager:            workerManager,
+		ioThreadManager:          ioThreadManager,
+		cmdHandlerManager:        cmdHandlerManager,
 		shardManager:             shardManager,
 		watchManager:             watchmanager.NewManager(cmdWatchSubscriptionChan, cmdWatchChan),
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
@@ -95,8 +103,6 @@ func (s *Server) Run(ctx context.Context) (err error) {
 			errChan <- fmt.Errorf("failed to accept connections %w", err)
 		}
 	}(wg)
-
-	slog.Info("ready to accept and serve requests on", slog.Int("port", config.DiceConfig.AsyncServer.Port))
 
 	select {
 	case <-ctx.Done():
@@ -186,51 +192,96 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 				return fmt.Errorf("error accepting connection: %w", err)
 			}
 
-			// Register a new worker for the client
+			// Register a new io-thread for the client
 			ioHandler, err := netconn.NewIOHandler(clientFD)
 			if err != nil {
 				slog.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
 				return err
 			}
 
-			parser := respparser.NewParser()
+			// create a new io-thread
+			ioThreadID := GenerateUniqueIOThreadID()
+			ioThreadReadChan := make(chan []byte)       // for sending data to the command handler from the io-thread
+			ioThreadWriteChan := make(chan interface{}) // for sending data to the io-thread from the command handler
+			ioThreadErrChan := make(chan error, 1)      // for receiving errors from the io-thread
+			thread := iothread.NewIOThread(ioThreadID, ioHandler, ioThreadReadChan, ioThreadWriteChan, ioThreadErrChan)
 
+			// For each io-thread, we create a dedicated command handler - 1:1 mapping
+			cmdHandlerID := GenerateUniqueCommandHandlerID()
+			parser := respparser.NewParser()
 			responseChan := make(chan *ops.StoreResponse)      // responseChan is used for handling common responses from shards
 			preprocessingChan := make(chan *ops.StoreResponse) // preprocessingChan is specifically for handling responses from shards for commands that require preprocessing
 
-			wID := GenerateUniqueWorkerID()
-			w := worker.NewWorker(wID, responseChan, preprocessingChan, s.cmdWatchSubscriptionChan, ioHandler, parser, s.shardManager, s.globalErrorChan, s.wl)
+			handler := commandhandler.NewCommandHandler(cmdHandlerID, responseChan, preprocessingChan,
+				s.cmdWatchSubscriptionChan, parser, s.shardManager, s.globalErrorChan,
+				ioThreadReadChan, ioThreadWriteChan, ioThreadErrChan, s.wl)
 
-			// Register the worker with the worker manager
-			err = s.workerManager.RegisterWorker(w)
+			// Register the io-thread with the manager
+			err = s.ioThreadManager.RegisterIOThread(thread)
 			if err != nil {
-				return err
+				slog.Debug("Failed to register io-thread", slog.String("id", ioThreadID), slog.Any("error", err))
+				continue
 			}
 
-			wg.Add(1)
-			go func(wID string) {
-				wg.Done()
-				defer func(wm *worker.WorkerManager, workerID string) {
-					err := wm.UnregisterWorker(workerID)
-					if err != nil {
-						slog.Warn("Failed to unregister worker", slog.String("worker-id", wID), slog.Any("error", err))
-					}
-				}(s.workerManager, wID)
-				wctx, cwctx := context.WithCancel(ctx)
-				defer cwctx()
-				err := w.Start(wctx)
-				if err != nil {
-					slog.Debug("Worker stopped", slog.String("worker-id", wID), slog.Any("error", err))
-				}
-			}(wID)
+			// Register the command handler with the manager
+			err = s.cmdHandlerManager.RegisterCommandHandler(handler)
+			if err != nil {
+				slog.Debug("Failed to register command handler", slog.String("id", cmdHandlerID), slog.Any("error", err))
+				continue
+			}
+
+			// Registration for both IO thread and command handler is done to ensure there is no error before starting the goroutines
+			wg.Add(2)
+			go s.startIOThread(ctx, wg, thread)
+			go s.startCommandHandler(ctx, wg, handler)
 		}
 	}
 }
 
-func GenerateUniqueWorkerID() string {
-	count := atomic.AddUint64(&workerCounter, 1)
-	timestamp := time.Now().UnixNano()/int64(time.Millisecond) - startTime
-	return fmt.Sprintf("W-%d-%d", timestamp, count)
+func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *iothread.IOThread) {
+	wg.Done()
+	defer func(wm *iothread.Manager, id string) {
+		err := wm.UnregisterIOThread(id)
+		if err != nil {
+			slog.Warn("Failed to unregister io-thread", slog.String("id", id), slog.Any("error", err))
+		}
+	}(s.ioThreadManager, thread.ID())
+	ctx2, cancel := context.WithCancel(ctx)
+	defer cancel()
+	err := thread.Start(ctx2)
+	if err != nil {
+		slog.Debug("IOThread stopped", slog.String("id", thread.ID()), slog.Any("error", err))
+	}
+}
+
+func (s *Server) startCommandHandler(ctx context.Context, wg *sync.WaitGroup, cmdHandler *commandhandler.BaseCommandHandler) {
+	wg.Done()
+	defer func(wm *commandhandler.Registry, id string) {
+		err := wm.UnregisterCommandHandler(id)
+		if err != nil {
+			slog.Warn("Failed to unregister command handler", slog.String("id", id), slog.Any("error", err))
+		}
+	}(s.cmdHandlerManager, cmdHandler.ID())
+	ctx2, cancel := context.WithCancel(ctx)
+	defer cancel()
+	err := cmdHandler.Start(ctx2)
+	if err != nil {
+		slog.Debug("CommandHandler stopped", slog.String("id", cmdHandler.ID()), slog.Any("error", err))
+	}
+}
+
+func GenerateUniqueIOThreadID() string {
+	return GenerateUniqueID("I", &ioThreadCounter)
+}
+
+func GenerateUniqueCommandHandlerID() string {
+	return GenerateUniqueID("C", &cmdHandlerCounter)
+}
+
+func GenerateUniqueID(prefix string, counter *uint64) string {
+	count := atomic.AddUint64(counter, 1)
+	timestamp := time.Now().UnixMilli() - startTime
+	return fmt.Sprintf("%s-%d-%d", prefix, timestamp, count)
 }
 
 func (s *Server) Shutdown() {

@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package websocket
 
 import (
@@ -283,6 +286,22 @@ func TestBitCount(t *testing.T) {
 		{
 			InCmds: []string{"SETBIT mykey 122 1"},
 			Out:    []interface{}{float64(0)},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -1 1"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -1 0"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -10000 1"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -10000 0"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
 		},
 		{
 			InCmds: []string{"GETBIT mykey 122"},

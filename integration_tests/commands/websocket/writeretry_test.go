@@ -1,7 +1,11 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package websocket
 
 import (
 	"fmt"
+	"github.com/dicedb/dice/internal/server/httpws"
 	"net"
 	"net/http"
 	"net/url"
@@ -9,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/internal/server"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +25,7 @@ func TestWriteResponseWithRetries_Success(t *testing.T) {
 	defer conn.Close()
 
 	// Complete a write without any errors
-	err := server.WriteResponseWithRetries(conn, []byte("hello"), 3)
+	err := httpws.WriteResponseWithRetries(conn, []byte("hello"), 3)
 	assert.NoError(t, err)
 }
 
@@ -33,7 +36,7 @@ func TestWriteResponseWithRetries_NetworkError(t *testing.T) {
 	// Simulate a network error by closing the connection beforehand
 	conn.Close()
 
-	err := server.WriteResponseWithRetries(conn, []byte("hello"), 3)
+	err := httpws.WriteResponseWithRetries(conn, []byte("hello"), 3)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "network operation error")
 }
@@ -45,7 +48,7 @@ func TestWriteResponseWithRetries_BrokenPipe(t *testing.T) {
 	// Simulate a broken pipe error by manually triggering it.
 	conn.UnderlyingConn().(*net.TCPConn).CloseWrite()
 
-	err := server.WriteResponseWithRetries(conn, []byte("hello"), 3)
+	err := httpws.WriteResponseWithRetries(conn, []byte("hello"), 3)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "broken pipe")
 }
@@ -60,7 +63,7 @@ func TestWriteResponseWithRetries_EAGAINRetry(t *testing.T) {
 	conn.SetWriteDeadline(time.Now().Add(1 * time.Millisecond))
 
 	for retries < 2 {
-		err := server.WriteResponseWithRetries(conn, []byte("hello"), 3)
+		err := httpws.WriteResponseWithRetries(conn, []byte("hello"), 3)
 		if err != nil {
 			// Retry and reset deadline after a failed attempt.
 			conn.SetWriteDeadline(time.Now().Add(100 * time.Millisecond))

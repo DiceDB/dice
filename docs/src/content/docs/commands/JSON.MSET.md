@@ -7,21 +7,20 @@ The `JSON.MSET` command in DiceDB is used to set multiple JSON values at once. T
 
 ## Parameters
 
-| Parameter | Description                                                                 | Type   | Required |
-| --------- | --------------------------------------------------------------------------- | ------ | -------- |
-| `key`     | The key where the JSON value will be set.                                   | String | Yes      |
-| `json`    | The JSON value to be set at the specified key.                              | String | Yes      |
-| `...`     | Additional key-value pairs can be provided as needed.                       |        |          |
+| Parameter | Description                                           | Type   | Required |
+| --------- | ----------------------------------------------------- | ------ | -------- |
+| `key`     | The key where the JSON value will be set.             | String | Yes      |
+| `json`    | The JSON value to be set at the specified key.        | String | Yes      |
+| `...`     | Additional key-value pairs can be provided as needed. |        |          |
 
 The `JSON.MSET` command requires an even number of arguments. The arguments are provided in pairs, where each pair consists of a key and a JSON value.
 
 ## Return Value
 
-| Condition | Return Value |
-| --------- | ------------ |
-| Success   | `OK`         |
-| Error in Syntax or Wrong key type    | Error        |
-
+| Condition                         | Return Value |
+| --------------------------------- | ------------ |
+| Success                           | `OK`         |
+| Error in Syntax or Wrong key type | Error        |
 
 ## Behaviour
 

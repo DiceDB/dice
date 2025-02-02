@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package http
 
 import (
@@ -16,7 +19,7 @@ func TestJSONDEBUG(t *testing.T) {
 				{Command: "JSON.SET", Body: map[string]interface{}{"key": "k1", "path": "$", "json": map[string]interface{}{"a": 1}}},
 				{Command: "JSON.DEBUG", Body: map[string]interface{}{"values": []interface{}{"MEMORY", "k1"}}},
 			},
-			expected: []interface{}{"OK", float64(89)},
+			expected: []interface{}{"OK", float64(72)},
 		},
 		{
 			name: "jsondebug with a valid path",

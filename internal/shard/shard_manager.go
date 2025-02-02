@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package shard
 
 import (
@@ -27,16 +30,16 @@ type ShardManager struct {
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
-func NewShardManager(shardCount uint8, queryWatchChan chan dstore.QueryWatchEvent, cmdWatchChan chan dstore.CmdWatchEvent, globalErrorChan chan error) *ShardManager {
+func NewShardManager(shardCount uint8, cmdWatchChan chan dstore.CmdWatchEvent, globalErrorChan chan error) *ShardManager {
 	shards := make([]*ShardThread, shardCount)
 	shardReqMap := make(map[ShardID]chan *ops.StoreOp)
 	shardErrorChan := make(chan *ShardError)
 
-	maxKeysPerShard := config.DiceConfig.Memory.KeysLimit / int(shardCount)
+	maxKeysPerShard := config.DefaultKeysLimit / int(shardCount)
 	for i := uint8(0); i < shardCount; i++ {
-		evictionStrategy := dstore.NewBatchEvictionLRU(maxKeysPerShard, config.DiceConfig.Memory.EvictionRatio)
+		evictionStrategy := dstore.NewPrimitiveEvictionStrategy(maxKeysPerShard)
 		// Shards are numbered from 0 to shardCount-1
-		shard := NewShardThread(i, globalErrorChan, shardErrorChan, queryWatchChan, cmdWatchChan, evictionStrategy)
+		shard := NewShardThread(i, globalErrorChan, shardErrorChan, cmdWatchChan, evictionStrategy)
 		shards[i] = shard
 		shardReqMap[i] = shard.ReqChan
 	}
@@ -53,6 +56,9 @@ func NewShardManager(shardCount uint8, queryWatchChan chan dstore.QueryWatchEven
 
 // Run starts the ShardManager, manages its lifecycle, and listens for errors.
 func (manager *ShardManager) Run(ctx context.Context) {
+	if manager == nil {
+		return
+	}
 	signal.Notify(manager.sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	var wg sync.WaitGroup
@@ -104,15 +110,16 @@ func (manager *ShardManager) GetShard(id ShardID) *ShardThread {
 	return nil
 }
 
-// RegisterWorker registers a worker with all Shards present in the ShardManager.
-func (manager *ShardManager) RegisterWorker(workerID string, request, processing chan *ops.StoreResponse) {
+// RegisterCommandHandler registers a command handler with all Shards present in the ShardManager.
+func (manager *ShardManager) RegisterCommandHandler(id string, request, processing chan *ops.StoreResponse) {
 	for _, shard := range manager.shards {
-		shard.registerWorker(workerID, request, processing)
+		shard.registerCommandHandler(id, request, processing)
 	}
 }
 
-func (manager *ShardManager) UnregisterWorker(workerID string) {
+// UnregisterCommandHandler unregisters a command handler from all Shards present in the ShardManager.
+func (manager *ShardManager) UnregisterCommandHandler(id string) {
 	for _, shard := range manager.shards {
-		shard.unregisterWorker(workerID)
+		shard.unregisterCommandHandler(id)
 	}
 }

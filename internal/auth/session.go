@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package auth
 
 import (
@@ -105,7 +108,7 @@ func NewSession() (session *Session) {
 }
 
 func (session *Session) IsActive() (isActive bool) {
-	if config.DiceConfig.Auth.Password == utils.EmptyStr && session.Status != SessionStatusActive {
+	if config.Config.Password == utils.EmptyStr && session.Status != SessionStatusActive {
 		session.Activate(session.User)
 	}
 	isActive = session.Status == SessionStatusActive
@@ -130,7 +133,7 @@ func (session *Session) Validate(username, password string) error {
 	if user, err = UserStore.Get(username); err != nil {
 		return err
 	}
-	if username == config.DiceConfig.Auth.UserName && len(user.Passwords) == 0 {
+	if username == config.Config.Username && len(user.Passwords) == 0 {
 		session.Activate(user)
 		return nil
 	}

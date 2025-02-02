@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package websocket
 
 import (
@@ -30,7 +33,7 @@ func TestJSONDEBUG(t *testing.T) {
 				`JSON.SET k1 $ {"a":1}`,
 				"JSON.DEBUG MEMORY k1",
 			},
-			expected: []interface{}{"OK", float64(89)},
+			expected: []interface{}{"OK", float64(72)},
 		},
 		{
 			name: "jsondebug with a valid path",

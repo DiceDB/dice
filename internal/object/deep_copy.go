@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package object
 
 import (
@@ -10,7 +13,7 @@ type DeepCopyable interface {
 
 func (obj *Obj) DeepCopy() *Obj {
 	newObj := &Obj{
-		TypeEncoding:   obj.TypeEncoding,
+		Type:           obj.Type,
 		LastAccessedAt: obj.LastAccessedAt,
 	}
 
@@ -19,7 +22,7 @@ func (obj *Obj) DeepCopy() *Obj {
 		newObj.Value = copier.DeepCopy()
 	} else {
 		// Handle types that are not DeepCopyable
-		sourceType, _ := ExtractTypeEncoding(obj)
+		sourceType := obj.Type
 		switch sourceType {
 		case ObjTypeString:
 			sourceValue := obj.Value.(string)

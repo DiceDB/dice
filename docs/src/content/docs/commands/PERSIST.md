@@ -1,9 +1,9 @@
 ---
 title: PERSIST
-description: Documentation for the DiceDB command PERSIST
+description: The `PERSIST` command in DiceDB is used to remove the expiration time from a key, making it persistent. This allows the key to remain in the database indefinitely until it is explicitly deleted.
 ---
 
-The `PERSIST` command is used to remove the expiration from a key in DiceDB. If a key is set to expire after a certain amount of time, using the `PERSIST` command will make the key persistent, meaning it will no longer have an expiration time and will remain in the database until explicitly deleted.
+The `PERSIST` command is used to remove the expiration from a key in DiceDB. If a key is set to expire after a certain period, using the `PERSIST` command will make the key persistent, meaning it will no longer have an expiration time and will remain in the database until explicitly deleted.
 
 ## Syntax
 
@@ -26,11 +26,9 @@ PERSIST key
 
 ## Behaviour
 
-When the `PERSIST` command is executed:
-
-1. If the specified key has an expiration time, the `PERSIST` command removes that expiration, making the key persistent.
-2. If the key does not exist or does not have an expiration, the command does nothing and returns `0`.
-3. This command does not alter the key’s value, only its expiration state.
+- If the specified key has an expiration time, the `PERSIST` command will remove that expiration, ensuring the key remains in the database.
+- If the key does not have an expiration or if the key does not exist, the command returns `0` and no action is taken.
+- The value of the key remains unchanged. Only the expiration is affected.
 
 ## Errors
 
@@ -64,6 +62,10 @@ OK
 (integer) -1
 ```
 
+**Explanation**:
+
+- The `PERSIST` command removes the expiration from `mykey`, and the `TTL` command confirms that the key no longer has a time-to-live (TTL) value (`-1` indicates no expiration).
+
 1. `SET mykey "Hello"`: Sets the value of `mykey` to "Hello".
 2. `EXPIRE mykey 10`: Sets an expiration of 10 seconds on `mykey`.
 3. `PERSIST mykey`: Removes the expiration from `mykey`.
@@ -76,12 +78,14 @@ OK
 (integer) 0
 ```
 
-- The command returns `0` because `mykey` does not exist in the database.
+**Explanation**:
+
+- The command returns `0` because the key `mykey` does not exist in the database.
 
 ### Persisting a Key Without Expiration
 
 ```bash
-127.0.0.1:7379> SET mykey
+127.0.0.1:7379> SET mykey "Hello"
 OK
 ```
 
@@ -89,6 +93,8 @@ OK
 127.0.0.1:7379> PERSIST mykey
 (integer) 0
 ```
+
+**Explanation**:
 
 - The command returns `0` because `mykey` does not have an expiration time set.
 

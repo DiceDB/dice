@@ -4,13 +4,12 @@ DiceDB
 <a href="https://dicedb.io">![slatedb.io](https://img.shields.io/badge/site-dicedb.io-00A1FF?style=flat-square)</a>
 <a href="https://dicedb.io/get-started/installation/">![Docs](https://img.shields.io/badge/docs-00A1FF?style=flat-square)</a>
 <a target="_blank" href="https://discord.gg/6r8uXWtXh7"><img src="https://dcbadge.limes.pink/api/server/6r8uXWtXh7?style=flat" alt="discord community" /></a>
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
-DiceDB is a redis-compliant, reactive, scalable, highly available, unified cache optimized for modern hardware.
-
-We are looking for Early Design Partners, so, if you want to evaluate DiceDB, [block our calendar](https://cal.com/dicedb-arpit). always up for a chat.
+DiceDB is an open-source in-memory database with query subscriptions.
 
 > [!CAUTION]
-> DiceDB is under development and it supports a subset of Redis commands. So, please do not use it in production. But, feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
+> DiceDB is under active development and supports a wide [range of commands](https://dicedb.io/commands/get/). Inconsistent behavior is expected. Feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
 
 ## Want to contribute?
 
@@ -21,15 +20,6 @@ We have multiple repositories where you can contribute. So, as per your interest
 - [dicedb/playground-mono](https://github.com/dicedb/playground-mono) backend APIs for DiceDB playground / Stack - Go
 - [dicedb/alloy](https://github.com/dicedb/alloy) frontend and marketplace for DiceDB playground / Stack - NextJS
 
-## How is it different from Redis?
-
-Although DiceDB is a drop-in replacement of Redis, which means almost no learning curve and switching does not require any code change, it still differs in two key aspects and they are
-
-1. DiceDB is multithreaded and follows [shared-nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing_architecture).
-2. DiceDB supports `.WATCH` commands like `GET.WATCH`, `ZRANGE.WATCH`, etc. that lets clients listen to data changes and get the result set in real-time whenever something changes.
-
-`.WATCH` commands are pretty handy when it comes to building truly real-time applications like [Leaderboard](https://github.com/arpitbbhayani/leaderboard-go-dicedb).
-
 ## Get started
 
 ### Setting up DiceDB with Docker
@@ -37,19 +27,15 @@ Although DiceDB is a drop-in replacement of Redis, which means almost no learnin
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```bash
-docker run -p 7379:7379 dicedb/dicedb --enable-multithreading --enable-watch
+docker run -p 7379:7379 dicedb/dicedb --enable-watch
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
 to it using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and SDKs.
 
-> [!TIP]
-> Since DiceDB is a drop-in replacement for Redis, you can also use any Redis CLI and SDK to connect to DiceDB.
+### Build from source
 
-
-### Setting up DiceDB from source for development and contributions
-
-To run DiceDB for local development or running from source, you will need
+To build DiceDB from source, you need to have the following
 
 1. [Golang](https://go.dev/)
 2. Any of the below supported platform environments:
@@ -57,15 +43,49 @@ To run DiceDB for local development or running from source, you will need
     2. [OSX (Darwin) based environment](https://en.wikipedia.org/wiki/MacOS)
     3. WSL under Windows
 
-```bash
+```sh
 git clone https://github.com/dicedb/dice
 cd dice
-go run main.go --enable-multithreading --enable-watch
+make build
 ```
 
-You can skip passing the two flags if you are not working with multi-threading or `.WATCH` features.
+The above command will create a binary `dicedb`. Execute the binary and that will
+start the DiceDB server., or, you can run the following command to run like a usual
+Go program
 
-1. Install GoLangCI
+```sh
+go run main.go --enable-watch
+```
+
+You can skip passing the flag if you are not working with `.WATCH` feature.
+
+## Setting up CLI
+
+### Using cURL
+
+The best way to connect to DiceDB is using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and you can install it by running the following command
+
+```bash
+sudo su
+curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
+```
+
+If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
+
+### Building from source
+
+```sh
+git clone https://github.com/DiceDB/dicedb-cli
+cd dicedb-cli
+make build
+```
+
+The above command will create a binary `dicedb-cli`. Execute the binary will
+start the CLI and will try to connect to the DiceDB server.
+
+## Essentials for Development
+
+### Install GoLangCI
 
 ```bash
 sudo su
@@ -105,36 +125,6 @@ By default, DiceDB will look for the configuration file at `./dicedb.conf`. (Lin
 
 > [!TIP]
 > If you want to use a custom configuration file, you can specify the path using the `-c` flag. and to output the configuration file to a specific location, you can specify the output dir path using the `-o` flag.
-#### Additional Configuration Options:
-
-If you'd like to use a different location, you can specify a custom configuration file path with the `-c flag`:
-
-```bash
-go run main.go -c /path/to/config.toml
-```
-If you'd like to output the configuration file to a specific location, you can specify a custom output path with the `-o flag`:
-
-```bash
-go run main.go -o /path/of/output/dir
-```
-
-
-### Setting up CLI
-
-The best way to connect to DiceDB is using DiceDB CLI and you can install it by running the following command
-
-```bash
-sudo su
-curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
-```
-
-### Client Compatibility
-
-DiceDB is fully compatible with Redis protocol, allowing you to connect using any existing Redis client or SDK.
-
-> [!NOTE]
-> The `.WATCH` feature is only accessible through the DiceDB CLI.
-> If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
 
 ### Running Tests
 
@@ -170,9 +160,6 @@ TEST_FUNC=TestSet make test-one
 make test
 ```
 
-> Work to add more tests in DiceDB is in progress, and we will soon port the
-> test [Redis suite](https://github.com/redis/redis/tree/f60370ce28b946c1146dcea77c9c399d39601aaa) to this codebase to ensure full compatibility.
-
 ## Running Benchmark
 
 ```bash
@@ -200,10 +187,6 @@ Once the server starts, visit http://localhost:4321/ in your favourite browser. 
 1. `docs/src/content/docs/commands` is where all the commands are documented
 2. `docs/src/content/docs/tutorials` is where all the tutorials are documented
 
-## The Story
-
-DiceDB started as a re-implementation of Redis in Golang with the idea of building a DB from scratch to understand the micro-nuances that come with its implementation. DiceDB isn’t just another database; it’s a platform purpose-built for the real-time era. As real-time systems become increasingly prevalent in modern applications, DiceDB’s hyper-optimized architecture is positioned to power the next generation of user experiences.
-
 ## How to contribute
 
 The Code Contribution Guidelines are published at [CONTRIBUTING/README.md](CONTRIBUTING/README.md); please read them before you start making any changes. This would allow us to have a consistent standard of coding practices and developer experience.
@@ -216,7 +199,12 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
   <img src = "https://contrib.rocks/image?repo=dicedb/dice"/>
 </a>
 
+## License
+
+This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
+
 ## Troubleshoot
+
 ### Forcefully killing the process
 
 ```

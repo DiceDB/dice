@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package eval
 
 import (
@@ -53,9 +56,9 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 		// ===============================================================================
 		// dealing with store object is not recommended for all commands
 		// These operations are specialised for the commands which requires
-		// transferring data across multiple shards. e.g COPY, RENAME
+		// transferring data across multiple shards. e.g. COPY, RENAME, PFMERGE
 		// ===============================================================================
-		if e.cmd.InternalObj != nil {
+		if e.cmd.InternalObjs != nil {
 			// This involves handling object at store level, evaluating it, modifying it, and then storing it back.
 			return diceCmd.StoreObjectEval(e.cmd, e.store)
 		}
@@ -70,10 +73,6 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 	switch diceCmd.Name {
 	// Old implementation kept as it is, but we will be moving
 	// to the new implementation soon for all commands
-	case "SUBSCRIBE", "Q.WATCH":
-		return &EvalResponse{Result: EvalQWATCH(e.cmd.Args, e.isHTTPOperation, e.isWebSocketOperation, e.client, e.store), Error: nil}
-	case "UNSUBSCRIBE", "Q.UNWATCH":
-		return &EvalResponse{Result: EvalQUNWATCH(e.cmd.Args, e.isHTTPOperation, e.client), Error: nil}
 	case auth.Cmd:
 		return &EvalResponse{Result: EvalAUTH(e.cmd.Args, e.client), Error: nil}
 	case "ABORT":

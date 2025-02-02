@@ -37,7 +37,7 @@ If any of the specified keys do not exist, they are treated as empty sets. The i
 
 ## Error Handling
 
-- `Wrong Type Error`: 
+- `Wrong Type Error`:
   - `Error Message`: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
   - If any of the specified keys exist but are not of the set data type, DiceDB will return an error.
 - `No Key Error`:

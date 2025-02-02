@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package eval
 
 import (
@@ -71,7 +74,7 @@ func TestHashMapIncrementValue(t *testing.T) {
 }
 
 func TestGetValueFromHashMap(t *testing.T) {
-	store := store.NewStore(nil, nil, nil)
+	store := store.NewStore(nil, nil)
 	key := "key1"
 	field := "field1"
 	value := "value1"
@@ -79,7 +82,7 @@ func TestGetValueFromHashMap(t *testing.T) {
 	hmap.Set(field, value)
 
 	obj := &object.Obj{
-		TypeEncoding:   object.ObjTypeHashMap | object.ObjEncodingHashMap,
+		Type:           object.ObjTypeHashMap,
 		Value:          hmap,
 		LastAccessedAt: uint32(time.Now().Unix()),
 	}

@@ -84,7 +84,7 @@ Getting `HSCAN` on `nonExistentHash`.
 
 ## Notes
 
-- The `HSCAN` command has a time complexity of O(N), where N is the number of keys in the hash. This is in contrast to Redis, which implements `HSCAN` in O(1) time complexity by maintaining a cursor.
+- The `HSCAN` command has a time complexity of O(N), where N is the number of keys in the hash.
 - The `HSCAN` command is particularly useful for iterating over the fields of a hash in a cursor-based manner, allowing for efficient processing of large hashes.
 - The `MATCH` pattern allows for flexible filtering of fields based on their names, making it easy to target specific fields or groups of fields.
 - The `COUNT` option enables limiting the number of fields returned, which can be beneficial for performance and memory usage considerations.

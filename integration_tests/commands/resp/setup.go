@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package resp
 
 import (
@@ -5,17 +8,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net"
 	"os"
 	"sync"
+	"testing"
 	"time"
 
+	"github.com/dicedb/dice/internal/commandhandler"
+	"github.com/dicedb/dice/internal/iothread"
 	"github.com/dicedb/dice/internal/server/resp"
 	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dice/internal/watchmanager"
-	"github.com/dicedb/dice/internal/worker"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/clientio"
@@ -30,18 +35,9 @@ type TestServerOptions struct {
 	Port int
 }
 
-func init() {
-	parser := config.NewConfigParser()
-	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
-	}
-}
-
-// getLocalConnection returns a local TCP connection to the database
-//
 //nolint:unused
 func getLocalConnection() net.Conn {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.DiceConfig.AsyncServer.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", config.Config.Port))
 	if err != nil {
 		panic(err)
 	}
@@ -61,6 +57,30 @@ func ClosePublisherSubscribers(publisher net.Conn, subscribers []net.Conn) error
 	return nil
 }
 
+//nolint:unused
+func unsubscribeFromWatchUpdates(t *testing.T, subscribers []net.Conn, cmd, fingerprint string) {
+	t.Helper()
+	for _, subscriber := range subscribers {
+		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("%s.UNWATCH %s", cmd, fingerprint))
+		assert.NotNil(t, rp)
+		v, err := rp.DecodeOne()
+		assert.NoError(t, err)
+		castedValue, ok := v.(string)
+		if !ok {
+			t.Errorf("Type assertion to string failed for value: %v", v)
+		}
+		assert.Equal(t, castedValue, "OK")
+	}
+}
+
+//nolint:unused
+func unsubscribeFromWatchUpdatesSDK(t *testing.T, subscribers []WatchSubscriber, cmd, fingerprint string) {
+	for _, subscriber := range subscribers {
+		err := subscriber.watch.Unwatch(context.Background(), cmd, fingerprint)
+		assert.Nil(t, err)
+	}
+}
+
 // deleteTestKeys is a utility to delete a list of keys before running a test
 //
 //nolint:unused
@@ -73,7 +93,7 @@ func deleteTestKeys(keysToDelete []string, store *dstore.Store) {
 //nolint:unused
 func getLocalSdk() *dicedb.Client {
 	return dicedb.NewClient(&dicedb.Options{
-		Addr: fmt.Sprintf(":%d", config.DiceConfig.AsyncServer.Port),
+		Addr: fmt.Sprintf(":%d", config.Config.Port),
 
 		DialTimeout:           10 * time.Second,
 		ReadTimeout:           30 * time.Second,
@@ -155,29 +175,26 @@ func fireCommandAndGetRESPParser(conn net.Conn, cmd string) *clientio.RESPParser
 }
 
 func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
-
 	// #1261: Added here to prevent resp integration tests from failing on lower-spec machines
-	config.DiceConfig.Memory.KeysLimit = 2000
 	if opt.Port != 0 {
-		config.DiceConfig.AsyncServer.Port = opt.Port
+		config.Config.Port = opt.Port
 	} else {
-		config.DiceConfig.AsyncServer.Port = 9739
+		config.Config.Port = 9739
 	}
 
-	queryWatchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
-	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
+	cmdWatchChan := make(chan dstore.CmdWatchEvent, config.WatchChanBufSize)
 	cmdWatchSubscriptionChan := make(chan watchmanager.WatchSubscription)
 	gec := make(chan error)
-	shardManager := shard.NewShardManager(1, queryWatchChan, cmdWatchChan, gec)
-	workerManager := worker.NewWorkerManager(20000, shardManager)
+	shardManager := shard.NewShardManager(1, cmdWatchChan, gec)
+	ioThreadManager := iothread.NewManager()
+	cmdHandlerManager := commandhandler.NewRegistry(shardManager)
+
 	// Initialize the RESP Server
 	wl, _ := wal.NewNullWAL()
-	testServer := resp.NewServer(shardManager, workerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, wl)
+	testServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, gec, wl)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fmt.Println("Starting the test server on port", config.DiceConfig.AsyncServer.Port)
+	fmt.Println("Starting the test server on port", config.Config.Port)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 	wg.Add(1)

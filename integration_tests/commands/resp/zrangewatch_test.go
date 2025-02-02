@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package resp
 
 import (
@@ -73,7 +76,7 @@ func TestZRANGEWATCH(t *testing.T) {
 		}
 	}
 
-	// TODO - unsubscribe from updates once ZRANGE.UNWATCH is implemented
+	unsubscribeFromWatchUpdates(t, subscribers, "ZRANGE", "1178068413")
 }
 
 type zrangeWatchSDKTestCase struct {
@@ -142,7 +145,7 @@ func TestZRANGEWATCHWithSDK(t *testing.T) {
 		}
 	}
 
-	// TODO - unsubscribe from updates once ZRANGE.UNWATCH is implemented
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, "ZRANGE", "1178068413")
 }
 
 func TestZRANGEWATCHWithSDK2(t *testing.T) {
@@ -182,5 +185,5 @@ func TestZRANGEWATCHWithSDK2(t *testing.T) {
 		}
 	}
 
-	// TODO - unsubscribe from updates once ZRANGE.UNWATCH is implemented
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, "ZRANGE", "1178068413")
 }

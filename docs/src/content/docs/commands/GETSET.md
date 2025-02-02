@@ -1,6 +1,10 @@
 ---
 title: GETSET
 description: Documentation for the DiceDB command GETSET
+sidebar:
+  badge:
+    text: Deprecated
+    variant: danger
 ---
 
 The `GETSET` command in DiceDB is a powerful atomic operation that combines the functionality of `GET` and `SET` commands. It retrieves the current value of a key and simultaneously sets a new value for that key. This command is particularly useful when you need to update a value and also need to know the previous value in a single atomic operation.
@@ -55,8 +59,6 @@ The `GETSET` command can raise errors in the following scenarios:
 "Hello"
 ```
 
- 
-
 - The initial value of `mykey` is set to "Hello".
 - The `GETSET` command retrieves the current value "Hello" and sets the new value "World".
 - The old value "Hello" is returned.
@@ -67,8 +69,6 @@ The `GETSET` command can raise errors in the following scenarios:
 127.0.0.1:7379> GETSET newkey "NewValue"
 (nil)
 ```
-
- 
 
 - The key `newkey` does not exist.
 - The `GETSET` command sets the value of `newkey` to "NewValue".
@@ -88,8 +88,6 @@ OK
 127.0.0.1:7379> TTL newkey
 (integer) -1
 ```
-
- 
 
 - The `newkey` used in the `GETSET` command had an existing `TTL` set to expire in 60 seconds
 - When `GETSET` is executed on the mentioned key, it updates the value and resets the `TTL` on the key.

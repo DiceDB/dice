@@ -1,8 +1,12 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package shard
 
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -21,37 +25,38 @@ type ShardError struct {
 	Error   error   // Error is the error that occurred
 }
 
-// WorkerChannels holds the communication channels for a worker.
-// It contains both the common response channel and the preprocessing response channel.
-type WorkerChannels struct {
-	CommonResponseChan        chan *ops.StoreResponse // CommonResponseChan is used to send standard responses for worker operations.
+// CmdHandlerChannels holds the communication channels for a Command Handler.
+// It contains both the response channel and the preprocessing response channel.
+type CmdHandlerChannels struct {
+	ResponseChan              chan *ops.StoreResponse // ResponseChan is used to send standard responses for Command Handler operations.
 	PreProcessingResponseChan chan *ops.StoreResponse // PreProcessingResponseChan is used to send responses related to preprocessing operations.
 }
 
 type ShardThread struct {
-	id               ShardID                   // id is the unique identifier for the shard.
-	store            *dstore.Store             // store that the shard is responsible for.
-	ReqChan          chan *ops.StoreOp         // ReqChan is this shard's channel for receiving requests.
-	workerMap        map[string]WorkerChannels // workerMap maps each workerID to its corresponding WorkerChannels, containing both the common and preprocessing response channels.
-	workerMutex      sync.RWMutex              // workerMutex is the workerMap's mutex for thread safety.
-	globalErrorChan  chan error                // globalErrorChan is the channel for sending system-level errors.
-	shardErrorChan   chan *ShardError          // ShardErrorChan is the channel for sending shard-level errors.
-	lastCronExecTime time.Time                 // lastCronExecTime is the last time the shard executed cron tasks.
-	cronFrequency    time.Duration             // cronFrequency is the frequency at which the shard executes cron tasks.
+	id      ShardID           // id is the unique identifier for the shard.
+	store   *dstore.Store     // store that the shard is responsible for.
+	ReqChan chan *ops.StoreOp // ReqChan is this shard's channel for receiving requests.
+	// cmdHandlerMap maps each command handler id to its corresponding CommandHandlerChannels, containing both the common and preprocessing response channels.
+	cmdHandlerMap    map[string]CmdHandlerChannels
+	mu               sync.RWMutex     // mu is the cmdHandlerMap's mutex for thread safety.
+	globalErrorChan  chan error       // globalErrorChan is the channel for sending system-level errors.
+	shardErrorChan   chan *ShardError // ShardErrorChan is the channel for sending shard-level errors.
+	lastCronExecTime time.Time        // lastCronExecTime is the last time the shard executed cron tasks.
+	cronFrequency    time.Duration    // cronFrequency is the frequency at which the shard executes cron tasks.
 }
 
 // NewShardThread creates a new ShardThread instance with the given shard id and error channel.
-func NewShardThread(id ShardID, gec chan error, sec chan *ShardError, queryWatchChan chan dstore.QueryWatchEvent,
+func NewShardThread(id ShardID, gec chan error, sec chan *ShardError,
 	cmdWatchChan chan dstore.CmdWatchEvent, evictionStrategy dstore.EvictionStrategy) *ShardThread {
 	return &ShardThread{
 		id:               id,
-		store:            dstore.NewStore(queryWatchChan, cmdWatchChan, evictionStrategy),
+		store:            dstore.NewStore(cmdWatchChan, evictionStrategy, int(id)),
 		ReqChan:          make(chan *ops.StoreOp, 1000),
-		workerMap:        make(map[string]WorkerChannels),
+		cmdHandlerMap:    make(map[string]CmdHandlerChannels),
 		globalErrorChan:  gec,
 		shardErrorChan:   sec,
 		lastCronExecTime: utils.GetCurrentTime(),
-		cronFrequency:    config.DiceConfig.Performance.ShardCronFrequency,
+		cronFrequency:    config.ShardCronFrequency,
 	}
 }
 
@@ -79,30 +84,30 @@ func (shard *ShardThread) runCronTasks() {
 	shard.lastCronExecTime = utils.GetCurrentTime()
 }
 
-func (shard *ShardThread) registerWorker(workerID string, responseChan, preprocessingChan chan *ops.StoreResponse) {
-	shard.workerMutex.Lock()
-	shard.workerMap[workerID] = WorkerChannels{
-		CommonResponseChan:        responseChan,
+func (shard *ShardThread) registerCommandHandler(id string, responseChan, preprocessingChan chan *ops.StoreResponse) {
+	shard.mu.Lock()
+	shard.cmdHandlerMap[id] = CmdHandlerChannels{
+		ResponseChan:              responseChan,
 		PreProcessingResponseChan: preprocessingChan,
 	}
 
-	shard.workerMutex.Unlock()
+	shard.mu.Unlock()
 }
 
-func (shard *ShardThread) unregisterWorker(workerID string) {
-	shard.workerMutex.Lock()
-	delete(shard.workerMap, workerID)
-	shard.workerMutex.Unlock()
+func (shard *ShardThread) unregisterCommandHandler(id string) {
+	shard.mu.Lock()
+	delete(shard.cmdHandlerMap, id)
+	shard.mu.Unlock()
 }
 
 // processRequest processes a Store operation for the shard.
 func (shard *ShardThread) processRequest(op *ops.StoreOp) {
-	shard.workerMutex.RLock()
-	workerChans, ok := shard.workerMap[op.WorkerID]
-	shard.workerMutex.RUnlock()
+	shard.mu.RLock()
+	channels, ok := shard.cmdHandlerMap[op.CmdHandlerID]
+	shard.mu.RUnlock()
 
-	workerChan := workerChans.CommonResponseChan
-	preProcessChan := workerChans.PreProcessingResponseChan
+	cmdHandlerChan := channels.ResponseChan
+	preProcessChan := channels.PreProcessingResponseChan
 
 	sp := &ops.StoreResponse{
 		RequestID: op.RequestID,
@@ -118,25 +123,28 @@ func (shard *ShardThread) processRequest(op *ops.StoreOp) {
 		return
 	}
 
+	start := time.Now()
 	resp := e.ExecuteCommand()
+	slog.Debug("command executed",
+		slog.Any("cmd", op.Cmd),
+		slog.Any("took_ns", time.Since(start).Nanoseconds()))
+
 	if ok {
 		sp.EvalResponse = resp
 	} else {
 		shard.shardErrorChan <- &ShardError{
 			ShardID: shard.id,
-			Error:   fmt.Errorf(diceerrors.WorkerNotFoundErr, op.WorkerID),
+			Error:   fmt.Errorf(diceerrors.CmdHandlerNotFoundErr, op.CmdHandlerID),
 		}
 	}
 
-	workerChan <- sp
+	cmdHandlerChan <- sp
 }
 
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	close(shard.ReqChan)
-	if !config.DiceConfig.Persistence.Enabled || !config.DiceConfig.Persistence.WriteAOFOnCleanup {
+	if !config.Config.EnableWAL {
 		return
 	}
-
-	eval.EvalBGREWRITEAOF([]string{}, shard.store)
 }

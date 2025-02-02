@@ -1,6 +1,11 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package eval
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"strconv"
@@ -595,7 +600,6 @@ func (i *DequeIterator) Next() (string, error) {
 // *************************** deque entry encode/decode ***************************
 
 // EncodeDeqEntry encodes `x` into an entry of Deque. An entry will be encoded as [enc + data + backlen].
-// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 func EncodeDeqEntry(x string) []byte {
 	if len(x) >= 21 {
 		return EncodeDeqStr(x)
@@ -674,7 +678,6 @@ func EncodeDeqInt(v int64) []byte {
 }
 
 // EncodeDeqEntryInPlace encodes `x` into an entry of Deque in place.
-// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 func EncodeDeqEntryInPlace(x string, buf []byte) {
 	if len(x) >= 21 {
 		EncodeDeqStrInPlace(x, buf)
@@ -776,7 +779,6 @@ func GetEncodeDeqIntSize(v int64) uint64 {
 
 // DecodeDeqEntry decode `xb` started from index 0, returns the decoded `x` and the
 // overall length of [enc + data + backlen].
-// References: lpEncodeString, lpEncodeIntegerGetType in redis implementation.
 // TODO possible optimizations:
 // 1. return the string with the underlying array of `xb` to save memory usage?
 // 2. replace strconv with more efficient/memory-saving implementation
@@ -837,4 +839,161 @@ func DecodeDeqEntry(xb []byte) (x string, entryLen int) {
 	val <<= 64 - bit
 	val >>= 64 - bit
 	return strconv.FormatInt(val, 10), entryLen
+}
+
+func (q *Deque) Serialize(buf *bytes.Buffer) error {
+	if q == nil {
+		return errors.New("deque is nil")
+	}
+
+	err := binary.Write(buf, binary.BigEndian, q.Length)
+	if err != nil {
+		return err
+	}
+	err = binary.Write(buf, binary.BigEndian, int32(q.leftIdx))
+	if err != nil {
+		return err
+	}
+
+	// Serialize byteList
+	err = serializeByteList(buf, q.list)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func serializeByteList(buf *bytes.Buffer, list *byteList) error {
+	if list == nil {
+		return binary.Write(buf, binary.BigEndian, int32(0))
+	}
+
+	err := binary.Write(buf, binary.BigEndian, int32(list.bufLen))
+	if err != nil {
+		return err
+	}
+	err = binary.Write(buf, binary.BigEndian, list.size)
+	if err != nil {
+		return err
+	}
+
+	current := list.head
+	var nodeCount int32
+	nodes := [][]byte{}
+
+	for current != nil {
+		nodes = append(nodes, current.buf)
+		current = current.next
+		nodeCount++
+	}
+
+	err = binary.Write(buf, binary.BigEndian, nodeCount)
+	if err != nil {
+		return err
+	}
+
+	for _, nodeBuf := range nodes {
+		err = binary.Write(buf, binary.BigEndian, int32(len(nodeBuf)))
+		if err != nil {
+			return err
+		}
+		_, err = buf.Write(nodeBuf)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func DeserializeDeque(buf *bytes.Reader) (*Deque, error) {
+	if buf.Len() == 0 {
+		return nil, errors.New("data is empty")
+	}
+
+	var length int64
+	var leftIdx int32
+
+	err := binary.Read(buf, binary.BigEndian, &length)
+	if err != nil {
+		return nil, err
+	}
+
+	err = binary.Read(buf, binary.BigEndian, &leftIdx)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := deserializeByteList(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Deque{
+		Length:  length,
+		list:    list,
+		leftIdx: int(leftIdx),
+	}, nil
+}
+
+func deserializeByteList(buf *bytes.Reader) (*byteList, error) {
+	var bufLen int32
+	var size int64
+	var nodeCount int32
+
+	err := binary.Read(buf, binary.BigEndian, &bufLen)
+	if err != nil {
+		return nil, err
+	}
+
+	err = binary.Read(buf, binary.BigEndian, &size)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read the number of nodes
+	err = binary.Read(buf, binary.BigEndian, &nodeCount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reconstruct the nodes
+	var prev *byteListNode
+	list := &byteList{
+		bufLen: int(bufLen),
+		size:   size,
+	}
+
+	for i := int32(0); i < nodeCount; i++ {
+		// Read the length of the buffer
+		var bufSize int32
+		err := binary.Read(buf, binary.BigEndian, &bufSize)
+		if err != nil {
+			return nil, err
+		}
+
+		// Read the buffer data
+		nodeBuf := make([]byte, bufSize)
+		_, err = buf.Read(nodeBuf)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create and link the node
+		node := &byteListNode{
+			buf:  nodeBuf,
+			prev: prev,
+		}
+		if prev == nil {
+			list.head = node
+		} else {
+			prev.next = node
+		}
+		prev = node
+	}
+
+	list.tail = prev
+
+	return list, nil
 }

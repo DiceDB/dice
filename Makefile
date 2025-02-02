@@ -1,3 +1,5 @@
+# Adapted from https://www.thapaliya.com/en/writings/well-documented-makefiles/
+
 THREADS ?= 4 #number of threads
 CLIENTS ?= 50 #number of clients per thread
 REQUESTS ?= 10000 #number of requests per client
@@ -27,12 +29,16 @@ build: ## generate the dicedb binary for the current OS and architecture
 	@echo "Building for $(GOOS)/$(GOARCH)"
 	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./dicedb
 
+build-debug: ## generate the dicedb binary for the current OS and architecture
+	@echo "Building for $(GOOS)/$(GOARCH)"
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -gcflags="all=-N -l" -o ./dicedb
+
 ##@ Testing
 
 # Changing the parallel package count to 1 due to a possible race condition which causes the tests to get stuck.
 # TODO: Fix the tests to run in parallel, and remove the -p=1 flag.
 test: ## run the integration tests
-	go test -v -race -count=1 -p=1 ./integration_tests/...
+	go test -race -count=1 -p=1 ./integration_tests/...
 
 test-one: ## run a single integration test function by name (e.g. make test-one TEST_FUNC=TestSetGet)
 	go test -v -race -count=1 --run $(TEST_FUNC) ./integration_tests/...
@@ -42,13 +48,6 @@ unittest: ## run the unit tests
 
 unittest-one: ## run a single unit test function by name (e.g. make unittest-one TEST_FUNC=TestSetGet)
 	go test -v -race -count=1 --run $(TEST_FUNC) ./internal/...
-
-release: ## build and push the Docker image to Docker Hub with the latest tag and the version tag
-	git tag $(VERSION)
-	git push origin --tags
-	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:$(VERSION) .
-	docker push dicedb/dicedb:$(VERSION)
-	docker push dicedb/dicedb:latest
 
 ##@ Benchmarking
 
@@ -72,7 +71,7 @@ run-benchmark-large: ## run the memtier benchmark with large parameters
 
 ##@ Development
 run: ## run dicedb with the default configuration
-	go run main.go
+	go run main.go --engine ironhawk --log-level debug
 
 run-docker: ## run dicedb in a Docker container
 	docker run -p 7379:7379 dicedb/dicedb:latest
@@ -82,7 +81,8 @@ format: ## format the code using go fmt
 
 GOLANGCI_LINT_VERSION := 1.60.1
 
-lint: check-golangci-lint ## run golangci-lint
+lint:
+	gofmt -w .
 	golangci-lint run ./...
 
 check-golangci-lint:
@@ -97,3 +97,29 @@ clean: ## clean the dicedb binary
 	@echo "Cleaning build artifacts..."
 	rm -f dicedb
 	@echo "Clean complete."
+
+##@ Deployment
+
+release: ## build and push the Docker image to Docker Hub with the latest tag and the version tag
+	git tag $(VERSION)
+	git push origin --tags
+	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:$(VERSION) .
+	docker push dicedb/dicedb:$(VERSION)
+	docker push dicedb/dicedb:latest
+
+push-binary-remote:
+	$(MAKE) build
+	scp -i ${SSH_PEM_PATH} ./dicedb ubuntu@${REMOTE_HOST}:.
+
+add-license-notice:
+	./add_license_notice.sh
+
+kill:
+	@lsof -t -i :7379 | xargs -r kill -9
+
+generate:
+	protoc --go_out=. --go-grpc_out=. protos/cmd.proto
+
+update:
+	git submodule update --remote
+	git submodule update --init --recursive

@@ -1,7 +1,12 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package eval
 
 import (
+	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash"
 	"hash/fnv"
@@ -95,9 +100,9 @@ func newCountMinSketch(opts *CountMinSketchOpts) *CountMinSketch {
 	}
 
 	cms.matrix = make([][]uint64, opts.depth)
-
+	flatMatrix := make([]uint64, opts.depth*opts.width) // single memory allocation
 	for row := uint64(0); row < opts.depth; row++ {
-		cms.matrix[row] = make([]uint64, opts.width)
+		cms.matrix[row] = flatMatrix[row*opts.width : (row+1)*opts.width : (row+1)*opts.width]
 	}
 
 	return cms
@@ -181,8 +186,9 @@ func (c *CountMinSketch) DeepCopy() *CountMinSketch {
 
 	// Deep copy the matrix
 	matrix := make([][]uint64, c.opts.depth)
+	flatMatrix := make([]uint64, c.opts.depth*c.opts.width) // single memory allocation
 	for row := uint64(0); row < c.opts.depth; row++ {
-		matrix[row] = make([]uint64, c.opts.width)
+		matrix[row] = flatMatrix[row*c.opts.width : (row+1)*c.opts.width : (row+1)*c.opts.width]
 		copy(matrix[row], c.matrix[row])
 	}
 
@@ -230,6 +236,85 @@ func (c *CountMinSketch) mergeMatrices(sources []*CountMinSketch, weights []uint
 			c.count += weights[i] * cms.count
 		}
 	}
+}
+
+// serialize encodes the CountMinSketch into a byte slice.
+func (c *CountMinSketch) serialize(buffer *bytes.Buffer) error {
+	if c == nil {
+		return errors.New("cannot serialize a nil CountMinSketch")
+	}
+
+	// Write depth, width, and count
+	if err := binary.Write(buffer, binary.BigEndian, c.opts.depth); err != nil {
+		return err
+	}
+	if err := binary.Write(buffer, binary.BigEndian, c.opts.width); err != nil {
+		return err
+	}
+	if err := binary.Write(buffer, binary.BigEndian, c.count); err != nil {
+		return err
+	}
+
+	// Write matrix
+	for i := 0; i < len(c.matrix); i++ {
+		for j := 0; j < len(c.matrix[i]); j++ {
+			if err := binary.Write(buffer, binary.BigEndian, c.matrix[i][j]); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// deserialize reconstructs a CountMinSketch from a byte slice.
+func DeserializeCMS(buffer *bytes.Reader) (*CountMinSketch, error) {
+	if buffer.Len() < 24 { // Minimum size for depth, width, and count
+		return nil, errors.New("insufficient data for deserialization")
+	}
+
+	var depth, width, count uint64
+
+	// Read depth, width, and count
+	if err := binary.Read(buffer, binary.BigEndian, &depth); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buffer, binary.BigEndian, &width); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buffer, binary.BigEndian, &count); err != nil {
+		return nil, err
+	}
+	// fmt.Println(depth, width, count, buffer.Len())
+	// Validate data size
+	expectedSize := int(depth * width * 8) // Each uint64 takes 8 bytes
+	if buffer.Len() <= expectedSize {
+		return nil, errors.New("data size mismatch with expected matrix size")
+	}
+
+	// Read matrix
+	matrix := make([][]uint64, depth)
+	flatMatrix := make([]uint64, depth*width) // single memory allocation
+	for i := 0; i < int(depth); i++ {
+		matrix[i] = flatMatrix[i*int(width) : (i+1)*int(width) : (i+1)*int(width)]
+		for j := 0; j < int(width); j++ {
+			if err := binary.Read(buffer, binary.BigEndian, &matrix[i][j]); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	opts := &CountMinSketchOpts{
+		depth:  depth,
+		width:  width,
+		hasher: fnv.New64(), // Default hasher
+	}
+
+	return &CountMinSketch{
+		opts:   opts,
+		matrix: matrix,
+		count:  count,
+	}, nil
 }
 
 // evalCMSMerge is used to merge multiple sketches into one. The final sketch
@@ -511,7 +596,7 @@ func createCountMinSketch(key string, opts *CountMinSketchOpts, store *dstore.St
 		return diceerrors.NewErr("key already exists")
 	}
 
-	obj = store.NewObj(newCountMinSketch(opts), -1, object.ObjTypeCountMinSketch, object.ObjEncodingMatrix)
+	obj = store.NewObj(newCountMinSketch(opts), -1, object.ObjTypeCountMinSketch)
 	store.Put(key, obj)
 
 	return nil
@@ -526,11 +611,7 @@ func getCountMinSketch(key string, store *dstore.Store) (*CountMinSketch, error)
 		return nil, diceerrors.NewErr("key does not exist")
 	}
 
-	if err := object.AssertType(obj.TypeEncoding, object.ObjTypeCountMinSketch); err != nil {
-		return nil, err
-	}
-
-	if err := object.AssertEncoding(obj.TypeEncoding, object.ObjEncodingMatrix); err != nil {
+	if err := object.AssertTypeWithError(obj.Type, object.ObjTypeCountMinSketch); err != nil {
 		return nil, err
 	}
 

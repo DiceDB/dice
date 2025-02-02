@@ -24,6 +24,7 @@ ECHO message
 | Syntax or specified constraints are invalid | error                             |
 
 ## Errors
+
 1. `Syntax Error`:
    - Error Message: `(error) ERR wrong number of arguments for 'echo' command`
    - Occurs if the command is called with additional or fewer parameters than required
@@ -43,7 +44,6 @@ ECHO message
 127.0.0.1:7379> ECHO
 `(error) ERROR wrong number of arguments for 'echo' command`
 ```
-
 
 ```bash
 127.0.0.1:7379> ECHO "DiceDB is" "very efficient"

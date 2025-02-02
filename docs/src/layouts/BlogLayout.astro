@@ -4,7 +4,11 @@ import Layout from "./Layout.astro";
 import AboutMeVertical from "../components/AboutMeVertical.astro";
 
 const { blog, type } = Astro.props;
-const author = await getEntry("authors", blog.data.author.id);
+let author = null;
+
+if (blog?.data?.author?.id) {
+  author = await getEntry("authors", blog.data.author.id);
+}
 
 const JSONLD = {
   "@context": "https://schema.org/",
@@ -18,8 +22,8 @@ const JSONLD = {
   dateModified: blog.data.published_at,
   author: {
     "@type": "Person",
-    name: author.data.name,
-    image: author.data.avatar_url,
+    name: author?.data?.name,
+    image: author?.data?.avatar_url,
   },
   url: Astro.url,
   isPartOf: {
@@ -28,8 +32,8 @@ const JSONLD = {
     name: "DiceDB Blog",
     publisher: {
       "@type": "Person",
-      name: author.data.name,
-      image: author.data.avatar_url,
+      name: author?.data?.name,
+      image: author?.data?.avatar_url,
     },
   },
 };
@@ -51,6 +55,13 @@ const JSONLD = {
               <li>
                 <a href="/releases">Releases</a>
               </li>
+            ) : type === "update" ? (
+              <li>
+                <a href="/community">Weekly Updates</a>
+              </li>
+              <li>
+                <a href={`/updates/${blog.slug}`}>{blog.slug}</a>
+              </li>
             ) : (
               <li>
                 <a href="/blog">Blog</a>
@@ -68,35 +79,39 @@ const JSONLD = {
             >
               {blog.data.title}
             </h1>
-            <div class="media">
-              <div class="media-left">
-                <figure class="image is-48x48">
-                  <img class="is-rounded" src={author.data.avatar_url} />
-                </figure>
-              </div>
-              <div class="media-content">
-                <p class="title is-5">
-                  <a class="has-text-black" href={author.data.url}
-                    >{author.data.name}</a
-                  >
-                </p>
-                <p class="subtitle is-6">
-                  {author.data.bio}
-                </p>
-              </div>
-            </div>
+            {
+              author && (
+                <div class="media">
+                  <div class="media-left">
+                    <figure class="image is-48x48">
+                      <img class="is-rounded" src={author.data.avatar_url} />
+                    </figure>
+                  </div>
+                  <div class="media-content">
+                    <p class="title is-5">
+                      <a class="has-text-black" href={author.data.url}>
+                        {author.data.name}
+                      </a>
+                    </p>
+                    <p class="subtitle is-6">{author.data.bio}</p>
+                  </div>
+                </div>
+              )
+            }
           </div>
           <br />
           <div class="content blog-content">
-            <p class="is-family-monospace">
-              {
-                blog.data.published_at.toLocaleString("en-us", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })
-              }
-            </p>
+            {
+              type !== "update" && (
+                <p class="is-family-monospace">
+                  {blog.data.published_at.toLocaleString("en-us", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </p>
+              )
+            }
             <slot />
           </div>
         </div>

@@ -1,19 +1,20 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package wal
 
 import (
-	"fmt"
 	"log/slog"
 	sync "sync"
 	"time"
-
-	"github.com/dicedb/dice/internal/cmd"
 )
 
 type AbstractWAL interface {
-	LogCommand(c *cmd.DiceDBCmd)
+	LogCommand([]byte) error
 	Close() error
 	Init(t time.Time) error
-	ForEachCommand(f func(c cmd.DiceDBCmd) error) error
+	Replay(c func(*WALEntry) error) error
+	ForEachCommand(e *WALEntry, c func(*WALEntry) error) error
 }
 
 var (
@@ -58,15 +59,4 @@ func InitBG(wl AbstractWAL) {
 func ShutdownBG() {
 	close(stopCh)
 	ticker.Stop()
-}
-
-func ReplayWAL(wl AbstractWAL) {
-	err := wl.ForEachCommand(func(c cmd.DiceDBCmd) error {
-		fmt.Println("replaying", c.Cmd, c.Args)
-		return nil
-	})
-
-	if err != nil {
-		slog.Warn("error replaying WAL", slog.Any("error", err))
-	}
 }

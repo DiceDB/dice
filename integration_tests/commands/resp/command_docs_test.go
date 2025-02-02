@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package resp
 
 import (
@@ -7,10 +10,12 @@ import (
 )
 
 var getDocsTestCases = []struct {
-	name     string
-	inCmd    string
-	expected interface{}
+	name              string
+	inCmd             string
+	expected          interface{}
+	skipExpectedMatch bool
 }{
+	{"Without any commands", "", []any{}, true},
 	{"Set command", "SET", []interface{}{[]interface{}{
 		"set",
 		[]interface{}{
@@ -21,7 +26,7 @@ var getDocsTestCases = []struct {
 			"lastIndex", int64(0),
 			"step", int64(0),
 		},
-	}}},
+	}}, false},
 	{"Get command", "GET", []interface{}{[]interface{}{
 		"get",
 		[]interface{}{
@@ -32,7 +37,7 @@ var getDocsTestCases = []struct {
 			"lastIndex", int64(0),
 			"step", int64(0),
 		},
-	}}},
+	}}, false},
 	{"Ping command", "PING", []interface{}{[]interface{}{
 		"ping",
 		[]interface{}{
@@ -43,9 +48,10 @@ var getDocsTestCases = []struct {
 			"lastIndex", int64(0),
 			"step", int64(0),
 		},
-	}}},
+	}}, false},
 	{"Invalid command", "INVALID_CMD",
 		[]any{},
+		false,
 	},
 	{"Combination of valid and Invalid command", "SET INVALID_CMD", []interface{}{[]interface{}{
 		"set",
@@ -56,7 +62,7 @@ var getDocsTestCases = []struct {
 			"beginIndex", int64(1),
 			"lastIndex", int64(0),
 			"step", int64(0),
-		}}}},
+		}}}, false},
 	{"Combination of multiple valid commands", "SET GET", []interface{}{[]interface{}{
 		"set",
 		[]interface{}{
@@ -76,7 +82,7 @@ var getDocsTestCases = []struct {
 				"lastIndex", int64(0),
 				"step", int64(0),
 			},
-		}}},
+		}}, false},
 }
 
 func TestCommandDocs(t *testing.T) {
@@ -86,7 +92,14 @@ func TestCommandDocs(t *testing.T) {
 	for _, tc := range getDocsTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := FireCommand(conn, "COMMAND DOCS "+tc.inCmd)
-			assert.Equal(t, tc.expected, result)
+			if !tc.skipExpectedMatch {
+				assert.Equal(t, tc.expected, result)
+			} else {
+				assert.NotNil(t, result)
+				_, ok := result.([]interface{})
+				assert.True(t, ok)
+				assert.True(t, len(result.([]interface{})) > 0)
+			}
 		})
 	}
 }

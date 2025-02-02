@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package http
 
 // The following commands are a part of this test class:
@@ -480,6 +483,30 @@ func TestBitCount(t *testing.T) {
 				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{122, 1}}},
 			},
 			Out: []interface{}{float64(0)},
+		},
+		{
+			InCmds: []HTTPCommand{
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{-1, 1}}},
+			},
+			Out: []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []HTTPCommand{
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{-1, 0}}},
+			},
+			Out: []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []HTTPCommand{
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{-10000, 1}}},
+			},
+			Out: []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []HTTPCommand{
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "mykey", "values": []interface{}{-10000, 0}}},
+			},
+			Out: []interface{}{"ERR bit offset is not an integer or out of range"},
 		},
 		{
 			InCmds: []HTTPCommand{

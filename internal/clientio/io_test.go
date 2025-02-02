@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package clientio
 
 import (
@@ -118,7 +121,7 @@ func TestDecodeOneEmptyMessage(t *testing.T) {
 }
 
 func TestDecodeOneHighVolumeData(t *testing.T) {
-	largeString := bytes.Repeat([]byte("a"), 10*config.DiceConfig.Network.IOBufferLength)
+	largeString := bytes.Repeat([]byte("a"), 10*config.IOBufferLength)
 	mockRW := &MockReadWriter{
 		ReadChunks: [][]byte{
 			[]byte("$" + strconv.Itoa(len(largeString)) + "\r\n"),
@@ -175,7 +178,7 @@ func TestDecodeOnePartialMessages(t *testing.T) {
 }
 
 func TestDecodeOneVeryLargeMessage(t *testing.T) {
-	largeString := bytes.Repeat([]byte("a"), 10*config.DiceConfig.Network.IOBufferLength)
+	largeString := bytes.Repeat([]byte("a"), 10*config.IOBufferLength)
 	mockRW := &MockReadWriter{
 		ReadChunks: [][]byte{
 			[]byte("$" + strconv.Itoa(len(largeString)) + "\r\n"),

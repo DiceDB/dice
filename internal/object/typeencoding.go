@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package object
 
 import (
@@ -6,33 +9,15 @@ import (
 	diceerrors "github.com/dicedb/dice/internal/errors"
 )
 
-func GetType(te uint8) uint8 {
-	return (te >> 4) << 4
-}
-
-func GetEncoding(te uint8) uint8 {
-	return te & 0b00001111
-}
-
-func AssertType(te, t uint8) error {
-	if GetType(te) != t {
+func AssertTypeWithError(te, t ObjectType) error {
+	if te != t {
 		return errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
 	}
 	return nil
 }
 
-func AssertEncoding(te, e uint8) error {
-	if GetEncoding(te) != e {
-		return errors.New("the operation is not permitted on this encoding")
-	}
-	return nil
-}
-
-func AssertTypeAndEncoding(typeEncoding, expectedType, expectedEncoding uint8) []byte {
-	if err := AssertType(typeEncoding, expectedType); err != nil {
-		return diceerrors.NewErrWithMessage(diceerrors.WrongKeyTypeErr)
-	}
-	if err := AssertEncoding(typeEncoding, expectedEncoding); err != nil {
+func AssertType(_type, expectedType ObjectType) []byte {
+	if err := AssertTypeWithError(_type, expectedType); err != nil {
 		return diceerrors.NewErrWithMessage(diceerrors.WrongKeyTypeErr)
 	}
 	return nil

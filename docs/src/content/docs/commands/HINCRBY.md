@@ -153,7 +153,7 @@ Incrementing the hash value with a very large integer results in an integer over
 
 ## Alternatives
 
-- `HINCRBYFLOAT`: If you need to increment a hash field by a floating-point number, consider using the `HINCRBYFLOAT` command, which is specifically designed for that purpose.
+- [`HINCRBYFLOAT`](/commands/hincrbyfloat): If you need to increment a hash field by a floating-point number, consider using the `HINCRBYFLOAT` command, which is specifically designed for that purpose.
 
 ## Notes
 

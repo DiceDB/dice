@@ -98,7 +98,7 @@ LPUSH mylist
 ## Best Practices
 
 - `Check Key Type`: Before using `LPUSH`, ensure that the key is associated with a list to avoid errors.
-- `Use in Conjunction with Other List Commands`: The `LPUSH` command is often used alongside other list commands like `RPUSH`, `LLEN`, `LPOP`, and `RPOP` to manage and process lists effectively.
+- `Use in Conjunction with Other List Commands`: The `LPUSH` command is often used alongside other list commands like [`RPUSH`](/commands/rpush), [`LLEN`](/commands/llen), [`LPOP`](/commands/lpop), and [`RPOP`](/commands/rpop) to manage and process lists effectively.
 - The `LPUSH` command can be used to implement a stack (LIFO) by always pushing new elements to the head of the list.
 
 By understanding the `LPUSH` command, you can efficiently manage lists in DiceDB, ensuring that elements are added to the head of the list as needed.

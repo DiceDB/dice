@@ -2,7 +2,6 @@ bin/dice
 *.aof
 *.out
 *.prof
-.vscode/
 dice-server
 dicedb
 venv
@@ -35,3 +34,5 @@ pnpm-debug.log*
 
 # macOS-specific files
 .DS_Store
+dicedb.yaml
+dicedb.conf

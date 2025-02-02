@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package store
 
 import (
@@ -7,7 +10,7 @@ import (
 )
 
 func TestDelExpiry(t *testing.T) {
-	store := NewStore(nil, nil, nil)
+	store := NewStore(nil, nil)
 	// Initialize the test environment
 	store.store = NewStoreMap()
 	store.expires = NewExpireMap()

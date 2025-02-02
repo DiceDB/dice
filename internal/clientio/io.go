@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package clientio
 
 import (
@@ -34,7 +37,7 @@ func NewRESPParserWithBytes(c io.ReadWriter, initBytes []byte) *RESPParser {
 		// we want.
 		// note: the size 512 is arbitrarily chosen, and we can put
 		// a decent thought into deciding the optimal value (in case it affects the perf)
-		tbuf: make([]byte, config.DiceConfig.Network.IOBufferLength),
+		tbuf: make([]byte, config.IOBufferLength),
 	}
 }
 

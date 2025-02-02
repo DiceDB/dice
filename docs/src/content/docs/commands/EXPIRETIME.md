@@ -75,5 +75,5 @@ In this example, the key `nonExistentKey` does not exist in the database. The `E
 
 ## Alternatives
 
-- Use `TTL` to get relative expiration times
-- Use `PTTL` to get relative expiration times in milliseconds
+- Use [`TTL`](/commands/ttl) to get relative expiration times
+- Use [`PTTL`](/commands/pttl) to get relative expiration times in milliseconds

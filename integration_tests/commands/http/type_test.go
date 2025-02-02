@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package http
 
 import (
@@ -71,17 +74,17 @@ func TestType(t *testing.T) {
 			expected:      []interface{}{float64(0), "string"},
 			errorExpected: false,
 		},
-		{
-			name: "TYPE for key with value created from BITOP command",
-			commands: []HTTPCommand{
-				{Command: "SET", Body: map[string]interface{}{"key": "key1", "value": "foobar"}},
-				{Command: "SET", Body: map[string]interface{}{"key": "key2", "value": "abcdef"}},
-				{Command: "BITOP", Body: map[string]interface{}{"values": []interface{}{"AND", "dest", "key1", "key2"}}},
-				{Command: "TYPE", Body: map[string]interface{}{"key": "dest"}},
-			},
-			expected:      []interface{}{"OK", "OK", float64(6), "string"},
-			errorExpected: false,
-		},
+		// TODO: uncomment when bitop is added
+		// {
+		// 	name: "TYPE for key with value created from BITOP command",
+		// 	commands: []HTTPCommand{
+		// 		{Command: "SET", Body: map[string]interface{}{"key": "key1", "value": "foobar"}},
+		// 		{Command: "SET", Body: map[string]interface{}{"key": "key2", "value": "abcdef"}},
+		// 		{Command: "TYPE", Body: map[string]interface{}{"key": "dest"}},
+		// 	},
+		// 	expected:      []interface{}{"OK", "OK", "string"},
+		// 	errorExpected: false,
+		// },
 		{
 			name: "TYPE for key with value created from ZADD command",
 			commands: []HTTPCommand{

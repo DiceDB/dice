@@ -29,7 +29,7 @@ On the machine that is designated to run DiceDB, fire the following commands to 
 
 ```sh
 $ go build -o dicedb
-$ ./dicedb --enable-multithreading=true
+$ ./dicedb
 ```
 
 ### Running the benchmark

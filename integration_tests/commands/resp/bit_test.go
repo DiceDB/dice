@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package resp
 
 // The following commands are a part of this test class:
@@ -12,8 +15,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
-
-// TODO: BITOP has not been migrated yet. Once done, we can uncomment the tests - please check accuracy and validate for expected values.
 
 // func TestBitOp(t *testing.T) {
 // 	conn := getLocalConnection()
@@ -281,6 +282,22 @@ func TestBitCount(t *testing.T) {
 		{
 			InCmds: []string{"SETBIT mykey 122 1"},
 			Out:    []interface{}{int64(0)},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -1 1"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -1 0"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -10000 1"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
+		},
+		{
+			InCmds: []string{"SETBIT mykey -10000 0"},
+			Out:    []interface{}{"ERR bit offset is not an integer or out of range"},
 		},
 		{
 			InCmds: []string{"GETBIT mykey 122"},

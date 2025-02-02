@@ -118,12 +118,12 @@ Passing invalid number of arguments to the `hrandfield` command
 
 ## Best Practices
 
-- `Check Key Existence`: Before using `HRANDFIELD`, ensure that the hash key exists to avoid unnecessary errors. You can use the `HEXISTS` command to verify the presence of the key.
+- `Check Key Existence`: Before using `HRANDFIELD`, ensure that the hash key exists to avoid unnecessary errors. You can use the [`HEXISTS`](/commands/hexists) command to verify the presence of the key.
 
 ## Alternatives
 
-- `HKEYS`: Use `HKEYS` to retrieve all fields in a hash. If you need to work with all fields rather than a random selection, this command provides a complete view.
-- `Sampling with HSCAN`: For larger hashes, consider using `HSCAN` to iterate through the fields and randomly select a subset. This approach can help manage memory usage when dealing with large datasets.
+- [`HKEYS`](/commands/hkeys): Use `HKEYS` to retrieve all fields in a hash. If you need to work with all fields rather than a random selection, this command provides a complete view.
+- `Sampling with HSCAN`: For larger hashes, consider using [`HSCAN`](/commands/hscan) to iterate through the fields and randomly select a subset. This approach can help manage memory usage when dealing with large datasets.
 
 ## Notes
 

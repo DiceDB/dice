@@ -1,12 +1,73 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/dgryski/go-farm"
 	"github.com/dicedb/dice/internal/object"
+	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/wire"
 )
+
+type Cmd struct {
+	C        *wire.Command
+	ThreadID string
+}
+
+type CmdRes struct {
+	R        *wire.Response
+	ThreadID string
+}
+
+type DiceDBCommand struct {
+	Name      string
+	HelpShort string
+	Eval      func(c *Cmd, s *dstore.Store) (*CmdRes, error)
+}
+
+type CmdRegistry struct {
+	cmds []*DiceDBCommand
+}
+
+func Total() int {
+	return len(commandRegistry.cmds)
+}
+
+func (r *CmdRegistry) AddCommand(cmd *DiceDBCommand) {
+	r.cmds = append(r.cmds, cmd)
+}
+
+var commandRegistry CmdRegistry = CmdRegistry{
+	cmds: []*DiceDBCommand{},
+}
+
+func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
+	for _, cmd := range commandRegistry.cmds {
+		if cmd.Name == c.C.Cmd {
+			start := time.Now()
+			resp, err := cmd.Eval(c, s)
+			if err != nil {
+				resp.R.Err = err.Error()
+			}
+
+			slog.Debug("command executed",
+				slog.Any("cmd", c.C.Cmd),
+				slog.String("args", strings.Join(c.C.Args, " ")),
+				slog.String("thread_id", c.ThreadID),
+				slog.Int("shard_id", s.ShardID),
+				slog.Any("took_ns", time.Since(start).Nanoseconds()))
+			return resp, err
+		}
+	}
+	return cmdResNil, errors.New("command not found")
+}
 
 // DiceDBCmd represents a command structure to be executed
 // within a DiceDB system. This struct emulates the way DiceDB commands
@@ -29,15 +90,15 @@ type DiceDBCmd struct {
 	// This slice allows flexible support for commands with variable arguments.
 	Args []string
 
-	// InternalObj is a pointer to an InternalObj, representing an optional data structure
+	// InternalObjs is a pointer to list of InternalObjs, representing an optional data structure
 	// associated with the command. This contains pointer to the underlying simple
 	// types such as int, string or even complex types
 	// like hashes, sets, or sorted sets, which are stored and manipulated as objects.
 	// WARN: This parameter should be used with caution
-	InternalObj *object.InternalObj
+	InternalObjs []*object.InternalObj
 }
 
-type RedisCmds struct {
+type DiceDBCmds struct {
 	Cmds      []*DiceDBCmd
 	RequestID uint32
 }
@@ -52,15 +113,39 @@ func (cmd *DiceDBCmd) GetFingerprint() uint32 {
 	return farm.Fingerprint32([]byte(cmd.Repr()))
 }
 
-// GetKey Returns the key which the command operates on.
+// Key Returns the key which the command operates on.
 //
 // TODO: This is a naive implementation which assumes that the first argument is the key.
 // This is not true for all commands, however, for now this is only used by the watch manager,
 // which as of now only supports a small subset of commands (all of which fit this implementation).
-func (cmd *DiceDBCmd) GetKey() string {
+func (cmd *DiceDBCmd) Key() string {
 	var c string
 	if len(cmd.Args) > 0 {
 		c = cmd.Args[0]
 	}
 	return c
 }
+
+func errWrongArgumentCount(command string) error {
+	return fmt.Errorf("wrong number of arguments for '%s' command", strings.ToUpper(command))
+}
+
+var errUnknownObjectType = errors.New("unknown object type")
+
+//nolint:unparam
+func errInvalidSyntax(command string) error {
+	return fmt.Errorf("invalid syntax for '%s' command", strings.ToUpper(command))
+}
+
+//nolint:unparam
+func errInvalidValue(command, param string) error {
+	return fmt.Errorf("invalid value for a parameter in '%s' command for %s parameter", strings.ToUpper(command), strings.ToUpper(param))
+}
+
+var cmdResNil = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VNil{VNil: true},
+}}
+
+var cmdResOK = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VStr{VStr: "OK"},
+}}

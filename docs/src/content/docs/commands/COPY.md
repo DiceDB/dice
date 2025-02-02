@@ -13,11 +13,11 @@ COPY <source> <destination> [DB destination-db] [REPLACE]
 
 ## Parameters
 
-| Parameter         | Description                                                                                                                                                  | Type    | Required |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | :------: |
-| source            | The key of the value you want to copy. This key must exist.                                                                                                  | String  |   Yes    |
-| destination       | The key where the value will be copied to. This key must not exist unless the `REPLACE` option is specified.                                                 | String  |   Yes    |
-| REPLACE           | If specified, the command will overwrite the destination key if it already exists.                                                                           | String  | Optional |
+| Parameter   | Description                                                                                                  | Type   | Required |
+| ----------- | ------------------------------------------------------------------------------------------------------------ | ------ | :------: |
+| source      | The key of the value you want to copy. This key must exist.                                                  | String |   Yes    |
+| destination | The key where the value will be copied to. This key must not exist unless the `REPLACE` option is specified. | String |   Yes    |
+| REPLACE     | If specified, the command will overwrite the destination key if it already exists.                           | String | Optional |
 
 ## Return Value
 

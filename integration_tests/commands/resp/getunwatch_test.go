@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package resp
 
 import (
@@ -71,7 +74,6 @@ func TestGETUNWATCH(t *testing.T) {
 			if !ok {
 				t.Errorf("Type assertion to []interface{} failed for value: %v", v)
 			}
-			fmt.Println(castedValue)
 			assert.Equal(t, 3, len(castedValue))
 			assert.Equal(t, "GET", castedValue[0])
 			assert.Equal(t, "426696421", castedValue[1])
@@ -80,7 +82,7 @@ func TestGETUNWATCH(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdates(t, subscribers, "426696421")
+	unsubscribeFromWatchUpdates(t, subscribers, "GET", "426696421")
 
 	// Test updates are not sent after unsubscribing
 	for _, tc := range getUnwatchTestCases[2:] {
@@ -110,21 +112,6 @@ func TestGETUNWATCH(t *testing.T) {
 				// This is the expected behavior - no response within the timeout
 			}
 		}
-	}
-}
-
-func unsubscribeFromUpdates(t *testing.T, subscribers []net.Conn, fingerprint string) {
-	for _, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf("GET.UNWATCH %s", fingerprint))
-		assert.NotNil(t, rp)
-
-		v, err := rp.DecodeOne()
-		assert.NoError(t, err)
-		castedValue, ok := v.(string)
-		if !ok {
-			t.Errorf("Type assertion to string failed for value: %v", v)
-		}
-		assert.Equal(t, castedValue, "OK")
 	}
 }
 
@@ -167,7 +154,7 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 	}
 
 	// unsubscribe from updates
-	unsubscribeFromUpdatesSDK(t, subscribers, "426696421")
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, "GET", "426696421")
 
 	// fire updates and validate that they are not received
 	err = publisher.Set(ctx, getUnwatchKey, "final", 0).Err()
@@ -179,12 +166,5 @@ func TestGETUNWATCHWithSDK(t *testing.T) {
 		case <-time.After(100 * time.Millisecond):
 			// This is the expected behavior - no response within the timeout
 		}
-	}
-}
-
-func unsubscribeFromUpdatesSDK(t *testing.T, subscribers []WatchSubscriber, fingerprint string) {
-	for _, subscriber := range subscribers {
-		err := subscriber.watch.Unwatch(context.Background(), "GET", fingerprint)
-		assert.Nil(t, err)
 	}
 }

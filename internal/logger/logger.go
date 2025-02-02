@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package logger
 
 import (
@@ -10,7 +13,7 @@ import (
 )
 
 func getSLogLevel() slog.Level {
-	switch config.DiceConfig.Logging.LogLevel {
+	switch config.Config.LogLevel {
 	case "debug":
 		return slog.LevelDebug
 	case "info":
@@ -24,7 +27,7 @@ func New() *slog.Logger {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerologLogger := zerolog.New(zerolog.ConsoleWriter{
 		Out:        os.Stderr,
-		NoColor:    true,
+		NoColor:    false,
 		TimeFormat: time.RFC3339,
 	}).Level(toZerologLevel(getSLogLevel())).With().Timestamp().Logger()
 	return slog.New(newZerologHandler(&zerologLogger))

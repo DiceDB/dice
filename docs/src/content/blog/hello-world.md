@@ -7,7 +7,6 @@ author: arpit
 
 [DiceDB](https://github.com/dicedb/dice) is being revived with a bold new mission: to optimize and build a database that truly meets the demands of real-time applications. The world of real-time systems, both frontend and backend, is evolving rapidly, and so must the tools that underpin them. DiceDB will offer a robust and performant database solution specifically engineered for building and scaling real-time applications. Some key design decisions
 
-- drop-in replacement for Redis - for easy adoption
 - reactivity - subscribe to a SQL query and get results pushed to clients
 - native, first-class JSON support for reads, writes, and queries
 - in-memory, no disk overhead and every operation completes in 8 ms over the network

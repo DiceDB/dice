@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package http
 
 import (
@@ -38,13 +41,14 @@ func TestCommandGetKeys(t *testing.T) {
 			},
 			expected: []interface{}{[]interface{}{"1 2 3 4 5 6 7"}},
 		},
-		{
-			name: "MSET command",
-			commands: []HTTPCommand{
-				{Command: "COMMAND/GETKEYS", Body: map[string]interface{}{"key": "MSET", "keys": []interface{}{"key1 key2"}, "values": []interface{}{" val1 val2"}}},
-			},
-			expected: []interface{}{[]interface{}{"key1 key2"}},
-		},
+		// Skipping these tests until multishards cmds supported by http
+		//{
+		//	name: "MSET command",
+		//	commands: []HTTPCommand{
+		//		{Command: "COMMAND/GETKEYS", Body: map[string]interface{}{"key": "MSET", "keys": []interface{}{"key1 key2"}, "values": []interface{}{" val1 val2"}}},
+		//	},
+		//	expected: []interface{}{"ERR invalid command specified"},
+		//},
 		{
 			name: "Expire command",
 			commands: []HTTPCommand{

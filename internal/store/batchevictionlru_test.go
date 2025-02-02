@@ -1,17 +1,21 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package store
 
 import (
-	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
-	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEvictVictims_BelowMaxKeys(t *testing.T) {
-	eviction := NewBatchEvictionLRU(5, 0.2)
-	s := NewStore(nil, nil, eviction)
+	eviction := NewPrimitiveEvictionStrategy(5, 0.2)
+	s := NewStore(nil, eviction)
 
 	// Add 3 keys (below maxKeys of 5)
 	for i := 1; i <= 3; i++ {
@@ -32,9 +36,8 @@ func TestEvictVictims_BelowMaxKeys(t *testing.T) {
 
 func TestEvictVictims_ExceedsMaxKeys(t *testing.T) {
 	maxKeys := 5
-	evictionRatio := 0.4
-	eviction := NewBatchEvictionLRU(maxKeys, evictionRatio)
-	s := NewStore(nil, nil, eviction)
+	eviction := NewPrimitiveEvictionStrategy(maxKeys)
+	s := NewStore(nil, eviction)
 
 	// Add 10 keys, exceeding maxKeys of 5
 	for i := 1; i <= 10; i++ {
@@ -55,8 +58,8 @@ func TestEvictVictims_EvictsLRU(t *testing.T) {
 	mockTime := &utils.MockClock{CurrTime: time.Now()}
 	utils.CurrentTime = mockTime
 
-	eviction := NewBatchEvictionLRU(10, 0.4)
-	s := NewStore(nil, nil, eviction)
+	eviction := NewPrimitiveEvictionStrategy(10, 0.4)
+	s := NewStore(nil, eviction)
 
 	// Add keys with varying LastAccessedAt
 	keyIDs := []int{0, 7, 1, 9, 4, 6, 5, 2, 8, 3, 10}
@@ -85,8 +88,8 @@ func TestEvictVictims_IdenticalLastAccessedAt(t *testing.T) {
 	currentTime := time.Now()
 	mockTime := &utils.MockClock{CurrTime: currentTime}
 	utils.CurrentTime = mockTime
-	eviction := NewBatchEvictionLRU(10, 0.5)
-	s := NewStore(nil, nil, eviction)
+	eviction := NewPrimitiveEvictionStrategy(10, 0.5)
+	s := NewStore(nil, eviction)
 
 	// Add 10 keys with identical LastAccessedAt
 	for i := 0; i <= 10; i++ {
@@ -101,8 +104,8 @@ func TestEvictVictims_IdenticalLastAccessedAt(t *testing.T) {
 }
 
 func TestEvictVictims_EvictsAtLeastOne(t *testing.T) {
-	eviction := NewBatchEvictionLRU(10, 0.000) // 0% eviction rate
-	s := NewStore(nil, nil, eviction)
+	eviction := NewPrimitiveEvictionStrategy(10, 0.000) // 0% eviction rate
+	s := NewStore(nil, eviction)
 
 	// Add 10 keys (equals maxKeys)
 	for i := 0; i < 10; i++ {
@@ -116,8 +119,8 @@ func TestEvictVictims_EvictsAtLeastOne(t *testing.T) {
 }
 
 func TestEvictVictims_EmptyStore(t *testing.T) { // Handles Empty Store Gracefully
-	eviction := NewBatchEvictionLRU(5, 0.2)
-	s := NewStore(nil, nil, eviction)
+	eviction := NewPrimitiveEvictionStrategy(5)
+	s := NewStore(nil, eviction)
 
 	toEvict := eviction.ShouldEvict(s)
 	assert.Equal(t, 0, toEvict, "Should not evict any keys when store is empty")
@@ -130,8 +133,8 @@ func TestEvictVictims_LastAccessedAtUpdated(t *testing.T) {
 	currentTime := time.Now()
 	mockTime := &utils.MockClock{CurrTime: currentTime}
 	utils.CurrentTime = mockTime
-	eviction := NewBatchEvictionLRU(10, 0.4)
-	s := NewStore(nil, nil, eviction)
+	eviction := NewPrimitiveEvictionStrategy(10, 0.4)
+	s := NewStore(nil, eviction)
 
 	// Add keys with initial LastAccessedAt
 	for i := 1; i <= 10; i++ {

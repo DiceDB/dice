@@ -13,11 +13,11 @@ JSON.DEBUG <subcommand> <key> [path]
 
 ## Parameters
 
-| Parameter | Description                                                                             | Type   | Required |
-| --------- | --------------------------------------------------------------------------------------- | ------ | -------- |
-| `subcommand` | The specific debug operation to perform. Currently, the supported subcommand is `MEMORY`. | String | Yes      |
-| `key`   | The key under which the JSON data is stored.                           | String | Yes      |
-| `path`   | The JSON path to the specific part of the JSON data to debug. Defaults to the root if not provided.                           | String | No      |
+| Parameter    | Description                                                                                         | Type   | Required |
+| ------------ | --------------------------------------------------------------------------------------------------- | ------ | -------- |
+| `subcommand` | The specific debug operation to perform. Currently, the supported subcommand is `MEMORY`.           | String | Yes      |
+| `key`        | The key under which the JSON data is stored.                                                        | String | Yes      |
+| `path`       | The JSON path to the specific part of the JSON data to debug. Defaults to the root if not provided. | String | No       |
 
 ### Subcommands
 
@@ -25,26 +25,26 @@ JSON.DEBUG <subcommand> <key> [path]
 
 ## Return Value
 
-| Condition               | Return Value                        |
-| ----------------------- | ----------------------------------- |
+| Condition                      | Return Value                                                   |
+| ------------------------------ | -------------------------------------------------------------- |
 | if `MEMORY` subcommand is used | Memory usage in bytes of the JSON value at the specified path. |
 
 ## Behaviour
 
-- For the `MEMORY` subcommand, it will calculate and return the memory usage of the JSON value at the specified path. 
+- For the `MEMORY` subcommand, it will calculate and return the memory usage of the JSON value at the specified path.
 - If the path is not provided, it defaults to the root of the JSON data.
 
 ## Errors
 
-1. `Invalid Subcommand`: 
+1. `Invalid Subcommand`:
    - Error Message: `ERR unknown subcommand '<subcommand>'`
    - Occurs when an unsupported subcommand is provided.
-   
-2. `Invalid Path`: 
+2. `Invalid Path`:
+
    - Error Message: `ERR Path '<path>' does not exist`
    - If the specified path does not exist within the JSON data, DiceDB will return an error.
 
-4. `Wrong Type`: 
+3. `Wrong Type`:
    - Error Message: `WRONGTYPE Operation against a key holding the wrong kind of value`
    - If the key exists but does not hold JSON data, DiceDB will return an error.
 
@@ -64,6 +64,7 @@ OK
 ### Debugging Memory Usage of a Specific Path
 
 The `JSON.DEBUG MEMORY` command is used to get the memory usage of the JSON value at the path `$.a` within the JSON data stored under the key `myjson`. The command returns `16`, indicating that the specified JSON value occupies 16 bytes of memory.
+
 ```bash
 127.0.0.1:7379> JSON.SET myjson $ '{"a":1,"b":2}',
 OK
@@ -91,4 +92,4 @@ The `JSON.DEBUG MEMORY` command is used on an invalid path `$.nonExistentPath` w
 
 ## Notes
 
- - JSONPath expressions are used to navigate and specify the location within the JSON document. Familiarity with JSONPath syntax is beneficial for effective use of this command.
+- JSONPath expressions are used to navigate and specify the location within the JSON document. Familiarity with JSONPath syntax is beneficial for effective use of this command.

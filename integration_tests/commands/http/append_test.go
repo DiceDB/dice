@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package http
 
 import (
@@ -120,6 +123,19 @@ func TestAPPEND(t *testing.T) {
 			expected: []interface{}{float64(0), float64(0), float64(0), float64(0), float64(0), float64(0), float64(3), "421"},
 			cleanup: []HTTPCommand{
 				{Command: "del", Body: map[string]interface{}{"key": "bitkey"}},
+			},
+		},
+		{
+			name: "SET and SETBIT commands followed by GET",
+			commands: []HTTPCommand{
+				{Command: "SET", Body: map[string]interface{}{"key": "key", "value": "10"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "key", "values": []string{"1", "1"}}},
+				{Command: "GET", Body: map[string]interface{}{"key": "key"}},
+				{Command: "SETBIT", Body: map[string]interface{}{"key": "key", "values": []string{"0", "1"}}},
+			},
+			expected: []interface{}{"OK", float64(0), "q0", float64(0)},
+			cleanup: []HTTPCommand{
+				{Command: "del", Body: map[string]interface{}{"key": "key"}},
 			},
 		},
 		{

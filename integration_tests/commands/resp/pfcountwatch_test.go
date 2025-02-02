@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package resp
 
 import (
@@ -71,7 +74,7 @@ func TestPFCOUNTWATCH(t *testing.T) {
 	},
 	)
 
-	// TODO - unsubscribe from updates once PFCOUNT.UNWATCH is implemented
+	unsubscribeFromWatchUpdates(t, subscribers, pfcountCommand, pfcountWatchFingerPrint)
 }
 
 func setupSubscribers(count int) []net.Conn {
@@ -139,7 +142,6 @@ func verifyWatchResults(t *testing.T, respParsers []*clientio.RESPParser, expect
 const (
 	pfcountCommandSDK          = "PFCOUNT"
 	pfcountWatchKeySDK         = "hllkey"
-	pfcountWatchQuerySDK       = "PFCOUNT.WATCH %s"
 	pfcountWatchFingerPrintSDK = "1832643469"
 	defaultTimeout             = 5 * time.Second
 )
@@ -196,7 +198,7 @@ func TestPFCountWATCHWithSDK(t *testing.T) {
 	},
 	)
 
-	// TODO - unsubscribe from updates once PFCOUNT.UNWATCH is implemented
+	unsubscribeFromWatchUpdatesSDK(t, subscribers, pfcountCommandSDK, pfcountWatchFingerPrintSDK)
 }
 
 func setupSubscribersSDK(count int) []WatchSubscriber {

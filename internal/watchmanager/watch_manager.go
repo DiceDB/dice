@@ -1,8 +1,12 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package watchmanager
 
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"sync"
 
 	"github.com/dicedb/dice/internal/cmd"
@@ -12,7 +16,7 @@ import (
 type (
 	WatchSubscription struct {
 		Subscribe    bool                // Subscribe is true for subscribe, false for unsubscribe. Required.
-		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the worker. Required.
+		AdhocReqChan chan *cmd.DiceDBCmd // AdhocReqChan is the channel to send adhoc requests to the io-thread. Required.
 		WatchCmd     *cmd.DiceDBCmd      // WatchCmd Represents a unique key for each watch artifact, only populated for subscriptions.
 		Fingerprint  uint32              // Fingerprint is a unique identifier for each watch artifact, only populated for unsubscriptions.
 	}
@@ -82,7 +86,12 @@ func (m *Manager) listenForEvents(ctx context.Context) {
 // handleSubscription processes a new subscription request
 func (m *Manager) handleSubscription(sub WatchSubscription) {
 	fingerprint := sub.WatchCmd.GetFingerprint()
-	key := sub.WatchCmd.GetKey()
+	key := sub.WatchCmd.Key()
+	slog.Debug("creating a new subscription",
+		slog.String("key", key),
+		slog.String("cmd", sub.WatchCmd.Cmd),
+		slog.String("args", strings.Join(sub.WatchCmd.Args, " ")),
+		slog.Any("fingerprint", fingerprint))
 
 	// Add fingerprint to querySubscriptionMap
 	if _, exists := m.querySubscriptionMap[key]; !exists {
@@ -111,12 +120,15 @@ func (m *Manager) handleUnsubscription(sub WatchSubscription) {
 		if len(clients) == 0 {
 			// Remove the fingerprint from tcpSubscriptionMap
 			delete(m.tcpSubscriptionMap, fingerprint)
+		} else {
+			// Other clients still subscribed, no need to remove the fingerprint altogether
+			return
 		}
 	}
 
 	// Remove fingerprint from querySubscriptionMap
 	if diceDBCmd, ok := m.fingerprintCmdMap[fingerprint]; ok {
-		key := diceDBCmd.GetKey()
+		key := diceDBCmd.Key()
 		if fingerprints, ok := m.querySubscriptionMap[key]; ok {
 			// Remove the fingerprint from the list of fingerprints listening to this key
 			delete(fingerprints, fingerprint)

@@ -7,7 +7,7 @@ The `DEL` command in DiceDB is used to remove one or more keys from the database
 
 ## Syntax
 
-```bash
+```
 DEL key [key ...]
 ```
 
@@ -29,23 +29,22 @@ DEL key [key ...]
 
 When the `DEL` command is executed, DiceDB will attempt to remove the specified keys from the database. The command operates in the following manner:
 
-1. `Key Existence Check`: For each key specified, DiceDB checks if the key exists in the database.
-2. `Key Removal`: If a key exists, it is removed from the database along with its associated value, regardless of the value's type.
-3. `Count Removal`: The command keeps a count of how many keys were successfully removed.
-4. `Ignore Non-existent Keys`: If a specified key does not exist, it is simply ignored and does not affect the count of removed keys.
-5. `Return Count`: The total count of removed keys is returned as the result of the command.
+1. **Key Existence Check**: For each key specified, DiceDB checks if the key exists in the database.
+2. **Key Removal**: If a key exists, it is removed from the database along with its associated value, regardless of the value's type.
+3. **Count Removal**: The command keeps a count of how many keys were successfully removed.
+4. **Ignore Non-existent Keys**: If a specified key does not exist, it is simply ignored and does not affect the count of removed keys.
+5. **Return Count**: The total count of removed keys is returned as the result of the command.
 
 ## Errors
 
 The `DEL` command is generally robust and straightforward, but there are a few scenarios where errors might occur:
 
-1. `Wrong Type of Argument`: If the command is provided with an argument that is not a valid key (e.g., a non-string type), DiceDB will raise a syntax error.
+1. **Wrong Type of Argument**: If the command is provided with an argument that is not a valid key (e.g., a non-string type), DiceDB will raise a syntax error.
 
-   - `Error Message`: `(error) ERR wrong number of arguments for 'del' command`
+   - **Error Message**: `(error) ERR wrong number of arguments for 'del' command`
 
-2. `No Arguments Provided`: If no keys are provided to the `DEL` command, DiceDB will raise a syntax error.
-
-   - `Error Message`: `(error) ERR wrong number of arguments for 'del' command`
+2. **No Arguments Provided**: If no keys are provided to the `DEL` command, DiceDB will raise a syntax error.
+   - **Error Message**: `(error) ERR wrong number of arguments for 'del' command`
 
 ## Example Usage
 

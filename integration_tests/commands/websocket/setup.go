@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package websocket
 
 import (
@@ -5,18 +8,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/server/httpws"
+
 	derrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/querymanager"
-	"github.com/dicedb/dice/internal/server"
 	"github.com/dicedb/dice/internal/shard"
-	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/gorilla/websocket"
 )
 
@@ -39,13 +39,6 @@ type WebsocketCommandExecutor struct {
 	baseURL         string
 	websocketClient *http.Client
 	upgrader        websocket.Upgrader
-}
-
-func init() {
-	parser := config.NewConfigParser()
-	if err := parser.ParseDefaults(config.DiceConfig); err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
-	}
 }
 
 func NewWebsocketCommandExecutor() *WebsocketCommandExecutor {
@@ -108,16 +101,10 @@ func (e *WebsocketCommandExecutor) Name() string {
 }
 
 func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerOptions) {
-	config.DiceConfig.Network.IOBufferLength = 16
-	config.DiceConfig.Persistence.WriteAOFOnCleanup = false
-
 	// Initialize WebsocketServer
 	globalErrChannel := make(chan error)
-	watchChan := make(chan dstore.QueryWatchEvent, config.DiceConfig.Performance.WatchChanBufSize)
-	shardManager := shard.NewShardManager(1, watchChan, nil, globalErrChannel)
-	queryWatcherLocal := querymanager.NewQueryManager()
-	config.DiceConfig.WebSocket.Port = opt.Port
-	testServer := server.NewWebSocketServer(shardManager, testPort1, nil)
+	shardManager := shard.NewShardManager(1, nil, globalErrChannel)
+	testServer := httpws.NewWebSocketServer(shardManager, testPort1, nil)
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
 
 	// run shard manager
@@ -125,13 +112,6 @@ func RunWebsocketServer(ctx context.Context, wg *sync.WaitGroup, opt TestServerO
 	go func() {
 		defer wg.Done()
 		shardManager.Run(shardManagerCtx)
-	}()
-
-	// run query manager
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		queryWatcherLocal.Run(ctx, watchChan)
 	}()
 
 	// start websocket server

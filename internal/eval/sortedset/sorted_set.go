@@ -1,6 +1,11 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package sortedset
 
 import (
+	"bytes"
+	"encoding/binary"
 	"strconv"
 	"strings"
 
@@ -42,7 +47,7 @@ func New() *Set {
 }
 
 func FromObject(obj *object.Obj) (value *Set, err []byte) {
-	if err := object.AssertTypeAndEncoding(obj.TypeEncoding, object.ObjTypeSortedSet, object.ObjEncodingBTree); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeSortedSet); err != nil {
 		return nil, err
 	}
 	value, ok := obj.Value.(*Set)
@@ -146,7 +151,7 @@ func (ss *Set) GetRange(
 			ssi := item.(*Item)
 			result = append(result, ssi.Member)
 			if withScores {
-				// Use 'g' format to match Redis's float formatting
+				// Use 'g' format to match float formatting
 				scoreStr := strings.ToLower(strconv.FormatFloat(ssi.Score, 'g', -1, 64))
 				result = append(result, scoreStr)
 			}
@@ -250,4 +255,60 @@ func (ss *Set) CountInRange(minVal, maxVal float64) int {
 	})
 
 	return count
+}
+
+func (ss *Set) Serialize(buf *bytes.Buffer) error {
+	// Serialize the length of the memberMap
+	memberCount := uint64(len(ss.memberMap))
+	if err := binary.Write(buf, binary.BigEndian, memberCount); err != nil {
+		return err
+	}
+
+	// Serialize each member and its score
+	for member, score := range ss.memberMap {
+		memberLen := uint64(len(member))
+		if err := binary.Write(buf, binary.BigEndian, memberLen); err != nil {
+			return err
+		}
+		if _, err := buf.WriteString(member); err != nil {
+			return err
+		}
+		if err := binary.Write(buf, binary.BigEndian, score); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func DeserializeSortedSet(buf *bytes.Reader) (*Set, error) {
+	ss := New()
+
+	// Read the member count
+	var memberCount uint64
+	if err := binary.Read(buf, binary.BigEndian, &memberCount); err != nil {
+		return nil, err
+	}
+
+	// Read each member and its score
+	for i := uint64(0); i < memberCount; i++ {
+		var memberLen uint64
+		if err := binary.Read(buf, binary.BigEndian, &memberLen); err != nil {
+			return nil, err
+		}
+
+		member := make([]byte, memberLen)
+		if _, err := buf.Read(member); err != nil {
+			return nil, err
+		}
+
+		var score float64
+		if err := binary.Read(buf, binary.BigEndian, &score); err != nil {
+			return nil, err
+		}
+
+		// Add the member back to the set
+		ss.Upsert(score, string(member))
+	}
+
+	return ss, nil
 }

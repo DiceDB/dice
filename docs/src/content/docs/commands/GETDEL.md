@@ -65,6 +65,7 @@ Trying to retrieve and delete a key `nonexistingkey` that does not exist.
 127.0.0.1:7379> GETDEL nonexistingkey
 (nil)
 ```
+
 - The key `nonexistingkey` does not exist in the database.
 - The `GETDEL` command returns `nil` since the key is not found.
 

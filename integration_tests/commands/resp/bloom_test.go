@@ -1,9 +1,13 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package resp
 
 import (
 	"testing"
 	"time"
 
+	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,7 +46,7 @@ func TestBFReserveAddInfoExists(t *testing.T) {
 		{
 			name:    "BF.RESERVE on existent filter returns error",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.RESERVE bf 0.01 1000"},
-			expect:  []interface{}{"OK", "ERR item exists"},
+			expect:  []interface{}{"OK", diceerrors.ErrKeyExists.Error()},
 			delays:  []time.Duration{0, 0},
 			cleanUp: []string{"DEL bf"},
 		},
@@ -135,7 +139,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 		{
 			name:    "BF.INFO on a non-existent filter",
 			cmds:    []string{"BF.INFO bf"},
-			expect:  []interface{}{"ERR not found"},
+			expect:  []interface{}{diceerrors.ErrKeyNotFound.Error()},
 			delays:  []time.Duration{0},
 			cleanUp: []string{"del bf"},
 		},
@@ -170,7 +174,7 @@ func TestBFEdgeCasesAndErrors(t *testing.T) {
 		{
 			name:    "BF.RESERVE with duplicate filter name",
 			cmds:    []string{"BF.RESERVE bf 0.01 1000", "BF.RESERVE bf 0.01 2000"},
-			expect:  []interface{}{"OK", "ERR item exists"},
+			expect:  []interface{}{"OK", diceerrors.ErrKeyExists.Error()},
 			delays:  []time.Duration{0, 0},
 			cleanUp: []string{"del bf"},
 		},

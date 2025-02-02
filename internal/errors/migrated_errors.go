@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package errors
 
 import (
@@ -33,6 +36,7 @@ var (
 	ErrInvalidIPAddress           = errors.New("invalid IP address")
 	ErrInvalidFingerprint         = errors.New("invalid fingerprint")
 	ErrKeyDoesNotExist            = errors.New("ERR could not perform this operation on a key that doesn't exist")
+	ErrKeyExists                  = errors.New("ERR key exists")
 
 	// Error generation functions for specific error messages with dynamic parameters.
 	ErrWrongArgumentCount = func(command string) error {
@@ -53,8 +57,8 @@ var (
 	ErrFormatted = func(errMsg string, opts ...any) error {
 		return ErrGeneral(fmt.Sprintf(errMsg, opts...))
 	}
-	ErrWorkerNotFound = func(workerID string) error {
-		return fmt.Errorf("ERR worker with ID %s not found", workerID) // Indicates that a worker with the specified ID does not exist.
+	ErrIOThreadNotFound = func(id string) error {
+		return fmt.Errorf("ERR io-thread with ID %s not found", id) // Indicates that an io-thread with the specified ID does not exist.
 	}
 
 	ErrJSONPathNotFound = func(path string) error {

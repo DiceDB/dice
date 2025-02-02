@@ -33,14 +33,14 @@ This real-time reactivity ensures that clients always receive the latest data wi
 
 ## DiceDB, a reactive database
 
-DiceDB exemplifies the reactive database model. Designed as a [redis-compatible](redis.io), in-memory, scalable, highly available, unified, multi-threaded database, DiceDB also focuses on real-time reactivity and efficiency. In DiceDB, clients can set up query subscriptions for specific keys and queries and when a value tied to a subscribed query changes, the updated result set is pushed directly to the subscribed clients. This push model eliminates the need for clients to continuously poll for updates.
+DiceDB exemplifies the reactive database model and also focuses on real-time reactivity and efficiency. In DiceDB, clients can set up query subscriptions for specific keys and queries and when a value tied to a subscribed query changes, the updated result set is pushed directly to the subscribed clients. This push model eliminates the need for clients to continuously poll for updates.
 
 ### Creating a query subscription
 
 DiceDB makes creating query subscriptions straightforward. For all read-only commands, such as `GET` and `ZRANGE`, DiceDB introduces a `.WATCH` variant, enabling reactive capabilities:
 
-- [GET.WATCH](/commands/getwatch)  
-- [ZRANGE.WATCH](/commands/zrangewatch)  
+- [GET.WATCH](/commands/getwatch)
+- [ZRANGE.WATCH](/commands/zrangewatch)
 
 The `.WATCH` variant signifies a query subscription. For example:
 
@@ -55,11 +55,11 @@ No, DiceDB is not the same as CDC. While CDC captures and streams data changes a
 
 ## Efficiency Gains and Cost Reduction
 
-DiceDB’s reactivity model delivers tangible benefits:  
+DiceDB’s reactivity model delivers tangible benefits:
 
-- **Reduced Query Load**: Shifting from client polling to server push eliminates redundant queries, particularly in high-read scenarios with multiple clients requesting the same data.  
+- **Reduced Query Load**: Shifting from client polling to server push eliminates redundant queries, particularly in high-read scenarios with multiple clients requesting the same data.
 
-- **Lower Latency**: Updates are pushed instantly upon data changes, ensuring clients receive real-time information with minimal delay, enhancing user experience.  
+- **Lower Latency**: Updates are pushed instantly upon data changes, ensuring clients receive real-time information with minimal delay, enhancing user experience.
 
 - **Resource Savings**: By processing queries once and streaming results to all subscribers, DiceDB optimizes CPU, memory, and network usage, reducing infrastructure requirements and lowering operational costs.
 

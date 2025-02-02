@@ -1,12 +1,16 @@
 ---
 title: GET.WATCH
 description: The `GET.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
+sidebar:
+  badge:
+    text: Reactive
+    variant: success
 ---
 
 The `GET.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
 It allows clients to subscribe to a key and receive notifications whenever the key is updated.
 
-This command is what makes DiceDB different from Redis and uniquely positions it as the easiest and most intuitive way
+This command uniquely positions DiceDB as the easiest and most intuitive way
 to build real-time reactive applications like leaderboards, documents etc.
 
 ## Protocol Support
@@ -14,8 +18,8 @@ to build real-time reactive applications like leaderboards, documents etc.
 | Protocol  | Supported |
 | --------- | --------- |
 | TCP-RESP  | ✅        |
-| HTTP      | ✅        |
-| WebSocket | ✅        |
+| HTTP      | ❌        |
+| WebSocket | ❌        |
 
 ## Syntax
 
@@ -25,17 +29,15 @@ GET.WATCH <key>
 
 ## Parameters
 
-| Parameter    | Description                                                                         | Type   | Required |
-| ------------ | ----------------------------------------------------------------------------------- | ------ | -------- |
-| `key` | key which the client would like to get updates on | String | Yes      |
-
-
+| Parameter | Description                                       | Type   | Required |
+| --------- | ------------------------------------------------- | ------ | -------- |
+| `key`     | key which the client would like to get updates on | String | Yes      |
 
 ## Return Value
 
-| Condition             | Return Value                                               |
-| --------------------- | ---------------------------------------------------------- |
-| Command is successful |  returns a message similar to `subscribe` |
+| Condition             | Return Value                             |
+| --------------------- | ---------------------------------------- |
+| Command is successful | returns a message similar to `subscribe` |
 
 ## Behavior
 
@@ -58,10 +60,8 @@ Let's explore a practical example of using the `GET.WATCH` command to create a r
 
 ```bash
 127.0.0.1:7379> GET.WATCH journal:user:0
-GET.WATCH
-Command: GET
-Fingerprint: 4016579015
-Data: Hello World
+Press Ctrl+C to exit watch mode.
+"Hello World"
 ```
 
 This query does the following:
@@ -69,7 +69,7 @@ This query does the following:
 - Monitors key matching the name `journal:user:0`
 
 When the key is updated using following set of commands from another client:
-    
+
 ```bash
 127.0.0.1:7379> set journal:user:0 "Hello World, I am user 0 of dice db"
 OK
@@ -80,16 +80,14 @@ OK
 ```
 
 The client will receive a message similar to the following:
+
 ```bash
-Command: GET
-Fingerprint: 4016579015
-Data: Hello World, I am user 0 of dice db
-Command: GET
-Fingerprint: 4016579015
-Data: Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch commands
-Command: GET
-Fingerprint: 4016579015
-Data: Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch and unwatch commands.
+127.0.0.1:7379> GET.WATCH journal:user:0
+Press Ctrl+C to exit watch mode.
+"Hello World"
+"Hello World, I am user 0 of dice db"
+"Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch commands"
+"Hello World, I am user 0 of dice db, and i am going to demonstrate the use of watch and unwatch commands."
 ```
 
 ## Notes
@@ -100,6 +98,7 @@ the [GET.UNWATCH](/commands/getunwatch) command documentation for more informati
 ## Related commands
 
 following are the related commands to `GET.WATCH`:
-- [ZRANGE.WATCH](/commands/zrangewatch)
-- [Q.WATCH](/commands/qwatch)
 
+- [GET.UNWATCH](/commands/getunwatch)
+- [ZRANGE.WATCH](/commands/zrangewatch)
+- [PFCOUNT.WATCH](/commands/pfcountwatch)
