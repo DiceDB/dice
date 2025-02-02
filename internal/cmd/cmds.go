@@ -131,7 +131,7 @@ func errWrongArgumentCount(command string) error {
 }
 
 var errUnknownObjectType = errors.New("unknown object type")
-
+var errIntegerOutOfRange = errors.New("integer out of range")
 //nolint:unparam
 func errInvalidSyntax(command string) error {
 	return fmt.Errorf("invalid syntax for '%s' command", strings.ToUpper(command))
@@ -140,6 +140,10 @@ func errInvalidSyntax(command string) error {
 //nolint:unparam
 func errInvalidValue(command, param string) error {
 	return fmt.Errorf("invalid value for a parameter in '%s' command for %s parameter", strings.ToUpper(command), strings.ToUpper(param))
+}
+
+func errWrongTypeOperation(command string) error {
+	return fmt.Errorf("wrong type operation for '%s' command", strings.ToUpper(command))
 }
 
 var cmdResNil = &CmdRes{R: &wire.Response{
