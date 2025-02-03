@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/dgryski/go-farm"
@@ -17,7 +16,7 @@ import (
 	"github.com/dicedb/dice/wire"
 )
 
-//nolint: stylecheck
+// nolint: stylecheck
 const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
@@ -43,7 +42,6 @@ func (c *Cmd) Key() string {
 type CmdRes struct {
 	R        *wire.Response
 	ThreadID string
-	Mu       *sync.Mutex
 }
 
 type DiceDBCommand struct {
@@ -68,12 +66,6 @@ var commandRegistry CmdRegistry = CmdRegistry{
 	cmds: []*DiceDBCommand{},
 }
 
-func (res *CmdRes) ResetErr() {
-	res.Mu.Lock()
-	defer res.Mu.Unlock()
-	res.R.Err = ""
-}
-
 func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// TODO: Replace this iteration with a HashTable lookup.
 	for _, cmd := range commandRegistry.cmds {
@@ -84,7 +76,7 @@ func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		start := time.Now()
 		resp, err := cmd.Eval(c, s)
 		if err != nil {
-			resp.R.Err = err.Error()
+			resp = &CmdRes{R: &wire.Response{Err: err.Error()}}
 		}
 
 		slog.Debug("command executed",
@@ -176,8 +168,8 @@ func errWrongTypeOperation(command string) error {
 
 var cmdResNil = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VNil{VNil: true},
-}, Mu: &sync.Mutex{}}
+}}
 
 var cmdResOK = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VStr{VStr: "OK"},
-}, Mu: &sync.Mutex{}}
+}}

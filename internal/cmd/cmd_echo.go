@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"sync"
-
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/wire"
 )
@@ -24,5 +22,5 @@ func evalECHO(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VStr{VStr: c.C.Args[0]},
-	}, Mu: &sync.Mutex{}}, nil
+	}}, nil
 }
