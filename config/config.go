@@ -4,26 +4,18 @@
 package config
 
 import (
-	"fmt"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"log/slog"
 	"os"
-	"path/filepath"
-	"runtime"
 )
 
 const (
 	DiceDBVersion = "0.1.0"
-
-	linuxPath   = "/var/lib/dicedb"
-	darwinPath  = "~/Library/Application Support/dicedb"
-	windowsPath = "C:\\ProgramData\\dicedb"
 )
 
 var (
-	Config           *DiceDBConfig
-	DefaultParentDir = "."
+	Config *DiceDBConfig
 )
 
 type DiceDBConfig struct {
@@ -57,14 +49,14 @@ type DiceDBConfig struct {
 }
 
 func Init(flags *pflag.FlagSet) {
-	configureParentDirPaths()
+	configureDataDirPaths()
 	viper.SetConfigName("dicedb")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath(DefaultParentDir)
+	viper.AddConfigPath(DicedbDataDir)
 
 	err := viper.ReadInConfig()
-	if _, ok := err.(viper.ConfigFileNotFoundError); !ok && err != nil {
+	_, configFileNotFoundErr := err.(viper.ConfigFileNotFoundError)
+	if !configFileNotFoundErr && err != nil {
 		panic(err)
 	}
 
@@ -73,8 +65,8 @@ func Init(flags *pflag.FlagSet) {
 			return
 		}
 
-		// Only updated parsed configs if the user sets value
-		if flag.Changed {
+		// Only updated parsed configs if the user sets value or viper doesn't have default values for config flags set
+		if flag.Changed || !viper.IsSet(flag.Name) {
 			viper.Set(flag.Name, flag.Value.String())
 		}
 	})
@@ -84,46 +76,10 @@ func Init(flags *pflag.FlagSet) {
 	}
 }
 
-// ConfigureParentDirPaths Creates the default parent directory which can be used for logs and persistent data
-func configureParentDirPaths() {
-	var err error
-	DefaultParentDir, err = createDefaultParentDir()
-	if err != nil {
+// ConfigureDataDirPaths Creates the default data directory which can be used for dicedb logs and other persistent data
+func configureDataDirPaths() {
+	// Creating dir with owner only permission
+	if err := os.MkdirAll(DicedbDataDir, 0o700); err != nil {
 		slog.Warn("Failed to create default preferences directory", slog.String("error", err.Error()))
 	}
-}
-
-func createDefaultParentDir() (string, error) {
-	// Get the default directory path for the OS
-	prefDir := GetDefaultParentDirPath()
-	if err := os.MkdirAll(prefDir, os.ModePerm); err != nil {
-		return "", fmt.Errorf("failed to create preferences directory: %w", err)
-	}
-
-	return prefDir, nil
-}
-
-func GetDefaultParentDirPath() string {
-	switch runtime.GOOS {
-	case "linux":
-		return linuxPath
-	case "darwin":
-		return expandHomeDirDarwin(darwinPath)
-	case "windows":
-		return windowsPath
-	default:
-		slog.Warn("unsupported OS, defaulting to current directory")
-		return DefaultParentDir
-	}
-}
-
-func expandHomeDirDarwin(path string) string {
-	if path != "" && path[0] == '~' {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path // Fallback if home directory can't be resolved
-		}
-		return filepath.Join(home, path[1:])
-	}
-	return path
 }
