@@ -6,6 +6,7 @@ package iothread
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
@@ -74,7 +75,10 @@ func (t *IOThread) Start(ctx context.Context) error {
 	}
 }
 
-func (t *IOThread) StartSync(ctx context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) error {
+func (t *IOThread) StartSync(
+	ctx context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error),
+	handleWatch func(c *cmd.Cmd, t *IOThread),
+	handleUnwatch func(c *cmd.Cmd, t *IOThread)) error {
 	slog.Debug("io thread started", slog.String("id", t.id))
 	for {
 		c, err := t.ioHandler.ReadSync()
@@ -86,6 +90,15 @@ func (t *IOThread) StartSync(ctx context.Context, execute func(c *cmd.Cmd) (*cmd
 		if err != nil {
 			res.R.Err = err.Error()
 		}
+
+		if strings.HasSuffix(c.C.Cmd, ".WATCH") {
+			handleWatch(c, t)
+		}
+
+		if strings.HasSuffix(c.C.Cmd, "UNWATCH") {
+			handleUnwatch(c, t)
+		}
+
 		err = t.ioHandler.WriteSync(ctx, res)
 		if err != nil {
 			return err
