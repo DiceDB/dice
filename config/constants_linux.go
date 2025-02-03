@@ -2,6 +2,12 @@
 
 package config
 
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
 var DicedbDataDir = func() string {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {

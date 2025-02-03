@@ -2,6 +2,12 @@
 
 package config
 
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
 const DicedbDataDir = func() string {
 	// Use %LOCALAPPDATA% for dir on Windows i.e C:\Users\<YourUsername>\AppData\Local
 	localAppData := os.Getenv("LOCALAPPDATA")
