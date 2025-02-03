@@ -15,7 +15,7 @@ import (
 
 type IOThread struct {
 	id                string
-	ioHandler         iohandler.IOHandler
+	IoHandler         iohandler.IOHandler
 	Session           *auth.Session
 	ioThreadReadChan  chan []byte      // Channel to send data to the command handler
 	ioThreadWriteChan chan interface{} // Channel to receive data from the command handler
@@ -27,7 +27,7 @@ func NewIOThread(id string, ioHandler iohandler.IOHandler,
 	ioThreadErrChan chan error) *IOThread {
 	return &IOThread{
 		id:                id,
-		ioHandler:         ioHandler,
+		IoHandler:         ioHandler,
 		Session:           auth.NewSession(),
 		ioThreadReadChan:  ioThreadReadChan,
 		ioThreadWriteChan: ioThreadWriteChan,
@@ -65,7 +65,7 @@ func (t *IOThread) Start(ctx context.Context) error {
 			t.ioThreadErrChan <- err
 			return err
 		case resp := <-t.ioThreadWriteChan:
-			err := t.ioHandler.Write(ctx, resp)
+			err := t.IoHandler.Write(ctx, resp)
 			if err != nil {
 				slog.Debug("error while sending response to the client", slog.String("id", t.id), slog.Any("error", err))
 				continue
@@ -78,10 +78,11 @@ func (t *IOThread) Start(ctx context.Context) error {
 func (t *IOThread) StartSync(
 	ctx context.Context, execute func(c *cmd.Cmd) (*cmd.CmdRes, error),
 	handleWatch func(c *cmd.Cmd, t *IOThread),
-	handleUnwatch func(c *cmd.Cmd, t *IOThread)) error {
+	handleUnwatch func(c *cmd.Cmd, t *IOThread),
+	notifyWatchers func(c *cmd.Cmd, execute func(c *cmd.Cmd) (*cmd.CmdRes, error))) error {
 	slog.Debug("io thread started", slog.String("id", t.id))
 	for {
-		c, err := t.ioHandler.ReadSync()
+		c, err := t.IoHandler.ReadSync()
 		if err != nil {
 			return err
 		}
@@ -99,10 +100,12 @@ func (t *IOThread) StartSync(
 			handleUnwatch(c, t)
 		}
 
-		err = t.ioHandler.WriteSync(ctx, res)
+		err = t.IoHandler.WriteSync(ctx, res)
 		if err != nil {
 			return err
 		}
+
+		go notifyWatchers(c, execute)
 	}
 }
 
@@ -112,7 +115,7 @@ func (t *IOThread) startInputReader(ctx context.Context, incomingDataChan chan [
 	defer close(readErrChan)
 
 	for {
-		data, err := t.ioHandler.Read(ctx)
+		data, err := t.IoHandler.Read(ctx)
 		if err != nil {
 			select {
 			case readErrChan <- err:

@@ -202,7 +202,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 
 func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *iothread.IOThread) {
 	wg.Done()
-	err := thread.StartSync(ctx, s.shardManager.Execute, HandleWatch, HandleUnwatch)
+	err := thread.StartSync(ctx, s.shardManager.Execute, HandleWatch, HandleUnwatch, NotifyWatchers)
 	if err != nil {
 		if err == io.EOF {
 			CleanupThreadWatchSubscriptions(thread)

@@ -1,6 +1,7 @@
 package ironhawk
 
 import (
+	"context"
 	"log/slog"
 	"strconv"
 
@@ -11,11 +12,13 @@ import (
 var (
 	keyFPMap    map[string]map[uint32]bool             // keyFPMap is a map of Key -> [fingerprint1, fingerprint2, ...]
 	fpThreadMap map[uint32]map[*iothread.IOThread]bool // fpConnMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
+	fpCmdMap    map[uint32]*cmd.Cmd                    // fpCmdMap is a map of fingerprint -> command
 )
 
 func init() {
 	keyFPMap = make(map[string]map[uint32]bool)
 	fpThreadMap = make(map[uint32]map[*iothread.IOThread]bool)
+	fpCmdMap = make(map[uint32]*cmd.Cmd)
 }
 
 func HandleWatch(c *cmd.Cmd, t *iothread.IOThread) {
@@ -35,6 +38,7 @@ func HandleWatch(c *cmd.Cmd, t *iothread.IOThread) {
 		fpThreadMap[fp] = make(map[*iothread.IOThread]bool)
 	}
 	fpThreadMap[fp][t] = true
+	fpCmdMap[fp] = c
 }
 
 func HandleUnwatch(c *cmd.Cmd, t *iothread.IOThread) {
@@ -61,6 +65,10 @@ func HandleUnwatch(c *cmd.Cmd, t *iothread.IOThread) {
 			delete(keyFPMap, key)
 		}
 	}
+
+	// TODO: Maintain ref count for gp -> cmd mapping
+	// delete it from delete(fpCmdMap, fp) only when ref count is 0
+	// check if any easier way to do this
 }
 
 func CleanupThreadWatchSubscriptions(t *iothread.IOThread) {
@@ -74,43 +82,32 @@ func CleanupThreadWatchSubscriptions(t *iothread.IOThread) {
 	}
 }
 
-// func (m *Manager) handleWatchEvent(event dstore.CmdWatchEvent) {
-// 	// Check if any watch commands are listening to updates on this key.
-// 	fingerprints, exists := m.querySubscriptionMap[event.AffectedKey]
-// 	if !exists {
-// 		return
-// 	}
+func NotifyWatchers(c *cmd.Cmd, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) {
+	// TODO: During first WATCH call, we are getting the response multiple times on the Client
+	// Check if this is happening because of the way we are notifying the watchers
+	key := c.Key()
+	for fp := range keyFPMap[key] {
+		_c := fpCmdMap[fp]
+		if _c == nil {
+			// TODO: We might want to remove the key from keyFPMap if we don't have a command for it.
+			continue
+		}
 
-// 	affectedCommands, cmdExists := affectedCmdMap[event.Cmd]
-// 	if !cmdExists {
-// 		slog.Error("Received a watch event for an unknown command type",
-// 			slog.String("cmd", event.Cmd))
-// 		return
-// 	}
+		r, err := execute(_c)
+		if err != nil {
+			slog.Error("failed to execute command as part of watch notification",
+				slog.Any("cmd", _c.String()),
+				slog.Any("error", err))
+			continue
+		}
 
-// 	// iterate through all command fingerprints that are listening to this key
-// 	for fingerprint := range fingerprints {
-// 		cmdToExecute := m.fingerprintCmdMap[fingerprint]
-// 		// Check if the command associated with this fingerprint actually needs to be executed for this event.
-// 		// For instance, if the event is a SET, only GET commands need to be executed. This also
-// 		// helps us handle cases where a key might get updated by an unrelated command which makes it
-// 		// incompatible with the watched command.
-// 		if _, affected := affectedCommands[cmdToExecute.Cmd]; affected {
-// 			m.notifyClients(fingerprint, cmdToExecute)
-// 		}
-// 	}
-// }
+		for thread := range fpThreadMap[fp] {
+			err := thread.IoHandler.WriteSync(context.Background(), r)
+			if err != nil {
+				slog.Error("failed to write response to thread", slog.Any("thread", thread.ID()), slog.Any("error", err))
+			}
+		}
 
-// // notifyClients sends cmd to all clients listening to this fingerprint, so that they can execute it.
-// func (m *Manager) notifyClients(fingerprint uint32, diceDBCmd *cmd.DiceDBCmd) {
-// 	clients, exists := m.tcpSubscriptionMap[fingerprint]
-// 	if !exists {
-// 		slog.Warn("No clients found for fingerprint",
-// 			slog.Uint64("fingerprint", uint64(fingerprint)))
-// 		return
-// 	}
-
-// 	for clientChan := range clients {
-// 		clientChan <- diceDBCmd
-// 	}
-// }
+		slog.Debug("notifying watchers for key", slog.String("key", key), slog.Int("watchers", len(fpThreadMap[fp])))
+	}
+}
