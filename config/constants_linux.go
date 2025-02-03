@@ -15,5 +15,5 @@ var DicedbDataDir = func() string {
 		return "/tmp/dicedb"
 	}
 
-	return filepath.Join(homeDir, ".local", "share", "dicedb"), nil
+	return filepath.Join(homeDir, ".local", "share", "dicedb")
 }()
