@@ -4,6 +4,9 @@
 package config
 
 import (
+	"log/slog"
+	"os"
+
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -12,7 +15,9 @@ const (
 	DiceDBVersion = "0.1.0"
 )
 
-var Config *DiceDBConfig
+var (
+	Config *DiceDBConfig
+)
 
 type DiceDBConfig struct {
 	Host string `mapstructure:"host" default:"0.0.0.0" description:"the host address to bind to"`
@@ -45,10 +50,10 @@ type DiceDBConfig struct {
 }
 
 func Init(flags *pflag.FlagSet) {
+	configureDataDirPaths()
 	viper.SetConfigName("dicedb")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("/etc/dicedb")
+	viper.AddConfigPath(DicedbDataDir)
 
 	err := viper.ReadInConfig()
 	if _, ok := err.(viper.ConfigFileNotFoundError); !ok && err != nil {
@@ -59,10 +64,22 @@ func Init(flags *pflag.FlagSet) {
 		if flag.Name == "help" {
 			return
 		}
-		viper.Set(flag.Name, flag.Value.String())
+
+		// Only updated parsed configs if the user sets value or viper doesn't have default values for config flags set
+		if flag.Changed || !viper.IsSet(flag.Name) {
+			viper.Set(flag.Name, flag.Value.String())
+		}
 	})
 
 	if err := viper.Unmarshal(&Config); err != nil {
 		panic(err)
+	}
+}
+
+// ConfigureDataDirPaths Creates the default data directory which can be used for dicedb logs and other persistent data
+func configureDataDirPaths() {
+	// Creating dir with owner only permission
+	if err := os.MkdirAll(DicedbDataDir, 0o700); err != nil {
+		slog.Warn("Failed to create default preferences directory", slog.String("error", err.Error()))
 	}
 }

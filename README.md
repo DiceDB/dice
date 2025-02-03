@@ -121,10 +121,24 @@ air
 
 ### Local Setup with Custom Config
 
-By default, DiceDB will look for the configuration file at `./dicedb.conf`. (Linux, Darwin, and WSL)
+Follow these steps to generate and customize your dicedb configuration:
 
-> [!TIP]
-> If you want to use a custom configuration file, you can specify the path using the `-c` flag. and to output the configuration file to a specific location, you can specify the output dir path using the `-o` flag.
+1. Build the application:
+```bash
+make build
+```
+
+2. Generate the initial configuration file:
+```bash
+dicedb init-config
+```
+The configuration file (dicedb.yaml) will be created in the default data directory for your operating system.
+
+3. Locate the configuration file in the default data directory for dicedb:
+
+macOS: `~/Library/Application Support/dicedb`
+Windows: `%LOCALAPPDATA%\dicedb` (i.e. `C:\Users\<YourUsername>\AppData\Local\dicedb`)
+Linux: `~/.local/share/dicedb`
 
 ### Running Tests
 
