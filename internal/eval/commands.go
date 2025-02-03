@@ -1374,7 +1374,7 @@ func init() {
 	DiceCmds["DECRBY"] = decrByCmdMeta
 	DiceCmds["DEL"] = delCmdMeta
 	DiceCmds["DUMP"] = dumpkeyCMmdMeta
-	DiceCmds["ECHO"] = echoCmdMeta
+	DiceCmds["ECHO"] = echoCmdMeta // moved to ironhawk
 	DiceCmds["EXISTS"] = existsCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
 	DiceCmds["EXPIREAT"] = expireatCmdMeta
