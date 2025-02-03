@@ -11,9 +11,9 @@ import (
 var DicedbDataDir = func() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Println("Error fetching home directory, defaulting to /tmp/dicedb for dir")
+		fmt.Println("Error fetching home directory, defaulting to /tmp/dicedb")
 		return "/tmp/dicedb"
 	}
 
-	return filepath.Join(home, "Library/Application Support/dicedb")
+	return filepath.Join(home, "Library", "Application Support", "dicedb")
 }()

@@ -2,10 +2,10 @@
 
 package config
 
-const DicedbDataDir = func() string {
+var DicedbDataDir = func() string {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Println("Error fetching home directory")
+		fmt.Println("Error fetching home directory, defaulting to /tmp/dicedb")
 		return "/tmp/dicedb"
 	}
 

@@ -121,14 +121,24 @@ air
 
 ### Local Setup with Custom Config
 
-Follow below steps to generate config file and can be updated: 
-1. Run below commands to generate the config file
-```
+Follow these steps to generate and customize your dicedb configuration:
+
+1. Build the application:
+```bash
 make build
-dicedb init-config
 ```
 
-2. Update config changes in file generated i.e. `dicedb.yaml` in current directory.
+2. Generate the initial configuration file:
+```bash
+dicedb init-config
+```
+The configuration file (dicedb.yaml) will be created in the default data directory for your operating system.
+
+3. Locate the configuration file in the default data directory for dicedb:
+
+macOS: `~/Library/Application Support/dicedb`
+Windows: `%LOCALAPPDATA%\dicedb` (i.e. `C:\Users\<YourUsername>\AppData\Local\dicedb`)
+Linux: `~/.local/share/dicedb`
 
 ### Running Tests
 

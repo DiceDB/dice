@@ -4,10 +4,11 @@
 package config
 
 import (
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	"log/slog"
 	"os"
+
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -55,8 +56,7 @@ func Init(flags *pflag.FlagSet) {
 	viper.AddConfigPath(DicedbDataDir)
 
 	err := viper.ReadInConfig()
-	_, configFileNotFoundErr := err.(viper.ConfigFileNotFoundError)
-	if !configFileNotFoundErr && err != nil {
+	if _, ok := err.(viper.ConfigFileNotFoundError); !ok && err != nil {
 		panic(err)
 	}
 
