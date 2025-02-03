@@ -17,9 +17,27 @@ import (
 	"github.com/dicedb/dice/wire"
 )
 
+//nolint: stylecheck
+const INFINITE_EXPIRATION = int64(-1)
+
 type Cmd struct {
 	C        *wire.Command
 	ThreadID string
+}
+
+func (c *Cmd) String() string {
+	return fmt.Sprintf("%s %s", c.C.Cmd, strings.Join(c.C.Args, " "))
+}
+
+func (c *Cmd) GetFingerprint() uint32 {
+	return farm.Fingerprint32([]byte(c.String()))
+}
+
+func (c *Cmd) Key() string {
+	if len(c.C.Args) > 0 {
+		return c.C.Args[0]
+	}
+	return ""
 }
 
 type CmdRes struct {
@@ -57,22 +75,24 @@ func (res *CmdRes) ResetErr() {
 }
 
 func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
+	// TODO: Replace this iteration with a HashTable lookup.
 	for _, cmd := range commandRegistry.cmds {
-		if cmd.Name == c.C.Cmd {
-			start := time.Now()
-			resp, err := cmd.Eval(c, s)
-			if err != nil {
-				resp.R.Err = err.Error()
-			}
-
-			slog.Debug("command executed",
-				slog.Any("cmd", c.C.Cmd),
-				slog.String("args", strings.Join(c.C.Args, " ")),
-				slog.String("thread_id", c.ThreadID),
-				slog.Int("shard_id", s.ShardID),
-				slog.Any("took_ns", time.Since(start).Nanoseconds()))
-			return resp, err
+		if cmd.Name != c.C.Cmd {
+			continue
 		}
+
+		start := time.Now()
+		resp, err := cmd.Eval(c, s)
+		if err != nil {
+			resp.R.Err = err.Error()
+		}
+
+		slog.Debug("command executed",
+			slog.Any("cmd", c.String()),
+			slog.String("thread_id", c.ThreadID),
+			slog.Int("shard_id", s.ShardID),
+			slog.Any("took_ns", time.Since(start).Nanoseconds()))
+		return resp, err
 	}
 	return cmdResNil, errors.New("command not found")
 }
@@ -148,6 +168,10 @@ func errInvalidSyntax(command string) error {
 //nolint:unparam
 func errInvalidValue(command, param string) error {
 	return fmt.Errorf("invalid value for a parameter in '%s' command for %s parameter", strings.ToUpper(command), strings.ToUpper(param))
+}
+
+func errWrongTypeOperation(command string) error {
+	return fmt.Errorf("wrong type operation for '%s' command", strings.ToUpper(command))
 }
 
 var cmdResNil = &CmdRes{R: &wire.Response{

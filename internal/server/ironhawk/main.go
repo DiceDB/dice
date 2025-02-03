@@ -202,9 +202,10 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 
 func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *iothread.IOThread) {
 	wg.Done()
-	err := thread.StartSync(ctx, s.shardManager.Execute)
+	err := thread.StartSync(ctx, s.shardManager.Execute, HandleWatch, HandleUnwatch, NotifyWatchers)
 	if err != nil {
 		if err == io.EOF {
+			CleanupThreadWatchSubscriptions(thread)
 			slog.Debug("client disconnected. io-thread stopped", slog.String("id", thread.ID()))
 		} else {
 			slog.Debug("io-thread errored out", slog.String("id", thread.ID()), slog.Any("error", err))
