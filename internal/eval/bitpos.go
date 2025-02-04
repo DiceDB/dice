@@ -42,7 +42,7 @@ func Encode(value interface{}, isSimple bool) []byte {
 	return []byte(fmt.Sprintf(":%v\r\n", value))
 }
 
-func evalBITPOS(args []string, store *store.Store) *EvalResponse {
+func evalBITPOS(args []string, st *store.Store) *EvalResponse {
 	if len(args) < 2 || len(args) > 5 {
 		return &EvalResponse{
 			Result: nil,
@@ -51,7 +51,7 @@ func evalBITPOS(args []string, store *store.Store) *EvalResponse {
 	}
 
 	key := args[0]
-	obj := store.Get(key)
+	obj := st.Get(key)
 
 	bitToFind, err := parseBitToFind(args[1])
 	if err != nil {

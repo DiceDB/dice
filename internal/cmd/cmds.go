@@ -16,7 +16,7 @@ import (
 	"github.com/dicedb/dice/wire"
 )
 
-// nolint: stylecheck
+//nolint: stylecheck
 const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
