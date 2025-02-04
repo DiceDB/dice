@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dicedb/dice/internal/clientio"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/stretchr/testify/assert"
 )
@@ -33,7 +32,7 @@ func TestBloomFilter(t *testing.T) {
 	args = append(args, "bf", "0.01", "10000") // Add key, error rate and capacity
 	resp = evalBFRESERVE(args, store)
 	assert.Nil(t, resp.Error)
-	assert.ObjectsAreEqualValues(resp.Result, clientio.OK)
+	assert.ObjectsAreEqualValues(resp.Result, OK)
 
 	// BF.RESERVE bf1
 	args = []string{"bf1"}
@@ -51,22 +50,22 @@ func TestBloomFilter(t *testing.T) {
 	args = []string{"bf", "hello"} // BF.ADD bf hello
 	resp = evalBFADD(args, store)
 	assert.Nil(t, resp.Error)
-	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
+	assert.ObjectsAreEqualValues(resp.Result, IntegerOne)
 
 	args[1] = "world" // BF.ADD bf world
 	resp = evalBFADD(args, store)
 	assert.Nil(t, resp.Error)
-	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
+	assert.ObjectsAreEqualValues(resp.Result, IntegerOne)
 
 	args[1] = "hello" // BF.ADD bf hello
 	resp = evalBFADD(args, store)
 	assert.Nil(t, resp.Error)
-	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerZero)
+	assert.ObjectsAreEqualValues(resp.Result, IntegerZero)
 	// Try adding element into a non-existing filter
 	args = []string{"bf2", "hello"} // BF.ADD bf2 hello
 	resp = evalBFADD(args, store)
 	assert.Nil(t, resp.Error)
-	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
+	assert.ObjectsAreEqualValues(resp.Result, IntegerOne)
 
 	// BF.EXISTS arity test
 	args = []string{"bf"}
@@ -77,23 +76,23 @@ func TestBloomFilter(t *testing.T) {
 	args = []string{"bf", "hello"} // BF.EXISTS bf hello
 	resp = evalBFEXISTS(args, store)
 	assert.Nil(t, resp.Error)
-	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
+	assert.ObjectsAreEqualValues(resp.Result, IntegerOne)
 
 	args[1] = "hello" // BF.EXISTS bf world
 	resp = evalBFEXISTS(args, store)
 	assert.Nil(t, resp.Error)
-	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerOne)
+	assert.ObjectsAreEqualValues(resp.Result, IntegerOne)
 
 	args[1] = "programming" // BF.EXISTS bf programming
 	resp = evalBFEXISTS(args, store)
 	assert.Nil(t, resp.Error)
-	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerZero)
+	assert.ObjectsAreEqualValues(resp.Result, IntegerZero)
 
 	// Try searching for an element in a non-existing filter
 	args = []string{"bf3", "hello"} // BF.EXISTS bf3 hello
 	resp = evalBFEXISTS(args, store)
 	assert.Nil(t, resp.Error)
-	assert.ObjectsAreEqualValues(resp.Result, clientio.IntegerZero)
+	assert.ObjectsAreEqualValues(resp.Result, IntegerZero)
 }
 
 func TestGetOrCreateBloomFilter(t *testing.T) {

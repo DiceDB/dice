@@ -22,20 +22,13 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/logger"
-	"github.com/dicedb/dice/internal/server/httpws"
 	"github.com/dicedb/dice/internal/server/ironhawk"
-	"github.com/dicedb/dice/internal/server/resp"
+	"github.com/dicedb/dice/wire"
 
-	"github.com/dicedb/dice/internal/commandhandler"
-	"github.com/dicedb/dice/internal/server/abstractserver"
 	"github.com/dicedb/dice/internal/wal"
-	"github.com/dicedb/dice/internal/watchmanager"
 
 	"github.com/dicedb/dice/config"
 	diceerrors "github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/iothread"
-	"github.com/dicedb/dice/internal/shard"
-	dstore "github.com/dicedb/dice/internal/store"
 )
 
 func printConfiguration() {
@@ -92,10 +85,8 @@ func Start() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		cmdWatchChan             chan dstore.CmdWatchEvent
-		serverErrCh              = make(chan error, 2)
-		cmdWatchSubscriptionChan = make(chan watchmanager.WatchSubscription)
-		wl                       wal.AbstractWAL
+		serverErrCh = make(chan error, 2)
+		wl          wal.AbstractWAL
 	)
 
 	wl, _ = wal.NewNullWAL()
@@ -118,11 +109,6 @@ func Start() {
 		slog.Debug("WAL initialization complete")
 	}
 
-	if config.Config.EnableWatch {
-		bufSize := config.WatchChanBufSize
-		cmdWatchChan = make(chan dstore.CmdWatchEvent, bufSize)
-	}
-
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().
 	// This determines the total number of logical processors that can be utilized
 	// for parallel execution. Setting the maximum number of CPUs to the available
@@ -139,14 +125,8 @@ func Start() {
 	// improving concurrency performance across multiple goroutines.
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	// Initialize the ShardManager
-	var shardManager *shard.ShardManager
-	var iShardManager *ironhawk.ShardManager
-	if config.Config.Engine == EngineIRONHAWK {
-		iShardManager = ironhawk.NewShardManager(numShards, cmdWatchChan, serverErrCh)
-	} else {
-		shardManager = shard.NewShardManager(uint8(numShards), cmdWatchChan, serverErrCh)
-	}
+	shardManager := ironhawk.NewShardManager(numShards, serverErrCh)
+	watchManager := ironhawk.NewWatchManager()
 
 	wg := sync.WaitGroup{}
 
@@ -166,49 +146,26 @@ func Start() {
 		}
 		defer stopProfiling()
 	}
-	ioThreadManager := iothread.NewManager()
-	cmdHandlerManager := commandhandler.NewRegistry(shardManager)
 
-	if config.Config.Engine == EngineRESP || config.Config.Engine == EngineSILVERPINE {
-		respServer := resp.NewServer(shardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
-		serverWg.Add(1)
-		go runServer(ctx, &serverWg, respServer, serverErrCh)
-	} else if config.Config.Engine == EngineIRONHAWK {
-		ironhawkServer := ironhawk.NewServer(iShardManager, ioThreadManager, cmdHandlerManager, cmdWatchSubscriptionChan, cmdWatchChan, serverErrCh, wl)
-		serverWg.Add(1)
-		go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
-	}
+	ioThreadManager := ironhawk.NewIOThreadManager()
+	ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager)
 
-	if false {
-		httpServer := httpws.NewHTTPServer(shardManager, wl)
-		serverWg.Add(1)
-		go runServer(ctx, &serverWg, httpServer, serverErrCh)
-	}
-
-	if false {
-		websocketServer := httpws.NewWebSocketServer(shardManager, 7380, wl)
-		serverWg.Add(1)
-		go runServer(ctx, &serverWg, websocketServer, serverErrCh)
-	}
+	serverWg.Add(1)
+	go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
 
 	// Recovery from WAL logs
 	if config.Config.EnableWAL {
 		slog.Info("restoring database from WAL")
-		replayHandler, err := commandhandler.NewWALReplayHandler(ctx, shardManager)
-
-		if err != nil {
-			slog.Error("error getting WAL replay handler", slog.Any("error", err))
-			sigs <- syscall.SIGKILL
-			cancel()
-			return
-		}
 		callback := func(entry *wal.WALEntry) error {
 			command := strings.Split(string(entry.Data), " ")
-			cmdTemp := cmd.DiceDBCmd{
-				Cmd:  command[0],
-				Args: command[1:],
+			cmdTemp := cmd.Cmd{
+				C: &wire.Command{
+					Cmd:  command[0],
+					Args: command[1:],
+				},
+				IsReplay: true,
 			}
-			_, err := replayHandler.ExecuteCommand(context.Background(), &cmdTemp, false, false)
+			_, err := shardManager.Execute(&cmdTemp)
 			if err != nil {
 				return fmt.Errorf("error handling WAL replay: %w", err)
 			}
@@ -251,7 +208,7 @@ func Start() {
 	wg.Wait()
 }
 
-func runServer(ctx context.Context, wg *sync.WaitGroup, srv abstractserver.AbstractServer, errCh chan<- error) {
+func runServer(ctx context.Context, wg *sync.WaitGroup, srv *ironhawk.Server, errCh chan<- error) {
 	defer wg.Done()
 	if err := srv.Run(ctx); err != nil {
 		switch {

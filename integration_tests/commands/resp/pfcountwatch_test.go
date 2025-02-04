@@ -86,24 +86,6 @@ func setupSubscribers(count int) []net.Conn {
 	return subscribers
 }
 
-func setUpRespParsers(t *testing.T, subscribers []net.Conn) []*clientio.RESPParser {
-	respParsers := make([]*clientio.RESPParser, len(subscribers))
-	for i, subscriber := range subscribers {
-		rp := fireCommandAndGetRESPParser(subscriber, fmt.Sprintf(pfcountWatchQuery, pfcountWatchKey))
-		assert.NotNil(t, rp)
-		respParsers[i] = rp
-
-		v, err := rp.DecodeOne()
-		assert.Nil(t, err)
-		castedValue, ok := v.([]interface{})
-		if !ok {
-			t.Errorf("Type assertion to []interface{} failed for value: %v", v)
-		}
-		assert.Equal(t, 3, len(castedValue))
-	}
-	return respParsers
-}
-
 func testPFCountAdd(t *testing.T, publisher net.Conn, respParsers []*clientio.RESPParser) {
 	for _, tc := range pfcountWatchTestCases {
 		res := FireCommand(publisher, fmt.Sprintf("PFADD %s %s", tc.key, tc.val))

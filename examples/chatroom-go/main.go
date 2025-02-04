@@ -1,227 +1,147 @@
 package main
 
+// A simple program demonstrating the text area component from the Bubbles
+// component library.
+
 import (
-	"bufio"
-	"context"
-	"flag"
+	"chatroom-go/db"
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
-	"strconv"
 	"strings"
-	"syscall"
-	"time"
 
-	dicedb "github.com/dicedb/dicedb-go"
+	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/viewport"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
-const (
-	messageKey   = "chatroom:message"
-	updatedAtKey = "chatroom:updated_at"
-	pollInterval = 500 * time.Millisecond
-	serverPort   = ":8080"
-	diceDBAddr   = "localhost:7379"
-)
+const gap = "\n\n"
 
 var (
-	ddb      *dicedb.Client
-	isServer = flag.Bool("server", false, "Run as server")
-	username = flag.String("user", "", "Username for chat")
+	username string
 )
 
+var M model
+
 func init() {
-	ddb = dicedb.NewClient(&dicedb.Options{
-		Addr: diceDBAddr,
-	})
+	M = initialModel()
 }
 
-type Chatroom struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-}
-
-func NewChatroom() *Chatroom {
-	ctx, cancel := context.WithCancel(context.Background())
-	return &Chatroom{
-		ctx:    ctx,
-		cancel: cancel,
-	}
-}
-
-func (c *Chatroom) RunServer() error {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-	log.Println("initializing chatroom...")
-	err := ddb.Set(c.ctx, messageKey, "", 0).Err()
-	if err != nil {
-		return fmt.Errorf("initialization failed: failed to set the message key: %v", err)
-	}
-
-	err = ddb.Set(c.ctx, updatedAtKey, time.Now().Unix(), 0).Err()
-	if err != nil {
-		return fmt.Errorf("initialization failed: failed to set the updated_at key: %v", err)
-	}
-
-	fmt.Printf("chatroom is running on %s. waiting for clients...\n", serverPort)
-
-	<-sigChan
-	fmt.Println("shutting down server...")
-	c.cancel()
-	return nil
-}
-
-func (c *Chatroom) inputPromptLoop(username string) {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		select {
-		case <-c.ctx.Done():
-			return
-		default:
-			fmt.Printf("(%s)> ", username)
-			text, err := reader.ReadString('\n')
-			if err != nil {
-				fmt.Printf("error reading input: %v\n", err)
-				continue
-			}
-			text = strings.TrimSpace(text)
-
-			if text != "" {
-				message := fmt.Sprintf("%s:%d:%s",
-					username, time.Now().Unix(), text,
-				)
-
-				err := ddb.Set(c.ctx, messageKey, message, 0).Err()
-				if err != nil {
-					fmt.Printf("error sending message: %v\n", err)
-					continue
-				}
-
-				err = ddb.Set(c.ctx, updatedAtKey, time.Now().Unix(), 0).Err()
-				if err != nil {
-					fmt.Printf("error updating last update timestamp: %v\n", err)
-				}
-			}
-		}
-	}
-}
-
-func renderMessage(username string, msg string) {
-	if msg == "" {
-		return
-	}
-
-	parts := strings.Split(msg, ":")
-	if len(parts) >= 3 {
-		if parts[0] == username {
-			return
-		}
-
-		msgTime, err := strconv.ParseInt(parts[1], 10, 64)
-		if err != nil {
-			fmt.Printf("failed to parse timestamp: %v\n", err)
-			return
-		}
-		timestamp := time.Unix(msgTime, 0)
-
-		fmt.Printf("\n[%s] %s: %s\n",
-			timestamp.Format("15:04:05"), parts[0],
-			strings.Join(parts[2:], ":"))
-	}
-}
-
-func (c *Chatroom) pollMessages() {
-	var lastUpdatedAt int64
-
-	if _update, err := ddb.Get(c.ctx, updatedAtKey).Result(); err == nil {
-		if update, err := strconv.ParseInt(_update, 10, 64); err == nil {
-			lastUpdatedAt = update
-		}
-	}
-
-	for {
-		select {
-		case <-c.ctx.Done():
-			return
-		default:
-			_update, err := ddb.Get(c.ctx, updatedAtKey).Result()
-			if err != nil {
-				fmt.Printf("could not check the status from the database: %v\n", err)
-				continue
-			}
-			update, err := strconv.ParseInt(_update, 10, 64)
-			if err != nil {
-				update = 0
-			}
-
-			if update != lastUpdatedAt {
-				msg, err := ddb.Get(c.ctx, messageKey).Result()
-				if err != nil {
-					fmt.Printf("failed to get message from the database: %v", err)
-					continue
-				}
-				renderMessage(*username, msg)
-				lastUpdatedAt = update
-			}
-		}
-		time.Sleep(pollInterval)
-	}
-}
-
-func (c *Chatroom) RunClient(username string) {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		<-sigChan
-		c.cancel()
-	}()
-
-	go c.inputPromptLoop(username)
-	// go c.pollMessages()  // poll
-	go watchMessages() // push
-
-	<-c.ctx.Done()
-}
-
-func watchMessages() {
-	ctx := context.Background()
-	watchConn := ddb.WatchConn(ctx)
-	_, err := watchConn.GetWatch(ctx, messageKey)
-	if err != nil {
-		log.Println("failed to create watch connection:", err)
-		return
-	}
-	defer watchConn.Close()
-
-	ch := watchConn.Channel()
-	for {
-		select {
-		case msg := <-ch:
-			renderMessage(*username, msg.Data.(string))
-		case <-ctx.Done():
-			return
-		}
+func loop() {
+	for resp := range db.Client.WatchCh() {
+		fmt.Println(resp)
 	}
 }
 
 func main() {
-	flag.Parse()
-
-	if *username == "" && !*isServer {
-		fmt.Println("run either with -server or -user=<username>")
+	if len(os.Args) < 2 {
+		fmt.Println("go run main.go <username>")
 		os.Exit(1)
 	}
 
-	chatroom := NewChatroom()
-	if !*isServer {
-		chatroom.RunClient(*username)
-		return
-	}
-
-	if err := chatroom.RunServer(); err != nil {
-		fmt.Printf("error running server: %v\n", err)
+	username = os.Args[1]
+	if username == "" {
+		fmt.Println("go run main.go <username>")
 		os.Exit(1)
 	}
+
+	go loop()
+
+	p := tea.NewProgram(M)
+	if _, err := p.Run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+type model struct {
+	viewport    viewport.Model
+	messages    []string
+	textarea    textarea.Model
+	senderStyle lipgloss.Style
+	err         error
+}
+
+func initialModel() model {
+	ta := textarea.New()
+	ta.Placeholder = "Send a message ..."
+	ta.Focus()
+
+	ta.Prompt = "┃ "
+	ta.CharLimit = 280
+
+	ta.SetWidth(30)
+	ta.SetHeight(3)
+
+	// Remove cursor line styling
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
+
+	ta.ShowLineNumbers = false
+
+	vp := viewport.New(30, 5)
+	vp.SetContent(`Welcome to the chat room!
+Type a message and press Enter to send.`)
+
+	ta.KeyMap.InsertNewline.SetEnabled(false)
+	return model{
+		textarea:    ta,
+		messages:    []string{},
+		viewport:    vp,
+		senderStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
+		err:         nil,
+	}
+}
+
+func (m model) Refresh() {
+	M.viewport.SetContent(lipgloss.NewStyle().Width(M.viewport.Width).Render(strings.Join(M.messages, "\n")))
+	M.viewport.GotoBottom()
+}
+
+func (m model) Init() tea.Cmd {
+	return textarea.Blink
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var (
+		tiCmd tea.Cmd
+		vpCmd tea.Cmd
+	)
+
+	m.textarea, tiCmd = m.textarea.Update(msg)
+	m.viewport, vpCmd = m.viewport.Update(msg)
+
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.viewport.Width = msg.Width
+		m.textarea.SetWidth(msg.Width)
+		m.viewport.Height = msg.Height - m.textarea.Height() - lipgloss.Height(gap)
+		if len(m.messages) > 0 {
+			m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width).Render(strings.Join(m.messages, "\n")))
+		}
+		m.viewport.GotoTop()
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			return m, tea.Quit
+		case tea.KeyEnter:
+			db.Client.Fire(&wire.Command{
+				Cmd:  "SET",
+				Args: []string{username, m.textarea.Value()},
+			})
+
+			m.textarea.Reset()
+			m.Refresh()
+		}
+	}
+	return m, tea.Batch(tiCmd, vpCmd)
+}
+
+func (m model) View() string {
+	return fmt.Sprintf(
+		"%s%s%s",
+		m.viewport.View(),
+		gap,
+		m.textarea.View(),
+	)
 }

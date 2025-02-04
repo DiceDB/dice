@@ -14,7 +14,7 @@ import (
 	"github.com/dicedb/dice/config"
 
 	"github.com/dicedb/dice/internal/cmd"
-	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/store"
 )
 
 type Shard struct {
@@ -28,13 +28,13 @@ type ShardManager struct {
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
-func NewShardManager(shardCount int, cmdWatchChan chan dstore.CmdWatchEvent, globalErrorChan chan error) *ShardManager {
+func NewShardManager(shardCount int, globalErrorChan chan error) *ShardManager {
 	shards := make([]*Shard, shardCount)
 	maxKeysPerShard := config.DefaultKeysLimit / shardCount
 	for i := 0; i < shardCount; i++ {
 		shards[i] = &Shard{
 			ID:     i,
-			Thread: NewShardThread(i, globalErrorChan, dstore.NewPrimitiveEvictionStrategy(maxKeysPerShard)),
+			Thread: NewShardThread(i, globalErrorChan, store.NewPrimitiveEvictionStrategy(maxKeysPerShard)),
 		}
 	}
 
@@ -87,10 +87,10 @@ func (manager *ShardManager) start(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (manager *ShardManager) getShardForKey(key string) *Shard {
-	return manager.shards[xxhash.Sum64String(key)%uint64(manager.GetShardCount())]
+	return manager.shards[xxhash.Sum64String(key)%uint64(manager.ShardCount())]
 }
 
 // GetShardCount returns the number of shards managed by this ShardManager.
-func (manager *ShardManager) GetShardCount() int8 {
+func (manager *ShardManager) ShardCount() int8 {
 	return int8(len(manager.shards))
 }

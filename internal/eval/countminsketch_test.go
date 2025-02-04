@@ -6,7 +6,6 @@ package eval
 import (
 	"testing"
 
-	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -63,7 +62,7 @@ func testCMSInitByDim(t *testing.T, store *dstore.Store) {
 		"cms initbydim - correct width and depth": {
 			input: []string{"cms_key", "1000", "5"},
 			migratedOutput: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -124,7 +123,7 @@ func testCMSInitByProb(t *testing.T, store *dstore.Store) {
 		"cms initbyprob - correct error rate and probability": {
 			input: []string{"cms_key1", "0.01", "0.01"},
 			migratedOutput: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -394,7 +393,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"cms_key5", "1", "test"},
 			migratedOutput: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -414,7 +413,7 @@ func testCMSMerge(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"cms_key5", "2", "test", "test1", "WEIGHTS", "1", "2"},
 			migratedOutput: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},

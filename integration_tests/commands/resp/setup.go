@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/clientio"
 	derrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shard"
 	dstore "github.com/dicedb/dice/internal/store"
