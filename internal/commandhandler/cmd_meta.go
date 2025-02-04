@@ -112,6 +112,7 @@ const (
 	CmdSrem                = "SREM"
 	CmdScard               = "SCARD"
 	CmdSmembers            = "SMEMBERS"
+	CmdSMembersWatch       = "SMEMBERS.WATCH"
 	CmdDump                = "DUMP"
 	CmdRestore             = "RESTORE"
 	CmdGeoAdd              = "GEOADD"
@@ -795,6 +796,9 @@ var CommandsMeta = map[string]CmdMeta{
 	CmdPFCountWatch: {
 		CmdType:  Watch,
 		ReadOnly: true,
+	},
+	CmdSMembersWatch: {
+		CmdType: Watch,
 	},
 
 	// Unwatch commands
