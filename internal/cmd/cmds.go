@@ -151,6 +151,7 @@ func errWrongArgumentCount(command string) error {
 }
 
 var errUnknownObjectType = errors.New("unknown object type")
+var errIntegerOutOfRange = errors.New("ERR value is not an integer or out of range")     
 
 //nolint:unparam
 func errInvalidSyntax(command string) error {
