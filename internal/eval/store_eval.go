@@ -6149,7 +6149,7 @@ func evalGEOADD(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		hash := geo.EncodeInt(latitude, longitude)
+		hash := geo.EncodeHash(latitude, longitude)
 
 		wasInserted := ss.Upsert(hash, member)
 		if wasInserted {
@@ -6214,17 +6214,17 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	lat1, lon1 := geo.DecodeInt(score1)
-	lat2, lon2 := geo.DecodeInt(score2)
+	lat1, lon1 := geo.DecodeHash(score1)
+	lat2, lon2 := geo.DecodeHash(score2)
 
 	distance := geo.GetDistance(lon1, lat1, lon2, lat2)
 
-	result, err := geo.ConvertDistance(distance, unit)
+	result, conversionErr := geo.ConvertDistance(distance, unit)
 
-	if err != nil {
+	if conversionErr != nil {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrWrongTypeOperation,
+			Error:  conversionErr,
 		}
 	}
 
@@ -6271,7 +6271,7 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		lat, lon := geo.DecodeInt(hash)
+		lat, lon := geo.DecodeHash(hash)
 
 		latFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lat), 64)
 		lonFloat, _ := strconv.ParseFloat(fmt.Sprintf("%f", lon), 64)
@@ -6321,8 +6321,8 @@ func evalGEOHASH(args []string, store *dstore.Store) *EvalResponse {
 			continue
 		}
 
-		lat, lon := geo.DecodeInt(entry)
-		result = append(result, geo.EncodeString(lat, lon))
+		lat, lon := geo.DecodeHash(entry)
+		result = append(result, geo.EncodeHash(lat, lon)) // TODO 10 bit precision?
 	}
 
 	return &EvalResponse{
@@ -7148,4 +7148,274 @@ func parseFloatInt(input string) (result interface{}, err error) {
 	// If neither parsing succeeds, return an error
 	err = errors.New("invalid input: not a valid int or float")
 	return
+}
+
+type geoRadiusOpts struct {
+	WithCoord bool
+	WithDist  bool
+	WithHash  bool
+	Count     int    // 0 means no count specified
+	CountAny  bool   // true if ANY was specified with COUNT
+	IsSorted  bool   // By default return items are not sorted
+	Ascending bool   // If IsSorted is true, return items nearest to farthest relative to the center (ascending) or farthest to nearest relative to the center (descending)
+	Store     string // If both StoreDist and Store are specified, last argument takes precedence
+	StoreDist bool
+}
+
+func parseGeoRadiusOpts(args []string) (*geoRadiusOpts, error) {
+	opts := &geoRadiusOpts{}
+
+	for i := 0; i < len(args); i++ {
+		option := strings.ToUpper(args[i])
+
+		switch option {
+		case "WITHCOORD":
+			opts.WithCoord = true
+		case "WITHDIST":
+			opts.WithDist = true
+		case "WITHHASH":
+			opts.WithHash = true
+		case "ASC":
+			opts.IsSorted = true
+			opts.Ascending = true
+		case "DESC":
+			opts.IsSorted = true
+			opts.Ascending = false
+		case "COUNT":
+			if i+1 < len(args) {
+				count, err := strconv.Atoi(args[i+1])
+				if err != nil {
+					return nil, diceerrors.ErrIntegerOutOfRange
+				}
+				opts.Count = count
+				if i+2 < len(args) && strings.EqualFold(args[i+2], "ANY") {
+					opts.CountAny = true
+					i++
+				}
+				i++
+			} else {
+				return nil, diceerrors.ErrSyntax
+			}
+		case "ANY":
+			return nil, diceerrors.ErrGeneral("the ANY argument requires COUNT argument")
+		case "STORE":
+			if opts.WithCoord || opts.WithDist || opts.WithHash {
+				return nil, diceerrors.ErrGeneral("STORE option in GEORADIUS is not compatible with WITHDIST, WITHHASH and WITHCOORD options")
+			}
+			if i+1 < len(args) {
+				opts.Store = args[i+1]
+				opts.StoreDist = false
+				i++
+			} else {
+				return nil, diceerrors.ErrSyntax
+			}
+		case "STOREDIST":
+			if opts.WithCoord || opts.WithDist || opts.WithHash {
+				return nil, diceerrors.ErrGeneral("STORE option in GEORADIUS is not compatible with WITHDIST, WITHHASH and WITHCOORD options")
+			}
+			if i+1 < len(args) {
+				opts.Store = args[i+1]
+				opts.StoreDist = true
+				i++
+			} else {
+				return nil, diceerrors.ErrSyntax
+			}
+		default:
+			return nil, diceerrors.ErrSyntax
+		}
+	}
+
+	return opts, nil
+}
+
+func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
+	if len(args) < 4 {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongArgumentCount("GEORADIUSBYMEMBER"),
+		}
+	}
+
+	key := args[0]
+	member := args[1]
+	dist := args[2]
+	unit := args[3]
+
+	distVal, parseErr := strconv.ParseFloat(dist, 64)
+	if parseErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("need numeric radius"),
+		}
+	}
+
+	opts, parseErr := parseGeoRadiusOpts(args[4:])
+	if parseErr != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  parseErr,
+		}
+	}
+
+	obj := store.Get(key)
+	if obj == nil {
+		return &EvalResponse{
+			Result: clientio.EmptyArray,
+			Error:  nil,
+		}
+	}
+
+	ss, err := sortedset.FromObject(obj)
+	if err != nil {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrWrongTypeOperation,
+		}
+	}
+
+	centerHash, ok := ss.Get(member)
+	if !ok {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrGeneral("could not decode requested zset member"),
+		}
+	}
+
+	radius, ok := geo.ToMeters(distVal, unit)
+	if !ok {
+		return &EvalResponse{
+			Result: nil,
+			Error:  diceerrors.ErrUnsupportedUnit,
+		}
+	}
+
+	area, steps := geo.Area(centerHash, radius)
+
+	/* When a huge Radius (in the 5000 km range or more) is used,
+	 * adjacent neighbors can be the same, leading to duplicated
+	 * elements. Skip every range which is the same as the one
+	 * processed previously. */
+	var members []string
+	var hashes []float64
+
+	anyMax, count := 0, 0
+	if opts.CountAny {
+		anyMax = opts.Count
+	}
+
+	var lastProcessed uint64
+	for _, hash := range area {
+		if hash == 0 {
+			continue
+		}
+
+		if lastProcessed == hash {
+			continue
+		}
+
+		hashMin, hashMax := geo.HashMinMax(hash, steps)
+		rangeMembers, rangeHashes := ss.GetMemberScoresInRange(float64(hashMin), float64(hashMax), count, anyMax)
+		members = append(members, rangeMembers...)
+		hashes = append(hashes, rangeHashes...)
+		count += len(rangeMembers)
+		lastProcessed = hash
+	}
+
+	dists := make([]float64, 0, len(members))
+	coords := make([][]float64, 0, len(members))
+
+	centerLat, centerLon := geo.DecodeHash(centerHash)
+
+	for i := range hashes {
+		msLat, msLon := geo.DecodeHash(hashes[i])
+
+		dist := geo.GetDistance(centerLon, centerLat, msLon, msLat)
+
+		// Geohash scores are not linear. Therefore, we can sometimes receive results
+		// which are out of the geographical range and we need to post filter the results here.
+		if dist > radius {
+			members[i] = ""
+		}
+
+		distance, err := geo.ConvertDistance(dist, unit)
+		if err != nil {
+			return &EvalResponse{
+				Result: nil,
+				Error:  err,
+			}
+		}
+
+		dists = append(dists, distance)
+		coords = append(coords, []float64{msLat, msLon})
+	}
+
+	// Sorting is done by distance. Since our output can be dynamic and we can avoid allocating memory
+	// for each optional output property (hash, dist, coord), we follow an indirect sort approach:
+	// 1. Save the member inidices.
+	// 2. Sort the indices based on the distances in ascending or descending order.
+	// 3. Build the response based on the requested options.
+	indices := make([]int, len(members))
+	for i := range indices {
+		indices[i] = i
+	}
+
+	if opts.IsSorted {
+		if opts.Ascending {
+			sort.Slice(indices, func(i, j int) bool {
+				return dists[indices[i]] < dists[indices[j]]
+			})
+		} else {
+			sort.Slice(indices, func(i, j int) bool {
+				return dists[indices[i]] > dists[indices[j]]
+			})
+		}
+	}
+
+	var countVal int
+	if opts.Count == 0 {
+		countVal = len(members)
+	} else {
+		countVal = opts.Count
+	}
+
+	if !opts.WithCoord && !opts.WithDist && !opts.WithHash {
+		response := make([]string, 0, min(len(members), countVal))
+		for i := 0; i < cap(response); i++ {
+			if members[indices[i]] == "" {
+				continue
+			}
+
+			response = append(response, members[indices[i]])
+		}
+
+		return &EvalResponse{
+			Result: response,
+			Error:  nil,
+		}
+	}
+
+	response := make([][]interface{}, 0, min(len(members), countVal))
+	for i := 0; i < cap(response); i++ {
+		if members[indices[i]] == "" {
+			continue
+		}
+
+		member := []interface{}{}
+		member = append(member, members[indices[i]])
+		if opts.WithDist {
+			member = append(member, dists[indices[i]])
+		}
+		if opts.WithHash {
+			member = append(member, hashes[indices[i]])
+		}
+		if opts.WithCoord {
+			member = append(member, coords[indices[i]])
+		}
+		response = append(response, member)
+	}
+
+	return &EvalResponse{
+		Result: response,
+		Error:  nil,
+	}
 }

@@ -1240,6 +1240,14 @@ var (
 		NewEval:    evalGEOHASH,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
+	geoRadiusByMemberCmdMeta = DiceCmdMeta{
+		Name:       "GEORADIUSBYMEMBER",
+		Info:       `Returns all members within a radius of a given member from the geospatial index.`,
+		Arity:      -4,
+		IsMigrated: true,
+		NewEval:    evalGEORADIUSBYMEMBER,
+		KeySpecs:   KeySpecs{BeginIndex: 1},
+	}
 	jsonstrappendCmdMeta = DiceCmdMeta{
 		Name: "JSON.STRAPPEND",
 		Info: `JSON.STRAPPEND key [path] value
@@ -1384,6 +1392,7 @@ func init() {
 	DiceCmds["GEODIST"] = geoDistCmdMeta
 	DiceCmds["GEOPOS"] = geoPosCmdMeta
 	DiceCmds["GEOHASH"] = geoHashCmdMeta
+	DiceCmds["GEORADIUSBYMEMBER"] = geoRadiusByMemberCmdMeta
 	DiceCmds["GET"] = getCmdMeta // moved to ironhawk
 	DiceCmds["GETBIT"] = getBitCmdMeta
 	DiceCmds["GETDEL"] = getDelCmdMeta
