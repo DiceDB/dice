@@ -1,3 +1,6 @@
-## Potential Risks
+Chatroom
+===
 
-1. may have update when multiple updates happen at same time (granualrity)?
+```sh
+$ go run main.go <username>
+```

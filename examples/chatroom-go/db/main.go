@@ -11,7 +11,7 @@ var (
 
 func init() {
 	var err error
-	Client, err = dicedb.NewClient("localhost", 7379, dicedb.WithWatch())
+	Client, err = dicedb.NewClient("localhost", 7379)
 	if err != nil {
 		panic(err)
 	}
