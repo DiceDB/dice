@@ -158,9 +158,15 @@ func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *
 	if err != nil {
 		if err == io.EOF {
 			s.watchManager.CleanupThreadWatchSubscriptions(thread)
-			slog.Debug("client disconnected. io-thread stopped", slog.String("client_id", thread.ClientID))
+			slog.Debug("client disconnected. io-thread stopped",
+				slog.String("client_id", thread.ClientID),
+				slog.String("mode", thread.Mode),
+			)
 		} else {
-			slog.Debug("io-thread errored out", slog.String("client_id", thread.ClientID), slog.Any("error", err))
+			slog.Debug("io-thread errored out",
+				slog.String("client_id", thread.ClientID),
+				slog.String("mode", thread.Mode),
+				slog.Any("error", err))
 		}
 	}
 }

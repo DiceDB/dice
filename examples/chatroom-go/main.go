@@ -3,9 +3,6 @@
 
 package main
 
-// A simple program demonstrating the text area component from the Bubbles
-// component library.
-
 import (
 	"chatroom-go/db"
 	"fmt"
@@ -33,7 +30,11 @@ func init() {
 }
 
 func loop() {
-	for resp := range db.Client.WatchCh() {
+	ch, err := db.Client.WatchCh()
+	if err != nil {
+		panic(err)
+	}
+	for resp := range ch {
 		fmt.Println(resp)
 	}
 }

@@ -14,6 +14,7 @@ import (
 
 type IOThread struct {
 	ClientID  string
+	Mode      string
 	IoHandler *IOHandler
 	Session   *auth.Session
 }
@@ -39,6 +40,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 
 		_c := &cmd.Cmd{C: c}
 		_c.ClientID = t.ClientID
+		_c.Mode = t.Mode
 
 		res, err := shardManager.Execute(_c)
 		if err != nil {
@@ -48,6 +50,11 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 		// Also, we are allowing people to override the client ID.
 		// Also, CLientID is duplicated in command and io-thread.
 		t.ClientID = _c.ClientID
+
+		if c.Cmd == "HANDSHAKE" {
+			t.ClientID = _c.C.Args[0]
+			t.Mode = _c.C.Args[1]
+		}
 
 		if strings.HasSuffix(c.Cmd, ".WATCH") {
 			watchManager.HandleWatch(_c, t)

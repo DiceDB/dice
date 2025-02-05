@@ -23,6 +23,7 @@ type Cmd struct {
 	C        *wire.Command
 	IsReplay bool
 	ClientID string
+	Mode     string
 }
 
 func (c *Cmd) String() string {
@@ -83,6 +84,7 @@ func Execute(c *Cmd, s *store.Store) (*CmdRes, error) {
 		slog.Debug("command executed",
 			slog.Any("cmd", c.String()),
 			slog.String("client_id", c.ClientID),
+			slog.String("mode", c.Mode),
 			slog.Int("shard_id", s.ShardID),
 			slog.Any("took_ns", time.Since(start).Nanoseconds()))
 		return resp, err
