@@ -28,12 +28,12 @@ func TestMain(m *testing.M) {
 	exitCode := m.Run()
 
 	client := getLocalConnection()
-	if conn == nil {
+	if client == nil {
 		panic("Failed to connect to the test server")
 	}
 	defer client.Close()
 	result := client.FireString("ABORT")
-	if result != "OK" {
+	if result.GetVStr() != "OK" {
 		panic("Failed to abort the server")
 	}
 
