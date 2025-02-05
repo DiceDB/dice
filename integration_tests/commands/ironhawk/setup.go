@@ -20,10 +20,6 @@ import (
 	"github.com/dicedb/dicedb-go"
 )
 
-type TestServerOptions struct {
-	Port int
-}
-
 //nolint:unused
 func getLocalConnection() *dicedb.Client {
 	client, err := dicedb.NewClient("localhost", config.Config.Port)
@@ -108,14 +104,8 @@ func getLocalSdk() *dicedb.Client {
 // 	return nil
 // }
 
-func RunTestServer(wg *sync.WaitGroup, opt TestServerOptions) {
+func RunTestServer(wg *sync.WaitGroup) {
 	// #1261: Added here to prevent resp integration tests from failing on lower-spec machines
-	if opt.Port != 0 {
-		config.Config.Port = opt.Port
-	} else {
-		config.Config.Port = 9739
-	}
-
 	gec := make(chan error)
 	shardManager := ironhawk.NewShardManager(1, gec)
 	ioThreadManager := ironhawk.NewIOThreadManager()

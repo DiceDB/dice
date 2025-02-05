@@ -8,18 +8,19 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dice/config"
 )
 
 func TestMain(m *testing.M) {
+	config.ForceInit(&config.DiceDBConfig{})
+
 	var wg sync.WaitGroup
 	// Run the test server
 	// This is a synchronous method, because internally it
 	// checks for available port and then forks a goroutine
 	// to start the server
-	opts := TestServerOptions{
-		Port: 9739,
-	}
-	RunTestServer(&wg, opts)
+	RunTestServer(&wg)
 
 	// Wait for the server to start
 	time.Sleep(2 * time.Second)

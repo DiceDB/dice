@@ -13,7 +13,7 @@ import (
 	"github.com/dgryski/go-farm"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/wire"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 //nolint: stylecheck

@@ -2,7 +2,7 @@ package cmd
 
 import (
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/wire"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cCLIENTID = &DiceDBCommand{

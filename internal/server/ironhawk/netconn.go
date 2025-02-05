@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/wire"
+	"github.com/dicedb/dicedb-go/wire"
 	"google.golang.org/protobuf/proto"
 )
 

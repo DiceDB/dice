@@ -23,7 +23,7 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/ironhawk"
-	"github.com/dicedb/dice/wire"
+	"github.com/dicedb/dicedb-go/wire"
 
 	"github.com/dicedb/dice/internal/wal"
 

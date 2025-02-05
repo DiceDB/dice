@@ -6,7 +6,6 @@ package ironhawk
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"testing"
@@ -14,11 +13,6 @@ import (
 
 	"github.com/dicedb/dice/config"
 )
-
-func init() {
-	config.Config.Port = 8379
-	log.Print("Setting port to ", config.Config.Port)
-}
 
 func TestAbortCommand(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
