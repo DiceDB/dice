@@ -29,7 +29,7 @@ func evalDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return cmdResNil, errWrongArgumentCount("DEL")
 	}
 
-	var count int64
+	var count int
 	for _, key := range c.C.Args {
 		if ok := s.Del(key); ok {
 			count++
@@ -37,6 +37,6 @@ func evalDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: count},
+		Value: &wire.Response_VInt{VInt: int64(count)},
 	}}, nil
 }
