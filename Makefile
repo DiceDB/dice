@@ -116,10 +116,3 @@ add-license-notice:
 
 kill:
 	@lsof -t -i :7379 | xargs -r kill -9
-
-generate:
-	protoc --go_out=. --go-grpc_out=. protos/cmd.proto
-
-update:
-	git submodule update --remote
-	git submodule update --init --recursive

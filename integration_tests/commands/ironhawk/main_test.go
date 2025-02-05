@@ -5,39 +5,37 @@ package ironhawk
 
 import (
 	"os"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 func TestMain(m *testing.M) {
 	config.ForceInit(&config.DiceDBConfig{})
+	os.Exit(m.Run())
+}
 
-	var wg sync.WaitGroup
-	// Run the test server
-	// This is a synchronous method, because internally it
-	// checks for available port and then forks a goroutine
-	// to start the server
-	RunTestServer(&wg)
+type TestCase struct {
+	name     string
+	commands []string
+	expected []interface{}
+}
 
-	// Wait for the server to start
-	time.Sleep(2 * time.Second)
-
-	// Run the test suite
-	exitCode := m.Run()
-
-	client := getLocalConnection()
-	if client == nil {
-		panic("Failed to connect to the test server")
+func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) bool {
+	var areEqual bool
+	switch v := expected.(type) {
+	case string:
+		areEqual = v == actual.GetVStr()
+	case int64:
+		areEqual = v == actual.GetVInt()
+	case int:
+		areEqual = int64(v) == actual.GetVInt()
+	case nil:
+		areEqual = actual.GetVNil()
 	}
-	defer client.Close()
-	result := client.FireString("ABORT")
-	if result.GetVStr() != "OK" {
-		panic("Failed to abort the server")
+	if !areEqual {
+		t.Errorf("expected %v, got %v", expected, actual)
 	}
-
-	wg.Wait()
-	os.Exit(exitCode)
+	return areEqual
 }

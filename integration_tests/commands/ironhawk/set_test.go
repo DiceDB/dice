@@ -11,12 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type TestCase struct {
-	name     string
-	commands []string
-	expected []interface{}
-}
-
 func TestSet(t *testing.T) {
 	client := getLocalConnection()
 	defer client.Close()
@@ -30,7 +24,7 @@ func TestSet(t *testing.T) {
 		{
 			name:     "Set and Get Integer Value",
 			commands: []string{"SET k 123456789", "GET k"},
-			expected: []interface{}{"OK", int64(123456789)},
+			expected: []interface{}{"OK", 123456789},
 		},
 		{
 			name:     "Overwrite Existing Key",
@@ -44,7 +38,7 @@ func TestSet(t *testing.T) {
 			client.FireString("DEL k")
 			for i, cmd := range tc.commands {
 				result := client.FireString(cmd)
-				assert.Equal(t, tc.expected[i], result)
+				assertEqual(t, tc.expected[i], result)
 			}
 		})
 	}
@@ -146,7 +140,7 @@ func TestSetWithOptions(t *testing.T) {
 			client.FireString("DEL k2")
 			for i, cmd := range tc.commands {
 				result := client.FireString(cmd)
-				assert.Equal(t, tc.expected[i], result)
+				assertEqual(t, tc.expected[i], result)
 			}
 		})
 	}
