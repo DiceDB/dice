@@ -12,8 +12,8 @@ import (
 
 	"github.com/dgryski/go-farm"
 	"github.com/dicedb/dice/internal/object"
-	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/wire"
+	"github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 //nolint: stylecheck
@@ -21,7 +21,8 @@ const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
 	C        *wire.Command
-	ThreadID string
+	IsReplay bool
+	ClientID string
 }
 
 func (c *Cmd) String() string {
@@ -41,13 +42,13 @@ func (c *Cmd) Key() string {
 
 type CmdRes struct {
 	R        *wire.Response
-	ThreadID string
+	ClientID string
 }
 
 type DiceDBCommand struct {
 	Name      string
 	HelpShort string
-	Eval      func(c *Cmd, s *dstore.Store) (*CmdRes, error)
+	Eval      func(c *Cmd, s *store.Store) (*CmdRes, error)
 }
 
 type CmdRegistry struct {
@@ -66,7 +67,7 @@ var commandRegistry CmdRegistry = CmdRegistry{
 	cmds: []*DiceDBCommand{},
 }
 
-func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
+func Execute(c *Cmd, s *store.Store) (*CmdRes, error) {
 	// TODO: Replace this iteration with a HashTable lookup.
 	for _, cmd := range commandRegistry.cmds {
 		if cmd.Name != c.C.Cmd {
@@ -81,12 +82,12 @@ func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 		slog.Debug("command executed",
 			slog.Any("cmd", c.String()),
-			slog.String("thread_id", c.ThreadID),
+			slog.String("client_id", c.ClientID),
 			slog.Int("shard_id", s.ShardID),
 			slog.Any("took_ns", time.Since(start).Nanoseconds()))
 		return resp, err
 	}
-	return cmdResNil, errors.New("command not found")
+	return cmdResNil, fmt.Errorf("command '%s' not found", c.C.Cmd)
 }
 
 // DiceDBCmd represents a command structure to be executed

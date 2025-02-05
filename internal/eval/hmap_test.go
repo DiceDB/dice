@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/store"
@@ -95,14 +94,14 @@ func TestGetValueFromHashMap(t *testing.T) {
 	assert.NotNil(t, response.Result, "Expected a non-nil value to be fetched for key 'key1' and field 'field1'")
 	assert.Equal(t, value, response.Result, "Expected 'value1' to be fetched for key 'key1' and field 'field1'")
 
-	// Test case: Fetching a non-existing field (should return clientio.NIL and no error)
+	// Test case: Fetching a non-existing field (should return NIL and no error)
 	response = getValueFromHashMap(key, "nonfield", store)
-	assert.Equal(t, clientio.NIL, response.Result, "Expected clientio.NIL for a non-existing field")
+	assert.Equal(t, NIL, response.Result, "Expected NIL for a non-existing field")
 	assert.Nil(t, response.Error, "Expected no error when fetching a non-existing field from the hashmap")
 
-	// Test case: Fetching a non-existing key (should return clientio.NIL and ErrKeyNotFound)
+	// Test case: Fetching a non-existing key (should return NIL and ErrKeyNotFound)
 	response = getValueFromHashMap("nonkey", field, store)
-	assert.Equal(t, clientio.NIL, response.Result, "Expected clientio.NIL for a non-existing key")
+	assert.Equal(t, NIL, response.Result, "Expected NIL for a non-existing key")
 	assert.Nil(t, response.Error, "Expected no error for a non-existing key")
 }
 

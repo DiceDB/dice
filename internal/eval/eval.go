@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -94,9 +93,9 @@ func evalPING(args []string, store *dstore.Store) []byte {
 	}
 
 	if len(args) == 0 {
-		b = clientio.Encode("PONG", true)
+		b = Encode("PONG", true)
 	} else {
-		b = clientio.Encode(args[0], false)
+		b = Encode(args[0], false)
 	}
 
 	return b
@@ -108,7 +107,7 @@ func evalECHO(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrArity("ECHO")
 	}
 
-	return clientio.Encode(args[0], false)
+	return Encode(args[0], false)
 }
 
 // EvalAUTH returns with an encoded "OK" if the user is authenticated
@@ -133,9 +132,9 @@ func EvalAUTH(args []string, c *comm.Client) []byte {
 	}
 
 	if err = c.Session.Validate(username, password); err != nil {
-		return clientio.Encode(err, false)
+		return Encode(err, false)
 	}
-	return clientio.RespOK
+	return RespOK
 }
 
 func evalHELLO(args []string, store *dstore.Store) []byte {
@@ -152,7 +151,7 @@ func evalHELLO(args []string, store *dstore.Store) []byte {
 		"role", "master",
 		"modules", []interface{}{})
 
-	return clientio.Encode(resp, false)
+	return Encode(resp, false)
 }
 
 // evalSLEEP sets db to sleep for the specified number of seconds.
@@ -169,5 +168,5 @@ func evalSLEEP(args []string, store *dstore.Store) []byte {
 		return diceerrors.NewErrWithMessage(diceerrors.IntOrOutOfRangeErr)
 	}
 	time.Sleep(time.Duration(durationSec) * time.Second)
-	return clientio.RespOK
+	return RespOK
 }

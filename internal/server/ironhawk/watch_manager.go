@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package ironhawk
 
 import (
@@ -6,22 +9,23 @@ import (
 	"strconv"
 
 	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/iothread"
 )
 
-var (
-	keyFPMap    map[string]map[uint32]bool             // keyFPMap is a map of Key -> [fingerprint1, fingerprint2, ...]
-	fpThreadMap map[uint32]map[*iothread.IOThread]bool // fpConnMap is a map of fingerprint -> [client1Chan, client2Chan, ...]
-	fpCmdMap    map[uint32]*cmd.Cmd                    // fpCmdMap is a map of fingerprint -> command
-)
-
-func init() {
-	keyFPMap = make(map[string]map[uint32]bool)
-	fpThreadMap = make(map[uint32]map[*iothread.IOThread]bool)
-	fpCmdMap = make(map[uint32]*cmd.Cmd)
+type WatchManager struct {
+	keyFPMap    map[string]map[uint32]bool
+	fpThreadMap map[uint32]map[*IOThread]bool
+	fpCmdMap    map[uint32]*cmd.Cmd
 }
 
-func HandleWatch(c *cmd.Cmd, t *iothread.IOThread) {
+func NewWatchManager() *WatchManager {
+	return &WatchManager{
+		keyFPMap:    map[string]map[uint32]bool{},
+		fpThreadMap: map[uint32]map[*IOThread]bool{},
+		fpCmdMap:    map[uint32]*cmd.Cmd{},
+	}
+}
+
+func (w *WatchManager) HandleWatch(c *cmd.Cmd, t *IOThread) {
 	fp := c.GetFingerprint()
 	key := c.Key()
 	slog.Debug("creating a new subscription",
@@ -29,19 +33,19 @@ func HandleWatch(c *cmd.Cmd, t *iothread.IOThread) {
 		slog.String("cmd", c.String()),
 		slog.Any("fingerprint", fp))
 
-	if _, ok := keyFPMap[key]; !ok {
-		keyFPMap[key] = make(map[uint32]bool)
+	if _, ok := w.keyFPMap[key]; !ok {
+		w.keyFPMap[key] = make(map[uint32]bool)
 	}
-	keyFPMap[key][fp] = true
+	w.keyFPMap[key][fp] = true
 
-	if _, ok := fpThreadMap[fp]; !ok {
-		fpThreadMap[fp] = make(map[*iothread.IOThread]bool)
+	if _, ok := w.fpThreadMap[fp]; !ok {
+		w.fpThreadMap[fp] = make(map[*IOThread]bool)
 	}
-	fpThreadMap[fp][t] = true
-	fpCmdMap[fp] = c
+	w.fpThreadMap[fp][t] = true
+	w.fpCmdMap[fp] = c
 }
 
-func HandleUnwatch(c *cmd.Cmd, t *iothread.IOThread) {
+func (w *WatchManager) HandleUnwatch(c *cmd.Cmd, t *IOThread) {
 	if len(c.C.Args) != 1 {
 		return
 	}
@@ -52,17 +56,17 @@ func HandleUnwatch(c *cmd.Cmd, t *iothread.IOThread) {
 	}
 	fp := uint32(_fp)
 
-	delete(fpThreadMap[fp], t)
-	if len(fpThreadMap[fp]) == 0 {
-		delete(fpThreadMap, fp)
+	delete(w.fpThreadMap[fp], t)
+	if len(w.fpThreadMap[fp]) == 0 {
+		delete(w.fpThreadMap, fp)
 	}
 
-	for key, fpMap := range keyFPMap {
+	for key, fpMap := range w.keyFPMap {
 		if _, ok := fpMap[fp]; ok {
-			delete(keyFPMap[key], fp)
+			delete(w.keyFPMap[key], fp)
 		}
-		if len(keyFPMap[key]) == 0 {
-			delete(keyFPMap, key)
+		if len(w.keyFPMap[key]) == 0 {
+			delete(w.keyFPMap, key)
 		}
 	}
 
@@ -71,29 +75,29 @@ func HandleUnwatch(c *cmd.Cmd, t *iothread.IOThread) {
 	// check if any easier way to do this
 }
 
-func CleanupThreadWatchSubscriptions(t *iothread.IOThread) {
-	for fp, threadMap := range fpThreadMap {
+func (w *WatchManager) CleanupThreadWatchSubscriptions(t *IOThread) {
+	for fp, threadMap := range w.fpThreadMap {
 		if _, ok := threadMap[t]; ok {
-			delete(fpThreadMap[fp], t)
+			delete(w.fpThreadMap[fp], t)
 		}
-		if len(fpThreadMap[fp]) == 0 {
-			delete(fpThreadMap, fp)
+		if len(w.fpThreadMap[fp]) == 0 {
+			delete(w.fpThreadMap, fp)
 		}
 	}
 }
 
-func NotifyWatchers(c *cmd.Cmd, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) {
+func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *ShardManager, t *IOThread) {
 	// TODO: During first WATCH call, we are getting the response multiple times on the Client
 	// Check if this is happening because of the way we are notifying the watchers
 	key := c.Key()
-	for fp := range keyFPMap[key] {
-		_c := fpCmdMap[fp]
+	for fp := range w.keyFPMap[key] {
+		_c := w.fpCmdMap[fp]
 		if _c == nil {
 			// TODO: We might want to remove the key from keyFPMap if we don't have a command for it.
 			continue
 		}
 
-		r, err := execute(_c)
+		r, err := shardManager.Execute(_c)
 		if err != nil {
 			slog.Error("failed to execute command as part of watch notification",
 				slog.Any("cmd", _c.String()),
@@ -101,13 +105,13 @@ func NotifyWatchers(c *cmd.Cmd, execute func(c *cmd.Cmd) (*cmd.CmdRes, error)) {
 			continue
 		}
 
-		for thread := range fpThreadMap[fp] {
-			err := thread.IoHandler.WriteSync(context.Background(), r)
+		for thread := range w.fpThreadMap[fp] {
+			err := thread.IoHandler.WriteSync(context.Background(), r.R)
 			if err != nil {
-				slog.Error("failed to write response to thread", slog.Any("thread", thread.ID()), slog.Any("error", err))
+				slog.Error("failed to write response to thread", slog.Any("client_id", thread.ClientID), slog.Any("error", err))
 			}
 		}
 
-		slog.Debug("notifying watchers for key", slog.String("key", key), slog.Int("watchers", len(fpThreadMap[fp])))
+		slog.Debug("notifying watchers for key", slog.String("key", key), slog.Int("watchers", len(w.fpThreadMap[fp])))
 	}
 }

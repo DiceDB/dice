@@ -15,6 +15,8 @@ import (
 )
 
 func init() {
+	flags := rootCmd.PersistentFlags()
+
 	c := config.DiceDBConfig{}
 	_type := reflect.TypeOf(c)
 	for i := 0; i < _type.NumField(); i++ {
@@ -25,13 +27,13 @@ func init() {
 
 		switch field.Type.Kind() {
 		case reflect.String:
-			rootCmd.PersistentFlags().String(yamlTag, defaultTag, descriptionTag)
+			flags.String(yamlTag, defaultTag, descriptionTag)
 		case reflect.Int:
 			val, _ := strconv.Atoi(defaultTag)
-			rootCmd.PersistentFlags().Int(yamlTag, val, descriptionTag)
+			flags.Int(yamlTag, val, descriptionTag)
 		case reflect.Bool:
 			val, _ := strconv.ParseBool(defaultTag)
-			rootCmd.PersistentFlags().Bool(yamlTag, val, descriptionTag)
+			flags.Bool(yamlTag, val, descriptionTag)
 		}
 	}
 }

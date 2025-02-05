@@ -1,6 +1,6 @@
 module github.com/dicedb/dice
 
-go 1.23.0
+go 1.23.5
 
 require gotest.tools/v3 v3.5.1
 
@@ -48,7 +48,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
-	github.com/dicedb/dicedb-go v0.0.0-20241120175955-5eaa6c7e79bb
+	github.com/dicedb/dicedb-go v1.0.1
 	github.com/fatih/color v1.18.0
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/gobwas/glob v0.2.3
@@ -68,5 +68,7 @@ require (
 	github.com/twmb/murmur3 v1.1.8
 	golang.org/x/crypto v0.29.0
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
-	google.golang.org/protobuf v1.35.1
+	google.golang.org/protobuf v1.36.4
 )
+
+replace github.com/dicedb/dicedb-go => ../dicedb-go

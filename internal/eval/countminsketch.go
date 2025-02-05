@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -383,7 +382,7 @@ func evalCMSMerge(args []string, store *dstore.Store) *EvalResponse {
 		destination.mergeMatrices(sources, weights, args[0], keys)
 
 		return &EvalResponse{
-			Result: clientio.OK,
+			Result: OK,
 			Error:  nil,
 		}
 	}
@@ -419,7 +418,7 @@ func evalCMSMerge(args []string, store *dstore.Store) *EvalResponse {
 	destination.mergeMatrices(sources, weights, args[0], keys)
 
 	return &EvalResponse{
-		Result: clientio.OK,
+		Result: OK,
 		Error:  nil,
 	}
 }
@@ -551,7 +550,7 @@ func evalCMSINITBYDIM(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.OK,
+		Result: OK,
 		Error:  nil,
 	}
 }
@@ -583,7 +582,7 @@ func evalCMSINITBYPROB(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.OK,
+		Result: OK,
 		Error:  nil,
 	}
 }
