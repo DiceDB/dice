@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"github.com/dicedb/dice/internal/object"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/wire"
 )
 
 var cDECR = &DiceDBCommand{
@@ -36,28 +34,5 @@ func evalDECR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	delta := int64(-1)
 
-	key := c.C.Args[0]
-	obj := s.Get(key)
-	if obj == nil {
-		obj = s.NewObj(delta, INFINITE_EXPIRATION, object.ObjTypeInt)
-		s.Put(key, obj)
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VInt{VInt: delta},
-		}}, nil
-	}
-
-	switch obj.Type {
-	case object.ObjTypeInt:
-		break
-	default:
-		return cmdResNil, errWrongTypeOperation("DECR")
-	}
-
-	val, _ := obj.Value.(int64)
-	val += delta
-
-	obj.Value = val
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: val},
-	}}, nil
+	return incrDecr(c,s,delta)
 }

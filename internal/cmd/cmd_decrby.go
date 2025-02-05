@@ -30,6 +30,10 @@ func evalDECRBY(c *Cmd, s *dstore.Store)  (*CmdRes, error) {
 		return cmdResNil, errIntegerOutOfRange
 	}
 
+	return incrDecr(c,s,-delta)
+}
+
+func incrDecr(c *Cmd, s *dstore.Store, delta int64) (*CmdRes, error) {
 	key := c.C.Args[0]
 	obj := s.Get(key)
 	if obj == nil {
@@ -55,12 +59,12 @@ func evalDECRBY(c *Cmd, s *dstore.Store)  (*CmdRes, error) {
 		}}, errIntegerOutOfRange
 	}
 
-	value -= delta
+	value += delta
 	obj.Value = value
 	
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VInt{VInt: value},
-	}}, nil	
+	}}, nil
 }
 
 
