@@ -78,7 +78,7 @@ func Execute(c *Cmd, s *store.Store) (*CmdRes, error) {
 		start := time.Now()
 		resp, err := cmd.Eval(c, s)
 		if err != nil {
-			resp.R.Err = err.Error()
+			resp = &CmdRes{R: &wire.Response{Err: err.Error()}}
 		}
 
 		slog.Debug("command executed",

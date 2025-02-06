@@ -20,7 +20,7 @@ func init() {
 
 func evalPING(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) >= 2 {
-		return cmdResNil, errWrongArgumentCount("PING")
+		return cmdResOK, errWrongArgumentCount("PING")
 	}
 	if len(c.C.Args) == 0 {
 		return &CmdRes{R: &wire.Response{
