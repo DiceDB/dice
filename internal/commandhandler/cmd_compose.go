@@ -263,3 +263,15 @@ func composePFMerge(responses ...ops.StoreResponse) interface{} {
 
 	return clientio.OK
 }
+
+// composeGeoRadiusByMember only is a multi shard command if the STORE/STOREDIST option is given.
+// It does not really access multiple shards at the same time, so we don't need to aggregate the
+// response of multiple shards here, because there will always just be one.
+func composeGeoRadiusByMember(responses ...ops.StoreResponse) interface{} {
+	response := responses[0] // there is always a response, so we can savely access it here
+	if response.EvalResponse.Error != nil {
+		return response.EvalResponse.Error
+	}
+	
+	return response.EvalResponse.Result
+}

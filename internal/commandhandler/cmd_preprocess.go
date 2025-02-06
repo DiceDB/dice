@@ -97,3 +97,42 @@ func preProcessPFMerge(h *BaseCommandHandler, diceDBCmd *cmd.DiceDBCmd) error {
 
 	return nil
 }
+
+// preProcessGeoRadiusByMember is a preprocess function for the GEORADIUSBYMEMBER command.
+// This command has a STORE/STOREDIST option that allows the user to directly store the result
+// of the command with a new key. Hence, if one of these options is given, the command becomes
+// a multi-shard command and we need to break it up.
+func preProcessGeoRadiusByMember(h *BaseCommandHandler, cd *cmd.DiceDBCmd) error {
+	if len(cd.Args) < 4 {
+		return diceerrors.ErrWrongArgumentCount("GEORADIUSBYMEMBER")
+	}
+
+	ok, _, parseErr := parseGeoRadiusStoreOpts(cd.Args[4:])
+	if parseErr != nil {
+		return parseErr
+	}
+
+	// if STORE/STOREDIST options are not given, we're not doing any pre-processing
+	if !ok {
+		return nil
+	}
+
+	sid, rc := h.shardManager.GetShardInfo(cd.Args[0])
+
+	preCmd := cmd.DiceDBCmd{
+		Cmd:  "GEORADIUSBYMEMBER",
+		Args: cd.Args,
+	}
+
+	rc <- &ops.StoreOp{
+		SeqID:         0,
+		RequestID:     GenerateUniqueRequestID(),
+		Cmd:           &preCmd,
+		CmdHandlerID:  h.id,
+		ShardID:       sid,
+		Client:        nil,
+		PreProcessing: true,
+	}
+
+	return nil
+}

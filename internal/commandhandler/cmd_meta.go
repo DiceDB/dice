@@ -630,10 +630,6 @@ var CommandsMeta = map[string]CmdMeta{
 		CmdType:  SingleShard,
 		ReadOnly: true,
 	},
-	CmdGeoRadiusByMember: {
-		CmdType:  SingleShard,
-		ReadOnly: true,
-	},
 	CmdClient: {
 		CmdType:  SingleShard,
 		ReadOnly: true,
@@ -708,6 +704,15 @@ var CommandsMeta = map[string]CmdMeta{
 		preProcessResponse: preProcessPFMerge,
 		decomposeCommand:   (*BaseCommandHandler).decomposePFMerge,
 		composeResponse:    composePFMerge,
+		ReadOnly:           false,
+	},
+
+	CmdGeoRadiusByMember: {
+		CmdType:            MultiShard,
+		preProcessing:      true,
+		preProcessResponse: preProcessGeoRadiusByMember,
+		decomposeCommand:   (*BaseCommandHandler).decomposeGeoRadiusByMember,
+		composeResponse:    composeGeoRadiusByMember,
 		ReadOnly:           false,
 	},
 

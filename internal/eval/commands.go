@@ -1356,6 +1356,7 @@ func init() {
 	PreProcessing["COPY"] = evalGetObject
 	PreProcessing["RENAME"] = evalGET
 	PreProcessing["GETOBJECT"] = evalGetObject
+	PreProcessing["GEORADIUSBYMEMBER"] = evalGEORADIUSBYMEMBER
 
 	DiceCmds["ABORT"] = abortCmdMeta
 	DiceCmds["APPEND"] = appendCmdMeta

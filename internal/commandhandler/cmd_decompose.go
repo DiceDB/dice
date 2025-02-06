@@ -6,6 +6,7 @@ package commandhandler
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
@@ -309,5 +310,106 @@ func (h *BaseCommandHandler) decomposeFlushDB(_ context.Context, cd *cmd.DiceDBC
 			},
 		)
 	}
+	return decomposedCmds, nil
+}
+
+type geoRadiusStoreOpts struct {
+	Store     string
+	StoreDist bool
+}
+
+func parseGeoRadiusStoreOpts(args []string) (bool, *geoRadiusStoreOpts, error) {
+	opts := &geoRadiusStoreOpts{}
+	var ok bool
+
+	for i := 0; i < len(args); i++ {
+		option := strings.ToUpper(args[i])
+
+		// If both StoreDist and Store are specified, last argument takes precedence
+		switch option {
+		case "STORE":
+			if i+1 < len(args) {
+				opts.Store = args[i+1]
+				opts.StoreDist = false
+				i++
+				ok = true
+			} else {
+				return false, nil, diceerrors.ErrSyntax
+			}
+		case "STOREDIST":
+			if i+1 < len(args) {
+				opts.Store = args[i+1]
+				opts.StoreDist = true
+				i++
+				ok = true
+			} else {
+				return false, nil, diceerrors.ErrSyntax
+			}
+		}
+	}
+
+	return ok, opts, nil
+}
+
+// decomposeGeoRadiusByMember breaks down the GEORADIUSBYMEMBER command into the read-only part and the 
+// optional write part if the STORE/STOREDIST option is given. It first retrieves the response from the 
+// GEORADIUSBYMEMBER command and if STORE/STOREDIST is set, it stores the result in a sorted set.
+func (h *BaseCommandHandler) decomposeGeoRadiusByMember(ctx context.Context, cd *cmd.DiceDBCmd) ([]*cmd.DiceDBCmd, error) {
+	if len(cd.Args) < 4 {
+		return nil, diceerrors.ErrWrongArgumentCount("GEORADIUSBYMEMBER")
+	}
+
+	ok, opts, parseErr := parseGeoRadiusStoreOpts(cd.Args[4:])
+	if parseErr != nil {
+		return nil, &diceerrors.PreProcessError{
+			Result: parseErr,
+		}
+	}
+
+	var decomposedCmds []*cmd.DiceDBCmd
+
+	// if STORE/STOREDIST is not given, there was no pre-processing and we just execute the command
+	if !ok {
+		decomposedCmds = []*cmd.DiceDBCmd{
+			{
+				Cmd:  "GEORADIUSBYMEMBER",
+				Args: cd.Args,
+			},
+		}
+	} else {
+		var resp *ops.StoreResponse
+
+		// wait for pre-processing to finish
+		select {
+		case <-ctx.Done():
+			slog.Error("CommandHandler timed out waiting for response from shards", slog.String("id", h.id), slog.Any("error", ctx.Err()))
+		case preProcessedResp, ok := <-h.preprocessingChan:
+			if ok {
+				resp = preProcessedResp
+			}
+		}
+
+		if resp.EvalResponse.Error != nil || resp.EvalResponse.Result == clientio.IntegerZero {
+			return nil, &diceerrors.PreProcessError{Result: clientio.IntegerZero}
+		}
+
+		args := []string{opts.Store} // the key where to store the result
+
+		// parse the scores (hashes or dists) from the result and store them in a sorted set
+		result, ok := resp.EvalResponse.Result.([]string) 
+		if !ok {
+			return nil, diceerrors.ErrInternalServer
+		}
+
+		args = append(args, result...)
+
+		decomposedCmds = []*cmd.DiceDBCmd{
+			{
+				Cmd:  "ZADD",
+				Args: args,
+			},
+		}
+	}
+
 	return decomposedCmds, nil
 }

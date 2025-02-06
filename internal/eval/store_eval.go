@@ -7378,6 +7378,47 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 		countVal = opts.Count
 	}
 
+	// return members with scores, so we can store them
+	if opts.Store != "" && !opts.StoreDist {
+		length := min(len(members), countVal)
+		response := make([]string, 0, length * 2)
+
+		for i := 0; i < length; i++ {
+			if members[indices[i]] == "" {
+				continue
+			}
+
+			response = append(response, fmt.Sprintf("%d", uint64(hashes[indices[i]])))
+			response = append(response, members[indices[i]])
+		}
+
+		return &EvalResponse{
+			Result: response,
+			Error:  nil,
+		}
+	}
+
+	// return members with dists, so we can store them
+	if opts.Store != "" && opts.StoreDist {
+		length := min(len(members), countVal)
+		response := make([]string, 0, length * 2)
+
+		for i := 0; i < length; i++ {
+			if members[indices[i]] == "" {
+				continue
+			}
+			
+			response = append(response, fmt.Sprintf("%f", dists[indices[i]]))
+			response = append(response, members[indices[i]])
+		}
+
+		return &EvalResponse{
+			Result: response,
+			Error:  nil,
+		}
+	}
+
+	// return plain members
 	if !opts.WithCoord && !opts.WithDist && !opts.WithHash {
 		response := make([]string, 0, min(len(members), countVal))
 		for i := 0; i < cap(response); i++ {
@@ -7394,6 +7435,7 @@ func evalGEORADIUSBYMEMBER(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
+	// return members with options
 	response := make([][]interface{}, 0, min(len(members), countVal))
 	for i := 0; i < cap(response); i++ {
 		if members[indices[i]] == "" {
