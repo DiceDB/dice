@@ -85,7 +85,7 @@ func (m *Manager) listenForEvents(ctx context.Context) {
 
 // handleSubscription processes a new subscription request
 func (m *Manager) handleSubscription(sub WatchSubscription) {
-	fingerprint := sub.WatchCmd.GetFingerprint()
+	fingerprint := sub.WatchCmd.Fingerprint()
 	key := sub.WatchCmd.Key()
 	slog.Debug("creating a new subscription",
 		slog.String("key", key),

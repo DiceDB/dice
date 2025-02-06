@@ -4,7 +4,7 @@
 package main
 
 import (
-	"chatroom-go/db"
+	"chatroom-go/svc"
 	"fmt"
 	"log"
 	"os"
@@ -14,7 +14,6 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 const gap = "\n\n"
@@ -29,17 +28,9 @@ func init() {
 	M = initialModel()
 }
 
-func loop() {
-	ch, err := db.Client.WatchCh()
-	if err != nil {
-		panic(err)
-	}
-	for resp := range ch {
-		fmt.Println(resp)
-	}
-}
-
 func main() {
+	log.Println("Chatroom application started.")
+
 	if len(os.Args) < 2 {
 		fmt.Println("go run main.go <username>")
 		os.Exit(1)
@@ -51,9 +42,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	go loop()
+	go svc.ListenForMessages(func(message string) {
+		M.AddMessage("m")
+		M.Refresh()
+	})
 
-	p := tea.NewProgram(M)
+	p := tea.NewProgram(&M)
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
@@ -97,16 +91,21 @@ Type a message and press Enter to send.`)
 	}
 }
 
-func (m model) Refresh() {
-	M.viewport.SetContent(lipgloss.NewStyle().Width(M.viewport.Width).Render(strings.Join(M.messages, "\n")))
-	M.viewport.GotoBottom()
+func (m *model) AddMessage(message string) {
+	m.messages = append(m.messages, message)
 }
 
-func (m model) Init() tea.Cmd {
+func (m *model) Refresh() {
+	m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width).Render(strings.Join(m.messages, "\n")))
+	m.viewport.GotoBottom()
+}
+
+func (m *model) Init() tea.Cmd {
+	svc.Subscribe()
 	return textarea.Blink
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		tiCmd tea.Cmd
 		vpCmd tea.Cmd
@@ -129,11 +128,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
 		case tea.KeyEnter:
-			db.Client.Fire(&wire.Command{
-				Cmd:  "SET",
-				Args: []string{username, m.textarea.Value()},
-			})
-
+			svc.SendMessage(username, m.textarea.Value())
 			m.textarea.Reset()
 			m.Refresh()
 		}
@@ -141,7 +136,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(tiCmd, vpCmd)
 }
 
-func (m model) View() string {
+func (m *model) View() string {
 	return fmt.Sprintf(
 		"%s%s%s",
 		m.viewport.View(),

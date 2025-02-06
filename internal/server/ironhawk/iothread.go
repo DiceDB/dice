@@ -64,6 +64,8 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 			watchManager.HandleUnwatch(_c, t)
 		}
 
+		watchManager.RegisterThread(t)
+
 		err = t.IoHandler.WriteSync(ctx, res.R)
 		if err != nil {
 			return err
@@ -71,6 +73,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
+		_c.C.Cmd = strings.ReplaceAll(_c.C.Cmd, ".WATCH", "")
 		watchManager.NotifyWatchers(_c, shardManager, t)
 	}
 }
