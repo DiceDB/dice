@@ -43,7 +43,7 @@ func main() {
 	}
 
 	go svc.ListenForMessages(func(message string) {
-		M.AddMessage("m")
+		M.AddMessage(message)
 		M.Refresh()
 	})
 
@@ -92,7 +92,10 @@ Type a message and press Enter to send.`)
 }
 
 func (m *model) AddMessage(message string) {
-	m.messages = append(m.messages, message)
+	tokens := strings.Split(message, ":")
+	username := tokens[0]
+	msg := strings.Join(tokens[1:], ":")
+	m.messages = append(m.messages, m.senderStyle.Render(username+": ")+msg)
 }
 
 func (m *model) Refresh() {

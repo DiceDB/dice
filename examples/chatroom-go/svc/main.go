@@ -5,7 +5,6 @@ package svc
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/dicedb/dicedb-go"
 	"github.com/dicedb/dicedb-go/wire"
@@ -49,7 +48,6 @@ func ListenForMessages(onMessage func(message string)) {
 		panic(err)
 	}
 	for resp := range ch {
-		log.Println("resp", resp.GetVStr())
 		onMessage(resp.GetVStr())
 	}
 }
