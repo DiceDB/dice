@@ -71,4 +71,3 @@ require (
 	google.golang.org/protobuf v1.36.4
 )
 
-replace github.com/dicedb/dicedb-go => ../dicedb-go
