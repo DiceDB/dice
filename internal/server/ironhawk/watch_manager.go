@@ -29,12 +29,19 @@ func NewWatchManager() *WatchManager {
 	}
 }
 
+func (w *WatchManager) RegisterThread(t *IOThread) {
+	if t.Mode == "watch" {
+		w.clientWatchThreadMap[t.ClientID] = t
+	}
+}
+
 func (w *WatchManager) HandleWatch(c *cmd.Cmd, t *IOThread) {
-	fp, key := c.GetFingerprint(), c.Key()
+	fp, key := c.Fingerprint(), c.Key()
 	slog.Debug("creating a new subscription",
 		slog.String("key", key),
 		slog.String("cmd", c.String()),
-		slog.Any("fingerprint", fp))
+		slog.Any("fingerprint", fp),
+		slog.String("client_id", t.ClientID))
 
 	// For the key that will be watched through any .WATCH command
 	// Create an entry in the map that holds, key <--> [command fingerprint] as map
@@ -55,11 +62,7 @@ func (w *WatchManager) HandleWatch(c *cmd.Cmd, t *IOThread) {
 	// so that we understand what should we execute when the data changes
 	w.fpCmdMap[fp] = c
 
-	// If the thread is a WATCH thread, store it in the map
-	// so that we can notify the clients when the data changes
-	if t.Mode == "WATCH" {
-		w.clientWatchThreadMap[t.ClientID] = t
-	}
+	w.clientWatchThreadMap[t.ClientID] = t
 }
 
 func (w *WatchManager) HandleUnwatch(c *cmd.Cmd, t *IOThread) {

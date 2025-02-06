@@ -16,7 +16,7 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-//nolint: stylecheck
+// nolint: stylecheck
 const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
@@ -30,7 +30,7 @@ func (c *Cmd) String() string {
 	return fmt.Sprintf("%s %s", c.C.Cmd, strings.Join(c.C.Args, " "))
 }
 
-func (c *Cmd) GetFingerprint() uint32 {
+func (c *Cmd) Fingerprint() uint32 {
 	return farm.Fingerprint32([]byte(c.String()))
 }
 
@@ -132,7 +132,7 @@ func (cmd *DiceDBCmd) Repr() string {
 }
 
 // GetFingerprint returns a 32-bit fingerprint of the command and its arguments.
-func (cmd *DiceDBCmd) GetFingerprint() uint32 {
+func (cmd *DiceDBCmd) Fingerprint() uint32 {
 	return farm.Fingerprint32([]byte(cmd.Repr()))
 }
 
