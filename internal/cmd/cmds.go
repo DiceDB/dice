@@ -176,3 +176,11 @@ var cmdResNil = &CmdRes{R: &wire.Response{
 var cmdResOK = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VStr{VStr: "OK"},
 }}
+
+var cmdResIntNegTwo = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: -2},
+}}
+
+var cmdResIntNegOne = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: -1},
+}}
