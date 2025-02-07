@@ -70,5 +70,3 @@ require (
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
 	google.golang.org/protobuf v1.36.4
 )
-
-replace github.com/dicedb/dicedb-go => ../dicedb-go
