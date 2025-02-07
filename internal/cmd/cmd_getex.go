@@ -103,7 +103,7 @@ func evalGETEX(c *Cmd, s *store.Store) (*CmdRes, error) {
 			state = Initialized
 
 		case Persist:
-			// Ensure only one expiration flag is provided
+			// Ensure only one expiration flag is provided.
 			if state != Uninitialized {
 				return nil, diceerrors.ErrSyntax
 			}
