@@ -8,7 +8,7 @@ import (
 
 var cGETDEL = &DiceDBCommand{
 	Name:      "GETDEL",
-	HelpShort: "evalGETDEL returns the value for the queried key in args.",
+	HelpShort: "GETDEL returns the value for the queried key in args.",
 	Eval:      evalGETDEL,
 }
 
@@ -18,7 +18,7 @@ func init() {
 
 // evalGETDEL returns the value for the queried key in args
 //
-// The function expects exactly one argument: the key to decrement.
+// The function expects exactly one argument: the key to get.
 // If the key exists, it will be deleted before its value is returned.
 // evalGETDEL returns cmdResNil if key is expired or it does not exist
 //
