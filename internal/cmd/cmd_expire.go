@@ -26,11 +26,7 @@ func evalEXPIRE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	var key = c.C.Args[0]
 	exDurationSec, err := strconv.ParseInt(c.C.Args[1], 10, 64)
 
-	if err != nil {
-		return cmdResNil, errInvalidExpireTime("EXPIRE")
-	}
-
-	if exDurationSec < 0 {
+	if err != nil || exDurationSec < 0 {
 		return cmdResNil, errInvalidExpireTime("EXPIRE")
 	}
 
@@ -45,9 +41,7 @@ func evalEXPIRE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	isExpirySet, err2 := dstore.EvaluateAndSetExpiry(c.C.Args[2:], utils.AddSecondsToUnixEpoch(exDurationSec), key, s)
 
 	if err2 != nil {
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VInt{VInt: 0},
-		}}, nil
+		return cmdResNil, err2
 	}
 
 	if isExpirySet {
