@@ -32,6 +32,16 @@ Access it anywhere in the repo and call the required functions:
 	diceotel.DiceStartCounter.Add(ctx, 1)
 ```
 
+## Local testing
+The repo includes a `prometheus-grafana` folder which contains the required docker files to start the prometheus
+and grafana folder locally.
+Just run the usual docker-compose commands to use them.
+
+To start the docker containers, run
+```bash
+docker-compose up -d
+```
+
 ## Prometheus Integration
 Prometheus has multiple modes of collecting data from nodes. In this approach, the module
 implements the Prometheus scraping mode where Prometheus fetches data periodically from the
