@@ -11,5 +11,6 @@ var (
 
 func (dotel *DiceOtel) register() (err error) {
 	DiceStartCounter, _ = dotel.Meter.Int64Counter("dicedb_start", api.WithDescription("A counter for the start of the DiceDB server"))
+	// Add other metrics here
 	return
 }
