@@ -24,11 +24,7 @@ func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	var key = c.C.Args[0]
 	exUnixTimeSec, err := strconv.ParseInt(c.C.Args[1], 10, 64)
 
-	if err != nil {
-		return cmdResNil, errInvalidExpireTime("EXPIREAT")
-	}
-
-	if exUnixTimeSec < 0 {
+	if err != nil || exUnixTimeSec < 0 {
 		return cmdResNil, errInvalidExpireTime("EXPIREAT")
 	}
 
