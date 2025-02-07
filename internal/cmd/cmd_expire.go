@@ -59,5 +59,4 @@ func evalEXPIRE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VInt{VInt: 0},
 	}}, nil
-
 }
