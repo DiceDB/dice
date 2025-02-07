@@ -18,7 +18,7 @@ Different data types like Int64, Float64, etc are supported for each of the abov
 
 The observability module should be available from all other modules. There should always
 be one instance of the observability module running.
-To use any metric in the repo, first register it with the `diceotel` module [here](/internal/diceotel/metrics.go).
+To use any metric in the repo, first register it with the `diceotel` module [here](metrics.go).
 ```go
 func (dotel *DiceOtel) register() (err error) {
 	DiceStartCounter, _ = dotel.Meter.Int64Counter("dicedb_start", api.WithDescription("A counter for the start of the DiceDB server"))
