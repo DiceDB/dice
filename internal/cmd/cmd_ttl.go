@@ -44,5 +44,4 @@ func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VInt{VInt: int64(durationMs / 1000)},
 	}}, nil
-
 }

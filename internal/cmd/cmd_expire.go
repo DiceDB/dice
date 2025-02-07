@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"fmt"
+	"strconv"
+
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
-	"strconv"
 )
 
 var cEXPIRE = &DiceDBCommand{
@@ -20,7 +20,6 @@ func init() {
 
 func evalEXPIRE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
-		fmt.Println("HI")
 		return cmdResNil, errWrongArgumentCount("EXPIRE")
 	}
 
