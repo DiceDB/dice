@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"strings"
-
 	"github.com/dicedb/dice/internal/store"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -14,7 +12,7 @@ const (
 
 var cFLUSHDB = &DiceDBCommand{
 	Name:      "FLUSHDB",
-	HelpShort: "FLUSHDB removes all keys from the currently selected database.",
+	HelpShort: "FLUSHDB deletes all keys.",
 	Eval:      evalFLUSHDB,
 }
 
@@ -22,7 +20,7 @@ func init() {
 	commandRegistry.AddCommand(cFLUSHDB)
 }
 
-// FLUSHDB is used to remove all keys from the currently selected database in a DiceDB instance.
+// FLUSHDB deletes all keys.
 //
 // # The function expects no arguments
 //
@@ -34,21 +32,11 @@ func init() {
 //   - *CmdRes: OK or nil
 //   - error: Error if wrong number of arguments
 func evalFLUSHDB(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) > 1 {
+	if len(c.C.Args) > 0 {
 		return cmdResNil, errWrongArgumentCount("FLUSHDB")
 	}
 
-	flushType := SYNC
-	if len(c.C.Args) == 1 {
-		flushType = strings.ToUpper(c.C.Args[0])
-	}
-
-	switch flushType {
-	case SYNC, ASYNC:
-		store.ResetStore(s)
-	default:
-		return cmdResNil, errInvalidSyntax("FLUSHDB")
-	}
+	store.Reset(s)
 
 	return cmdResOK, nil
 }
