@@ -21,8 +21,7 @@ func init() {
 }
 
 // FLUSHDB deletes all keys.
-//
-// # The function expects no arguments
+// The function expects no arguments
 //
 // Parameters:
 //   - c *Cmd: The command context containing the arguments
@@ -32,7 +31,7 @@ func init() {
 //   - *CmdRes: OK or nil
 //   - error: Error if wrong number of arguments
 func evalFLUSHDB(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) > 0 {
+	if len(c.C.Args) != 0 {
 		return cmdResNil, errWrongArgumentCount("FLUSHDB")
 	}
 
