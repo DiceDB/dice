@@ -14,7 +14,7 @@ import (
 
 const (
 	meterName    = "dicedb-otel"
-	diceOtelPort = "9090"
+	diceOtelPort = "8050"
 )
 
 type (
@@ -78,6 +78,7 @@ func (dotel *DiceOtel) Run() (err error) {
 func (dotel *DiceOtel) serveMetrics() (err error) {
 	http.Handle("/metrics", promhttp.Handler())
 	if err = http.ListenAndServe(":"+diceOtelPort, nil); err != nil {
+		log.Println("Error starting Diceotel server", err)
 		return
 	}
 	return

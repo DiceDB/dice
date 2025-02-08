@@ -1,7 +1,3 @@
-# docker-compose.yml
-
-version: '3.8'
-
 services:
   prometheus:
     image: prom/prometheus
@@ -25,16 +21,5 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=grafana
     volumes:
       - ./grafana:/etc/grafana/provisioning/datasources
-  generate_prom_metrics:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: generate_prom_metrics
-    command: 'python app/tests/test_prom_scraping.py'
-    volumes:
-      - .:/app
-    ports:
-      - 8050:8050 
-    restart: unless-stopped
 volumes:
   prom_data:
