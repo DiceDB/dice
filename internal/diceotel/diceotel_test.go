@@ -18,13 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createDiceotelServer(ctx context.Context) (dotel *DiceOtel) {
-	// Create a new DiceOtel instance
-	dotel, _ = NewDiceOtel(ctx)
-	go dotel.Run()
-	return
-}
-
 func publishMetrics(ctx context.Context, dotel *DiceOtel) {
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
@@ -83,12 +76,8 @@ func checkMetrics() (content string, err error) {
 }
 
 func TestMetricsPublish(t *testing.T) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	otel := createDiceotelServer(ctx)
-	defer cancelFunc()
-
 	// Publish some metrics
-	publishMetrics(ctx, otel)
+	publishMetrics(context.Background(), DiceotelSrv)
 	checkMetrics()
 	content, err := checkMetrics()
 	assert.Nil(t, err)

@@ -21,7 +21,7 @@ import (
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/diceotel"
+	dotel "github.com/dicedb/dice/internal/diceotel"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/ironhawk"
 	"github.com/dicedb/dicedb-go/wire"
@@ -85,13 +85,8 @@ func Start() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	// Initialize the DiceDB opentelemetry lib
-	if err := initDiceotel(ctx); err != nil {
-		slog.Error("Observability service could not be started", slog.Any("error", err))
-		sigs <- syscall.SIGKILL
-	}
 	// Emit the starting metric
-	diceotel.DiceStartCounter.Add(ctx, 1)
+	dotel.DiceotelSrv.StartCounter.Add(ctx, 1)
 
 	var (
 		serverErrCh = make(chan error, 2)
@@ -215,12 +210,6 @@ func Start() {
 	cancel()
 
 	wg.Wait()
-}
-
-func initDiceotel(ctx context.Context) (err error) {
-	diceotel.DiceotelSrv, err = diceotel.NewDiceOtel(ctx)
-	go diceotel.DiceotelSrv.Run()
-	return
 }
 
 func runServer(ctx context.Context, wg *sync.WaitGroup, srv *ironhawk.Server, errCh chan<- error) {

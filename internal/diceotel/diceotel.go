@@ -22,23 +22,22 @@ type (
 		ctx context.Context
 
 		Meter api.Meter
+
+		StartCounter            api.Int64Counter
+		CmdLatencyInMsHistogram api.Int64Histogram
 	}
 )
 
 var (
-	DiceotelSrv *DiceOtel
+	DiceotelSrv *DiceOtel = NewDiceOtel(context.Background())
 )
 
-func NewDiceOtel(ctx context.Context) (dotel *DiceOtel, err error) {
+func NewDiceOtel(ctx context.Context) (dotel *DiceOtel) {
 	dotel = &DiceOtel{
 		ctx: ctx,
 	}
-	if err = dotel.setup(); err != nil {
-		return
-	}
-	if err = dotel.register(); err != nil {
-		return
-	}
+	dotel.setup()
+	go dotel.Run()
 	return
 }
 
@@ -53,6 +52,7 @@ func (dotel *DiceOtel) setup() (err error) {
 	provider := metric.NewMeterProvider(metric.WithReader(exporter))
 	dotel.Meter = provider.Meter(meterName)
 
+	dotel.register()
 	return
 }
 

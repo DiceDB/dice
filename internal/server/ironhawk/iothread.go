@@ -46,14 +46,14 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 		_c.ClientID = t.ClientID
 		_c.Mode = t.Mode
 
-		execStartTime := time.Now()
+		_telCmdExecStartTime := time.Now()
 		res, err := shardManager.Execute(_c)
 		if err != nil {
 			res.R.Err = err.Error()
 		}
-		diceotel.DiceCmdLatencyInMsHistogram.Record(
+		diceotel.DiceotelSrv.CmdLatencyInMsHistogram.Record(
 			ctx,
-			time.Since(execStartTime).Milliseconds(),
+			time.Since(_telCmdExecStartTime).Milliseconds(),
 			metric.WithAttributeSet(
 				attribute.NewSet(
 					attribute.String("cmd", c.Cmd),
