@@ -15,6 +15,9 @@ func init() {
 	commandRegistry.AddCommand(cDEL)
 }
 
+// TODO: DEL command is actually a multi-key command so this needs
+// to be scattered and gathered one step before this.
+
 // evalDEL deletes all the specified keys in args list.
 //
 // Parameters:

@@ -16,7 +16,7 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-// nolint: stylecheck
+//nolint: stylecheck
 const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
@@ -179,4 +179,12 @@ var cmdResNil = &CmdRes{R: &wire.Response{
 
 var cmdResOK = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VStr{VStr: "OK"},
+}}
+
+var cmdResInt1 = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: 1},
+}}
+
+var cmdResInt0 = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: 0},
 }}

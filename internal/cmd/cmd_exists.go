@@ -15,6 +15,9 @@ func init() {
 	commandRegistry.AddCommand(cEXISTS)
 }
 
+// TODO: EXISTS command is actually a multi-key command so this needs
+// to be scattered and gathered one step before this.
+
 func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
 		return cmdResNil, errWrongArgumentCount("EXISTS")
