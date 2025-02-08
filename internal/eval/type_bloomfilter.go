@@ -15,7 +15,6 @@ import (
 
 	"github.com/dicedb/dice/internal/object"
 
-	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -173,14 +172,14 @@ func (b *Bloom) add(value string) (interface{}, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
 	if value == utils.EmptyStr {
-		return clientio.IntegerNegativeOne, errEmptyValue
+		return IntegerNegativeOne, errEmptyValue
 	}
 
 	// Update the indexes where bits are supposed to be set
 	err := b.opts.updateIndexes(value)
 	if err != nil {
 		fmt.Println("error in getting indexes for value:", value, "err:", err)
-		return clientio.IntegerNegativeOne, errUnableToHash
+		return IntegerNegativeOne, errUnableToHash
 	}
 
 	// Set the bits and keep a count of already set ones
@@ -195,10 +194,10 @@ func (b *Bloom) add(value string) (interface{}, error) {
 
 	if count == len(b.opts.indexes) {
 		// All the bits were already set, return 0 in that case.
-		return clientio.IntegerZero, nil
+		return IntegerZero, nil
 	}
 	b.cnt++
-	return clientio.IntegerOne, nil
+	return IntegerOne, nil
 }
 
 // exists checks if the given `value` exists in the filter or not.
@@ -206,18 +205,18 @@ func (b *Bloom) add(value string) (interface{}, error) {
 // the underlying bitset. Returns "-1" in case of errors, "0" if the
 // element surely does not exist in the filter, and "1" if the element
 // may or may not exist in the filter.
-func (b *Bloom) exists(value string) (clientio.RespType, error) {
+func (b *Bloom) exists(value string) (RespType, error) {
 	// We're sure that empty values will be handled upper functions itself.
 	// This is just a property check for the bloom struct.
 	if value == utils.EmptyStr {
-		return clientio.IntegerOne, errEmptyValue
+		return IntegerOne, errEmptyValue
 	}
 
 	// Update the indexes where bits are supposed to be set
 	err := b.opts.updateIndexes(value)
 	if err != nil {
 		fmt.Println("error in getting indexes for value:", value, "err:", err)
-		return clientio.IntegerNegativeOne, errUnableToHash
+		return IntegerNegativeOne, errUnableToHash
 	}
 
 	// Check if all the bits at given indexes are set or not
@@ -225,12 +224,12 @@ func (b *Bloom) exists(value string) (clientio.RespType, error) {
 	for _, v := range b.opts.indexes {
 		if !isBitSet(b.bitset, v) {
 			// Return with "0" as we found one non-set bit (which is enough to conclude)
-			return clientio.IntegerZero, nil
+			return IntegerZero, nil
 		}
 	}
 
 	// We reached here, which means the element may exist in the filter. Return "1" now.
-	return clientio.IntegerOne, nil
+	return IntegerOne, nil
 }
 
 // DeepCopy creates a deep copy of the Bloom struct

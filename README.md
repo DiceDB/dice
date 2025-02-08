@@ -6,7 +6,7 @@ DiceDB
 <a target="_blank" href="https://discord.gg/6r8uXWtXh7"><img src="https://dcbadge.limes.pink/api/server/6r8uXWtXh7?style=flat" alt="discord community" /></a>
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
-DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware.
+DiceDB is an open-source in-memory database with query subscriptions.
 
 > [!CAUTION]
 > DiceDB is under active development and supports a wide [range of commands](https://dicedb.io/commands/get/). Inconsistent behavior is expected. Feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
@@ -163,9 +163,12 @@ Integration tests, on the other hand, involve starting up the DiceDB server and 
 
 ### Executing a single integration test
 
+Make sure you have DiceDB running before you run the following commands.
+By default it connects to the local instance of DiceDB running on port `7379`.
+
 ```bash
 TEST_FUNC=<name of the test function> make test-one
-TEST_FUNC=TestSet make test-one
+TEST_FUNC=^TestSet$ make test-one
 ```
 
 ### Running all integration tests

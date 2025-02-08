@@ -1,10 +1,11 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package cmd
 
 import (
-	"errors"
-
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/wire"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cPING = &DiceDBCommand{
@@ -19,7 +20,7 @@ func init() {
 
 func evalPING(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) >= 2 {
-		return cmdResNil, errors.New("invalid number of arguments in PING command")
+		return cmdResNil, errWrongArgumentCount("PING")
 	}
 	if len(c.C.Args) == 0 {
 		return &CmdRes{R: &wire.Response{

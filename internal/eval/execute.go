@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/internal/auth"
-	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/comm"
 	diceerrors "github.com/dicedb/dice/internal/errors"
@@ -76,7 +75,7 @@ func (e *Eval) ExecuteCommand() *EvalResponse {
 	case auth.Cmd:
 		return &EvalResponse{Result: EvalAUTH(e.cmd.Args, e.client), Error: nil}
 	case "ABORT":
-		return &EvalResponse{Result: clientio.RespOK, Error: nil}
+		return &EvalResponse{Result: RespOK, Error: nil}
 	default:
 		return &EvalResponse{Result: diceCmd.Eval(e.cmd.Args, e.store), Error: nil}
 	}
