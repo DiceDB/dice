@@ -15,14 +15,14 @@ import (
 
 const PERSIST = "PERSIST"
 
-var cGETX = &DiceDBCommand{
+var cGETEX = &DiceDBCommand{
 	Name:      "GETEX",
 	HelpShort: "Get the value of key and optionally set its expiration.",
 	Eval:      evalGETEX,
 }
 
 func init() {
-	commandRegistry.AddCommand(cGETX)
+	commandRegistry.AddCommand(cGETEX)
 }
 
 // GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
