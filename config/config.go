@@ -17,9 +17,7 @@ const (
 	DiceDBVersion = "0.1.0"
 )
 
-var (
-	Config *DiceDBConfig
-)
+var Config *DiceDBConfig
 
 type DiceDBConfig struct {
 	Host string `mapstructure:"host" default:"0.0.0.0" description:"the host address to bind to"`
