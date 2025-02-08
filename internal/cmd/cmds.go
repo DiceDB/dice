@@ -16,7 +16,7 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-// nolint: stylecheck
+//nolint: stylecheck
 const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
@@ -173,18 +173,18 @@ func errInvalidExpireTime(command string) error {
 	return fmt.Errorf("ERR invalid expire time in '%s' command", strings.ToUpper(command))
 }
 
-var cmdResNil = &CmdRes{R: &wire.Response{
+var cmdResNil *CmdRes = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VNil{VNil: true},
 }}
 
-var cmdResOK = &CmdRes{R: &wire.Response{
+var cmdResOK *CmdRes = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VStr{VStr: "OK"},
 }}
 
-var cmdResIntNegTwo = &CmdRes{R: &wire.Response{
+var cmdResIntNegTwo *CmdRes = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VInt{VInt: -2},
 }}
 
-var cmdResIntNegOne = &CmdRes{R: &wire.Response{
+var cmdResIntNegOne *CmdRes = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VInt{VInt: -1},
 }}
