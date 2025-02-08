@@ -2,13 +2,13 @@ package cmd
 
 import (
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/wire"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cEXISTS = &DiceDBCommand{
-	Name: "EXISTS",
+	Name:      "EXISTS",
 	HelpShort: "Returns the count of keys that exist among the given arguments without modifying them",
-	Eval: evalEXISTS,
+	Eval:      evalEXISTS,
 }
 
 func init() {
@@ -22,7 +22,7 @@ func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	var count int64
 	for _, key := range c.C.Args {
-		// GetNoTouch is used to check if a key exists in the store 
+		// GetNoTouch is used to check if a key exists in the store
 		// without updating its last access time.
 		if s.GetNoTouch(key) != nil {
 			count++
