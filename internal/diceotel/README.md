@@ -3,6 +3,11 @@
 This module implements the observability layer required for DiceDB to emit metrics.
 The current implementation integrates Opentelemetry with Prometheus in scraping mode.
 
+## Migrating to a new tool in the future
+The Opentelemetry SDK has a concept of Collectors and Exporters. In case there is a requirement
+to move the metrics from one provider to another, changing the Exporters should be sufficient
+without having to changing the existing application code where the metrics are emitted.
+
 ## Types of metrics
 - Counter, a synchronous instrument that supports non-negative increments
 - Asynchronous Counter, an asynchronous instrument which supports non-negative increments
