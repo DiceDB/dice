@@ -32,7 +32,7 @@ func evalExpireTime(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
 	getExpiry, ok := dstore.GetExpiry(obj, dst)
 	// returns -1 as the key doesn't have an expiration time set
 	if !ok {
-		return cmdResIntNegTwo, nil
+		return cmdResIntNegOne, nil
 	}
 	// returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
 	return &CmdRes{R: &wire.Response{
