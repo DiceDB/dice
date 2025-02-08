@@ -130,15 +130,14 @@ make build
 
 2. Generate the initial configuration file:
 ```bash
-dicedb init-config
+sudo ./dicedb init-config
 ```
-The configuration file (dicedb.yaml) will be created in the default data directory for your operating system.
+This will generate configuration file (dicedb.yaml) in the default configuration directory for your OS.
 
 3. Locate the configuration file in the default data directory for dicedb:
 
-macOS: `~/Library/Application Support/dicedb`
-Windows: `%LOCALAPPDATA%\dicedb` (i.e. `C:\Users\<YourUsername>\AppData\Local\dicedb`)
-Linux: `~/.local/share/dicedb`
+macOS: `/usr/local/etc/dicedb/dicedb.yaml`
+Linux: `/etc/dicedb/dicedb.yaml`
 
 ### Running Tests
 
