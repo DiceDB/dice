@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 	"strconv"
+
+	dstore "github.com/dicedb/dice/internal/store"
 )
 
 var cEXPIREAT = &DiceDBCommand{
@@ -17,30 +17,26 @@ func init() {
 }
 
 func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) <= 1 {
+	// We need at least 2 arguments.
+	if len(c.C.Args) < 2 {
 		return cmdResNil, errWrongArgumentCount("EXPIREAT")
 	}
 
 	var key = c.C.Args[0]
 	exUnixTimeSec, err := strconv.ParseInt(c.C.Args[1], 10, 64)
-
 	if err != nil || exUnixTimeSec < 0 {
+		// TODO: Check for the upper bound of the input.
 		return cmdResNil, errInvalidExpireTime("EXPIREAT")
 	}
 
-	isExpirySet, err2 := dstore.EvaluateAndSetExpiry(c.C.Args[2:], exUnixTimeSec, key, s)
-
-	if err2 != nil {
-		return cmdResNil, err2
+	isExpirySet, err := dstore.EvaluateAndSetExpiry(c.C.Args[2:], exUnixTimeSec, key, s)
+	if err != nil {
+		return cmdResNil, err
 	}
 
 	if isExpirySet {
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VInt{VInt: 1},
-		}}, nil
+		return cmdResInt1, nil
 	}
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: 0},
-	}}, nil
+	return cmdResInt0, nil
 }
