@@ -166,10 +166,6 @@ func errWrongTypeOperation(command string) error {
 	return fmt.Errorf("wrong type operation for '%s' command", strings.ToUpper(command))
 }
 
-func errUnexpectedType(expectedType string, actualType interface{}) error {
-	return fmt.Errorf("expected %s but got another type: %s", expectedType, actualType)
-}
-
 var cmdResNil = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VNil{VNil: true},
 }}
