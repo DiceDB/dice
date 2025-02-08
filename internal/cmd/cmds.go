@@ -169,6 +169,10 @@ func errWrongTypeOperation(command string) error {
 	return fmt.Errorf("wrong type operation for '%s' command", strings.ToUpper(command))
 }
 
+func errInvalidExpireTime(command string) error {
+	return fmt.Errorf("ERR invalid expire time in '%s' command", strings.ToUpper(command))
+}
+
 var cmdResNil = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VNil{VNil: true},
 }}
