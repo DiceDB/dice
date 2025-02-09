@@ -82,6 +82,7 @@ func (pit *PointInTimeSnapshot) Run() (err error) {
 func (pit *PointInTimeSnapshot) Close() (err error) {
 	pit.EndedAt = time.Now()
 	pit.cancelFunc()
-	log.Println("Closing snapshot", pit.ID, ". Total time taken", pit.EndedAt.Sub(pit.StartedAt))
+	log.Println("Closing snapshot", pit.ID, ". Total time taken",
+		pit.EndedAt.Sub(pit.StartedAt), "for total keys", pit.SnapshotMap.totalKeys)
 	return
 }

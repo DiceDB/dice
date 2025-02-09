@@ -121,7 +121,7 @@ func (pf *PITFlusher) Close() (err error) {
 	if err = pf.clearDLQ(); err != nil {
 		log.Println("error in clearing DLQ", err)
 	}
-	log.Println("Closing the flusher for snapshot", pf.snapshotID, ", total keys flushed", pf.totalKeys)
+	//log.Println("Closing the flusher for snapshot", pf.snapshotID, ", total keys flushed", pf.totalKeys)
 	pf.flushFile.Close()
 	pf.exitCh <- true
 	return

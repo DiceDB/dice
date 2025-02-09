@@ -19,7 +19,7 @@ func addDataToDummyStore(store *DummyStore, count int) {
 	for i := 0; i < count; i++ {
 		store.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
 	}
-	log.Println("Total size of store", len(store.store))
+	//log.Println("Total size of store", len(store.store))
 }
 
 func fetchOrWriteInStore(ctx context.Context, store *DummyStore, count int, rangeOfKeys int, duration time.Duration, shouldWrite bool) {
