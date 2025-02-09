@@ -4,6 +4,9 @@
 package config
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -27,7 +30,7 @@ type DiceDBConfig struct {
 	MaxClients  int  `mapstructure:"max-clients" default:"20000" description:"the maximum number of clients to accept"`
 	NumShards   int  `mapstructure:"num-shards" default:"-1" description:"number of shards to create. defaults to number of cores"`
 
-	Engine string `mapstructure:"engine" default:"resp" description:"the engine to use, values: resp, ironhawk"`
+	Engine string `mapstructure:"engine" default:"ironhawk" description:"the engine to use, values: ironhawk"`
 
 	EnableWAL                         bool   `mapstructure:"enable-wal" default:"false" description:"enable write-ahead logging"`
 	WALDir                            string `mapstructure:"wal-dir" default:"/var/log/dicedb" description:"the directory to store WAL segments"`
@@ -65,4 +68,56 @@ func Init(flags *pflag.FlagSet) {
 	if err := viper.Unmarshal(&Config); err != nil {
 		panic(err)
 	}
+}
+
+func initDefaultConfig() *DiceDBConfig {
+	defaultConfig := &DiceDBConfig{}
+	configType := reflect.TypeOf(*defaultConfig)
+	configValue := reflect.ValueOf(defaultConfig).Elem()
+
+	for i := 0; i < configType.NumField(); i++ {
+		field := configType.Field(i)
+		value := configValue.Field(i)
+
+		tag := field.Tag.Get("default")
+		if tag != "" {
+			switch value.Kind() {
+			case reflect.String:
+				value.SetString(tag)
+			case reflect.Int:
+				intVal := 0
+				_, err := fmt.Sscanf(tag, "%d", &intVal)
+				if err == nil {
+					value.SetInt(int64(intVal))
+				}
+			case reflect.Bool:
+				boolVal := false
+				_, err := fmt.Sscanf(tag, "%t", &boolVal)
+				if err == nil {
+					value.SetBool(boolVal)
+				}
+			}
+		}
+	}
+
+	return defaultConfig
+}
+
+func ForceInit(config *DiceDBConfig) {
+	defaultConfig := initDefaultConfig()
+
+	configType := reflect.TypeOf(*config)
+	configValue := reflect.ValueOf(config).Elem()
+
+	defaultConfigValue := reflect.ValueOf(defaultConfig).Elem()
+
+	for i := 0; i < configType.NumField(); i++ {
+		value := configValue.Field(i)
+		defaultValue := defaultConfigValue.Field(i)
+		if value.Interface() == reflect.Zero(value.Type()).Interface() {
+			value.Set(defaultValue)
+		}
+	}
+
+	Config = config
 }

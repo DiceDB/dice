@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package cmd
 
 import (
@@ -33,6 +36,6 @@ func evalGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		}
 	}
 
-	r.R.Attrs.Fields["fingerprint"] = structpb.NewStringValue(strconv.FormatUint(uint64(c.GetFingerprint()), 10))
+	r.R.Attrs.Fields["fingerprint"] = structpb.NewStringValue(strconv.FormatUint(uint64(c.Fingerprint()), 10))
 	return r, nil
 }

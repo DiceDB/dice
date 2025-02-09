@@ -19,7 +19,6 @@ import (
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
-	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/geo"
@@ -35,7 +34,7 @@ import (
 // evalEXPIRE sets an expiry time(in secs) on the specified key in args
 // args should contain 2 values, key and the expiry time to be set for the key
 // The expiry time should be in integer format; if not, it returns encoded error response
-// Returns clientio.IntegerOne if expiry was set on the key successfully.
+// Returns IntegerOne if expiry was set on the key successfully.
 // Once the time is lapsed, the key will be deleted automatically
 func evalEXPIRE(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) <= 1 {
@@ -66,7 +65,7 @@ func evalEXPIRE(args []string, store *dstore.Store) *EvalResponse {
 	// 0 if the timeout was not set. e.g. key doesn't exist, or operation skipped due to the provided arguments
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -74,7 +73,7 @@ func evalEXPIRE(args []string, store *dstore.Store) *EvalResponse {
 
 	if isExpirySet {
 		return &EvalResponse{
-			Result: clientio.IntegerOne,
+			Result: IntegerOne,
 			Error:  nil,
 		}
 	} else if err2 != nil {
@@ -85,7 +84,7 @@ func evalEXPIRE(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.IntegerZero,
+		Result: IntegerZero,
 		Error:  nil,
 	}
 }
@@ -122,7 +121,7 @@ func evalEXPIREAT(args []string, store *dstore.Store) *EvalResponse {
 	isExpirySet, err := dstore.EvaluateAndSetExpiry(args[2:], exUnixTimeSec, key, store)
 	if isExpirySet {
 		return &EvalResponse{
-			Result: clientio.IntegerOne,
+			Result: IntegerOne,
 			Error:  nil,
 		}
 	} else if err != nil {
@@ -132,7 +131,7 @@ func evalEXPIREAT(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 	return &EvalResponse{
-		Result: clientio.IntegerZero,
+		Result: IntegerZero,
 		Error:  nil,
 	}
 }
@@ -157,7 +156,7 @@ func evalEXPIRETIME(args []string, store *dstore.Store) *EvalResponse {
 	// -2 if key doesn't exist
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerNegativeTwo,
+			Result: IntegerNegativeTwo,
 			Error:  nil,
 		}
 	}
@@ -166,7 +165,7 @@ func evalEXPIRETIME(args []string, store *dstore.Store) *EvalResponse {
 	// -1 if key doesn't have expiration time set
 	if !ok {
 		return &EvalResponse{
-			Result: clientio.IntegerNegativeOne,
+			Result: IntegerNegativeOne,
 			Error:  nil,
 		}
 	}
@@ -279,12 +278,12 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 
 			// if key does not exist, return RESP encoded nil
 			if obj == nil {
-				return makeEvalResult(clientio.NIL)
+				return makeEvalResult(NIL)
 			}
 		case NX:
 			obj := store.Get(key)
 			if obj != nil {
-				return makeEvalResult(clientio.NIL)
+				return makeEvalResult(NIL)
 			}
 		case KeepTTL:
 			if state != Uninitialized {
@@ -307,13 +306,13 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 	if oldVal != nil {
 		return makeEvalResult(*oldVal)
 	}
-	return makeEvalResult(clientio.OK)
+	return makeEvalResult(OK)
 }
 
 // evalGET returns the value for the queried key in args
 // The key should be the only param in args
 // The RESP value of the key is encoded and then returned
-// evalGET returns response.clientio.NIL if key is expired or it does not exist
+// evalGET returns response.NIL if key is expired or it does not exist
 func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) != 1 {
 		return &EvalResponse{
@@ -329,7 +328,7 @@ func evalGET(args []string, store *dstore.Store) *EvalResponse {
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -501,7 +500,7 @@ func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -517,13 +516,13 @@ func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
 	_, ok := hashMap.Get(hmKey)
 	if ok {
 		return &EvalResponse{
-			Result: clientio.IntegerOne,
+			Result: IntegerOne,
 			Error:  nil,
 		}
 	}
 	// Return 0, if specified field doesn't exist in the HashMap.
 	return &EvalResponse{
-		Result: clientio.IntegerZero,
+		Result: IntegerZero,
 		Error:  nil,
 	}
 }
@@ -559,7 +558,7 @@ func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
 		hashMap = obj.Value.(HashMap)
 	} else {
 		return &EvalResponse{
-			Result: clientio.EmptyArray,
+			Result: EmptyArray,
 			Error:  nil,
 		}
 	}
@@ -592,7 +591,7 @@ func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
 	if obj == nil {
 		// Return an empty array for non-existent keys
 		return &EvalResponse{
-			Result: clientio.EmptyArray,
+			Result: EmptyArray,
 			Error:  nil,
 		}
 	}
@@ -1050,7 +1049,7 @@ func evalZREM(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -1174,7 +1173,7 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -1189,7 +1188,7 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 	rank, score := sortedSet.RankWithScore(member, false)
 	if rank == -1 {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -1223,7 +1222,7 @@ func evalZCARD(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -1376,7 +1375,7 @@ func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -1420,7 +1419,7 @@ func jsonGETHelper(store *dstore.Store, path, key string) *EvalResponse {
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -1473,7 +1472,7 @@ func evalJSONSET(args []string, store *dstore.Store) *EvalResponse {
 			obj := store.Get(key)
 			if obj != nil {
 				return &EvalResponse{
-					Result: clientio.NIL,
+					Result: NIL,
 					Error:  nil,
 				}
 			}
@@ -1487,7 +1486,7 @@ func evalJSONSET(args []string, store *dstore.Store) *EvalResponse {
 			obj := store.Get(key)
 			if obj == nil {
 				return &EvalResponse{
-					Result: clientio.NIL,
+					Result: NIL,
 					Error:  nil,
 				}
 			}
@@ -1557,7 +1556,7 @@ func evalJSONSET(args []string, store *dstore.Store) *EvalResponse {
 	newObj := store.NewObj(rootData, -1, object.ObjTypeJSON)
 	store.Put(key, newObj)
 	return &EvalResponse{
-		Result: clientio.OK,
+		Result: OK,
 		Error:  nil,
 	}
 }
@@ -1587,9 +1586,9 @@ func evalJSONINGEST(args []string, store *dstore.Store) *EvalResponse {
 	setArgs = append(setArgs, args[1:]...)
 
 	result := evalJSONSET(setArgs, store)
-	if resultValue, ok := result.Result.(clientio.RespType); ok {
+	if resultValue, ok := result.Result.(RespType); ok {
 		// If Result is of type RespType, check equality
-		if resultValue == clientio.OK {
+		if resultValue == OK {
 			return &EvalResponse{
 				Result: uniqueID.String(),
 				Error:  nil,
@@ -1622,7 +1621,7 @@ func evalJSONTYPE(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -1665,7 +1664,7 @@ func evalJSONTYPE(args []string, store *dstore.Store) *EvalResponse {
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
 		return &EvalResponse{
-			Result: clientio.EmptyArray,
+			Result: EmptyArray,
 			Error:  nil,
 		}
 	}
@@ -2017,7 +2016,7 @@ func evalPTTL(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerNegativeTwo,
+			Result: IntegerNegativeTwo,
 			Error:  nil,
 		}
 	}
@@ -2026,7 +2025,7 @@ func evalPTTL(args []string, store *dstore.Store) *EvalResponse {
 
 	if !isExpirySet {
 		return &EvalResponse{
-			Result: clientio.IntegerNegativeOne,
+			Result: IntegerNegativeOne,
 			Error:  nil,
 		}
 	}
@@ -2061,7 +2060,7 @@ func evalTTL(args []string, store *dstore.Store) *EvalResponse {
 	// if key does not exist, return RESP encoded -2 denoting key does not exist
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerNegativeTwo,
+			Result: IntegerNegativeTwo,
 			Error:  nil,
 		}
 	}
@@ -2070,7 +2069,7 @@ func evalTTL(args []string, store *dstore.Store) *EvalResponse {
 	exp, isExpirySet := dstore.GetExpiry(obj, store)
 	if !isExpirySet {
 		return &EvalResponse{
-			Result: clientio.IntegerNegativeOne,
+			Result: IntegerNegativeOne,
 			Error:  nil,
 		}
 	}
@@ -2220,7 +2219,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -2235,7 +2234,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
 	hashMap := obj.Value.(HashMap)
 	if len(hashMap) == 0 {
 		return &EvalResponse{
-			Result: clientio.EmptyArray,
+			Result: EmptyArray,
 			Error:  nil,
 		}
 	}
@@ -2502,7 +2501,7 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 	// Incorrect number of arguments should return error
 	if len(args) < 1 || len(args) > 2 {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMIN"),
 		}
 	}
@@ -2521,7 +2520,7 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 	sortedSet, err := sortedset.FromObject(obj)
 	if err != nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  diceerrors.ErrWrongTypeOperation,
 		}
 	}
@@ -2533,7 +2532,7 @@ func evalZPOPMIN(args []string, store *dstore.Store) *EvalResponse {
 		if err != nil {
 			// Return an error if the argument is not a valid integer
 			return &EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  diceerrors.ErrIntegerOutOfRange,
 			}
 		}
@@ -2565,7 +2564,7 @@ func evalDUMP(args []string, store *dstore.Store) *EvalResponse {
 	key := args[0]
 	obj := store.Get(key)
 	if obj == nil {
-		return makeEvalResult(clientio.NIL)
+		return makeEvalResult(NIL)
 	}
 
 	serializedValue, err := rdbSerialize(obj)
@@ -2606,7 +2605,7 @@ func evalRestore(args []string, store *dstore.Store) *EvalResponse {
 		store.Put(key, obj)
 	}
 
-	return makeEvalResult(clientio.OK)
+	return makeEvalResult(OK)
 }
 
 // evalHLEN returns the number of fields contained in the hash stored at key.
@@ -2628,7 +2627,7 @@ func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -2678,7 +2677,7 @@ func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 		hashMap = obj.Value.(HashMap)
 	} else {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -2692,7 +2691,7 @@ func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 	return &EvalResponse{
-		Result: clientio.IntegerZero,
+		Result: IntegerZero,
 		Error:  nil,
 	}
 }
@@ -2824,11 +2823,11 @@ func evalBFRESERVE(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(err)
 	} else if err != nil && err == diceerrors.ErrKeyNotFound { // key does not exists
 		CreateOrReplaceBloomFilter(key, opts, store)
-		return makeEvalResult(clientio.OK)
+		return makeEvalResult(OK)
 	} else if bf != nil { // bloom filter already exists
 		return makeEvalError(diceerrors.ErrKeyExists)
 	}
-	return makeEvalResult(clientio.OK)
+	return makeEvalResult(OK)
 }
 
 // evalBFADD evaluates the BF.ADD command responsible for adding an element to a bloom filter. If the filter does not
@@ -2862,7 +2861,7 @@ func evalBFEXISTS(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil && err != diceerrors.ErrKeyNotFound {
 		return makeEvalError(err)
 	} else if err != nil && err == diceerrors.ErrKeyNotFound {
-		return makeEvalResult(clientio.IntegerZero)
+		return makeEvalResult(IntegerZero)
 	}
 
 	result, err := bf.exists(args[1])
@@ -2903,7 +2902,7 @@ func evalBFINFO(args []string, store *dstore.Store) *EvalResponse {
 func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) < 1 || len(args) > 2 {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  diceerrors.ErrWrongArgumentCount("ZPOPMAX"),
 		}
 	}
@@ -2916,7 +2915,7 @@ func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
 		ops, err := strconv.Atoi(args[1])
 		if err != nil {
 			return &EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  diceerrors.ErrGeneral("value is out of range, must be positive"), // This error is thrown when then count argument is not an integer
 			}
 		}
@@ -2940,7 +2939,7 @@ func evalZPOPMAX(args []string, store *dstore.Store) *EvalResponse {
 	sortedSet, err := sortedset.FromObject(obj)
 	if err != nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  diceerrors.ErrWrongTypeOperation, // Returns this error when a key is present in the store but is not of type sortedset.Set
 		}
 	}
@@ -3020,7 +3019,7 @@ func evalJSONARRTRIM(args []string, store *dstore.Store) *EvalResponse {
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
 		return &EvalResponse{
-			Result: clientio.RespEmptyArray,
+			Result: RespEmptyArray,
 			Error:  nil,
 		}
 	}
@@ -3161,7 +3160,7 @@ func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
 		if nos == 0 {
 			// returns empty string if count given is 0
 			return &EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			}
 		}
@@ -3178,7 +3177,7 @@ func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(args[0])
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -3206,7 +3205,7 @@ func evalLPOP(args []string, store *dstore.Store) *EvalResponse {
 
 	if len(elements) == 0 {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -3240,7 +3239,7 @@ func evalRPOP(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(args[0])
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -3257,7 +3256,7 @@ func evalRPOP(args []string, store *dstore.Store) *EvalResponse {
 	if err != nil {
 		if errors.Is(err, ErrDequeEmpty) {
 			return &EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			}
 		}
@@ -3283,7 +3282,7 @@ func evalLLEN(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(args[0])
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -3323,7 +3322,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -3368,7 +3367,7 @@ func evalJSONARRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 		arr, ok := data.([]interface{})
 		if !ok {
 			// Not an array
-			resultsArray = append(resultsArray, clientio.NIL)
+			resultsArray = append(resultsArray, NIL)
 			return data, false
 		}
 
@@ -3424,7 +3423,7 @@ func evalJSONARRLEN(args []string, store *dstore.Store) *EvalResponse {
 	// If the object is not present in the store or if its nil, then we should simply return nil.
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -3489,7 +3488,7 @@ func evalJSONARRLEN(args []string, store *dstore.Store) *EvalResponse {
 			case utils.ArrayType:
 				arrlenList = append(arrlenList, len(result.([]interface{})))
 			default:
-				arrlenList = append(arrlenList, clientio.NIL)
+				arrlenList = append(arrlenList, NIL)
 			}
 		}
 
@@ -3634,7 +3633,7 @@ func evalJSONARRPOP(args []string, store *dstore.Store) *EvalResponse {
 		// returns nil
 		// also, return nil if array is empty
 		if !ok || len(arr) == 0 {
-			popArr = append(popArr, clientio.NIL)
+			popArr = append(popArr, NIL)
 			continue
 		}
 
@@ -3710,7 +3709,7 @@ func evalJSONARRINSERT(args []string, store *dstore.Store) *EvalResponse {
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
 		return &EvalResponse{
-			Result: clientio.RespEmptyArray,
+			Result: RespEmptyArray,
 			Error:  nil,
 		}
 	}
@@ -3864,7 +3863,7 @@ func evalJSONOBJKEYS(args []string, store *dstore.Store) *EvalResponse {
 	results := expr.Get(jsonData)
 	if len(results) == 0 {
 		return &EvalResponse{
-			Result: clientio.RespEmptyArray,
+			Result: RespEmptyArray,
 			Error:  nil,
 		}
 	}
@@ -3907,7 +3906,7 @@ func evalJSONRESP(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -4042,7 +4041,7 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -4118,7 +4117,7 @@ func evalJSONDebugMemory(args []string, store *dstore.Store) *EvalResponse {
 					// if index is out of bound return empty array
 					if index >= len(arr) {
 						return &EvalResponse{
-							Result: clientio.EmptyArray,
+							Result: EmptyArray,
 							Error:  nil,
 						}
 					}
@@ -4302,7 +4301,7 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -4356,7 +4355,7 @@ func evalGETDEL(args []string, store *dstore.Store) *EvalResponse {
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -4526,7 +4525,7 @@ func evalHMSET(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.OK,
+		Result: OK,
 		Error:  nil,
 	}
 }
@@ -4667,7 +4666,7 @@ func evalHSETNX(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if response.Result != clientio.NIL {
+	if response.Result != NIL {
 		return &EvalResponse{
 			Result: int64(0),
 			Error:  nil,
@@ -5076,12 +5075,12 @@ func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
 		store.Put(key, newObj)
 		if resp {
 			return &EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: IntegerOne,
 				Error:  nil,
 			}
 		}
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -5133,19 +5132,19 @@ func evalGETBIT(args []string, store *dstore.Store) *EvalResponse {
 		// check whether offset, length exists or not
 		if requiredByteArraySize > byteArrayLength {
 			return &EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			}
 		}
 		value := byteArray.GetBit(int(offset))
 		if value {
 			return &EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: IntegerOne,
 				Error:  nil,
 			}
 		}
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 
@@ -5159,25 +5158,25 @@ func evalGETBIT(args []string, store *dstore.Store) *EvalResponse {
 		}
 		if requiredByteArraySize > byteArray.Length {
 			return &EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			}
 		}
 		value := byteArray.GetBit(int(offset))
 		if value {
 			return &EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: IntegerOne,
 				Error:  nil,
 			}
 		}
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 
 	default:
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -5207,7 +5206,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -5274,7 +5273,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) *EvalResponse {
 		}
 		if start > end || start >= valueLength {
 			return &EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			}
 		}
@@ -5296,7 +5295,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) *EvalResponse {
 		}
 		if start > end {
 			return &EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			}
 		}
@@ -5309,7 +5308,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) *EvalResponse {
 
 		if startByte >= valueLength {
 			return &EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			}
 		}
@@ -5444,7 +5443,7 @@ func evalGetObject(args []string, store *dstore.Store) *EvalResponse {
 	// if key does not exist, return RESP encoded nil
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -5503,12 +5502,12 @@ func evalJSONSTRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 			resultsArray = append(resultsArray, len(newValue))
 			jsonData = newValue
 		} else {
-			return makeEvalResult(clientio.EmptyArray)
+			return makeEvalResult(EmptyArray)
 		}
 	} else {
 		expr, err := jp.ParseString(path)
 		if err != nil {
-			return makeEvalResult(clientio.EmptyArray)
+			return makeEvalResult(EmptyArray)
 		}
 
 		_, modifyErr := expr.Modify(jsonData, func(data any) (interface{}, bool) {
@@ -5519,18 +5518,18 @@ func evalJSONSTRAPPEND(args []string, store *dstore.Store) *EvalResponse {
 				resultsArray = append([]interface{}{len(newValue)}, resultsArray...)
 				return newValue, true
 			default:
-				resultsArray = append([]interface{}{clientio.RespNIL}, resultsArray...)
+				resultsArray = append([]interface{}{RespNIL}, resultsArray...)
 				return data, false
 			}
 		})
 
 		if modifyErr != nil {
-			return makeEvalResult(clientio.EmptyArray)
+			return makeEvalResult(EmptyArray)
 		}
 	}
 
 	if len(resultsArray) == 0 {
-		return makeEvalResult(clientio.EmptyArray)
+		return makeEvalResult(EmptyArray)
 	}
 
 	obj.Value = jsonData
@@ -5640,7 +5639,7 @@ func evalJSONDEL(args []string, store *dstore.Store) *EvalResponse {
 	// Retrieve the object from the database
 	obj := store.Get(key)
 	if obj == nil {
-		return makeEvalResult(clientio.IntegerZero)
+		return makeEvalResult(IntegerZero)
 	}
 
 	if errWithMessage := object.AssertType(obj.Type, object.ObjTypeJSON); errWithMessage != nil {
@@ -5868,7 +5867,7 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 	copyObj := cd.InternalObjs[0].Obj.DeepCopy()
 	if copyObj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -5882,7 +5881,7 @@ func evalCOPYObject(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 	}
 
 	return &EvalResponse{
-		Result: clientio.IntegerOne,
+		Result: IntegerOne,
 		Error:  nil,
 	}
 }
@@ -5938,7 +5937,7 @@ func evalPFMERGE(cd *cmd.DiceDBCmd, store *dstore.Store) *EvalResponse {
 	store.Put(destKey, obj, dstore.WithPutCmd(dstore.PFMERGE))
 
 	return &EvalResponse{
-		Result: clientio.OK,
+		Result: OK,
 		Error:  nil,
 	}
 }
@@ -6186,7 +6185,7 @@ func evalGEODIST(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -6247,7 +6246,7 @@ func evalGEOPOS(args []string, store *dstore.Store) *EvalResponse {
 
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -6317,7 +6316,7 @@ func evalGEOHASH(args []string, store *dstore.Store) *EvalResponse {
 	for _, member := range members {
 		entry, exists := ss.Get(member)
 		if !exists {
-			result = append(result, nil) // clientio.RespNIL
+			result = append(result, nil) // RespNIL
 			continue
 		}
 
@@ -6371,7 +6370,7 @@ func evalKEYS(args []string, store *dstore.Store) *EvalResponse {
 
 // TODO: Placeholder to support monitoring
 func evalCLIENT(args []string, store *dstore.Store) *EvalResponse {
-	return makeEvalResult(clientio.OK)
+	return makeEvalResult(OK)
 }
 
 // TODO: Placeholder to support monitoring
@@ -6440,7 +6439,7 @@ func evalPERSIST(args []string, store *dstore.Store) *EvalResponse {
 	// If the key doesn't exist, return 0
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -6449,7 +6448,7 @@ func evalPERSIST(args []string, store *dstore.Store) *EvalResponse {
 	_, isExpirySet := dstore.GetExpiry(obj, store)
 	if !isExpirySet {
 		return &EvalResponse{
-			Result: clientio.IntegerZero,
+			Result: IntegerZero,
 			Error:  nil,
 		}
 	}
@@ -6458,7 +6457,7 @@ func evalPERSIST(args []string, store *dstore.Store) *EvalResponse {
 	dstore.DelExpiry(obj, store)
 
 	return &EvalResponse{
-		Result: clientio.IntegerOne,
+		Result: IntegerOne,
 		Error:  nil,
 	}
 }
@@ -6525,7 +6524,7 @@ func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
 // 		key := keys[0]
 // 		obj := store.Get(key)
 // 		if obj == nil {
-// 			return makeEvalResult(clientio.IntegerZero)
+// 			return makeEvalResult(IntegerZero)
 // 		}
 
 // 		var value []byte
@@ -6677,13 +6676,13 @@ func evalFLUSHDB(args []string, store *dstore.Store) *EvalResponse {
 		return makeEvalError(diceerrors.ErrSyntax)
 	}
 
-	return makeEvalResult(clientio.OK)
+	return makeEvalResult(OK)
 }
 
 func evalObjectIdleTime(key string, store *dstore.Store) *EvalResponse {
 	obj := store.GetNoTouch(key)
 	if obj == nil {
-		return makeEvalResult(clientio.NIL)
+		return makeEvalResult(NIL)
 	}
 
 	return makeEvalResult(int64(dstore.GetIdleTime(obj.LastAccessedAt)))
@@ -6854,7 +6853,7 @@ func evalCommandInfo(args []string) *EvalResponse {
 		if cmdMeta, found := cmdMetaMap[arg]; found {
 			result = append(result, cmdMeta)
 		} else {
-			result = append(result, clientio.RespNIL)
+			result = append(result, RespNIL)
 		}
 	}
 

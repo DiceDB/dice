@@ -1372,12 +1372,12 @@ func init() {
 	DiceCmds["OBJECTCOPY"] = objectCopyCmdMeta
 	DiceCmds["DECR"] = decrCmdMeta // moved to ironhawk
 	DiceCmds["DECRBY"] = decrByCmdMeta
-	DiceCmds["DEL"] = delCmdMeta
+	DiceCmds["DEL"] = delCmdMeta // moved to ironhawk
 	DiceCmds["DUMP"] = dumpkeyCMmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta // moved to ironhawk
 	DiceCmds["EXISTS"] = existsCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
-	DiceCmds["EXPIREAT"] = expireatCmdMeta
+	DiceCmds["EXPIREAT"] = expireatCmdMeta // moved to ironhawk
 	DiceCmds["EXPIRETIME"] = expiretimeCmdMeta
 	DiceCmds["FLUSHDB"] = flushdbCmdMeta
 	DiceCmds["GEOADD"] = geoAddCmdMeta

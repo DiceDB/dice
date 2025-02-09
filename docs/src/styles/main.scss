@@ -213,4 +213,8 @@ pre {
   line-height: 1.5em !important;
 }
 
+.content-fit{
+  width: fit-content;
+}
+
 @import "../../node_modules/bulma/bulma.sass";

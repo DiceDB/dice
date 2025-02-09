@@ -18,7 +18,6 @@ import (
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/clientio"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/sortedset"
@@ -188,9 +187,9 @@ func testEvalHELLO(t *testing.T, store *dstore.Store) {
 	}
 
 	tests := map[string]evalTestCase{
-		"nil value":            {input: nil, output: clientio.Encode(resp, false)},
-		"empty args":           {input: []string{}, output: clientio.Encode(resp, false)},
-		"one value":            {input: []string{"HEY"}, output: clientio.Encode(resp, false)},
+		"nil value":            {input: nil, output: Encode(resp, false)},
+		"empty args":           {input: []string{}, output: Encode(resp, false)},
+		"one value":            {input: []string{"HEY"}, output: Encode(resp, false)},
 		"more than one values": {input: []string{"HEY", "HELLO"}, output: []byte("-ERR wrong number of arguments for 'hello' command\r\n")},
 	}
 
@@ -213,11 +212,11 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 		},
 		"key val pair": {
 			input:          []string{"KEY", "VAL"},
-			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+			migratedOutput: EvalResponse{Result: OK, Error: nil},
 		},
 		"key val pair with int val": {
 			input:          []string{"KEY", "123456"},
-			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+			migratedOutput: EvalResponse{Result: OK, Error: nil},
 		},
 		"key val pair and expiry key": {
 			input:          []string{"KEY", "VAL", Px},
@@ -229,7 +228,7 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 		},
 		"key val pair and valid EX": {
 			input:          []string{"KEY", "VAL", Ex, "2"},
-			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+			migratedOutput: EvalResponse{Result: OK, Error: nil},
 		},
 		"key val pair and invalid negative EX": {
 			input:          []string{"KEY", "VAL", Ex, "-2"},
@@ -257,7 +256,7 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 		},
 		"key val pair and valid PX": {
 			input:          []string{"KEY", "VAL", Px, "2000"},
-			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+			migratedOutput: EvalResponse{Result: OK, Error: nil},
 		},
 		"key val pair and invalid PX": {
 			input:          []string{"KEY", "VAL", Px, "invalid_expiry_val"},
@@ -304,7 +303,7 @@ func testEvalSET(t *testing.T, store *dstore.Store) {
 		},
 		"key val with get and nil get": {
 			input:          []string{"key", "bar", "GET"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 		"key val with get and but value is json": {
 			input: []string{"key", "bar", "GET"},
@@ -422,7 +421,7 @@ func testEvalGETDEL(t *testing.T, store *dstore.Store) {
 		},
 		"key does not exist": {
 			input:          []string{"NONEXISTENT_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 		"multiple arguments": {
 			input:          []string{"KEY1", "KEY2"},
@@ -453,7 +452,7 @@ func testEvalGETDEL(t *testing.T, store *dstore.Store) {
 				store.SetExpiry(obj, int64(-2*time.Millisecond))
 			},
 			input:          []string{"EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 		"key deleted by previous call of GETDEL": {
 			setup: func() {
@@ -467,7 +466,7 @@ func testEvalGETDEL(t *testing.T, store *dstore.Store) {
 				evalGETDEL([]string{key}, store)
 			},
 			input:          []string{"DELETED_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 	}
 
@@ -489,7 +488,7 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "key does not exist",
 			input:          []string{"NONEXISTENT_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 		{
 			name:           "multiple arguments",
@@ -523,7 +522,7 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 				store.SetExpiry(obj, int64(-2*time.Millisecond))
 			},
 			input:          []string{"EXISTING_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 	}
 
@@ -569,7 +568,7 @@ func testEvalGETSET(t *testing.T, store *dstore.Store) {
 		{
 			name:           "GETSET key not exists",
 			input:          []string{"HELLO", "WORLD"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 		{
 			name: "GETSET key exists",
@@ -654,7 +653,7 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			input: []string{"NONEXISTENT_KEY", strconv.FormatInt(1, 10)},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -670,7 +669,7 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY", "0"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: IntegerOne,
 				Error:  nil,
 			},
 		},
@@ -686,7 +685,7 @@ func testEvalEXPIRE(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY", strconv.FormatInt(1, 10)},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: IntegerOne,
 				Error:  nil,
 			},
 		},
@@ -772,7 +771,7 @@ func testEvalEXPIRETIME(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerNegativeTwo,
+				Result: IntegerNegativeTwo,
 				Error:  nil,
 			},
 		},
@@ -788,7 +787,7 @@ func testEvalEXPIRETIME(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerNegativeOne,
+				Result: IntegerNegativeOne,
 				Error:  nil,
 			},
 		},
@@ -841,7 +840,7 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			input: []string{"NONEXISTENT_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -857,7 +856,7 @@ func testEvalEXPIREAT(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY", strconv.FormatInt(time.Now().Add(2*time.Minute).Unix(), 10)},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: IntegerOne,
 				Error:  nil,
 			},
 		},
@@ -1282,7 +1281,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			input:  []string{"NONEXISTENT_KEY"},
 			output: []byte("$-1\r\n"),
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		},
@@ -1331,7 +1330,7 @@ func testEvalJSONARRLEN(t *testing.T, store *dstore.Store) {
 			input:  []string{"EXISTING_KEY", "$.*"},
 			output: []byte("*5\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n$-1\r\n"),
 			migratedOutput: EvalResponse{
-				Result: []interface{}{clientio.NIL, clientio.NIL, clientio.NIL, clientio.NIL, clientio.NIL},
+				Result: []interface{}{NIL, NIL, NIL, NIL, NIL},
 				Error:  nil,
 			},
 		},
@@ -1609,7 +1608,7 @@ func testEvalJSONDEL(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -1686,7 +1685,7 @@ func testEvalJSONFORGET(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -1941,7 +1940,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		},
@@ -2037,7 +2036,7 @@ func testEvalJSONTYPE(t *testing.T, store *dstore.Store) {
 
 			input: []string{"EXISTING_KEY", "$.language"},
 			migratedOutput: EvalResponse{
-				Result: clientio.EmptyArray,
+				Result: EmptyArray,
 				Error:  nil,
 			},
 		},
@@ -2084,7 +2083,7 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		},
@@ -2134,7 +2133,7 @@ func testEvalJSONGET(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		},
@@ -2182,7 +2181,7 @@ func testEvalJSONSET(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"doc", "$", "{\"a\":2}"},
 			migratedOutput: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -2619,7 +2618,7 @@ func testEvalPTTL(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerNegativeTwo,
+				Result: IntegerNegativeTwo,
 				Error:  nil,
 			},
 		},
@@ -2643,7 +2642,7 @@ func testEvalPTTL(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerNegativeOne,
+				Result: IntegerNegativeOne,
 				Error:  nil,
 			},
 		},
@@ -2662,8 +2661,8 @@ func testEvalPTTL(t *testing.T, store *dstore.Store) {
 			input: []string{"EXISTING_KEY"},
 			newValidator: func(output interface{}) {
 				assert.True(t, output != nil)
-				assert.True(t, output != clientio.IntegerNegativeOne)
-				assert.True(t, output != clientio.IntegerNegativeTwo)
+				assert.True(t, output != IntegerNegativeOne)
+				assert.True(t, output != IntegerNegativeTwo)
 			},
 		},
 		"key exists but expired": {
@@ -2680,7 +2679,7 @@ func testEvalPTTL(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerNegativeTwo,
+				Result: IntegerNegativeTwo,
 				Error:  nil,
 			},
 		},
@@ -2711,7 +2710,7 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerNegativeTwo,
+				Result: IntegerNegativeTwo,
 				Error:  nil,
 			},
 		},
@@ -2735,7 +2734,7 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerNegativeOne,
+				Result: IntegerNegativeOne,
 				Error:  nil,
 			},
 		},
@@ -2754,8 +2753,8 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 			input: []string{"EXISTING_KEY"},
 			newValidator: func(output interface{}) {
 				assert.True(t, output != nil)
-				assert.True(t, output != clientio.IntegerNegativeOne)
-				assert.True(t, output != clientio.IntegerNegativeTwo)
+				assert.True(t, output != IntegerNegativeOne)
+				assert.True(t, output != IntegerNegativeTwo)
 			},
 		},
 		"key exists but expired": {
@@ -2772,7 +2771,7 @@ func testEvalTTL(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerNegativeTwo,
+				Result: IntegerNegativeTwo,
 				Error:  nil,
 			},
 		},
@@ -2850,7 +2849,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 			name:  "PERSIST key does not exist",
 			input: []string{"nonexistent"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -2861,7 +2860,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"existent_no_expiry", "value"}, store)
 			},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -2872,7 +2871,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"existent_with_expiry", "value", Ex, "1"}, store)
 			},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: IntegerOne,
 				Error:  nil,
 			},
 		},
@@ -2884,7 +2883,7 @@ func testEvalPersist(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"existent_with_expiry_not_expired", "value", Ex, "10000"}, store) // 10000 seconds in the future
 			},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerOne,
+				Result: IntegerOne,
 				Error:  nil,
 			},
 		},
@@ -3058,7 +3057,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				Args: []string{"NON_EXISTING_DEST_KEY"},
 			},
 			output: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -3079,7 +3078,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				Args: []string{"EXISTING_DEST_KEY"},
 			},
 			output: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -3100,7 +3099,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				Args: []string{"EXISTING_DEST_KEY", "NON_EXISTING_SRC_KEY"},
 			},
 			output: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -3129,7 +3128,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				},
 			},
 			output: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -3180,7 +3179,7 @@ func testEvalPFMERGE(t *testing.T, store *dstore.Store) {
 				},
 			},
 			output: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -3211,7 +3210,7 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"KEY", "field_name"},
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		},
@@ -3232,7 +3231,7 @@ func testEvalHGET(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"KEY_MOCK", "non_existent_key"},
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		},
@@ -3432,7 +3431,7 @@ func testEvalHVALS(t *testing.T, store *dstore.Store) {
 			name:           "HVALS key doesn't exists",
 			setup:          nil,
 			input:          []string{"NONEXISTENTHVALSKEY"},
-			migratedOutput: EvalResponse{Result: clientio.EmptyArray, Error: nil},
+			migratedOutput: EvalResponse{Result: EmptyArray, Error: nil},
 		},
 		{
 			name: "HVALS key exists",
@@ -3502,7 +3501,7 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 		"key doesn't exist": {
 			setup:          func() {},
 			input:          []string{"KEY", "field_name"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerZero, Error: nil},
 		},
 		"key exists but field_name doesn't exists": {
 			setup: func() {
@@ -3520,7 +3519,7 @@ func testEvalHSTRLEN(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK", "non_existent_key"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerZero, Error: nil},
 		},
 		"both key and field_name exists": {
 			setup: func() {
@@ -3563,7 +3562,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 			name:           "HEXISTS key doesn't exist",
 			setup:          nil,
 			input:          []string{"KEY", "field_name"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerZero, Error: nil},
 		},
 		{
 			name: "HEXISTS key exists but field_name doesn't exists",
@@ -3582,7 +3581,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK", "non_existent_key"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerZero, Error: nil},
 		},
 		{
 			name: "HEXISTS both key and field_name exists",
@@ -3601,7 +3600,7 @@ func testEvalHEXISTS(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"KEY_MOCK", "mock_field_name"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerOne, Error: nil},
 		},
 	}
 
@@ -4047,7 +4046,7 @@ func testEvalLPOP(t *testing.T, store *dstore.Store) {
 		},
 		"key does not exist": {
 			input:          []string{"NONEXISTENT_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 		"key exists with 1 value": {
 			setup: func() {
@@ -4090,7 +4089,7 @@ func testEvalLPOP(t *testing.T, store *dstore.Store) {
 				evalRPUSH([]string{"k", "v1", "v2"}, store)
 			},
 			input:          []string{"k", "0"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 	}
 	runMigratedEvalTests(t, tests, evalLPOP, store)
@@ -4119,7 +4118,7 @@ func testEvalRPOP(t *testing.T, store *dstore.Store) {
 		},
 		"key does not exist": {
 			input:          []string{"NONEXISTENT_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 		"key exists with 1 value": {
 			setup: func() {
@@ -4156,7 +4155,7 @@ func testEvalLLEN(t *testing.T, store *dstore.Store) {
 		},
 		"key does not exist": {
 			input:          []string{"NONEXISTENT_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerZero, Error: nil},
 		},
 		"key exists": {
 			setup: func() {
@@ -4563,7 +4562,7 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"KEY1", "field_name", "value"},
 			migratedOutput: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -4571,7 +4570,7 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"KEY1", "field_name", "value_new"},
 			migratedOutput: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -4579,7 +4578,7 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"KEY2", "field_name_new", "value_new_new"},
 			migratedOutput: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -4600,7 +4599,7 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"KEY_MOCK", "mock_field_name", "mock_field_value"},
 			migratedOutput: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -4628,7 +4627,7 @@ func testEvalHMSET(t *testing.T, store *dstore.Store) {
 				"mock_value_new",
 			},
 			migratedOutput: EvalResponse{
-				Result: clientio.OK,
+				Result: OK,
 				Error:  nil,
 			},
 		},
@@ -4648,7 +4647,7 @@ func testEvalHKEYS(t *testing.T, store *dstore.Store) {
 			name:           "HKEYS key doesn't exist",
 			setup:          nil,
 			input:          []string{"KEY"},
-			migratedOutput: EvalResponse{Result: clientio.EmptyArray, Error: nil},
+			migratedOutput: EvalResponse{Result: EmptyArray, Error: nil},
 		},
 		{
 			name: "HKEYS key exists but not a hash",
@@ -4834,7 +4833,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 		"memory nonexistent key": {
 			setup:          func() {},
 			input:          []string{"MEMORY", "NONEXISTENT_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerZero, Error: nil},
 		},
 
 		// memory subcommand tests for existing key
@@ -4941,7 +4940,7 @@ func testEvalDebug(t *testing.T, store *dstore.Store) {
 				store.Put(key, obj)
 			},
 			input:          []string{"MEMORY", "EXISTING_KEY", "$[4]"},
-			migratedOutput: EvalResponse{Result: clientio.EmptyArray, Error: nil},
+			migratedOutput: EvalResponse{Result: EmptyArray, Error: nil},
 		},
 
 		"multiple valid and invalid index paths": {
@@ -5047,7 +5046,7 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 		},
 		"HLEN non-existent key": {
 			input:          []string{"nonexistent_key"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerZero, Error: nil},
 		},
 		"HLEN key exists but not a hash": {
 			setup: func() {
@@ -5059,7 +5058,7 @@ func testEvalHLEN(t *testing.T, store *dstore.Store) {
 		"HLEN empty hash": {
 			setup:          func() {},
 			input:          []string{"empty_hash"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerZero, Error: nil},
 		},
 		"HLEN hash with elements": {
 			setup: func() {
@@ -5144,7 +5143,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			input:  []string{"MOCK_KEY", "$.b"},
 			output: []byte("*1\r\n$-1\r\n"),
 			migratedOutput: EvalResponse{
-				Result: []interface{}{clientio.NIL},
+				Result: []interface{}{NIL},
 				Error:  nil,
 			},
 		},
@@ -5160,7 +5159,7 @@ func testEvalJSONARRPOP(t *testing.T, store *dstore.Store) {
 			input:  []string{"MOCK_KEY", "$.*"},
 			output: []byte("*2\r\n$-1\r\n$-1\r\n"),
 			migratedOutput: EvalResponse{
-				Result: []interface{}{clientio.NIL, clientio.NIL},
+				Result: []interface{}{NIL, NIL},
 				Error:  nil,
 			},
 		},
@@ -6260,7 +6259,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 		"one value":                              {input: []string{"KEY"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
 		"key val pair":                           {input: []string{"KEY", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
 		"key exp pair":                           {input: []string{"KEY", "123456"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
-		"key exp value pair":                     {input: []string{"KEY", "123", "VAL"}, migratedOutput: EvalResponse{Result: clientio.OK, Error: nil}},
+		"key exp value pair":                     {input: []string{"KEY", "123", "VAL"}, migratedOutput: EvalResponse{Result: OK, Error: nil}},
 		"key exp value pair with extra args":     {input: []string{"KEY", "123", "VAL", " "}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'setex' command")}},
 		"key exp value pair with invalid exp":    {input: []string{"KEY", "0", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'setex' command")}},
 		"key exp value pair with exp > maxexp":   {input: []string{"KEY", "9223372036854776", "VAL"}, migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR invalid expire time in 'setex' command")}},
@@ -6272,7 +6271,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"TEST_KEY", "5", "TEST_VALUE"},
 			newValidator: func(output interface{}) {
-				assert.Equal(t, clientio.OK, output)
+				assert.Equal(t, OK, output)
 
 				// Check if the key was set correctly
 				getValue := evalGET([]string{"TEST_KEY"}, store)
@@ -6290,7 +6289,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 
 				// Check if the key has been deleted after expiry
 				expiredValue := evalGET([]string{"TEST_KEY"}, store)
-				assert.Equal(t, clientio.NIL, expiredValue.Result)
+				assert.Equal(t, NIL, expiredValue.Result)
 			},
 		},
 		"update existing key": {
@@ -6299,7 +6298,7 @@ func testEvalSETEX(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXISTING_KEY", "10", "NEW_VALUE"},
 			newValidator: func(output interface{}) {
-				assert.Equal(t, clientio.OK, output)
+				assert.Equal(t, OK, output)
 
 				// Check if the key was updated correctly
 				getValue := evalGET([]string{"EXISTING_KEY"}, store)
@@ -6365,7 +6364,7 @@ func testEvalFLUSHDB(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"key", "val"}, store)
 			},
 			input:          nil,
-			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+			migratedOutput: EvalResponse{Result: OK, Error: nil},
 		},
 		"two keys exist in db": {
 			setup: func() {
@@ -6373,7 +6372,7 @@ func testEvalFLUSHDB(t *testing.T, store *dstore.Store) {
 				evalSET([]string{"key2", "val2"}, store)
 			},
 			input:          nil,
-			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+			migratedOutput: EvalResponse{Result: OK, Error: nil},
 		},
 	}
 	runMigratedEvalTests(t, tests, evalFLUSHDB, store)
@@ -6560,7 +6559,7 @@ func testEvalHRANDFIELD(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.RespType(0),
+				Result: RespType(0),
 				Error:  nil,
 			},
 		},
@@ -6856,7 +6855,7 @@ func testEvalJSONRESP(t *testing.T, store *dstore.Store) {
 		"key does not exist": {
 			setup:          func() {},
 			input:          []string{"NOTEXISTANT_KEY"},
-			migratedOutput: EvalResponse{Result: clientio.NIL, Error: nil},
+			migratedOutput: EvalResponse{Result: NIL, Error: nil},
 		},
 		"string json": {
 			setup: func() {
@@ -7589,7 +7588,7 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 		"ZRANK with non-existing key": {
 			input: []string{"non_existing_key", "member"},
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		},
@@ -7609,7 +7608,7 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"myzset", "non_existing_member"},
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		},
@@ -7694,7 +7693,7 @@ func testEvalZREM(t *testing.T, store *dstore.Store) {
 		"ZREM with non-existent key": {
 			input: []string{"non_existent_key", "field"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -7787,7 +7786,7 @@ func testEvalZCARD(t *testing.T, store *dstore.Store) {
 		"ZCARD with non-existent key": {
 			input: []string{"non_existent_key"},
 			migratedOutput: EvalResponse{
-				Result: clientio.IntegerZero,
+				Result: IntegerZero,
 				Error:  nil,
 			},
 		},
@@ -8067,7 +8066,7 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 			setup: func() {},
 			input: []string{"NONEXISTENT_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		}, "dump string value": {
@@ -8112,7 +8111,7 @@ func testEvalDUMP(t *testing.T, store *dstore.Store) {
 			},
 			input: []string{"EXPIRED_KEY"},
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		},
@@ -8380,7 +8379,7 @@ func testEvalGEOPOS(t *testing.T, store *dstore.Store) {
 		"GEOPOS with no members in key": {
 			input: []string{"index", "Palermo"},
 			migratedOutput: EvalResponse{
-				Result: clientio.NIL,
+				Result: NIL,
 				Error:  nil,
 			},
 		},
@@ -9078,7 +9077,7 @@ func testEvalBFRESERVE(t *testing.T, store *dstore.Store) {
 		{
 			name:           "BF.RESERVE successful reserve",
 			input:          []string{"myBloomFilter", "0.01", "1000"},
-			migratedOutput: EvalResponse{Result: clientio.OK, Error: nil},
+			migratedOutput: EvalResponse{Result: OK, Error: nil},
 		},
 	}
 
@@ -9150,7 +9149,7 @@ func testEvalBFADD(t *testing.T, store *dstore.Store) {
 		{
 			name:           "BF.ADD to non-existent filter",
 			input:          []string{"nonExistentFilter", "element"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerOne, Error: nil},
 		},
 		{
 			name: "BF.ADD to existing filter",
@@ -9158,7 +9157,7 @@ func testEvalBFADD(t *testing.T, store *dstore.Store) {
 				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
 			},
 			input:          []string{"myBloomFilter", "element"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil}, // 1 for new addition, 0 if already exists
+			migratedOutput: EvalResponse{Result: IntegerOne, Error: nil}, // 1 for new addition, 0 if already exists
 		},
 	}
 
@@ -9195,7 +9194,7 @@ func testEvalBFEXISTS(t *testing.T, store *dstore.Store) {
 		{
 			name:           "BF.EXISTS on non-existent filter",
 			input:          []string{"nonExistentFilter", "element"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil}, // Item does not exist
+			migratedOutput: EvalResponse{Result: IntegerZero, Error: nil}, // Item does not exist
 		},
 		{
 			name: "BF.EXISTS element not in filter",
@@ -9203,7 +9202,7 @@ func testEvalBFEXISTS(t *testing.T, store *dstore.Store) {
 				evalBFRESERVE([]string{"myBloomFilter", "0.01", "1000"}, store)
 			},
 			input:          []string{"myBloomFilter", "element"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerZero, Error: nil},
+			migratedOutput: EvalResponse{Result: IntegerZero, Error: nil},
 		},
 		{
 			name: "BF.EXISTS element in filter",
@@ -9212,7 +9211,7 @@ func testEvalBFEXISTS(t *testing.T, store *dstore.Store) {
 				evalBFADD([]string{"myBloomFilter", "element"}, store)
 			},
 			input:          []string{"myBloomFilter", "element"},
-			migratedOutput: EvalResponse{Result: clientio.IntegerOne, Error: nil}, // 1 indicates the element exists
+			migratedOutput: EvalResponse{Result: IntegerOne, Error: nil}, // 1 indicates the element exists
 		},
 	}
 

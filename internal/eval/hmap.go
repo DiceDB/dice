@@ -10,7 +10,6 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/dicedb/dice/internal/clientio"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -72,7 +71,7 @@ func getValueFromHashMap(key, field string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	if obj == nil {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
@@ -88,7 +87,7 @@ func getValueFromHashMap(key, field string, store *dstore.Store) *EvalResponse {
 	val, present := hashMap.Get(field)
 	if !present {
 		return &EvalResponse{
-			Result: clientio.NIL,
+			Result: NIL,
 			Error:  nil,
 		}
 	}
