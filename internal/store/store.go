@@ -59,7 +59,7 @@ type Store struct {
 
 	// Snapshot related fields
 	ongoingSnapshots map[uint64]Snapshotter
-	snapLock         *sync.Mutex
+	snapLock         *sync.RWMutex
 }
 
 type Snapshotter interface {
@@ -76,7 +76,7 @@ func NewStore(cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy
 		cmdWatchChan:     cmdWatchChan,
 		evictionStrategy: evictionStrategy,
 		ongoingSnapshots: make(map[uint64]Snapshotter),
-		snapLock:         &sync.Mutex{},
+		snapLock:         &sync.RWMutex{},
 		ShardID:          shardID,
 	}
 	if evictionStrategy == nil {
@@ -140,9 +140,12 @@ func (store *Store) IterateAllKeysForSnapshot(snapshotID uint64) (err error) {
 	if len(store.ongoingSnapshots) == 0 {
 		return
 	}
+	store.snapLock.RLock()
 	if snapshot, isPresent = store.ongoingSnapshots[snapshotID]; !isPresent {
 		return
 	}
+	store.snapLock.RUnlock()
+
 	store.store.All(func(k string, v *object.Obj) bool {
 		// Check if the data is overridden
 		tempVal, _ := snapshot.TempGet(k)

@@ -63,4 +63,14 @@ then talks to the `PITFLusher` to finish syncing all the chunks to disk and then
 process.
 
 ### Point-in-time Flusher
-TBD
+The `PITFlusher` serializes the store updates from the `SnapshotMap` to binary format, currently `gob`.
+It serializes and appends to a file.
+
+## Test cases and benchmarks
+- Snapshot data less than the buffer size without any subsequent writes
+- Snapshot data less than the buffer size with localized subsequent writes
+- Snapshot data less than the buffer size with spread out subsequent writes
+- Snapshot data more than the buffer size without any subsequent writes
+- Snapshot data more than the buffer size with localized subsequent writes
+- Snapshot data more than the buffer size with spread out subsequent writes
+- Ensure current `get` path is not affected
