@@ -75,10 +75,7 @@ func Execute(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 		start := time.Now()
 		resp, err := cmd.Eval(c, s)
-		if err != nil {
-			resp = &CmdRes{R: &wire.Response{Err: err.Error()}}
-		}
-
+		
 		slog.Debug("command executed",
 			slog.Any("cmd", c.String()),
 			slog.String("thread_id", c.ThreadID),

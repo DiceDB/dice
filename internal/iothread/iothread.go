@@ -11,6 +11,7 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/clientio/iohandler"
 	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/wire"
 )
 
 type IOThread struct {
@@ -88,10 +89,11 @@ func (t *IOThread) StartSync(
 		}
 		c.ThreadID = t.id
 		res, err := execute(c)
+		
 		if err != nil {
-			res.R.Err = err.Error()
+			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
 		}
-
+		
 		if strings.HasSuffix(c.C.Cmd, ".WATCH") {
 			handleWatch(c, t)
 		}
@@ -101,6 +103,7 @@ func (t *IOThread) StartSync(
 		}
 
 		err = t.IoHandler.WriteSync(ctx, res)
+		
 		if err != nil {
 			return err
 		}
