@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"github.com/dicedb/dice-go/wire"
 	"github.com/dicedb/dice/internal/object"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cGETDEL = &DiceDBCommand{
@@ -38,14 +38,14 @@ func evalGETDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	// Getting the key based on previous touch value
 	obj := s.GetNoTouch(key)
-
-	// If key does not exist, return nil
 	if obj == nil {
 		return cmdResNil, nil
 	}
 
-	// If the object exists, check if it is a Set object.
 	// Get the key from the hash table
+	// TODO: Evaluate the need for having GetDel
+	// implemented in the store. It might be better if we can
+	// keep the business logic untangled from the store.
 	objVal := s.GetDel(key)
 
 	// Decode and return the value based on its encoding
@@ -60,9 +60,6 @@ func evalGETDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return &CmdRes{R: &wire.Response{
 			Value: &wire.Response_VStr{VStr: objVal.Value.(string)},
 		}}, nil
-	case object.ObjTypeByteArray:
-		// TODO: Support ObjTypeByteArray
-		return cmdResNil, errWrongTypeOperation("GETDEL")
 	default:
 		return cmdResNil, errWrongTypeOperation("GETDEL")
 	}
