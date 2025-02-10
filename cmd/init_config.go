@@ -4,24 +4,19 @@
 package cmd
 
 import (
-	"fmt"
-	"path/filepath"
-
 	"github.com/dicedb/dice/config"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var initConfigCmd = &cobra.Command{
-	Use:   "init-config",
-	Short: "creates a config file at dicedb.yaml with default values",
+	Use:   "config-init",
+	Short: "creates a config file with default values",
 	Run: func(cmd *cobra.Command, args []string) {
-		config.Init(cmd.Flags())
-		_ = viper.WriteConfigAs(filepath.Join(config.DicedbDataDir, "dicedb.yaml"))
-		fmt.Println("config created at ", config.DicedbDataDir)
+		config.InitConfig(cmd.Flags())
 	},
 }
 
 func init() {
+	initConfigCmd.Flags().BoolP("overwrite", "", false, "overwrite the existing config")
 	rootCmd.AddCommand(initConfigCmd)
 }
