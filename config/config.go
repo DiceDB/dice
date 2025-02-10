@@ -4,6 +4,12 @@
 package config
 
 import (
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"reflect"
+
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -27,7 +33,7 @@ type DiceDBConfig struct {
 	MaxClients  int  `mapstructure:"max-clients" default:"20000" description:"the maximum number of clients to accept"`
 	NumShards   int  `mapstructure:"num-shards" default:"-1" description:"number of shards to create. defaults to number of cores"`
 
-	Engine string `mapstructure:"engine" default:"resp" description:"the engine to use, values: resp, ironhawk"`
+	Engine string `mapstructure:"engine" default:"ironhawk" description:"the engine to use, values: ironhawk"`
 
 	EnableWAL                         bool   `mapstructure:"enable-wal" default:"false" description:"enable write-ahead logging"`
 	WALDir                            string `mapstructure:"wal-dir" default:"/var/log/dicedb" description:"the directory to store WAL segments"`
@@ -44,11 +50,12 @@ type DiceDBConfig struct {
 	WALRecoveryMode                   string `mapstructure:"wal-recovery-mode" default:"strict" description:"wal recovery mode in case of a corruption, values: strict, truncate, ignore"`
 }
 
-func Init(flags *pflag.FlagSet) {
+func Load(flags *pflag.FlagSet) {
+	configureMetadataDir()
 	viper.SetConfigName("dicedb")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("/etc/dicedb")
+	viper.AddConfigPath(MetadataDir)
 
 	err := viper.ReadInConfig()
 	if _, ok := err.(viper.ConfigFileNotFoundError); !ok && err != nil {
@@ -59,10 +66,127 @@ func Init(flags *pflag.FlagSet) {
 		if flag.Name == "help" {
 			return
 		}
-		viper.Set(flag.Name, flag.Value.String())
+
+		// Only updated parsed configs if the user sets value or viper doesn't have default values for config flags set
+		if flag.Changed || !viper.IsSet(flag.Name) {
+			viper.Set(flag.Name, flag.Value.String())
+		}
 	})
 
 	if err := viper.Unmarshal(&Config); err != nil {
 		panic(err)
 	}
+}
+
+// InitConfig initializes the config file.
+// If the config file does not exist, it creates a new one.
+// If the config file exists, it overwrites the existing config with the new key-values.
+// and overwrite should replace the existing config with the new
+// key-values and default values.
+// If the metadata direcoty is inaccessible, then it uses the current working directory
+// as the metadata directory.
+func InitConfig(flags *pflag.FlagSet) {
+	Load(flags)
+	configPath := filepath.Join(MetadataDir, "dicedb.yaml")
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		err := viper.WriteConfigAs(configPath)
+		if err != nil {
+			slog.Error("could not write the config file",
+				slog.String("path", configPath),
+				slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		slog.Info("config created", slog.String("path", configPath))
+	} else {
+		if overwrite, _ := flags.GetBool("overwrite"); overwrite {
+			err := viper.WriteConfigAs(configPath)
+			if err != nil {
+				slog.Error("could not write the config file",
+					slog.String("path", configPath),
+					slog.String("error", err.Error()))
+				os.Exit(1)
+			}
+
+			// Current behavior - If key changed, then only overwrides.
+			// TODO: Ideally, we should have a config-update function that updates the
+			// existing config with the new key-values.
+			// and overwrite should replace the existing config with the new
+			// key-values and default values.
+			slog.Info("config overwritten", slog.String("path", configPath))
+		} else {
+			slog.Info("config already exists. skipping.", slog.String("path", configPath))
+			slog.Info("run with --overwrite to overwrite the existing config")
+		}
+	}
+}
+
+// configureMetadataDir creates the default metadata directory to be used
+// for DiceDB metadataother persistent data
+func configureMetadataDir() {
+	// Creating dir with owner only permission
+	// The reason we are lost logging the warning is because
+	// this is not a hard dependency.
+	// DiceDB can also run without metadata directory.and in that case
+	// current directory will be used as metadata directory.
+	if err := os.MkdirAll(MetadataDir, 0o700); err != nil {
+		slog.Warn("could not create metadata directory at",
+			slog.String("path", MetadataDir),
+			slog.String("error", err.Error()),
+			slog.String("fix", "run with sudo privileges to use the default metadata directory"),
+		)
+		slog.Info("using current directory as metadata directory")
+		MetadataDir = "."
+	}
+}
+
+func initDefaultConfig() *DiceDBConfig {
+	defaultConfig := &DiceDBConfig{}
+	configType := reflect.TypeOf(*defaultConfig)
+	configValue := reflect.ValueOf(defaultConfig).Elem()
+
+	for i := 0; i < configType.NumField(); i++ {
+		field := configType.Field(i)
+		value := configValue.Field(i)
+
+		tag := field.Tag.Get("default")
+		if tag != "" {
+			switch value.Kind() {
+			case reflect.String:
+				value.SetString(tag)
+			case reflect.Int:
+				intVal := 0
+				_, err := fmt.Sscanf(tag, "%d", &intVal)
+				if err == nil {
+					value.SetInt(int64(intVal))
+				}
+			case reflect.Bool:
+				boolVal := false
+				_, err := fmt.Sscanf(tag, "%t", &boolVal)
+				if err == nil {
+					value.SetBool(boolVal)
+				}
+			}
+		}
+	}
+
+	return defaultConfig
+}
+
+func ForceInit(config *DiceDBConfig) {
+	defaultConfig := initDefaultConfig()
+
+	configType := reflect.TypeOf(*config)
+	configValue := reflect.ValueOf(config).Elem()
+
+	defaultConfigValue := reflect.ValueOf(defaultConfig).Elem()
+
+	for i := 0; i < configType.NumField(); i++ {
+		value := configValue.Field(i)
+		defaultValue := defaultConfigValue.Field(i)
+		if value.Interface() == reflect.Zero(value.Type()).Interface() {
+			value.Set(defaultValue)
+		}
+	}
+
+	Config = config
 }

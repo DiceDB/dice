@@ -92,39 +92,22 @@ sudo su
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /bin v1.60.1
 ```
 
-### Live Development Server
-
-DiceDB provides a hot-reloading development environment, which allows you to instantly view your code changes in a live server. This functionality is supported by [Air](https://github.com/air-verse/air)
-
-To Install Air on your system you have the following options.
-
-1. If you're on go 1.22+
-```bash
-go install github.com/air-verse/air@latest
-```
-
-1. Install the Air binary
-```bash
-# binary will be installed at $(go env GOPATH)/bin/air
-curl -sSfL https://raw.githubusercontent.com/air-verse/air/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
-```
-
-Once `air` is installed you can verify the installation using the command `air -v`
-
-To run the live DiceDB server for local development:
-
-```bash
-git clone https://github.com/dicedb/dice
-cd dice
-air
-```
-
 ### Local Setup with Custom Config
 
-By default, DiceDB will look for the configuration file at `./dicedb.conf`. (Linux, Darwin, and WSL)
+Follow these steps to generate and customize your dicedb configuration in a local setup:
 
-> [!TIP]
-> If you want to use a custom configuration file, you can specify the path using the `-c` flag. and to output the configuration file to a specific location, you can specify the output dir path using the `-o` flag.
+```bash
+go run main.go config-init
+```
+
+This will generate configuration file (`dicedb.yaml`) in metadata directory.
+Metadata directory is OS-specific,
+
+ - macOS: `/usr/local/etc/dicedb/dicedb.yaml`
+ - Linux: `/etc/dicedb/dicedb.yaml`
+
+If you run with a `sudo` privileges, then these directories are used, otherwise
+the current working directory is used as the metada directory.
 
 ### Running Tests
 
@@ -149,9 +132,12 @@ Integration tests, on the other hand, involve starting up the DiceDB server and 
 
 ### Executing a single integration test
 
+Make sure you have DiceDB running before you run the following commands.
+By default it connects to the local instance of DiceDB running on port `7379`.
+
 ```bash
 TEST_FUNC=<name of the test function> make test-one
-TEST_FUNC=TestSet make test-one
+TEST_FUNC=^TestSet$ make test-one
 ```
 
 ### Running all integration tests

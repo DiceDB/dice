@@ -18,4 +18,10 @@ const (
 
 	KeepAlive int32 = 300
 	Timeout   int32 = 300
+
+	DefaultConnBacklogSize = 128
+
+	MaxRequestSize = 32 * 1024 * 1024 // 32 MB
+	IoBufferSize   = 16 * 1024        // 16 KB
+	IdleTimeout    = 30 * time.Minute
 )

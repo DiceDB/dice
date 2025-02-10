@@ -13,64 +13,38 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/dicedb/dice/internal/commandhandler"
-	"github.com/dicedb/dice/internal/server/abstractserver"
-	"github.com/dicedb/dice/internal/wal"
-
-	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dice/internal/watchmanager"
-
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/clientio/iohandler"
-	"github.com/dicedb/dice/internal/clientio/iohandler/netconn"
-	"github.com/dicedb/dice/internal/clientio/iohandler/netconn2"
-	"github.com/dicedb/dice/internal/iothread"
-)
-
-const (
-	DefaultConnBacklogSize = 128
 )
 
 type Server struct {
-	abstractserver.AbstractServer
-	Host              string
-	Port              int
-	serverFD          int
-	connBacklogSize   int
-	ioThreadManager   *iothread.Manager
-	cmdHandlerManager *commandhandler.Registry
-	shardManager      *ShardManager
-	watchManager      *watchmanager.Manager
-	globalErrorChan   chan error
-	wl                wal.AbstractWAL
+	Host            string
+	Port            int
+	serverFD        int
+	connBacklogSize int
+	shardManager    *ShardManager
+	watchManager    *WatchManager
+	ioThreadManager *IOThreadManager
 }
 
-func NewServer(shardManager *ShardManager, ioThreadManager *iothread.Manager, cmdHandlerManager *commandhandler.Registry,
-	cmdWatchSubscriptionChan chan watchmanager.WatchSubscription, cmdWatchChan chan dstore.CmdWatchEvent,
-	globalErrChan chan error, wl wal.AbstractWAL) *Server {
+func NewServer(shardManager *ShardManager, ioThreadManager *IOThreadManager, watchManager *WatchManager) *Server {
 	return &Server{
-		Host:              config.Config.Host,
-		Port:              config.Config.Port,
-		connBacklogSize:   DefaultConnBacklogSize,
-		ioThreadManager:   ioThreadManager,
-		cmdHandlerManager: cmdHandlerManager,
-		shardManager:      shardManager,
-		watchManager:      watchmanager.NewManager(cmdWatchSubscriptionChan, cmdWatchChan),
-		globalErrorChan:   globalErrChan,
-		wl:                wl,
+		Host:            config.Config.Host,
+		Port:            config.Config.Port,
+		connBacklogSize: config.DefaultConnBacklogSize,
+		shardManager:    shardManager,
+		ioThreadManager: ioThreadManager,
+		watchManager:    watchManager,
 	}
 }
 
 func (s *Server) Run(ctx context.Context) (err error) {
-	// BindAndListen the desired port to the server
 	if err = s.BindAndListen(); err != nil {
 		slog.Error("failed to bind server", slog.Any("error", err))
 		return err
 	}
 
-	defer s.ReleasePort()
+	defer releasePort(s.serverFD)
 
-	// Start a go routine to accept connections
 	errChan := make(chan error, 1)
 	wg := &sync.WaitGroup{}
 
@@ -145,20 +119,17 @@ func (s *Server) BindAndListen() error {
 	return nil
 }
 
-// ReleasePort closes the server socket.
-func (s *Server) ReleasePort() {
-	if err := syscall.Close(s.serverFD); err != nil {
+func releasePort(serverFD int) {
+	if err := syscall.Close(serverFD); err != nil {
 		slog.Error("Failed to close server socket", slog.Any("error", err))
 	}
 }
 
-// AcceptConnectionRequests accepts new client connections
 func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGroup) error {
 	for {
 		select {
 		case <-ctx.Done():
 			slog.Info("no new connections will be accepted")
-
 			return ctx.Err()
 		default:
 			clientFD, _, err := syscall.Accept(s.serverFD)
@@ -166,49 +137,36 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 				if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EWOULDBLOCK) {
 					continue // No more connections to accept at this time
 				}
-
 				return fmt.Errorf("error accepting connection: %w", err)
 			}
 
-			var ioHandler iohandler.IOHandler
-			if config.Config.Engine == "ironhawk" {
-				ioHandler, err = netconn2.NewIOHandler(clientFD)
-			} else {
-				ioHandler, err = netconn.NewIOHandler(clientFD)
-			}
+			thread, err := NewIOThread(clientFD)
 			if err != nil {
-				slog.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
-				return err
-			}
-
-			// create a new io-thread
-			ioThreadReadChan := make(chan []byte)       // for sending data to the command handler from the io-thread
-			ioThreadWriteChan := make(chan interface{}) // for sending data to the io-thread from the command handler
-			ioThreadErrChan := make(chan error, 1)      // for receiving errors from the io-thread
-			thread := iothread.NewIOThread("-xxx", ioHandler, ioThreadReadChan, ioThreadWriteChan, ioThreadErrChan)
-			// Register the io-thread with the manager
-			err = s.ioThreadManager.RegisterIOThread(thread)
-			if err != nil {
-				slog.Debug("Failed to register io-thread", slog.String("id", "-xxx"), slog.Any("error", err))
+				slog.Error("failed to create io-thread", slog.String("id", "-xxx"), slog.Any("error", err))
 				continue
 			}
 
-			// Registration for both IO thread and command handler is done to ensure there is no error before starting the goroutines
 			wg.Add(1)
 			go s.startIOThread(ctx, wg, thread)
 		}
 	}
 }
 
-func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *iothread.IOThread) {
+func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *IOThread) {
 	wg.Done()
-	err := thread.StartSync(ctx, s.shardManager.Execute, HandleWatch, HandleUnwatch, NotifyWatchers)
+	err := thread.StartSync(ctx, s.shardManager, s.watchManager)
 	if err != nil {
 		if err == io.EOF {
-			CleanupThreadWatchSubscriptions(thread)
-			slog.Debug("client disconnected. io-thread stopped", slog.String("id", thread.ID()))
+			s.watchManager.CleanupThreadWatchSubscriptions(thread)
+			slog.Debug("client disconnected. io-thread stopped",
+				slog.String("client_id", thread.ClientID),
+				slog.String("mode", thread.Mode),
+			)
 		} else {
-			slog.Debug("io-thread errored out", slog.String("id", thread.ID()), slog.Any("error", err))
+			slog.Debug("io-thread errored out",
+				slog.String("client_id", thread.ClientID),
+				slog.String("mode", thread.Mode),
+				slog.Any("error", err))
 		}
 	}
 }
