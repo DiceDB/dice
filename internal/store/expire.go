@@ -93,13 +93,15 @@ func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 	if obj == nil {
 		return false, nil
 	}
-	shouldSetExpiry = true
-	// if no condition exists
+	shouldSetExpiry = false
+
+	// If no sub-command is provided, set the expiry
 	if len(subCommands) == 0 {
 		store.SetUnixTimeExpiry(obj, newExpiry)
-		return shouldSetExpiry, nil
+		return true, nil
 	}
 
+	// Get the previous expiry time
 	expireTime, ok := GetExpiry(obj, store)
 	if ok {
 		prevExpiry = &expireTime
@@ -111,26 +113,34 @@ func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 		switch subCommand {
 		case NX:
 			nxCmd = true
-			if prevExpiry != nil {
-				shouldSetExpiry = false
+
+			// Set the expiration only if the key does not already have an expiration time.
+			if prevExpiry == nil {
+				shouldSetExpiry = true
 			}
 		case XX:
 			xxCmd = true
-			if prevExpiry == nil {
-				shouldSetExpiry = false
+
+			// Set the expiration only if the key already has an expiration time.
+			if prevExpiry != nil {
+				shouldSetExpiry = true
 			}
 		case GT:
 			gtCmd = true
-			if prevExpiry == nil || *prevExpiry > uint64(newExpInMilli) {
-				shouldSetExpiry = false
+
+			// Set the expiration only if the new expiration time is greater than the current one.
+			if prevExpiry != nil && uint64(newExpInMilli) > *prevExpiry {
+				shouldSetExpiry = true
 			}
 		case LT:
 			ltCmd = true
-			if prevExpiry == nil || *prevExpiry < uint64(newExpInMilli) {
-				shouldSetExpiry = false
+
+			// Set the expiration only if the new expiration time is less than the current one.
+			if prevExpiry != nil && uint64(newExpInMilli) < *prevExpiry {
+				shouldSetExpiry = true
 			}
 		default:
-			return false, diceerrors.ErrGeneral("Unsupported option " + subCommands[i])
+			return false, diceerrors.ErrGeneral("unsupported option " + subCommands[i])
 		}
 	}
 
