@@ -94,23 +94,20 @@ curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/insta
 
 ### Local Setup with Custom Config
 
-Follow these steps to generate and customize your dicedb configuration:
+Follow these steps to generate and customize your dicedb configuration in a local setup:
 
-1. Build the application:
 ```bash
-make build
+go run main.go config-init
 ```
 
-2. Generate the initial configuration file:
-```bash
-sudo ./dicedb init-config
-```
-This will generate configuration file (dicedb.yaml) in the default configuration directory for your OS.
+This will generate configuration file (`dicedb.yaml`) in metadata directory.
+Metadata directory is OS-specific,
 
-3. Locate the configuration file in the default data directory for dicedb:
+ - macOS: `/usr/local/etc/dicedb/dicedb.yaml`
+ - Linux: `/etc/dicedb/dicedb.yaml`
 
-macOS: `/usr/local/etc/dicedb/dicedb.yaml`
-Linux: `/etc/dicedb/dicedb.yaml`
+If you run with a `sudo` privileges, then these directories are used, otherwise
+the current working directory is used as the metada directory.
 
 ### Running Tests
 
