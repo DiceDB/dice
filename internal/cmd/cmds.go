@@ -173,11 +173,11 @@ func errInvalidExpireTime(command string) error {
 	return fmt.Errorf("ERR invalid expire time in '%s' command", strings.ToUpper(command))
 }
 
-var cmdResNil = &CmdRes{R: &wire.Response{
+var cmdResNil *CmdRes = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VNil{VNil: true},
 }}
 
-var cmdResOK = &CmdRes{R: &wire.Response{
+var cmdResOK *CmdRes = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VStr{VStr: "OK"},
 }}
 
@@ -187,4 +187,12 @@ var cmdResInt1 = &CmdRes{R: &wire.Response{
 
 var cmdResInt0 = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VInt{VInt: 0},
+}}
+
+var cmdResIntNegTwo *CmdRes = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: -2},
+}}
+
+var cmdResIntNegOne *CmdRes = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: -1},
 }}

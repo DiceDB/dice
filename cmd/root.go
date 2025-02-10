@@ -42,7 +42,7 @@ var rootCmd = &cobra.Command{
 	Use:   "dicedb",
 	Short: "an in-memory database;",
 	Run: func(cmd *cobra.Command, args []string) {
-		config.Load(cmd.Flags())
+		config.Init(cmd.Flags())
 		server.Init()
 		server.Start()
 	},
