@@ -181,6 +181,14 @@ var cmdResOK *CmdRes = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VStr{VStr: "OK"},
 }}
 
+var cmdResInt1 = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: 1},
+}}
+
+var cmdResInt0 = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: 0},
+}}
+
 var cmdResIntNegTwo *CmdRes = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VInt{VInt: -2},
 }}
