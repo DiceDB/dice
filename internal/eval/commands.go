@@ -1379,7 +1379,7 @@ func init() {
 	DiceCmds["EXPIRE"] = expireCmdMeta
 	DiceCmds["EXPIREAT"] = expireatCmdMeta // moved to ironhawk
 	DiceCmds["EXPIRETIME"] = expiretimeCmdMeta
-	DiceCmds["FLUSHDB"] = flushdbCmdMeta
+	DiceCmds["FLUSHDB"] = flushdbCmdMeta // moved to ironhawk
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
 	DiceCmds["GEOPOS"] = geoPosCmdMeta
