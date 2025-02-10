@@ -2,12 +2,6 @@ package cmd
 
 import (
 	"github.com/dicedb/dice/internal/store"
-	dstore "github.com/dicedb/dice/internal/store"
-)
-
-const (
-	SYNC  string = "sync"
-	ASYNC string = "async"
 )
 
 var cFLUSHDB = &DiceDBCommand{
@@ -20,6 +14,10 @@ func init() {
 	commandRegistry.AddCommand(cFLUSHDB)
 }
 
+// TODO: FLUSHDB is a multi-shard command.
+// It should be executed on all shards, hence we need to
+// scatter and gather the results.
+
 // FLUSHDB deletes all keys.
 // The function expects no arguments
 //
@@ -30,12 +28,11 @@ func init() {
 // Returns:
 //   - *CmdRes: OK or nil
 //   - error: Error if wrong number of arguments
-func evalFLUSHDB(c *Cmd, s *dstore.Store) (*CmdRes, error) {
+func evalFLUSHDB(c *Cmd, s *store.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 0 {
 		return cmdResNil, errWrongArgumentCount("FLUSHDB")
 	}
 
 	store.Reset(s)
-
 	return cmdResOK, nil
 }
