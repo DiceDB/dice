@@ -74,7 +74,7 @@ run: ## run dicedb with the default configuration
 	go run main.go --engine ironhawk --log-level debug
 
 run-docker: ## run dicedb in a Docker container
-	docker run -p 7379:7379 dicedb/dicedb:latest
+	docker run -p 7379:7379 -p 8050:8050 dicedb/dicedb:latest
 
 format: ## format the code using go fmt
 	go fmt ./...
