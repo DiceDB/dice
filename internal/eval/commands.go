@@ -1407,9 +1407,9 @@ func init() {
 	DiceCmds["HSETNX"] = hsetnxCmdMeta
 	DiceCmds["HSTRLEN"] = hstrLenCmdMeta
 	DiceCmds["HVALS"] = hValsCmdMeta
-	DiceCmds["INCR"] = incrCmdMeta
+	DiceCmds["INCR"] = incrCmdMeta // moved to ironhawk
 	DiceCmds["INCRBYFLOAT"] = incrByFloatCmdMeta
-	DiceCmds["INCRBY"] = incrbyCmdMeta
+	DiceCmds["INCRBY"] = incrbyCmdMeta // moved to ironhawk
 	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
 	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
