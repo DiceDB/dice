@@ -82,6 +82,24 @@ func pickRandomNumbers(min, max, x int) ([]int, error) {
 // Range of keys to access - 100
 // Duration - 10ms
 // Allow writes - No
+func TestSnapshotWithoutChangesWithNoRangeAccess(t *testing.T) {
+	storeSize := testBufferSize
+	// Create a new dummy store
+	dummyStore := NewDummyStore()
+	addDataToDummyStore(dummyStore, storeSize)
+
+	snapshot, err := NewPointInTimeSnapshot(context.Background(), dummyStore)
+	snapshot.Run()
+
+	assert.Nil(t, err)
+	<-snapshot.ctx.Done()
+	time.Sleep(10 * time.Millisecond)
+}
+
+// Total key size - 1000
+// Range of keys to access - 100
+// Duration - 10ms
+// Allow writes - No
 func TestSnapshotWithoutChangesWithLowRangeAccess(t *testing.T) {
 	storeSize := testBufferSize
 	// Create a new dummy store
@@ -133,5 +151,39 @@ func TestNoSnapshotWithChangesWithLowRangeAccess(t *testing.T) {
 	time.Sleep(750 * time.Millisecond)
 	cancel()
 	<-ctx.Done()
+	time.Sleep(10 * time.Millisecond)
+}
+
+func TestNoSnapshotWithChangesWithWideRangeAccess(t *testing.T) {
+	storeSize := testBufferSize
+	// Create a new dummy store
+	dummyStore := NewDummyStore()
+	addDataToDummyStore(dummyStore, storeSize)
+
+	snapshot, err := NewPointInTimeSnapshot(context.Background(), dummyStore)
+	go fetchOrWriteInStore(snapshot.ctx, dummyStore, storeSize/10, storeSize/100, 10*time.Millisecond, true)
+	snapshot.Run()
+
+	assert.Nil(t, err)
+
+	time.Sleep(750 * time.Millisecond)
+	<-snapshot.ctx.Done()
+	time.Sleep(10 * time.Millisecond)
+}
+
+func TestNoSnapshotWithChangesWithAllRangeAccess(t *testing.T) {
+	storeSize := testBufferSize
+	// Create a new dummy store
+	dummyStore := NewDummyStore()
+	addDataToDummyStore(dummyStore, storeSize)
+
+	snapshot, err := NewPointInTimeSnapshot(context.Background(), dummyStore)
+	go fetchOrWriteInStore(snapshot.ctx, dummyStore, storeSize, storeSize, 10*time.Millisecond, true)
+	snapshot.Run()
+
+	assert.Nil(t, err)
+
+	time.Sleep(750 * time.Millisecond)
+	<-snapshot.ctx.Done()
 	time.Sleep(10 * time.Millisecond)
 }

@@ -24,6 +24,14 @@ The snapshotting technique would be similar to the copy-on-write mechanism, ie, 
 wouldn't have to be stored till the data has to be modified. This means additional memory would
 only be required if there are changes to the underyling data.
 
+### Impact on current latency benchmarks
+- For reads, there should be minimal latency change since there are no references to the `get`
+methods even when snapshotting is running. One thing which may impact the read latency is that
+it has to iterate through all the keys, so an implicit lock inside the datastructure may be
+required.
+- For writes, if a snapshot is going on, then it has to write in 2 places and an additional read
+to a map.
+
 ### Flow
 
 The initiation flow:
