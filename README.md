@@ -92,6 +92,26 @@ sudo su
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /bin v1.60.1
 ```
 
+### Local Setup with Custom Config
+
+Follow these steps to generate and customize your dicedb configuration:
+
+1. Build the application:
+```bash
+make build
+```
+
+2. Generate the initial configuration file:
+```bash
+sudo ./dicedb init-config
+```
+This will generate configuration file (dicedb.yaml) in the default configuration directory for your OS.
+
+3. Locate the configuration file in the default data directory for dicedb:
+
+macOS: `/usr/local/etc/dicedb/dicedb.yaml`
+Linux: `/etc/dicedb/dicedb.yaml`
+
 ### Running Tests
 
 Unit tests and integration tests are essential for ensuring correctness and in the case of DiceDB, both types of tests are available to validate its functionality.
