@@ -126,7 +126,7 @@ func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 			}
 		case LT:
 			ltCmd = true
-			if prevExpiry != nil && *prevExpiry < uint64(newExpInMilli) {
+			if prevExpiry == nil || *prevExpiry < uint64(newExpInMilli) {
 				shouldSetExpiry = false
 			}
 		default:
