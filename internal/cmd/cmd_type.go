@@ -7,9 +7,9 @@ import (
 )
 
 var cType = &DiceDBCommand{
-	Name:	   "TYPE",
+	Name:      "TYPE",
 	HelpShort: "Determine data type of the value stored at a specified key",
-	Eval:		evalTYPE,
+	Eval:      evalTYPE,
 }
 
 func init() {
