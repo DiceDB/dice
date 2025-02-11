@@ -1370,9 +1370,9 @@ func init() {
 	DiceCmds["COMMAND|DOCS"] = commandDocsCmdMeta
 	DiceCmds["COMMAND|GETKEYSANDFLAGS"] = commandGetKeysAndFlagsCmdMeta
 	DiceCmds["OBJECTCOPY"] = objectCopyCmdMeta
-	DiceCmds["DECR"] = decrCmdMeta // moved to ironhawk
+	DiceCmds["DECR"] = decrCmdMeta     // moved to ironhawk
 	DiceCmds["DECRBY"] = decrByCmdMeta // moved to ironhawk
-	DiceCmds["DEL"] = delCmdMeta // moved to ironhawk
+	DiceCmds["DEL"] = delCmdMeta       // moved to ironhawk
 	DiceCmds["DUMP"] = dumpkeyCMmdMeta
 	DiceCmds["ECHO"] = echoCmdMeta // moved to ironhawk
 	DiceCmds["EXISTS"] = existsCmdMeta

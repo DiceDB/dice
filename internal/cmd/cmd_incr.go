@@ -7,7 +7,7 @@ import (
 var cINCR = &DiceDBCommand{
 	Name:      "INCR",
 	HelpShort: "INCR increments the value of the specified key in args by 1",
-	Eval:      evalDECR,
+	Eval:      evalINCR,
 }
 
 func init() {
@@ -31,8 +31,5 @@ func evalINCR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
 		return cmdResNil, errWrongArgumentCount("INCR")
 	}
-
-	delta := int64(1)
-
-	return incrDecr(c,s,delta)
+	return doIncr(c, s, 1)
 }
