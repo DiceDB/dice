@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/dicedb/dice/internal/object"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -32,21 +31,7 @@ func evalTYPE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		}}, nil
 	}
 
-	var typeStr string
-	switch oType := obj.Type; oType {
-	case object.ObjTypeString, object.ObjTypeInt, object.ObjTypeByteArray:
-		typeStr = "string"
-	case object.ObjTypeDequeue:
-		typeStr = "list"
-	case object.ObjTypeSet:
-		typeStr = "set"
-	case object.ObjTypeHashMap:
-		typeStr = "hash"
-	case object.ObjTypeSortedSet:
-		typeStr = "zset"
-	default:
-		typeStr = "non-supported type"
-	}
+	typeStr := obj.Type.String()
 
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VStr{
