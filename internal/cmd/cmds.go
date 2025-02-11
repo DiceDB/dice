@@ -16,7 +16,7 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-// nolint: stylecheck
+//nolint: stylecheck
 const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
@@ -156,12 +156,10 @@ func errWrongArgumentCount(command string) error {
 var errUnknownObjectType = errors.New("unknown object type")
 var errIntegerOutOfRange = errors.New("ERR value is not an integer or out of range")
 
-//nolint:unparam
 func errInvalidSyntax(command string) error {
 	return fmt.Errorf("invalid syntax for '%s' command", strings.ToUpper(command))
 }
 
-//nolint:unparam
 func errInvalidValue(command, param string) error {
 	return fmt.Errorf("invalid value for a parameter in '%s' command for %s parameter", strings.ToUpper(command), strings.ToUpper(param))
 }
@@ -188,4 +186,12 @@ var cmdResInt1 = &CmdRes{R: &wire.Response{
 
 var cmdResInt0 = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VInt{VInt: 0},
+}}
+
+var cmdResIntNegOne = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: -1},
+}}
+
+var cmdResIntNegTwo = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: -2},
 }}
