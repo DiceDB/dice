@@ -1452,7 +1452,7 @@ func init() {
 	DiceCmds["SLEEP"] = sleepCmdMeta
 	DiceCmds["SMEMBERS"] = smembersCmdMeta
 	DiceCmds["SREM"] = sremCmdMeta
-	DiceCmds["TTL"] = ttlCmdMeta
+	DiceCmds["TTL"] = ttlCmdMeta // moved to ironhawk
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZCOUNT"] = zcountCmdMeta
