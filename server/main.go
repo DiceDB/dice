@@ -21,6 +21,7 @@ import (
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
+	dotel "github.com/dicedb/dice/internal/diceotel"
 	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/ironhawk"
 	"github.com/dicedb/dicedb-go/wire"
@@ -83,6 +84,9 @@ func Start() {
 	// Handle SIGTERM and SIGINT
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+
+	// Emit the starting metric
+	dotel.DiceotelSrv.StartCounter.Add(ctx, 1)
 
 	var (
 		serverErrCh = make(chan error, 2)
