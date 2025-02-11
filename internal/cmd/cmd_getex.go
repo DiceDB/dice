@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
@@ -25,18 +24,6 @@ func init() {
 	commandRegistry.AddCommand(cGETEX)
 }
 
-// GETEX key [EX seconds | PX milliseconds | EXAT unix-time-seconds |
-// PXAT unix-time-milliseconds | PERSIST]
-// Get the value of key and optionally set its expiration.
-// GETEX is similar to GET, but is a write command with additional options.
-// The GETEX command supports a set of options that modify its behavior:
-// EX seconds -- Set the specified expire time, in seconds.
-// PX milliseconds -- Set the specified expire time, in milliseconds.
-// EXAT timestamp-seconds -- Set the specified Unix time at which the key will expire, in seconds.
-// PXAT timestamp-milliseconds -- Set the specified Unix time at which the key will expire, in milliseconds.
-// PERSIST -- Remove the time to live associated with the key.
-// The RESP value of the key is encoded and then returned
-// evalGET returns response.RespNIL if key is expired or it does not exist
 func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
 		return cmdResNil, errWrongArgumentCount("GETEX")
@@ -122,37 +109,25 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		}
 	}
 
-	// Get the key from the hash table
-	obj := s.Get(key)
-
-	if obj == nil {
+	existingObj := s.Get(key)
+	if existingObj == nil {
 		return cmdResNil, nil
 	}
 
-	if object.AssertType(obj.Type, object.ObjTypeSet) == nil ||
-		object.AssertType(obj.Type, object.ObjTypeJSON) == nil {
-		return cmdResNil, errWrongTypeOperation("GETEX")
-	}
-
-	// Get EvalResponse with correct data type
-	getResp, err := evalGET(&Cmd{
+	resp, err := evalGET(&Cmd{
 		C: &wire.Command{
 			Cmd:  "GET",
 			Args: []string{key},
-		},
-	}, s)
-
-	// If there is an error return the error response
+		}}, s)
 	if err != nil {
-		return getResp, err
+		return resp, err
 	}
 
 	if params[PERSIST] != "" {
-		dstore.DelExpiry(obj, s)
+		dstore.DelExpiry(existingObj, s)
 	} else {
-		s.SetExpiry(obj, exDurationMs)
+		s.SetExpiry(existingObj, exDurationMs)
 	}
 
-	// return an EvalResponse with the value
-	return getResp, nil
+	return resp, nil
 }

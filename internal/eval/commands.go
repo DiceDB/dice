@@ -1387,7 +1387,7 @@ func init() {
 	DiceCmds["GET"] = getCmdMeta // moved to ironhawk
 	DiceCmds["GETBIT"] = getBitCmdMeta
 	DiceCmds["GETDEL"] = getDelCmdMeta // moved to ironhawk
-	DiceCmds["GETEX"] = getexCmdMeta
+	DiceCmds["GETEX"] = getexCmdMeta   // moved to ironhawk
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
 	DiceCmds["GETSET"] = getSetCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
@@ -1452,7 +1452,7 @@ func init() {
 	DiceCmds["SLEEP"] = sleepCmdMeta
 	DiceCmds["SMEMBERS"] = smembersCmdMeta
 	DiceCmds["SREM"] = sremCmdMeta
-	DiceCmds["TTL"] = ttlCmdMeta
+	DiceCmds["TTL"] = ttlCmdMeta // moved to ironhawk
 	DiceCmds["TYPE"] = typeCmdMeta
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZCOUNT"] = zcountCmdMeta
