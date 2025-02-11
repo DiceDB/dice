@@ -85,6 +85,21 @@ start the CLI and will try to connect to the DiceDB server.
 
 ## Essentials for Development
 
+### Pointing to local checked-out `dicedb-go`
+
+It is advised to checkout `dicedb-go` repository also because `dice` takes
+a strong dependency on it. To point to the local copy add the following line
+at the end of the `go.mod` file.
+
+```
+replace github.com/dicedb/dicedb-go => ../dicedb-go
+```
+
+Note: this is the literal line that needs to be added at the end of the go.mod file.
+Refer to [this article](https://thewebivore.com/using-replace-in-go-mod-to-point-to-your-local-module/), to understand what it is and why it is needed.
+
+Do not check-in the `go.mod` file with this change.
+
 ### Install GoLangCI
 
 ```bash
