@@ -35,7 +35,5 @@ func evalDECR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return cmdResNil, errWrongArgumentCount("DECR")
 	}
 
-	delta := int64(-1)
-
-	return incrDecr(c,s,delta)
+	return doIncr(c, s, -1)
 }
