@@ -95,3 +95,28 @@ const (
 	ObjTypeHLL
 	ObjTypeFloat
 )
+
+// String returns the name of the object type as a string
+func (ot ObjectType) String() string {
+	names := [...]string{
+		"string",
+		"",
+		"",
+		"json",
+		"bytes",
+		"int",
+		"set",
+		"hashmap",
+		"sortedset",
+		"countminsketch",
+		"bf",
+		"dequeue",
+		"hll",
+		"float",
+	}
+
+	if ot < ObjectType(len(names)) {
+		return names[ot]
+	}
+	return "Unknown"
+}
