@@ -189,3 +189,11 @@ var cmdResInt1 = &CmdRes{R: &wire.Response{
 var cmdResInt0 = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VInt{VInt: 0},
 }}
+
+var cmdResIntNegOne = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: -1},
+}}
+
+var cmdResIntNegTwo = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: -2},
+}}
