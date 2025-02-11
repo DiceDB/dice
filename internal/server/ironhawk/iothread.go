@@ -73,7 +73,6 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		_c.C.Cmd = strings.ReplaceAll(_c.C.Cmd, ".WATCH", "")
 		watchManager.NotifyWatchers(_c, shardManager, t)
 	}
 }
