@@ -25,7 +25,6 @@ func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
 		return cmdResNil, errWrongArgumentCount("GET")
 	}
-
 	key := c.C.Args[0]
 	obj := s.Get(key)
 
