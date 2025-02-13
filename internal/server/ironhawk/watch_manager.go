@@ -7,6 +7,7 @@ import (
 	"context"
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/dicedb/dice/internal/cmd"
 )
@@ -139,9 +140,9 @@ func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *ShardManager, t 
 				continue
 			}
 
-			// If this is first time a client is connecting it'd be sending a GET.WATCH command
-			// in that case we don't need to notify all other clients subsribed to the key
-			if c.C.Cmd == "GET.WATCH" && t.ClientID != clientID {
+			// If this is first time a client is connecting it'd be sending a .WATCH command
+			// in that case we don't need to notify all other clients subscribed to the key
+			if strings.HasSuffix(c.C.Cmd, ".WATCH") && t.ClientID != clientID {
 				continue
 			}
 
