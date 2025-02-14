@@ -7,7 +7,7 @@ import (
 
 var cType = &DiceDBCommand{
 	Name:      "TYPE",
-	HelpShort: "Determine data type of the value stored at a specified key",
+	HelpShort: "returns the type of the value stored at a specified key",
 	Eval:      evalTYPE,
 }
 
@@ -32,7 +32,6 @@ func evalTYPE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	typeStr := obj.Type.String()
-
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VStr{
 			VStr: typeStr,
