@@ -10,6 +10,7 @@ import (
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 type IOThread struct {
@@ -43,9 +44,11 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 		_c.Mode = t.Mode
 
 		res, err := shardManager.Execute(_c)
+
 		if err != nil {
-			res.R.Err = err.Error()
+			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
 		}
+
 		// TODO: Optimize this. We are doing this for all command execution
 		// Also, we are allowing people to override the client ID.
 		// Also, CLientID is duplicated in command and io-thread.
@@ -69,6 +72,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 		watchManager.RegisterThread(t)
 
 		err = t.IoHandler.WriteSync(ctx, res.R)
+		
 		if err != nil {
 			return err
 		}
