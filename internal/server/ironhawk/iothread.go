@@ -49,6 +49,8 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 		// TODO: Optimize this. We are doing this for all command execution
 		// Also, we are allowing people to override the client ID.
 		// Also, CLientID is duplicated in command and io-thread.
+		// Also, we shouldn't allow execution/registration incase of invalid commands
+		// like for B.WATCH cmd since it'll err out we shall return and not create subscription
 		t.ClientID = _c.ClientID
 
 		if c.Cmd == "HANDSHAKE" {
@@ -73,7 +75,6 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		_c.C.Cmd = strings.ReplaceAll(_c.C.Cmd, ".WATCH", "")
 		watchManager.NotifyWatchers(_c, shardManager, t)
 	}
 }
