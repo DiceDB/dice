@@ -1377,9 +1377,9 @@ func init() {
 	DiceCmds["ECHO"] = echoCmdMeta // moved to ironhawk
 	DiceCmds["EXISTS"] = existsCmdMeta
 	DiceCmds["EXPIRE"] = expireCmdMeta
-	DiceCmds["EXPIREAT"] = expireatCmdMeta // moved to ironhawk
+	DiceCmds["EXPIREAT"] = expireatCmdMeta     // moved to ironhawk
 	DiceCmds["EXPIRETIME"] = expiretimeCmdMeta // moved to ironhawk
-	DiceCmds["FLUSHDB"] = flushdbCmdMeta // moved to ironhawk
+	DiceCmds["FLUSHDB"] = flushdbCmdMeta       // moved to ironhawk
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
 	DiceCmds["GEOPOS"] = geoPosCmdMeta
@@ -1452,8 +1452,8 @@ func init() {
 	DiceCmds["SLEEP"] = sleepCmdMeta
 	DiceCmds["SMEMBERS"] = smembersCmdMeta
 	DiceCmds["SREM"] = sremCmdMeta
-	DiceCmds["TTL"] = ttlCmdMeta // moved to ironhawk
-	DiceCmds["TYPE"] = typeCmdMeta
+	DiceCmds["TTL"] = ttlCmdMeta   // moved to ironhawk
+	DiceCmds["TYPE"] = typeCmdMeta // moved to ironhawk
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZCOUNT"] = zcountCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta

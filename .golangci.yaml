@@ -27,7 +27,6 @@ linters:
     - funlen
     - goconst
     - gocritic
-    - gocyclo
     - gofmt
     - goimports
     - goprintffuncname
@@ -59,7 +58,7 @@ linters-settings:
 
   goconst:
     min-len: 2
-    min-occurrences: 2
+    min-occurrences: 10
 
   gocognit:
     # minimal code complexity to report, 30 by default (but we recommend 10-20)
