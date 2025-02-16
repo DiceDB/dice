@@ -7,9 +7,14 @@ import (
 	"context"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/internal/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+
 	"github.com/dicedb/dicedb-go/wire"
 )
 
@@ -43,12 +48,21 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 		_c.ClientID = t.ClientID
 		_c.Mode = t.Mode
 
+		_telCmdExecStartTime := time.Now()
 		res, err := shardManager.Execute(_c)
 
 		if err != nil {
 			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
 		}
-
+		otel.CmdLatencyInMsHistogram.Record(
+			ctx,
+			time.Since(_telCmdExecStartTime).Milliseconds(),
+			metric.WithAttributeSet(
+				attribute.NewSet(
+					attribute.String("cmd", c.Cmd),
+				),
+			),
+		)
 		// TODO: Optimize this. We are doing this for all command execution
 		// Also, we are allowing people to override the client ID.
 		// Also, CLientID is duplicated in command and io-thread.

@@ -22,6 +22,7 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/logger"
+	otel "github.com/dicedb/dice/internal/otel"
 	"github.com/dicedb/dice/internal/server/ironhawk"
 	"github.com/dicedb/dicedb-go/wire"
 
@@ -83,6 +84,9 @@ func Start() {
 	// Handle SIGTERM and SIGINT
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+
+	// Emit the starting metric
+	otel.StartCounter.Add(ctx, 1)
 
 	var (
 		serverErrCh = make(chan error, 2)
