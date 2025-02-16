@@ -7,20 +7,20 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var cDECR = &DiceDBCommand{
-	Name:      "DECR",
-	HelpShort: "DECR decrements the value of the specified key in args by 1",
-	Eval:      evalDECR,
+var cINCR = &DiceDBCommand{
+	Name:      "INCR",
+	HelpShort: "INCR increments the value of the specified key in args by 1",
+	Eval:      evalINCR,
 }
 
 func init() {
-	commandRegistry.AddCommand(cDECR)
+	commandRegistry.AddCommand(cINCR)
 }
 
-// evalDECR decrements an integer value stored at the specified key by 1.
+// evalINCR increments an integer value stored at the specified key by 1.
 //
-// The function expects exactly one argument: the key to decrement.
-// If the key does not exist, it is initialized with value -1.
+// The function expects exactly one argument: the key to increment.
+// If the key does not exist, it is initialized with value 1.
 // If the key exists but does not contain an integer, an error is returned.
 //
 // Parameters:
@@ -28,12 +28,11 @@ func init() {
 //   - s *dstore.Store: The data store instance
 //
 // Returns:
-//   - *CmdRes: Response containing the new integer value after decrement
+//   - *CmdRes: Response containing the new integer value after increment
 //   - error: Error if wrong number of arguments or wrong value type
-func evalDECR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
+func evalINCR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("DECR")
+		return cmdResNil, errWrongArgumentCount("INCR")
 	}
-
-	return doIncr(c, s, -1)
+	return doIncr(c, s, 1)
 }

@@ -77,10 +77,7 @@ func Execute(c *Cmd, s *store.Store) (*CmdRes, error) {
 
 		start := time.Now()
 		resp, err := cmd.Eval(c, s)
-		if err != nil {
-			resp.R.Err = err.Error()
-		}
-
+		
 		slog.Debug("command executed",
 			slog.Any("cmd", c.String()),
 			slog.String("client_id", c.ClientID),
@@ -154,13 +151,12 @@ func errWrongArgumentCount(command string) error {
 }
 
 var errUnknownObjectType = errors.New("unknown object type")
+var errIntegerOutOfRange = errors.New("ERR value is not an integer or out of range")
 
-//nolint:unparam
 func errInvalidSyntax(command string) error {
 	return fmt.Errorf("invalid syntax for '%s' command", strings.ToUpper(command))
 }
 
-//nolint:unparam
 func errInvalidValue(command, param string) error {
 	return fmt.Errorf("invalid value for a parameter in '%s' command for %s parameter", strings.ToUpper(command), strings.ToUpper(param))
 }
@@ -169,10 +165,30 @@ func errWrongTypeOperation(command string) error {
 	return fmt.Errorf("wrong type operation for '%s' command", strings.ToUpper(command))
 }
 
+func errInvalidExpireTime(command string) error {
+	return fmt.Errorf("ERR invalid expire time in '%s' command", strings.ToUpper(command))
+}
+
 var cmdResNil = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VNil{VNil: true},
 }}
 
 var cmdResOK = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VStr{VStr: "OK"},
+}}
+
+var cmdResInt1 = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: 1},
+}}
+
+var cmdResInt0 = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: 0},
+}}
+
+var cmdResIntNegOne = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: -1},
+}}
+
+var cmdResIntNegTwo = &CmdRes{R: &wire.Response{
+	Value: &wire.Response_VInt{VInt: -2},
 }}

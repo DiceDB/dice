@@ -71,7 +71,7 @@ func NewStore(cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy
 	return store
 }
 
-func ResetStore(store *Store) *Store {
+func Reset(store *Store) *Store {
 	store.numKeys = 0
 	store.store = NewStoreMap()
 	store.expires = NewExpireMap()

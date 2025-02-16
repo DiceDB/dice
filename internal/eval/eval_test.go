@@ -46,7 +46,7 @@ type evalMultiShardTestCase struct {
 }
 
 func setupTest(store *dstore.Store) *dstore.Store {
-	dstore.ResetStore(store)
+	dstore.Reset(store)
 	return store
 }
 
@@ -7575,7 +7575,7 @@ func BenchmarkEvalZPOPMIN(b *testing.B) {
 
 			for i := 0; i < b.N; i++ {
 				// Reset the store before each run to avoid contamination
-				dstore.ResetStore(store)
+				dstore.Reset(store)
 				bm.setup(store)
 				evalZPOPMIN(bm.input, store)
 			}
@@ -8648,7 +8648,7 @@ func BenchmarkEvalZPOPMAX(b *testing.B) {
 
 			for i := 0; i < b.N; i++ {
 				// Reset the store before each run to avoid contamination
-				dstore.ResetStore(store)
+				dstore.Reset(store)
 				bm.setup(store)
 				evalZPOPMAX(bm.input, store)
 			}

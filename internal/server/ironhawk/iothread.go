@@ -14,6 +14,8 @@ import (
 	"github.com/dicedb/dice/internal/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 type IOThread struct {
@@ -48,8 +50,9 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 
 		_telCmdExecStartTime := time.Now()
 		res, err := shardManager.Execute(_c)
+
 		if err != nil {
-			res.R.Err = err.Error()
+			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
 		}
 		otel.CmdLatencyInMsHistogram.Record(
 			ctx,
@@ -63,6 +66,8 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 		// TODO: Optimize this. We are doing this for all command execution
 		// Also, we are allowing people to override the client ID.
 		// Also, CLientID is duplicated in command and io-thread.
+		// Also, we shouldn't allow execution/registration incase of invalid commands
+		// like for B.WATCH cmd since it'll err out we shall return and not create subscription
 		t.ClientID = _c.ClientID
 
 		if c.Cmd == "HANDSHAKE" {
@@ -81,13 +86,13 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 		watchManager.RegisterThread(t)
 
 		err = t.IoHandler.WriteSync(ctx, res.R)
+		
 		if err != nil {
 			return err
 		}
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		_c.C.Cmd = strings.ReplaceAll(_c.C.Cmd, ".WATCH", "")
 		watchManager.NotifyWatchers(_c, shardManager, t)
 	}
 }
