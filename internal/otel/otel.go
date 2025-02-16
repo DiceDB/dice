@@ -1,4 +1,4 @@
-package diceotel
+package otel
 
 import (
 	"context"
@@ -13,27 +13,24 @@ import (
 )
 
 const (
-	meterName    = "dicedb-otel"
-	diceOtelPort = "8050"
+	meterName = "dicedb-otel"
+	otelPort  = "8050"
 )
 
 type (
-	DiceOtel struct {
+	Otel struct {
 		ctx context.Context
 
 		Meter api.Meter
-
-		StartCounter            api.Int64Counter
-		CmdLatencyInMsHistogram api.Int64Histogram
 	}
 )
 
 var (
-	DiceotelSrv *DiceOtel = NewDiceOtel(context.Background())
+	OtelSrv *Otel = NewOtel(context.Background())
 )
 
-func NewDiceOtel(ctx context.Context) (dotel *DiceOtel) {
-	dotel = &DiceOtel{
+func NewOtel(ctx context.Context) (dotel *Otel) {
+	dotel = &Otel{
 		ctx: ctx,
 	}
 	dotel.setup()
@@ -41,7 +38,7 @@ func NewDiceOtel(ctx context.Context) (dotel *DiceOtel) {
 	return
 }
 
-func (dotel *DiceOtel) setup() (err error) {
+func (dotel *Otel) setup() (err error) {
 	// The exporter embeds a default OpenTelemetry Reader and
 	// implements prometheus.Collector, allowing it to be used as
 	// both a Reader and Collector.
@@ -56,12 +53,12 @@ func (dotel *DiceOtel) setup() (err error) {
 	return
 }
 
-func (dotel *DiceOtel) Close() (err error) {
+func (dotel *Otel) Close() (err error) {
 	// Cleanup tasks
 	return
 }
 
-func (dotel *DiceOtel) Run() (err error) {
+func (dotel *Otel) Run() (err error) {
 	log.Println("Starting DiceDB Observability server")
 
 	// Start the prometheus HTTP server and pass the exporter Collector to it
@@ -75,10 +72,10 @@ func (dotel *DiceOtel) Run() (err error) {
 	return
 }
 
-func (dotel *DiceOtel) serveMetrics() (err error) {
+func (dotel *Otel) serveMetrics() (err error) {
 	http.Handle("/metrics", promhttp.Handler())
-	if err = http.ListenAndServe(":"+diceOtelPort, nil); err != nil {
-		log.Println("Error starting Diceotel server", err)
+	if err = http.ListenAndServe(":"+otelPort, nil); err != nil {
+		log.Println("Error starting Otel server", err)
 		return
 	}
 	return

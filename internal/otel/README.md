@@ -1,4 +1,4 @@
-# DiceDB Observability with Opentelemetry (Diceotel)
+# DiceDB Observability with Opentelemetry (Otel)
 
 This module implements the observability layer required for DiceDB to emit metrics.
 The current implementation integrates Opentelemetry with Prometheus in scraping mode.
@@ -23,10 +23,10 @@ Different data types like Int64, Float64, etc are supported for each of the abov
 
 The observability module should be available from all other modules. There should always
 be one instance of the observability module running.
-To use any metric in the repo, first register it with the `diceotel` module [here](metrics.go).
+To use any metric in the repo, first register it with the `dotel` module [here](metrics.go).
 ```go
-func (dotel *DiceOtel) register() (err error) {
-	DiceStartCounter, _ = dotel.Meter.Int64Counter("dicedb_start", api.WithDescription("A counter for the start of the DiceDB server"))
+func (dotel *Otel) register() (err error) {
+	StartCounter, _ = dotel.Meter.Int64Counter("dicedb_start", api.WithDescription("A counter for the start of the DiceDB server"))
 	// Add other metrics here
 	return
 }
@@ -34,10 +34,58 @@ func (dotel *DiceOtel) register() (err error) {
 
 Access it anywhere in the repo and call the required functions:
 ```go
-	diceotel.DiceStartCounter.Add(ctx, 1)
+	dotel.StartCounter.Add(ctx, 1)
 ```
 
 ## Local testing
+Install prometheus locally by following the steps [here](https://prometheus.io/docs/prometheus/latest/getting_started/)
+
+To start prometheus, run this
+```bash
+./prometheus --config.file=prometheus.yml
+```
+
+A sample `prometheus.yml` file looks like this
+```yaml
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: []
+    scheme: http
+    timeout: 10s
+    api_version: v1
+scrape_configs:
+- job_name: prometheus
+  honor_timestamps: true
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  static_configs:
+  - targets: ['localhost:9090']
+```
+
+Next comes installing Grafana.
+Follow the steps listed [here](https://grafana.com/docs/grafana/latest/setup-grafana/installation/)
+
+A sample `grafana.yml` file:
+```yaml
+apiVersion: 1
+
+datasources:
+- name: Prometheus
+  type: prometheus
+  url: http://prometheus:9090 
+  isDefault: true
+  access: proxy
+  editable: true
+```
+
+### Installing using docker images
 The repo includes a `prometheus-grafana` folder which contains the required docker files to start the prometheus
 and grafana folder locally.
 Just run the usual docker-compose commands to use them.

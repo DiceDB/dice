@@ -1,4 +1,4 @@
-package diceotel
+package otel
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func publishMetrics(ctx context.Context, dotel *DiceOtel) {
+func publishMetrics(ctx context.Context, dotel *Otel) {
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
 	opt := api.WithAttributes(
@@ -65,7 +65,7 @@ func publishMetrics(ctx context.Context, dotel *DiceOtel) {
 
 func checkMetrics() (content string, err error) {
 	httpClient := &http.Client{}
-	resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%s/metrics", diceOtelPort))
+	resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%s/metrics", otelPort))
 	if err != nil {
 		return
 	}
@@ -77,7 +77,7 @@ func checkMetrics() (content string, err error) {
 
 func TestMetricsPublish(t *testing.T) {
 	// Publish some metrics
-	publishMetrics(context.Background(), DiceotelSrv)
+	publishMetrics(context.Background(), OtelSrv)
 	checkMetrics()
 	content, err := checkMetrics()
 	assert.Nil(t, err)

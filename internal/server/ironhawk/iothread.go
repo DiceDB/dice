@@ -11,7 +11,7 @@ import (
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/diceotel"
+	"github.com/dicedb/dice/internal/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -51,7 +51,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 		if err != nil {
 			res.R.Err = err.Error()
 		}
-		diceotel.DiceotelSrv.CmdLatencyInMsHistogram.Record(
+		otel.CmdLatencyInMsHistogram.Record(
 			ctx,
 			time.Since(_telCmdExecStartTime).Milliseconds(),
 			metric.WithAttributeSet(
