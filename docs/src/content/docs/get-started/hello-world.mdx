@@ -1,6 +1,6 @@
 ---
-title: Simple Hello, World!
-description: A simple Hello, World! example to get started with DiceDB.
+title: Hello, World!
+description: DiceDB is a key-value store and this is a simple Hello, World! example to get started with it.
 sidebar:
   order: 2
 ---
@@ -12,11 +12,11 @@ Before we start with Hello, World program for DiceDB, make sure you have
 
 You can follow the steps mentioned in the [installation](/get-started/installation/) guide to wrap up the installation.
 
-### Starting DiceDB
+## Starting DiceDB
 
 Once the DiceDB server starts, you will see output similar to this
 
-```
+```bash
         ██████╗ ██╗ ██████╗███████╗██████╗ ██████╗
         ██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
         ██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
@@ -24,68 +24,54 @@ Once the DiceDB server starts, you will see output similar to this
         ██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
         ╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 
-
---------------------------------------------------
-| Configuration           | Value                |
---------------------------------------------------
-| Version                 | 0.0.5                |
-| Port                    | 7379                 |
-| Multi Threading Enabled | true                 |
-| Cores                   | 8                    |
-| Shards                  | 8                    |
-| Watch Enabled           | false                |
-| HTTP Enabled            | false                |
-| Websocket Enabled       | false                |
---------------------------------------------------
+2025-02-17T07:15:33Z INF starting DiceDB version=0.1.0
+2025-02-17T07:15:33Z INF running with total_commands=21
+2025-02-17T07:15:33Z INF running with engine=ironhawk
+2025-02-17T07:15:33Z INF running with port=7379
+2025-02-17T07:15:33Z INF running on cores=16
+2025-02-17T07:15:33Z INF running with shards=16
 ```
 
-### Starting the DiceDB CLI
+## Starting the DiceDB CLI
 
-Open your terminal or command prompt and fire the following command
+DiceDB CLI is your portal to all things DiceDB, and once you start
+you will get a REPL to interact with the database and it looks
+something like this
 
 ```bash
-dicedb-cli
-```
-
-This command launches the DiceDB CLI REPL, presenting you with a prompt similar to this
-
-```
-Connected to DiceDB. Type 'exit' or press Ctrl+D to exit.
-dicedb>
+localhost:7379>
 ```
 
 This indicates that you're connected to the default DiceDB instance on your local machine on port 7379.
 
-### Storing Data: The SET Command
+## A simple Set-Get Example
 
-Let's store `<k1, v1>` in DiceDB. We'll use the [`SET`](/commands/set) command, which is responsible for storing a string value under a specified key.
+DiceDB is a KV store and one of the most basic operations is to store a key and a value
+and then retrieve it.
 
-```bash
-dicedb> SET k1 v1
-OK
-```
-
-Here's a breakdown of what happened:
-
-- `SET`: This is the DiceDB command to store a value.
-- `k1`: This is the key we're assigning to the value.
-- `v1`: This is the actual value we want to store. It's a simple string in this case.
-- `OK`: DiceDB's response indicating successful storage.
-
-### Retrieving Data: The GET Command
-
-Now, let's fetch the stored value using the `GET` command.
+To store `<k1, v1>` in DiceDB, we use the [`SET`](/commands/set) command and
+then retrieve it using the [`GET`](/commands/get) command.
 
 ```bash
-dicedb> GET k1
-v1
+localhost:7379> SET k1 v1
+OK OK
+localhost:7379> GET k1
+OK v1
 ```
 
-The [`GET`](/commands/get) command retrieves the value associated with the specified key. In this case, we retrieved the "v1" message we stored earlier.
+Here's a breakdown of what happened,
 
-### Conclusion
+- `SET`: This is the DiceDB command to store a value
+- `k1`: This is the key we're assigning to the value
+- `v1`: This is the actual value we want to store. It's a simple string in this case
+- `OK`: DiceDB's response indicating successful storage
+
+Note: The first `OK` is the status of the command, while the second `OK` is the output of the command.
+
+### Bottom Line
 
 This is just the tip of the iceberg when it comes to DiceDB.
 We've covered the basics of connecting to a DiceDB instance, storing a simple string, and retrieving it.
-The true power of DiceDB lies in its ability to intuitively build realtime reactive applications like [leaderboards](/tutorials/realtime-leaderboard/),
-handle complex data structures and perform operations efficiently.
+The true power of DiceDB lies in its ability to intuitively build reactive applications
+like [chatrooms](/tutorials/chatroom/), handle complex data structures and perform operations efficiently.
+But all of that after we do our first tutorial for reactivity and query subscriptions.

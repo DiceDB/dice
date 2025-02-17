@@ -38,14 +38,6 @@ export default defineConfig({
           autogenerate: { directory: "sdk" },
         },
         {
-          label: "Connection Protocols",
-          autogenerate: { directory: "protocols" },
-        },
-        {
-          label: "Tutorials",
-          autogenerate: { directory: "tutorials" },
-        },
-        {
           label: "Commands",
           autogenerate: { directory: "commands" },
         },
