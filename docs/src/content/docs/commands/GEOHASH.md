@@ -18,37 +18,39 @@ GEOHASH key member [member ...]
 
 ## Return Values
 
-| Condition                                   | Return Value                                          |
-| ------------------------------------------- | ----------------------------------------------------- |
-| Geohash representation for valid members.   | A string representing the Geohash of each member.    |
-| Non-existent member in the specified key.   | `(nil)` for that member.                             |
-| Incorrect Argument Count                    | `ERR wrong number of arguments for 'geohash' command` |
-| Non-existent or invalid key type.           | `WRONGTYPE Operation against a key holding the wrong kind of value`  |
+| Condition                                 | Return Value                                                        |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| Geohash representation for valid members. | A string representing the Geohash of each member.                   |
+| Non-existent member in the specified key. | `(nil)` for that member.                                            |
+| Incorrect Argument Count                  | `ERR wrong number of arguments for 'geohash' command`               |
+| Non-existent or invalid key type.         | `WRONGTYPE Operation against a key holding the wrong kind of value` |
 
 ## Behaviour
 
 When the GEOHASH command is issued, DiceDB performs the following steps:
 
-1. Checks if the key exists and corresponds to a valid geospatial dataset.  
-2. Verifies the presence of each specified member within the dataset.  
+1. Checks if the key exists and corresponds to a valid geospatial dataset.
+2. Verifies the presence of each specified member within the dataset.
 3. For each member:
    - If the member exists, its Geohash representation is returned.
-   - If the member does not exist, `(nil)` is returned.  
+   - If the member does not exist, `(nil)` is returned.
 4. Returns the results as an array of strings or nil values, maintaining the order of input members.
 
 ## Errors
 
 1. **Wrong Number of Arguments**
-   - **Error Message:** (error) ERR wrong number of arguments for 'geohash' command  
-   - Occurs when the command is executed without a key or member(s).  
 
-2. **Key Does Not Exist or Is of Wrong Type**  
+   - **Error Message:** (error) ERR wrong number of arguments for 'geohash' command
+   - Occurs when the command is executed without a key or member(s).
+
+2. **Key Does Not Exist or Is of Wrong Type**
+
    - **Error Message:** (error) WRONGTYPE Operation against a key holding the wrong kind of value
-   - Occurs when the specified key does not exist or is not a sorted set.  
+   - Occurs when the specified key does not exist or is not a sorted set.
 
 3. **Member Does Not Exist**
-   - **Error Message:** Returns `(nil)` for non-existent members.  
-   - Occurs when a member is specified but not found under the given key.  
+   - **Error Message:** Returns `(nil)` for non-existent members.
+   - Occurs when a member is specified but not found under the given key.
 
 ## Example Usage
 
