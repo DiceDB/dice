@@ -1,56 +1,16 @@
 ---
 title: Installation
-description: "Steps to install DiceDB and get started with it."
+description: Steps to install DiceDB and get started with it.
 sidebar:
   order: 1
 ---
 
-DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware.
+DiceDB is an open-source in-memory database with query subscriptions.
 
-## Setting up DiceDB server
+We support multiple ways to install DiceDB, one of which is using Docker and the other is building from source.
+Both of these methods can be found [here](https://github.com/DiceDB/dice/blob/master/README.md).
 
-### Using Docker
+To work with DiceDB from a command line interface, you can use the [DiceDB CLI](https://github.com/DiceDB/dicedb-cli)
+and the installation instructions can be found [here](https://github.com/DiceDB/dicedb-cli/blob/master/README.md).
 
-The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
-
-```bash
-docker run -p 7379:7379 dicedb/dicedb --enable-watch
-```
-
-The above command will start the DiceDB server running locally on the port `7379` and you can connect
-to it using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and SDKs.
-
-### Build from source
-
-```sh
-git clone https://github.com/dicedb/dice
-cd dice
-make build
-```
-
-The above command will create a binary `dicedb`. Execute the binary and that will
-start the DiceDB server.
-
-## Setting up CLI
-
-### Using cURL
-
-The best way to connect to DiceDB is using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and you can install it by running the following command
-
-```bash
-sudo su
-curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
-```
-
-If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
-
-### Building from source
-
-```sh
-git clone https://github.com/DiceDB/dicedb-cli
-cd dicedb-cli
-make build
-```
-
-The above command will create a binary `dicedb-cli`. Execute the binary will
-start the CLI and will try to connect to the DiceDB server.
+Once everything is installed, you are all set for a Hello, World example.

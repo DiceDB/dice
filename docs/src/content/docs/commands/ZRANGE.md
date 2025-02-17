@@ -13,21 +13,21 @@ ZRANGE key start stop [WITHSCORES] [REV]
 
 ## Parameters
 
-| Parameter   | Description                                                                 | Type    | Required |
-| ----------- | --------------------------------------------------------------------------- | ------- | -------- |
-| `key`       | The name of the sorted set.                                                 | String  | Yes      |
-| `start`     | The starting index of the range.                                            | Integer | Yes      |
-| `stop`      | The ending index of the range.                                              | Integer | Yes      |
-| `WITHSCORES`| Optional. Returns the scores of the elements in the result.                 | None    | No       |
-| `REV`       | Optional. Returns the elements in reverse order, from highest to lowest.    | None    | No       |
+| Parameter    | Description                                                              | Type    | Required |
+| ------------ | ------------------------------------------------------------------------ | ------- | -------- |
+| `key`        | The name of the sorted set.                                              | String  | Yes      |
+| `start`      | The starting index of the range.                                         | Integer | Yes      |
+| `stop`       | The ending index of the range.                                           | Integer | Yes      |
+| `WITHSCORES` | Optional. Returns the scores of the elements in the result.              | None    | No       |
+| `REV`        | Optional. Returns the elements in reverse order, from highest to lowest. | None    | No       |
 
 ## Return values
 
-| Condition                              | Return Value |
-| -------------------------------------- | ------------ |
+| Condition                                | Return Value                             |
+| ---------------------------------------- | ---------------------------------------- |
 | If the key exists and the range is valid | Array of elements in the specified range |
-| If the key does not exist              | Empty array  |
-| If the key is not a sorted set         | Error        |
+| If the key does not exist                | Empty array                              |
+| If the key is not a sorted set           | Error                                    |
 
 ## Behaviour
 
@@ -41,6 +41,7 @@ ZRANGE key start stop [WITHSCORES] [REV]
 ## Errors
 
 1. `Wrong type of value or key`:
+
    - Error Message: `(error) WRONGTYPE Operation against a key holding the wrong kind of value`
    - Occurs when attempting to use the command on a key that contains a non-sorted set value.
 

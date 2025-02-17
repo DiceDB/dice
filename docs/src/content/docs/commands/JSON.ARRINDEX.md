@@ -16,27 +16,27 @@ JSON.ARRINDEX key path value [start [stop]]
 ## Parameters
 
 | Parameter | Description                                                | Type    | Required |
-| --------- | -------------------------------------------------------    | ------  | -------- |
+| --------- | ---------------------------------------------------------- | ------- | -------- |
 | `key`     | The name of the key holding the JSON document.             | String  | Yes      |
 | `path`    | JSONPath pointing to an array within the JSON document.    | String  | Yes      |
 | `value`   | The value to search for within the array in JSON document. | Mixed   | Yes      |
 | `start`   | Optional index to start the search from. Defaults to 0.    | Integer | No       |
 | `stop`    | Optional index to end the search. Defaults to 0.           | Integer | No       |
 
-
 ## Return Values
 
-| Condition                                              | Return Value                                                                                                                   |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------                        |
-| Success                                                | ([]integer) `array of integer replies for each path, the first position in the array of each JSON value that matches the path` |
-| Wrong number of arguments                              | Error: `(error) ERR wrong number of arguments for JSON.ARRINDEX command`                                                       |
-| Key has wrong type                                     | Error: `(error) ERR Existing key has wrong Dice type`                                                                          |
-| Invalid integer arguments                              | Error: `(error) ERR Couldn't parse as integer`                                                                                 |
-| Invalid jsonpath                                       | Error: `(error) ERR Path '<path>' does not exist`                                                                              |
+| Condition                 | Return Value                                                                                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Success                   | ([]integer) `array of integer replies for each path, the first position in the array of each JSON value that matches the path` |
+| Wrong number of arguments | Error: `(error) ERR wrong number of arguments for JSON.ARRINDEX command`                                                       |
+| Key has wrong type        | Error: `(error) ERR Existing key has wrong Dice type`                                                                          |
+| Invalid integer arguments | Error: `(error) ERR Couldn't parse as integer`                                                                                 |
+| Invalid jsonpath          | Error: `(error) ERR Path '<path>' does not exist`                                                                              |
 
 ## Behaviour
 
 When the JSON.ARRINDEX command is issued, DiceDB performs the following steps:
+
 1. It checks if argument count is valid or not. If not, an error is thrown.
 2. It checks for the validity of value, start(optional) and stop(optional) argument passed. If not, an error is thrown.
 3. If the jsonpath passed is invalid, an error is thrown.
@@ -44,7 +44,7 @@ When the JSON.ARRINDEX command is issued, DiceDB performs the following steps:
 5. For each value matching the path, it checks if the value is JSON array.
 6. If it is JSON array, it finds the first occurrence of the value.
 7. If value is found, it adds to array the index where the value was found. Else, -1 is added.
-8. If it is not JSON array, (nil) is added to resultant array. 
+8. If it is not JSON array, (nil) is added to resultant array.
 9. The final array is returned.
 
 ## Errors
@@ -57,7 +57,7 @@ When the JSON.ARRINDEX command is issued, DiceDB performs the following steps:
 2. `Couldn't parse as integer`:
 
    - Error Message: `(error) ERR Couldn't parse as integer`
-   - Raised if the optional start and stop argument are non-integer strings. 
+   - Raised if the optional start and stop argument are non-integer strings.
    - Raised if the value is not a valid integer.
 
 3. `Key has wrong Dice type`:
@@ -67,8 +67,8 @@ When the JSON.ARRINDEX command is issued, DiceDB performs the following steps:
 
 4. `Path '<path>' does not exist`
 
-	- Error Message: `(error) ERR Path '<path>' does not exist`
-	- Raise if the path passed is not valid.
+   - Error Message: `(error) ERR Path '<path>' does not exist`
+   - Raise if the path passed is not valid.
 
 ## Example Usage
 
