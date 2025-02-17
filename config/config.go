@@ -59,7 +59,7 @@ func Load(flags *pflag.FlagSet) {
 
 	err := viper.ReadInConfig()
 	if _, ok := err.(viper.ConfigFileNotFoundError); !ok && err != nil {
-		panic(err)
+		viper.WriteConfigAs(filepath.Join(MetadataDir, "dicedb.yaml"))
 	}
 
 	flags.VisitAll(func(flag *pflag.Flag) {
