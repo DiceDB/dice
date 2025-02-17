@@ -21,7 +21,6 @@ import (
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
-	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/internal/server/ironhawk"
 	"github.com/dicedb/dicedb-go/wire"
 
@@ -56,10 +55,6 @@ func printBanner() {
 	╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 			
 `)
-}
-
-func Init() {
-	slog.SetDefault(logger.New())
 }
 
 const EngineRESP = "resp"

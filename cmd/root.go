@@ -5,11 +5,13 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"reflect"
 	"strconv"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/logger"
 	"github.com/dicedb/dice/server"
 	"github.com/spf13/cobra"
 )
@@ -43,7 +45,7 @@ var rootCmd = &cobra.Command{
 	Short: "an in-memory database;",
 	Run: func(cmd *cobra.Command, args []string) {
 		config.Load(cmd.Flags())
-		server.Init()
+		slog.SetDefault(logger.New())
 		server.Start()
 	},
 }

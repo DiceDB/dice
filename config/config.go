@@ -129,12 +129,8 @@ func configureMetadataDir() {
 	// DiceDB can also run without metadata directory.and in that case
 	// current directory will be used as metadata directory.
 	if err := os.MkdirAll(MetadataDir, 0o700); err != nil {
-		slog.Warn("could not create metadata directory at",
-			slog.String("path", MetadataDir),
-			slog.String("error", err.Error()),
-			slog.String("fix", "run with sudo privileges to use the default metadata directory"),
-		)
-		slog.Info("using current directory as metadata directory")
+		fmt.Printf("could not create metadata directory at %s. error: %s\n", MetadataDir, err)
+		fmt.Println("using current directory as metadata directory")
 		MetadataDir = "."
 	}
 }
