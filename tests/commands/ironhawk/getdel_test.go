@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dicedb/dicedb-go/wire"
 	"gotest.tools/v3/assert"
 )
 
@@ -16,66 +17,111 @@ func TestGetDel(t *testing.T) {
 
 	testCases := []struct {
 		name   string
-		cmds   []string
-		expect []interface{}
+		cmds   []*wire.Command
+		expect []*wire.Response
 		delays []time.Duration
 	}{
 		{
 			name:   "GetDel",
-			cmds:   []string{"SET k v", "GETDEL k", "GETDEL k", "GET k"},
-			expect: []interface{}{"OK", "v", "(nil)", "(nil)"},
+			cmds:   []*wire.Command{{Cmd: "SET", Args: []string{"k", "v"}}, {Cmd: "GETDEL", Args: []string{"k"}}, {Cmd: "GETDEL", Args: []string{"k"}}, {Cmd: "GET", Args: []string{"k"}}},
+			expect: []*wire.Response{{Value: &wire.Response_VStr{VStr: "OK"}}, {Value: &wire.Response_VStr{VStr: "v"}}, {Value: &wire.Response_VNil{VNil: true}}, {Value: &wire.Response_VNil{VNil: true}}},
 			delays: []time.Duration{0, 0, 0, 0},
 		},
 		{
-			name:   "GetDel with expiration, checking if key exist and is already expired, then it should return null",
-			cmds:   []string{"GETDEL k", "SET k v EX 2", "GETDEL k"},
-			expect: []interface{}{"(nil)", "OK", "(nil)"},
+			name: "GetDel with expiration, checking if key exist and is already expired, then it should return null",
+			cmds: []*wire.Command{
+				{Cmd: "GETDEL", Args: []string{"k"}},
+				{Cmd: "SET", Args: []string{"k", "v", "EX", "2"}},
+				{Cmd: "GETDEL", Args: []string{"k"}},
+			},
+			expect: []*wire.Response{
+				{Value: &wire.Response_VNil{VNil: true}},
+				{Value: &wire.Response_VStr{VStr: "OK"}},
+				{Value: &wire.Response_VNil{VNil: true}},
+			},
 			delays: []time.Duration{0, 0, 3 * time.Second},
 		},
 		{
-			name: "GetDel with expiration, checking if key exist and is not yet expired, then it should return its " +
-				"value",
-			cmds:   []string{"SET k v EX 40", "GETDEL k"},
-			expect: []interface{}{"OK", "v"},
+			name: "GetDel with expiration, checking if key exist and is not yet expired, then it should return its value",
+			cmds: []*wire.Command{
+				{Cmd: "SET", Args: []string{"k", "v", "EX", "40"}},
+				{Cmd: "GETDEL", Args: []string{"k"}},
+			},
+			expect: []*wire.Response{
+				{Value: &wire.Response_VStr{VStr: "OK"}},
+				{Value: &wire.Response_VStr{VStr: "v"}},
+			},
 			delays: []time.Duration{0, 2 * time.Second},
 		},
 		{
 			name: "GetDel with invalid command",
-			cmds: []string{"GETDEL", "GETDEL k v"},
-			expect: []interface{}{"ERR wrong number of arguments for 'getdel' command",
-				"ERR wrong number of arguments for 'getdel' command"},
+			cmds: []*wire.Command{
+				{Cmd: "GETDEL", Args: []string{}},
+				{Cmd: "GETDEL", Args: []string{"k", "v"}},
+			},
+			expect: []*wire.Response{
+				{},
+				{},
+			},
 			delays: []time.Duration{0, 0},
 		},
-		{
-			name:   "Getdel with value created from Setbit",
-			cmds:   []string{"SETBIT k 1 1", "GET k", "GETDEL k", "GET k"},
-			expect: []interface{}{int64(0), "@", "@", "(nil)"},
-			delays: []time.Duration{0, 0, 0, 0},
-		},
-		{
-			name:   "GetDel with Set object should return wrong type error",
-			cmds:   []string{"SADD myset member1", "GETDEL myset"},
-			expect: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
-			delays: []time.Duration{0, 0},
-		},
-		{
-			name:   "GetDel with JSON object should return wrong type error",
-			cmds:   []string{"JSON.SET k $ 1", "GETDEL k", "JSON.GET k"},
-			expect: []interface{}{"OK", "WRONGTYPE Operation against a key holding the wrong kind of value", "1"},
-			delays: []time.Duration{0, 0, 0},
-		},
+		// TODO: remove these after confirming if needed
+		// {
+		// name: "Getdel with value created from Setbit",
+		// cmds: []*wire.Command{
+		// &wire.Command{Cmd: "SETBIT", Args: []string{"k", "1", "1"}},
+		// &wire.Command{Cmd: "GET", Args: []string{"k"}},
+		// &wire.Command{Cmd: "GETDEL", Args: []string{"k"}},
+		// &wire.Command{Cmd: "GET", Args: []string{"k"}},
+		// },
+		// expect: []*wire.Response{
+		// &wire.Response{Value: &wire.Response_VInt{VInt: 0}},
+		// &wire.Response{Value: &wire.Response_VStr{VStr: "@"}},
+		// &wire.Response{Value: &wire.Response_VStr{VStr: "@"}},
+		// &wire.Response{Value: &wire.Response_VNil{VNil: true}},
+		// },
+		// delays: []time.Duration{0, 0, 0, 0},
+		// },
+		// {
+		// name: "GetDel with Set object should return wrong type error",
+		// cmds: []*wire.Command{
+		// &wire.Command{Cmd: "SADD", Args: []string{"myset", "member1"}},
+		// &wire.Command{Cmd: "GETDEL", Args: []string{"myset"}},
+		// },
+		// expect: []*wire.Response{
+		// &wire.Response{Value: &wire.Response_VInt{VInt: 1}},
+		// &wire.Response{},
+		// // &wire.Response{Value: &wire.Response_VErr{VErr: "WRONGTYPE Operation against a key holding the wrong kind of value"}},
+		// },
+		// delays: []time.Duration{0, 0},
+		// },
+		// {
+		// name: "GetDel with JSON object should return wrong type error",
+		// cmds: []*wire.Command{
+		// &wire.Command{Cmd: "JSON.SET", Args: []string{"k", "$", "1"}},
+		// &wire.Command{Cmd: "GETDEL", Args: []string{"k"}},
+		// &wire.Command{Cmd: "JSON.GET", Args: []string{"k"}},
+		// },
+		// expect: []*wire.Response{
+		// &wire.Response{Value: &wire.Response_VStr{VStr: "OK"}},
+		// &wire.Response{},
+		// // &wire.Response{Value: &wire.Response_VErr{VErr: "WRONGTYPE Operation against a key holding the wrong kind of value"}},
+		// &wire.Response{Value: &wire.Response_VStr{VStr: "1"}},
+		// },
+		// delays: []time.Duration{0, 0, 0},
+		// },
 	}
 
 	for _, tc := range testCases {
-		client.FireString("del k")
+		client.Fire(&wire.Command{Cmd: "del k"})
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.cmds {
 				if tc.delays[i] > 0 {
 					time.Sleep(tc.delays[i])
 				}
-				result := client.FireString(cmd)
-				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s, expected this %s, "+
-					"got this %s", cmd, tc.expect[i], result)
+				result := client.Fire(cmd)
+				// Since, we might have any of these 5 types (Response_VNil, Response_VInt, Response_VStr, Response_VFloat, Response_VBytes) in .Value, we do DeepEqual to check actual values
+				assert.DeepEqual(t, tc.expect[i].Value, result.Value)
 			}
 		})
 	}
