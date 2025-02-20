@@ -6,6 +6,7 @@ package ironhawk
 import (
 	"testing"
 
+	"github.com/dicedb/dice/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,12 +22,17 @@ func TestEcho(t *testing.T) {
 		{
 			name:     "ECHO with invalid number of arguments",
 			commands: []string{"ECHO"},
-			expected: []interface{}{"ERR wrong number of arguments for 'echo' command"},
+			expected: []interface{}{"wrong number of arguments for 'ECHO' command"},
 		},
 		{
 			name:     "ECHO with one argument",
-			commands: []string{"ECHO \"hello world\""},
-			expected: []interface{}{"hello world"},
+			commands: []string{"ECHO Hello"},
+			expected: []interface{}{"Hello"},
+		},
+		{
+			name: "ECHO with multiple arguments",
+			commands: []string{"ECHO Hello World"},
+			expected: []interface{}{"wrong number of arguments for 'ECHO' command"},
 		},
 	}
 
@@ -34,7 +40,7 @@ func TestEcho(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result := client.FireString(cmd)
-				assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
+				assert.Equal(t, tc.expected[i], testutils.ParseTestResponse(result), "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
