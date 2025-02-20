@@ -29,6 +29,11 @@ func TestEcho(t *testing.T) {
 			commands: []string{"ECHO Hello"},
 			expected: []interface{}{"Hello"},
 		},
+		{
+			name: "ECHO with multiple arguments",
+			commands: []string{"ECHO Hello World"},
+			expected: []interface{}{"wrong number of arguments for 'ECHO' command"},
+		},
 	}
 
 	for _, tc := range testCases {
