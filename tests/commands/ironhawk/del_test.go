@@ -53,7 +53,7 @@ func TestDel(t *testing.T) {
 			name:     "DEL with no keys or arguments",
 			commands: []string{"DEL"},
 			expected: []any{
-				nil,
+				"wrong number of arguments for 'DEL' command",
 			},
 		},
 	}
@@ -62,7 +62,13 @@ func TestDel(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result := client.FireString(cmd)
-				assert.Equal(t, tc.expected[i], result.GetValue(), "Value mismatch for cmd %s", cmd)
+
+				var resultValue any = result.GetValue()
+				if result.Err != "" {
+					resultValue = result.Err
+				}
+				
+				assert.Equal(t, tc.expected[i], resultValue, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}

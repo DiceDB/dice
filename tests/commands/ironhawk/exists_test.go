@@ -68,6 +68,14 @@ func TestExists(t *testing.T) {
 			},
 			delay:    []time.Duration{0, 0, 0, 0, 2 * time.Second},
 		},
+		{
+			name:     "EXISTS with no keys or arguments",
+			command:  []string{"EXISTS"},
+			expected: []any{
+				"wrong number of arguments for 'EXISTS' command",
+			},
+			delay:    []time.Duration{0},
+		},
 	}
 	for _, tcase := range testCases {
 		t.Run(tcase.name, func(t *testing.T) {
@@ -83,7 +91,13 @@ func TestExists(t *testing.T) {
 				}
 				cmd := tcase.command[i]
 				result := client.FireString(cmd)
-				assert.Equal(t, tcase.expected[i], result.GetValue(), "Value mismatch for cmd %s", cmd)
+				
+				var resultValue any = result.GetValue()
+				if result.Err != "" {
+					resultValue = result.Err
+				}
+				
+				assert.Equal(t, tcase.expected[i], resultValue, "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
