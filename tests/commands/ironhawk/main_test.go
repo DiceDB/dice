@@ -5,6 +5,7 @@ package ironhawk
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/dicedb/dice/config"
@@ -20,6 +21,7 @@ type TestCase struct {
 	name     string
 	commands []string
 	expected []interface{}
+	keysUsed []string
 }
 
 func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) bool {
@@ -27,6 +29,9 @@ func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) bool
 	switch v := expected.(type) {
 	case string:
 		areEqual = v == actual.GetVStr()
+		if strings.HasPrefix(v, "ERR") {
+			areEqual = v == actual.GetErr()
+		}
 	case int64:
 		areEqual = v == actual.GetVInt()
 	case int:
