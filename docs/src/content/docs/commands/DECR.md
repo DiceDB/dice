@@ -1,14 +1,14 @@
 ---
 title: DECR
-description: Documentation for the DiceDB command DECR
+description: DECR
 ---
 
-The `DECR` command in DiceDB is used to decrement the integer value of a key by one. If the key does not exist, it is set to 0 before performing the decrement operation. This command is useful for counters and other numerical operations where you need to decrease the value stored at a specific key.
+The `DECR` command decrements the integer value of a key by one. If the key does not exist, it is set to 0 before performing the decrement operation. This command is useful for counters and other numerical operations where you need to decrease the value stored at a specific key.
 
 ## Syntax
 
 ```bash
-DECR key
+localhost:7379> DECR key
 ```
 
 ## Parameters

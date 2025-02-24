@@ -34,22 +34,7 @@ func TestSet(t *testing.T) {
 			expected: []interface{}{"OK", "OK", int64(5)},
 		},
 	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			client.Fire(&wire.Command{
-				Cmd:  "DEL",
-				Args: []string{"k"},
-			})
-			for i, cmd := range tc.commands {
-				result := client.Fire(&wire.Command{
-					Cmd:  strings.Split(cmd, " ")[0],
-					Args: strings.Split(cmd, " ")[1:],
-				})
-				assertEqual(t, tc.expected[i], result)
-			}
-		})
-	}
+	runTestcases(t, client, testCases)
 }
 
 func TestSetWithOptions(t *testing.T) {
@@ -139,36 +124,7 @@ func TestSetWithOptions(t *testing.T) {
 			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"k", "k1", "k2"}, store)
-			client.Fire(&wire.Command{
-				Cmd:  "DEL",
-				Args: []string{"k"},
-			})
-			client.Fire(&wire.Command{
-				Cmd:  "DEL",
-				Args: []string{"k1"},
-			})
-			client.Fire(&wire.Command{
-				Cmd:  "DEL",
-				Args: []string{"k1"},
-			})
-			for i, cmd := range tc.commands {
-				result := client.Fire(&wire.Command{
-					Cmd:  strings.Split(cmd, " ")[0],
-					Args: strings.Split(cmd, " ")[1:],
-				})
-				assertEqual(t, tc.expected[i], result)
-			}
-		})
-	}
-
-	client.Fire(&wire.Command{
-		Cmd:  "FLUSHDB",
-		Args: []string{},
-	})
+	runTestcases(t, client, testCases)
 }
 
 func TestSetWithExat(t *testing.T) {
