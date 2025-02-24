@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 func TestGet(t *testing.T) {
@@ -17,14 +18,26 @@ func TestGet(t *testing.T) {
 	testCases := []struct {
 		name   string
 		cmds   []string
-		expect []interface{}
+		expect []any
 		delays []time.Duration
 	}{
 		{
 			name:   "Get with expiration",
 			cmds:   []string{"SET k v EX 4", "GET k", "GET k"},
-			expect: []interface{}{"OK", "v", "(nil)"},
+			expect: []any{
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VStr{VStr: "v"},
+				&wire.Response_VNil{VNil: true},
+			},
 			delays: []time.Duration{0, 0, 5 * time.Second},
+		},
+		{
+			name:   "Get with non existent key",
+			cmds:   []string{"GET nek"},
+			expect: []any{
+				&wire.Response_VNil{VNil: true},
+			},
+			delays: []time.Duration{0},
 		},
 	}
 
@@ -35,7 +48,7 @@ func TestGet(t *testing.T) {
 					time.Sleep(tc.delays[i])
 				}
 				result := client.FireString(cmd)
-				assert.Equal(t, tc.expect[i], result, "Value mismatch for cmd %s", cmd)
+				assert.Equal(t, tc.expect[i], result.GetValue(), "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
