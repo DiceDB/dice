@@ -1,4 +1,4 @@
-Hello, World - DiceDB with Go
+Hello, World - DiceDB + Go
 ===
 
 This is a simple Hello, World application with DiceDB using Go SDK.

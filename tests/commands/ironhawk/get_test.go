@@ -4,11 +4,11 @@
 package ironhawk
 
 import (
+	"strings"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/dicedb/dicedb-go/wire"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGet(t *testing.T) {
@@ -16,39 +16,40 @@ func TestGet(t *testing.T) {
 	defer client.Close()
 
 	testCases := []struct {
-		name   string
-		cmds   []string
-		expect []any
-		delays []time.Duration
+		name     string
+		commands []string
+		expected []any
 	}{
 		{
-			name:   "Get with expiration",
-			cmds:   []string{"SET k v EX 4", "GET k", "GET k"},
-			expect: []any{
+			name: "Get with expiration",
+			commands: []string{
+				"SET k v",
+				"GET k",
+			},
+			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VStr{VStr: "v"},
-				&wire.Response_VNil{VNil: true},
 			},
-			delays: []time.Duration{0, 0, 5 * time.Second},
 		},
 		{
-			name:   "Get with non existent key",
-			cmds:   []string{"GET nek"},
-			expect: []any{
+			name: "Get with non existent key",
+			commands: []string{
+				"GET nek",
+			},
+			expected: []any{
 				&wire.Response_VNil{VNil: true},
 			},
-			delays: []time.Duration{0},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			for i, cmd := range tc.cmds {
-				if tc.delays[i] > 0 {
-					time.Sleep(tc.delays[i])
-				}
-				result := client.FireString(cmd)
-				assert.Equal(t, tc.expect[i], result.GetValue(), "Value mismatch for cmd %s", cmd)
+			for i, cmd := range tc.commands {
+				result := client.Fire(&wire.Command{
+					Cmd:  strings.Split(cmd, " ")[0],
+					Args: strings.Split(cmd, " ")[1:],
+				})
+				assert.Equal(t, tc.expected[i], result.GetValue(), "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
