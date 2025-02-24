@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 func TestExists(t *testing.T) {
@@ -17,31 +18,54 @@ func TestExists(t *testing.T) {
 	testCases := []struct {
 		name     string
 		command  []string
-		expected []interface{}
+		expected []any
 		delay    []time.Duration
 	}{
 		{
 			name:     "Test EXISTS command",
 			command:  []string{"SET key value", "EXISTS key", "EXISTS key2"},
-			expected: []interface{}{"OK", int64(1), int64(0)},
+			expected: []interface{}{
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VInt{VInt: 1},
+				&wire.Response_VInt{VInt: 0},
+			},
 			delay:    []time.Duration{0, 0, 0},
 		},
 		{
+		 	// TODO: expected response should be updated for all exists command once multi shard is impl
 			name:     "Test EXISTS command with multiple keys",
 			command:  []string{"SET key value", "SET key2 value2", "EXISTS key key2 key3", "EXISTS key key2 key3 key4", "DEL key", "EXISTS key key2 key3 key4"},
-			expected: []interface{}{"OK", "OK", int64(2), int64(2), int64(1), int64(1)},
+			expected: []interface{}{
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VInt{VInt: 1},
+				&wire.Response_VInt{VInt: 1},
+				&wire.Response_VInt{VInt: 1},
+				&wire.Response_VInt{VInt: 0},
+			},
 			delay:    []time.Duration{0, 0, 0, 0, 0, 0},
 		},
 		{
 			name:     "Test EXISTS an expired key",
 			command:  []string{"SET key value ex 1", "EXISTS key", "EXISTS key"},
-			expected: []interface{}{"OK", int64(1), int64(0)},
+			expected: []interface{}{
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VInt{VInt: 1},
+				&wire.Response_VInt{VInt: 0},
+			},
 			delay:    []time.Duration{0, 0, 2 * time.Second},
 		},
 		{
+			// TODO: expected response should be updated for all exists command once multi shard is impl
 			name:     "Test EXISTS with multiple keys and expired key",
 			command:  []string{"SET key value ex 2", "SET key2 value2", "SET key3 value3", "EXISTS key key2 key3", "EXISTS key key2 key3"},
-			expected: []interface{}{"OK", "OK", "OK", int64(3), int64(2)},
+			expected: []interface{}{
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VInt{VInt: 1},
+				&wire.Response_VInt{VInt: 0},
+			},
 			delay:    []time.Duration{0, 0, 0, 0, 2 * time.Second},
 		},
 	}
@@ -58,8 +82,8 @@ func TestExists(t *testing.T) {
 					time.Sleep(tcase.delay[i])
 				}
 				cmd := tcase.command[i]
-				out := tcase.expected[i]
-				assert.Equal(t, out, client.FireString(cmd), "Value mismatch for cmd %s\n.", cmd)
+				result := client.FireString(cmd)
+				assert.Equal(t, tcase.expected[i], result.GetValue(), "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}

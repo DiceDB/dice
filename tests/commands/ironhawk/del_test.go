@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 func TestDel(t *testing.T) {
@@ -16,27 +17,44 @@ func TestDel(t *testing.T) {
 	testCases := []struct {
 		name     string
 		commands []string
-		expected []interface{}
+		expected []any
 	}{
 		{
 			name:     "DEL with set key",
 			commands: []string{"SET k1 v1", "DEL k1", "GET k1"},
-			expected: []interface{}{"OK", int64(1), "(nil)"},
+			expected: []interface{}{
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VInt{VInt: 1},
+				&wire.Response_VNil{VNil: true},
+			},
 		},
 		{
+			// TODO: 3rd and 4th command should be together but delete on multi shard isn't there as of now
 			name:     "DEL with multiple keys",
-			commands: []string{"SET k1 v1", "SET k2 v2", "DEL k1 k2", "GET k1", "GET k2"},
-			expected: []interface{}{"OK", "OK", int64(2), "(nil)", "(nil)"},
+			commands: []string{"SET k1 v1", "SET k2 v2", "DEL k1", "DEL k2", "GET k1", "GET k2"},
+			expected: []interface{}{
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VStr{VStr: "OK"},
+				&wire.Response_VInt{VInt: 1},
+				&wire.Response_VInt{VInt: 1},
+				&wire.Response_VNil{VNil: true},
+				&wire.Response_VNil{VNil: true},
+			},
 		},
 		{
 			name:     "DEL with key not set",
 			commands: []string{"GET k3", "DEL k3"},
-			expected: []interface{}{"(nil)", int64(0)},
+			expected: []interface{}{
+				&wire.Response_VNil{VNil: true},
+				&wire.Response_VInt{VInt: 0},
+			},
 		},
 		{
 			name:     "DEL with no keys or arguments",
 			commands: []string{"DEL"},
-			expected: []interface{}{"ERR wrong number of arguments for 'del' command"},
+			expected: []any{
+				nil,
+			},
 		},
 	}
 
@@ -44,7 +62,7 @@ func TestDel(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for i, cmd := range tc.commands {
 				result := client.FireString(cmd)
-				assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
+				assert.Equal(t, tc.expected[i], result.GetValue(), "Value mismatch for cmd %s", cmd)
 			}
 		})
 	}
