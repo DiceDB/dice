@@ -25,6 +25,13 @@ func TestEcho(t *testing.T) {
 			commands: []string{"ECHO hello"},
 			expected: []interface{}{"hello"},
 		},
+		{
+			name: "ECHO with multiple arguments",
+			commands: []string{"ECHO hello world"},
+			expected: []interface{}{
+				errors.New("wrong number of arguments for 'ECHO' command"),
+			},
+		},
 	}
 	runTestcases(t, client, testCases)
 }
