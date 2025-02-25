@@ -74,6 +74,7 @@ func Start() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	ctx = context.WithValue(ctx, "cancel", cancel)
 
 	// Handle SIGTERM and SIGINT
 	sigs := make(chan os.Signal, 1)
