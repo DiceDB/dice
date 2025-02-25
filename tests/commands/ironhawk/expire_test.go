@@ -340,7 +340,6 @@ func TestEXPIREAT(t *testing.T) {
 				"SET test_key test_value",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10),
 			},
-			// expected: []interface{}{"OK", int64(1)},
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VInt{VInt: 1},
@@ -354,7 +353,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10),
 				"GET test_key",
 			},
-			// expected: []interface{}{int64(1), "(nil)"},
 			expected: []any{
 				&wire.Response_VInt{VInt: 1},
 				&wire.Response_VNil{VNil: true},
@@ -367,7 +365,6 @@ func TestEXPIREAT(t *testing.T) {
 			commands: []string{
 				"EXPIREAT non_existent_key " + strconv.FormatInt(time.Now().Unix()+1, 10),
 			},
-			// expected: []interface{}{int64(0)},
 			expected: []any{
 				&wire.Response_VInt{VInt: 0},
 			},
@@ -380,7 +377,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(-1, 10),
 				"GET test_key",
 			},
-			// expected: []interface{}{"ERR invalid expire time in 'expireat' command", "test_value"},
 			expected: []any{"ERR invalid expire time in 'EXPIREAT' command", &wire.Response_VStr{VStr: "test_value"}},
 			delay:    []time.Duration{0, 0},
 		},
@@ -390,7 +386,6 @@ func TestEXPIREAT(t *testing.T) {
 			commands: []string{
 				"EXPIREAT test_key",
 			},
-			// expected: []interface{}{"ERR wrong number of arguments for 'expireat' command"},
 			expected: []any{"wrong number of arguments for 'EXPIREAT' command"},
 			delay:    []time.Duration{0},
 		},
@@ -402,7 +397,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " NX",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " NX",
 			},
-			// expected: []interface{}{"OK", int64(1), int64(0)},
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VInt{VInt: 1},
@@ -421,7 +415,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
 			},
-			// expected: []interface{}{"OK", int64(0), int64(-1), int64(1), int64(1)},
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VInt{VInt: 0},
@@ -442,7 +435,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " GT",
 			},
-			// expected: []interface{}{"OK", int64(0), int64(-1), int64(1), int64(1)},
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VInt{VInt: 0},
@@ -461,7 +453,7 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10),
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " LT",
 			},
-			// expected: []interface{}{"OK", int64(1), int64(0)},
+
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VInt{VInt: 1},
@@ -478,7 +470,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " LT",
 			},
-			// expected: []interface{}{"OK", int64(1), int64(0)},
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VInt{VInt: 1},
@@ -497,10 +488,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " NX" + " GT",
 				"GET test_key",
 			},
-			// expected: []interface{}{"OK", int64(1),
-			// 	"ERR NX and XX, GT or LT options at the same time are not compatible",
-			// 	"ERR NX and XX, GT or LT options at the same time are not compatible",
-			// 	"test_value"},
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VInt{VInt: 1},
@@ -521,7 +508,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " XX" + " GT",
 				"GET test_key",
 			},
-			// expected: []interface{}{"OK", int64(1), int64(1), int64(1), int64(1), "test_value"},
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VInt{VInt: 1},
@@ -541,7 +527,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+2, 10) + " XX" + " LT",
 				"GET test_key",
 			},
-			// expected: []interface{}{"OK", int64(1), int64(1), "(nil)"},
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VInt{VInt: 1},
@@ -558,7 +543,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+2, 10) + " NX",
 				"GET test_key",
 			},
-			// expected: []interface{}{"OK", int64(1), "(nil)"},
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				&wire.Response_VInt{VInt: 1},
@@ -579,13 +563,6 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " nx" + " " + "xx" + " " + "gt",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " nx" + " " + "xx" + " " + "lt",
 			},
-			// expected: []interface{}{"OK", "ERR Unsupported option rr",
-			// 	"ERR NX and XX, GT or LT options at the same time are not compatible",
-			// 	"ERR GT and LT options at the same time are not compatible",
-			// 	"ERR GT and LT options at the same time are not compatible",
-			// 	"ERR NX and XX, GT or LT options at the same time are not compatible",
-			// 	"ERR NX and XX, GT or LT options at the same time are not compatible",
-			// 	"ERR NX and XX, GT or LT options at the same time are not compatible"},
 			expected: []any{
 				&wire.Response_VStr{VStr: "OK"},
 				"ERR unsupported option rr",
