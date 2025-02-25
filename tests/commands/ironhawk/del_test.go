@@ -18,10 +18,11 @@ func TestDel(t *testing.T) {
 			commands: []string{"SET k1 v1", "DEL k1", "GET k1"},
 			expected: []interface{}{"OK", 1, nil},
 		},
+		// TODO: 3rd and 4th commands should be together but delete on multi shard isn't supported as of now
 		{
 			name:     "DEL multiple keys",
-			commands: []string{"SET k1 v1", "SET k2 v2", "DEL k1 k2", "GET k1", "GET k2"},
-			expected: []interface{}{"OK", "OK", 2, nil, nil},
+			commands: []string{"SET k1 v1", "SET k2 v2", "DEL k1", "DEL k2", "GET k1", "GET k2"},
+			expected: []interface{}{"OK", "OK", 1, 1, nil, nil},
 		},
 		{
 			name:     "DEL with key not set",

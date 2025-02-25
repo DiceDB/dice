@@ -4,53 +4,40 @@
 package ironhawk
 
 import (
-	"strings"
 	"testing"
-
-	"github.com/dicedb/dicedb-go/wire"
-	"github.com/stretchr/testify/assert"
+	"time"
+	"errors"
 )
 
 func TestGet(t *testing.T) {
 	client := getLocalConnection()
 	defer client.Close()
 
-	testCases := []struct {
-		name     string
-		commands []string
-		expected []any
-	}{
+	testCases := []TestCase{
 		{
-			name: "Get with expiration",
-			commands: []string{
-				"SET k v",
-				"GET k",
-			},
-			expected: []any{
-				&wire.Response_VStr{VStr: "OK"},
-				&wire.Response_VStr{VStr: "v"},
-			},
+			name:     "Get with expiration",
+			commands: []string{"SET k v EX 2", "GET k", "GET k"},
+			expected: []interface{}{"OK", "v", nil},
+			delay:    []time.Duration{0, 0, 2 * time.Second},
 		},
 		{
-			name: "Get with non existent key",
-			commands: []string{
-				"GET nek",
-			},
-			expected: []any{
-				&wire.Response_VNil{VNil: true},
+			name:     "Get without expiration",
+			commands: []string{"SET k v", "GET k"},
+			expected: []interface{}{"OK", "v"},
+		},
+		{
+			name:     "Get with non existent key",
+			commands: []string{"GET nek"},
+			expected: []interface{}{nil},
+		},
+		{
+			name:     "GET with no keys or arguments",
+			commands: []string{"GET"},
+			expected: []interface{}{
+				errors.New("wrong number of arguments for 'GET' command"),
 			},
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			for i, cmd := range tc.commands {
-				result := client.Fire(&wire.Command{
-					Cmd:  strings.Split(cmd, " ")[0],
-					Args: strings.Split(cmd, " ")[1:],
-				})
-				assert.Equal(t, tc.expected[i], result.GetValue(), "Value mismatch for cmd %s", cmd)
-			}
-		})
-	}
+	runTestcases(t, client, testCases)
 }
