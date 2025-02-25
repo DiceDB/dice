@@ -39,9 +39,12 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 			return err
 		}
 
-		_c := &cmd.Cmd{C: c}
-		_c.ClientID = t.ClientID
-		_c.Mode = t.Mode
+		_c := &cmd.Cmd{
+			C:        c,
+			ClientID: t.ClientID,
+			Mode:     t.Mode,
+			Ctx:      ctx,
+		}
 
 		res, err := shardManager.Execute(_c)
 

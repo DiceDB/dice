@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -16,7 +17,7 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-//nolint: stylecheck
+// nolint: stylecheck
 const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
@@ -24,6 +25,7 @@ type Cmd struct {
 	IsReplay bool
 	ClientID string
 	Mode     string
+	Ctx      context.Context
 }
 
 func (c *Cmd) String() string {
@@ -152,6 +154,7 @@ func errWrongArgumentCount(command string) error {
 
 var errUnknownObjectType = errors.New("unknown object type")
 var errIntegerOutOfRange = errors.New("ERR value is not an integer or out of range")
+var errContextNotFound = errors.New("Context not found")
 
 func errInvalidSyntax(command string) error {
 	return fmt.Errorf("invalid syntax for '%s' command", strings.ToUpper(command))
