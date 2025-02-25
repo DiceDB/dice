@@ -55,6 +55,9 @@ func evalEXPIRETIME(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
 }
 
 func executeEXPIRETIME(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 1 {
+		return cmdResNil, errWrongArgumentCount("EXPIRETIME")
+	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalEXPIRETIME(c, shard.Thread.Store())
 }
