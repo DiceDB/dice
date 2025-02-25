@@ -7,14 +7,14 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var cHANDSHAKE = &DiceDBCommand{
+var cHANDSHAKE = &CommandMeta{
 	Name:      "HANDSHAKE",
 	HelpShort: "HANDSHAKE is used to handshake with the database; sends client_id and execution mode",
 	Eval:      evalHANDSHAKE,
 }
 
 func init() {
-	commandRegistry.AddCommand(cHANDSHAKE)
+	CommandRegistry.AddCommand(cHANDSHAKE)
 }
 
 func evalHANDSHAKE(c *Cmd, s *dstore.Store) (*CmdRes, error) {

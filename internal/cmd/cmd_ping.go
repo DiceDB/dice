@@ -8,14 +8,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cPING = &DiceDBCommand{
+var cPING = &CommandMeta{
 	Name:      "PING",
 	HelpShort: "PING returns with an encoded \"PONG\" if no message is added with the ping command, the message will be returned.",
 	Eval:      evalPING,
 }
 
 func init() {
-	commandRegistry.AddCommand(cPING)
+	CommandRegistry.AddCommand(cPING)
 }
 
 func evalPING(c *Cmd, s *dstore.Store) (*CmdRes, error) {

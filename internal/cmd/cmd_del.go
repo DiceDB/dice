@@ -8,14 +8,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cDEL = &DiceDBCommand{
+var cDEL = &CommandMeta{
 	Name:      "DEL",
 	HelpShort: "DEL deletes all the specified keys in args list",
 	Eval:      evalDEL,
 }
 
 func init() {
-	commandRegistry.AddCommand(cDEL)
+	CommandRegistry.AddCommand(cDEL)
 }
 
 // TODO: DEL command is actually a multi-key command so this needs

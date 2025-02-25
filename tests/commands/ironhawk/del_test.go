@@ -4,48 +4,37 @@
 package ironhawk
 
 import (
+	"errors"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDel(t *testing.T) {
 	client := getLocalConnection()
 	defer client.Close()
 
-	testCases := []struct {
-		name     string
-		commands []string
-		expected []interface{}
-	}{
+	testCases := []TestCase{
 		{
 			name:     "DEL with set key",
 			commands: []string{"SET k1 v1", "DEL k1", "GET k1"},
-			expected: []interface{}{"OK", int64(1), "(nil)"},
+			expected: []interface{}{"OK", 1, nil},
 		},
 		{
-			name:     "DEL with multiple keys",
+			name:     "DEL multiple keys",
 			commands: []string{"SET k1 v1", "SET k2 v2", "DEL k1 k2", "GET k1", "GET k2"},
-			expected: []interface{}{"OK", "OK", int64(2), "(nil)", "(nil)"},
+			expected: []interface{}{"OK", "OK", 2, nil, nil},
 		},
 		{
 			name:     "DEL with key not set",
 			commands: []string{"GET k3", "DEL k3"},
-			expected: []interface{}{"(nil)", int64(0)},
+			expected: []interface{}{nil, 0},
 		},
 		{
 			name:     "DEL with no keys or arguments",
 			commands: []string{"DEL"},
-			expected: []interface{}{"ERR wrong number of arguments for 'del' command"},
+			expected: []interface{}{
+				errors.New("wrong number of arguments for 'DEL' command"),
+			},
 		},
 	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			for i, cmd := range tc.commands {
-				result := client.FireString(cmd)
-				assert.Equal(t, tc.expected[i], result, "Value mismatch for cmd %s", cmd)
-			}
-		})
-	}
+	runTestcases(t, client, testCases)
 }

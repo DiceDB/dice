@@ -7,15 +7,27 @@ import (
 	"testing"
 )
 
-func TestDECR(t *testing.T) {
+func TestDECRBY(t *testing.T) {
 	client := getLocalConnection()
 	defer client.Close()
 
 	testCases := []TestCase{
 		{
-			name:     "DECR",
-			commands: []string{"SET key1 2", "DECR key1", "DECR key1", "DECR key1"},
-			expected: []interface{}{"OK", 1, 0, -1},
+			name: "DECRBY",
+			commands: []string{
+				"SET key1 5",
+				"DECRBY key1 2",
+				"DECRBY key1 2",
+				"DECRBY key1 1",
+				"DECRBY key1 1",
+			},
+			expected: []interface{}{
+				"OK",
+				3,
+				1,
+				0,
+				-1,
+			},
 		},
 	}
 	runTestcases(t, client, testCases)

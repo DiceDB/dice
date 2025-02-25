@@ -9,14 +9,14 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var cDECRBY = &DiceDBCommand{
+var cDECRBY = &CommandMeta{
 	Name:      "DECRBY",
 	HelpShort: "DECRBY decrements the value of the specified key in args by the specified decrement",
 	Eval:      evalDECRBY,
 }
 
 func init() {
-	commandRegistry.AddCommand(cDECRBY)
+	CommandRegistry.AddCommand(cDECRBY)
 }
 
 func evalDECRBY(c *Cmd, s *dstore.Store) (*CmdRes, error) {

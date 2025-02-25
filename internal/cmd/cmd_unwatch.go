@@ -7,14 +7,14 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var cUNWATCH = &DiceDBCommand{
+var cUNWATCH = &CommandMeta{
 	Name:      "UNWATCH",
 	HelpShort: "UNWATCH removes the previously created query subscription",
 	Eval:      evalUNWATCH,
 }
 
 func init() {
-	commandRegistry.AddCommand(cUNWATCH)
+	CommandRegistry.AddCommand(cUNWATCH)
 }
 
 func evalUNWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {

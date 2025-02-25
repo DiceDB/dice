@@ -7,14 +7,14 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var cINCR = &DiceDBCommand{
+var cINCR = &CommandMeta{
 	Name:      "INCR",
 	HelpShort: "INCR increments the value of the specified key in args by 1",
 	Eval:      evalINCR,
 }
 
 func init() {
-	commandRegistry.AddCommand(cINCR)
+	CommandRegistry.AddCommand(cINCR)
 }
 
 // evalINCR increments an integer value stored at the specified key by 1.
