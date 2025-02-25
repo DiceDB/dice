@@ -14,14 +14,14 @@ import (
 
 const PERSIST = "PERSIST"
 
-var cGETEX = &DiceDBCommand{
+var cGETEX = &CommandMeta{
 	Name:      "GETEX",
 	HelpShort: "Get the value of key and optionally set its expiration.",
 	Eval:      evalGETEX,
 }
 
 func init() {
-	commandRegistry.AddCommand(cGETEX)
+	CommandRegistry.AddCommand(cGETEX)
 }
 
 func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {

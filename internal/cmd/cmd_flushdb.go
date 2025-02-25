@@ -7,14 +7,14 @@ import (
 	"github.com/dicedb/dice/internal/store"
 )
 
-var cFLUSHDB = &DiceDBCommand{
+var cFLUSHDB = &CommandMeta{
 	Name:      "FLUSHDB",
 	HelpShort: "FLUSHDB deletes all keys.",
 	Eval:      evalFLUSHDB,
 }
 
 func init() {
-	commandRegistry.AddCommand(cFLUSHDB)
+	CommandRegistry.AddCommand(cFLUSHDB)
 }
 
 // TODO: FLUSHDB is a multi-shard command.

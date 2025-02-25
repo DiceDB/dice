@@ -9,14 +9,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cGETDEL = &DiceDBCommand{
+var cGETDEL = &CommandMeta{
 	Name:      "GETDEL",
 	HelpShort: "GETDEL returns the value of the key and then deletes the key.",
 	Eval:      evalGETDEL,
 }
 
 func init() {
-	commandRegistry.AddCommand(cGETDEL)
+	CommandRegistry.AddCommand(cGETDEL)
 }
 
 // GETDEL returns the value of the key and then deletes the key.

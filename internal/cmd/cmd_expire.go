@@ -11,14 +11,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cEXPIRE = &DiceDBCommand{
+var cEXPIRE = &CommandMeta{
 	Name:      "EXPIRE",
 	HelpShort: "EXPIRE sets an expiry(in seconds) on a specified key",
 	Eval:      evalEXPIRE,
 }
 
 func init() {
-	commandRegistry.AddCommand(cEXPIRE)
+	CommandRegistry.AddCommand(cEXPIRE)
 }
 
 func evalEXPIRE(c *Cmd, s *dstore.Store) (*CmdRes, error) {

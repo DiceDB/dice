@@ -10,14 +10,14 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-var cGETWATCH = &DiceDBCommand{
+var cGETWATCH = &CommandMeta{
 	Name:      "GET.WATCH",
 	HelpShort: "GET.WATCH creates a query subscription over the GET command",
 	Eval:      evalGETWATCH,
 }
 
 func init() {
-	commandRegistry.AddCommand(cGETWATCH)
+	CommandRegistry.AddCommand(cGETWATCH)
 }
 
 func evalGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {

@@ -6,7 +6,7 @@ require (
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.2.4
 	github.com/charmbracelet/lipgloss v1.0.0
-	github.com/dicedb/dicedb-go v1.0.1
+	github.com/dicedb/dicedb-go v1.0.2
 )
 
 require (
@@ -27,7 +27,5 @@ require (
 	golang.org/x/sync v0.9.0 // indirect
 	golang.org/x/sys v0.27.0 // indirect
 	golang.org/x/text v0.3.8 // indirect
-	google.golang.org/protobuf v1.36.4 // indirect
+	google.golang.org/protobuf v1.36.5 // indirect
 )
-
-replace github.com/dicedb/dicedb-go => ../../../dicedb-go

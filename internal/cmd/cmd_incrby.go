@@ -11,14 +11,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cINCRBY = &DiceDBCommand{
+var cINCRBY = &CommandMeta{
 	Name:      "INCRBY",
 	HelpShort: "INCRBY decrements the value of the specified key in args by the specified decrement",
 	Eval:      evalINCRBY,
 }
 
 func init() {
-	commandRegistry.AddCommand(cINCRBY)
+	CommandRegistry.AddCommand(cINCRBY)
 }
 
 func evalINCRBY(c *Cmd, s *dstore.Store) (*CmdRes, error) {

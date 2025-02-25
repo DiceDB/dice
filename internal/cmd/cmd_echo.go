@@ -8,14 +8,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cECHO = &DiceDBCommand{
+var cECHO = &CommandMeta{
 	Name:      "ECHO",
 	HelpShort: "ECHO returns the message passed to it",
 	Eval:      evalECHO,
 }
 
 func init() {
-	commandRegistry.AddCommand(cECHO)
+	CommandRegistry.AddCommand(cECHO)
 }
 
 func evalECHO(c *Cmd, s *dstore.Store) (*CmdRes, error) {

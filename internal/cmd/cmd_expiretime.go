@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package cmd
 
 import (
@@ -5,14 +8,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cExpireTime *DiceDBCommand = &DiceDBCommand{
+var cExpireTime *CommandMeta = &CommandMeta{
 	Name:      "EXPIRETIME",
 	HelpShort: `EXPIRETIME returns the absolute Unix timestamp in seconds at which the given key will expire`,
 	Eval:      evalExpireTime,
 }
 
 func init() {
-	commandRegistry.AddCommand(cExpireTime)
+	CommandRegistry.AddCommand(cExpireTime)
 }
 
 // evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire

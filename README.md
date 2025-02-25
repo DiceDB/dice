@@ -87,7 +87,7 @@ start the CLI and will try to connect to the DiceDB server.
 
 ### Pointing to local checked-out `dicedb-go`
 
-It is advised to checkout `dicedb-go` repository also because `dice` takes
+It is advised to checkout [dicedb-go](https://github.com/DiceDB/dicedb-go) repository also because `dice` takes
 a strong dependency on it. To point to the local copy add the following line
 at the end of the `go.mod` file.
 

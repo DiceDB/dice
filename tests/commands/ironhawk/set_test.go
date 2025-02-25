@@ -5,9 +5,11 @@ package ironhawk
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/dicedb/dicedb-go/wire"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,16 +34,7 @@ func TestSet(t *testing.T) {
 			expected: []interface{}{"OK", "OK", int64(5)},
 		},
 	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			client.FireString("DEL k")
-			for i, cmd := range tc.commands {
-				result := client.FireString(cmd)
-				assertEqual(t, tc.expected[i], result)
-			}
-		})
-	}
+	runTestcases(t, client, testCases)
 }
 
 func TestSetWithOptions(t *testing.T) {
@@ -131,21 +124,7 @@ func TestSetWithOptions(t *testing.T) {
 			expected: []interface{}{int64(1), "WRONGTYPE Operation against a key holding the wrong kind of value"},
 		},
 	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// deleteTestKeys([]string{"k", "k1", "k2"}, store)
-			client.FireString("DEL k")
-			client.FireString("DEL k1")
-			client.FireString("DEL k2")
-			for i, cmd := range tc.commands {
-				result := client.FireString(cmd)
-				assertEqual(t, tc.expected[i], result)
-			}
-		})
-	}
-
-	client.FireString("FLUSHDB")
+	runTestcases(t, client, testCases)
 }
 
 func TestSetWithExat(t *testing.T) {
@@ -157,32 +136,70 @@ func TestSetWithExat(t *testing.T) {
 	t.Run("SET with EXAT",
 		func(t *testing.T) {
 			// deleteTestKeys([]string{"k"}, store)
-			client.FireString("DEL k")
-			assert.Equal(t, "OK", client.FireString("SET k v EXAT "+Etime), "Value mismatch for cmd SET k v EXAT "+Etime)
-			assert.Equal(t, "v", client.FireString("GET k"), "Value mismatch for cmd GET k")
-			assert.True(t, client.FireString("TTL k").GetVInt() <= 5, "Value mismatch for cmd TTL k")
+			client.Fire(&wire.Command{
+				Cmd:  "DEL",
+				Args: []string{"k"},
+			})
+			assert.Equal(t, "OK", client.Fire(&wire.Command{
+				Cmd:  "SET",
+				Args: []string{"k", "v", "EXAT", Etime},
+			}), "Value mismatch for cmd SET k v EXAT "+Etime)
+			assert.Equal(t, "v", client.Fire(&wire.Command{
+				Cmd:  "GET",
+				Args: []string{"k"},
+			}), "Value mismatch for cmd GET k")
+			assert.True(t, client.Fire(&wire.Command{
+				Cmd:  "TTL",
+				Args: []string{"k"},
+			}).GetVInt() <= 5, "Value mismatch for cmd TTL k")
 			time.Sleep(3 * time.Second)
-			assert.True(t, client.FireString("TTL k").GetVInt() <= 3, "Value mismatch for cmd TTL k")
+			assert.True(t, client.Fire(&wire.Command{
+				Cmd:  "TTL",
+				Args: []string{"k"},
+			}).GetVInt() <= 3, "Value mismatch for cmd TTL k")
 			time.Sleep(3 * time.Second)
-			assert.Equal(t, "(nil)", client.FireString("GET k"), "Value mismatch for cmd GET k")
-			assert.Equal(t, int64(-2), client.FireString("TTL k"), "Value mismatch for cmd TTL k")
+			assert.Equal(t, "(nil)", client.Fire(&wire.Command{
+				Cmd:  "GET",
+				Args: []string{"k"},
+			}), "Value mismatch for cmd GET k")
+			assert.Equal(t, int64(-2), client.Fire(&wire.Command{
+				Cmd:  "TTL",
+				Args: []string{"k"},
+			}), "Value mismatch for cmd TTL k")
 		})
 
 	t.Run("SET with invalid EXAT expires key immediately",
 		func(t *testing.T) {
 			// deleteTestKeys([]string{"k"}, store)
-			client.FireString("DEL k")
-			assert.Equal(t, "OK", client.FireString("SET k v EXAT "+BadTime), "Value mismatch for cmd SET k v EXAT "+BadTime)
-			assert.Equal(t, "(nil)", client.FireString("GET k"), "Value mismatch for cmd GET k")
-			assert.Equal(t, int64(-2), client.FireString("TTL k"), "Value mismatch for cmd TTL k")
+			client.Fire(&wire.Command{
+				Cmd:  "DEL",
+				Args: []string{"k"},
+			})
+			assert.Equal(t, "OK", client.Fire(&wire.Command{
+				Cmd:  "SET",
+				Args: []string{"k", "v", "EXAT", BadTime},
+			}), "Value mismatch for cmd SET k v EXAT "+BadTime)
+			assert.Equal(t, "(nil)", client.Fire(&wire.Command{
+				Cmd:  "GET",
+				Args: []string{"k"},
+			}), "Value mismatch for cmd GET k")
 		})
 
 	t.Run("SET with EXAT and PXAT returns syntax error",
 		func(t *testing.T) {
 			// deleteTestKeys([]string{"k"}, store)
-			client.FireString("DEL k")
-			assert.Equal(t, "ERR syntax error", client.FireString("SET k v PXAT "+Etime+" EXAT "+Etime), "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
-			assert.Equal(t, "(nil)", client.FireString("GET k"), "Value mismatch for cmd GET k")
+			client.Fire(&wire.Command{
+				Cmd:  "DEL",
+				Args: []string{"k"},
+			})
+			assert.Equal(t, "ERR syntax error", client.Fire(&wire.Command{
+				Cmd:  "SET",
+				Args: []string{"k", "v", "PXAT", Etime, "EXAT", Etime},
+			}), "Value mismatch for cmd SET k v PXAT "+Etime+" EXAT "+Etime)
+			assert.Equal(t, "(nil)", client.Fire(&wire.Command{
+				Cmd:  "GET",
+				Args: []string{"k"},
+			}), "Value mismatch for cmd GET k")
 		})
 }
 
@@ -200,7 +217,10 @@ func TestWithKeepTTLFlag(t *testing.T) {
 		for i := 0; i < len(tcase.commands); i++ {
 			cmd := tcase.commands[i]
 			out := tcase.expected[i]
-			assert.Equal(t, out, client.FireString(cmd), "Value mismatch for cmd %s\n.", cmd)
+			assert.Equal(t, out, client.Fire(&wire.Command{
+				Cmd:  strings.Split(cmd, " ")[0],
+				Args: strings.Split(cmd, " ")[1:],
+			}), "Value mismatch for cmd %s\n.", cmd)
 		}
 	}
 
@@ -209,5 +229,8 @@ func TestWithKeepTTLFlag(t *testing.T) {
 	cmd := "GET k"
 	out := "(nil)"
 
-	assert.Equal(t, out, client.FireString(cmd), "Value mismatch for cmd %s\n.", cmd)
+	assert.Equal(t, out, client.Fire(&wire.Command{
+		Cmd:  strings.Split(cmd, " ")[0],
+		Args: strings.Split(cmd, " ")[1:],
+	}), "Value mismatch for cmd %s\n.", cmd)
 }
