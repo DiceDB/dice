@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -11,6 +12,7 @@ var cINCR = &CommandMeta{
 	Name:      "INCR",
 	HelpShort: "INCR increments the value of the specified key in args by 1",
 	Eval:      evalINCR,
+	Execute:   executeINCR,
 }
 
 func init() {
@@ -35,4 +37,9 @@ func evalINCR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return cmdResNil, errWrongArgumentCount("INCR")
 	}
 	return doIncr(c, s, 1)
+}
+
+func executeINCR(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalINCR(c, shard.Thread.Store())
 }

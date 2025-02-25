@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -15,6 +16,7 @@ var cEXPIRE = &CommandMeta{
 	Name:      "EXPIRE",
 	HelpShort: "EXPIRE sets an expiry(in seconds) on a specified key",
 	Eval:      evalEXPIRE,
+	Execute:   executeEXPIRE,
 }
 
 func init() {
@@ -56,4 +58,9 @@ func evalEXPIRE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VInt{VInt: 0},
 	}}, nil
+}
+
+func executeEXPIRE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalEXPIRE(c, shard.Thread.Store())
 }

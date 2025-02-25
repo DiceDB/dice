@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
 )
 
@@ -11,6 +12,7 @@ var cFLUSHDB = &CommandMeta{
 	Name:      "FLUSHDB",
 	HelpShort: "FLUSHDB deletes all keys.",
 	Eval:      evalFLUSHDB,
+	Execute:   executeFLUSHDB,
 }
 
 func init() {
@@ -38,4 +40,9 @@ func evalFLUSHDB(c *Cmd, s *store.Store) (*CmdRes, error) {
 
 	store.Reset(s)
 	return cmdResOK, nil
+}
+
+func executeFLUSHDB(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey("-")
+	return evalFLUSHDB(c, shard.Thread.Store())
 }

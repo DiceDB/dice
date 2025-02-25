@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/dicedb/dice/config"
+	"github.com/dicedb/dice/internal/shardmanager"
 )
 
 type Server struct {
@@ -21,12 +22,12 @@ type Server struct {
 	Port            int
 	serverFD        int
 	connBacklogSize int
-	shardManager    *ShardManager
+	shardManager    *shardmanager.ShardManager
 	watchManager    *WatchManager
 	ioThreadManager *IOThreadManager
 }
 
-func NewServer(shardManager *ShardManager, ioThreadManager *IOThreadManager, watchManager *WatchManager) *Server {
+func NewServer(shardManager *shardmanager.ShardManager, ioThreadManager *IOThreadManager, watchManager *WatchManager) *Server {
 	return &Server{
 		Host:            config.Config.Host,
 		Port:            config.Config.Port,

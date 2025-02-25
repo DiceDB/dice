@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -15,6 +16,7 @@ var cINCRBY = &CommandMeta{
 	Name:      "INCRBY",
 	HelpShort: "INCRBY decrements the value of the specified key in args by the specified decrement",
 	Eval:      evalINCRBY,
+	Execute:   executeINCRBY,
 }
 
 func init() {
@@ -60,4 +62,9 @@ func doIncr(c *Cmd, s *dstore.Store, delta int64) (*CmdRes, error) {
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VInt{VInt: value},
 	}}, nil
+}
+
+func executeINCRBY(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalINCRBY(c, shard.Thread.Store())
 }

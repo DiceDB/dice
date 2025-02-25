@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -11,6 +12,7 @@ var cUNWATCH = &CommandMeta{
 	Name:      "UNWATCH",
 	HelpShort: "UNWATCH removes the previously created query subscription",
 	Eval:      evalUNWATCH,
+	Execute:   executeUNWATCH,
 }
 
 func init() {
@@ -23,4 +25,9 @@ func evalUNWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	return cmdResOK, nil
+}
+
+func executeUNWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey("-")
+	return evalUNWATCH(c, shard.Thread.Store())
 }

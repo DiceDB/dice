@@ -1,7 +1,4 @@
-// Copyright (c) 2022-present, DiceDB contributors
-// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
-
-package ironhawk
+package shardmanager
 
 import (
 	"context"
@@ -12,29 +9,24 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/dicedb/dice/config"
-
-	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/internal/shard"
+	"github.com/dicedb/dice/internal/shardthread"
 	"github.com/dicedb/dice/internal/store"
 )
 
-type Shard struct {
-	ID     int
-	Thread *ShardThread
-}
-
 type ShardManager struct {
-	shards  []*Shard
+	shards  []*shard.Shard
 	sigChan chan os.Signal // sigChan is the signal channel for the shard manager
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
 func NewShardManager(shardCount int, globalErrorChan chan error) *ShardManager {
-	shards := make([]*Shard, shardCount)
+	shards := make([]*shard.Shard, shardCount)
 	maxKeysPerShard := config.DefaultKeysLimit / shardCount
 	for i := 0; i < shardCount; i++ {
-		shards[i] = &Shard{
+		shards[i] = &shard.Shard{
 			ID:     i,
-			Thread: NewShardThread(i, globalErrorChan, store.NewPrimitiveEvictionStrategy(maxKeysPerShard)),
+			Thread: shardthread.NewShardThread(i, globalErrorChan, store.NewPrimitiveEvictionStrategy(maxKeysPerShard)),
 		}
 	}
 
@@ -42,15 +34,6 @@ func NewShardManager(shardCount int, globalErrorChan chan error) *ShardManager {
 		shards:  shards,
 		sigChan: make(chan os.Signal, 1),
 	}
-}
-
-// Execute executes a command on the appropriate shard.
-func (manager *ShardManager) Execute(c *cmd.Cmd) (*cmd.CmdRes, error) {
-	var shard *Shard = manager.shards[0]
-	if len(c.C.Args) > 0 {
-		shard = manager.getShardForKey(c.C.Args[0])
-	}
-	return shard.Thread.processRequest(c)
 }
 
 // Run starts the ShardManager, manages its lifecycle, and listens for errors.
@@ -75,18 +58,16 @@ func (manager *ShardManager) Run(ctx context.Context) {
 
 // start initializes and starts the shard threads.
 func (manager *ShardManager) start(ctx context.Context, wg *sync.WaitGroup) {
-	for _, shard := range manager.shards {
-		shard := shard
-
+	for _, sh := range manager.shards {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			shard.Thread.Start(ctx)
+			sh.Thread.Start(ctx)
 		}()
 	}
 }
 
-func (manager *ShardManager) getShardForKey(key string) *Shard {
+func (manager *ShardManager) GetShardForKey(key string) *shard.Shard {
 	return manager.shards[xxhash.Sum64String(key)%uint64(manager.ShardCount())]
 }
 

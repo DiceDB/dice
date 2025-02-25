@@ -22,6 +22,7 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/server/ironhawk"
+	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dicedb-go/wire"
 
 	"github.com/dicedb/dice/internal/wal"
@@ -120,7 +121,7 @@ func Start() {
 	// improving concurrency performance across multiple goroutines.
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	shardManager := ironhawk.NewShardManager(numShards, serverErrCh)
+	shardManager := shardmanager.NewShardManager(numShards, serverErrCh)
 	watchManager := ironhawk.NewWatchManager()
 
 	wg := sync.WaitGroup{}
@@ -160,7 +161,7 @@ func Start() {
 				},
 				IsReplay: true,
 			}
-			_, err := shardManager.Execute(&cmdTemp)
+			_, err := cmdTemp.Execute(shardManager)
 			if err != nil {
 				return fmt.Errorf("error handling WAL replay: %w", err)
 			}

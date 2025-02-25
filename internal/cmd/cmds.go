@@ -12,6 +12,7 @@ import (
 
 	"github.com/dgryski/go-farm"
 	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -42,6 +43,25 @@ func (c *Cmd) Key() string {
 	return ""
 }
 
+func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
+	start := time.Now()
+	if c.Meta == nil {
+		for _, meta := range CommandRegistry.CommandMetas {
+			if meta.Name == c.C.Cmd {
+				c.Meta = meta
+				break
+			}
+		}
+	}
+	res, err := c.Meta.Execute(c, sm)
+	slog.Debug("command executed",
+		slog.Any("cmd", c.String()),
+		slog.String("client_id", c.ClientID),
+		slog.String("mode", c.Mode),
+		slog.Any("took_ns", time.Since(start).Nanoseconds()))
+	return res, err
+}
+
 type CmdRes struct {
 	R        *wire.Response
 	ClientID string
@@ -51,6 +71,7 @@ type CommandMeta struct {
 	Name      string
 	HelpShort string
 	Eval      func(c *Cmd, s *store.Store) (*CmdRes, error)
+	Execute   func(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error)
 }
 
 type CmdRegistry struct {
@@ -67,19 +88,6 @@ func (r *CmdRegistry) AddCommand(cmd *CommandMeta) {
 
 var CommandRegistry CmdRegistry = CmdRegistry{
 	CommandMetas: []*CommandMeta{},
-}
-
-func Execute(c *Cmd, s *store.Store) (*CmdRes, error) {
-	start := time.Now()
-	resp, err := c.Meta.Eval(c, s)
-
-	slog.Debug("command executed",
-		slog.Any("cmd", c.String()),
-		slog.String("client_id", c.ClientID),
-		slog.String("mode", c.Mode),
-		slog.Int("shard_id", s.ShardID),
-		slog.Any("took_ns", time.Since(start).Nanoseconds()))
-	return resp, err
 }
 
 // DiceDBCmd represents a command structure to be executed
