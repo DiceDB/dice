@@ -9,14 +9,14 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var cEXPIREAT = &DiceDBCommand{
+var cEXPIREAT = &CommandMeta{
 	Name:      "EXPIREAT",
 	HelpShort: "EXPIREAT sets the expiration time of a key as an absolute Unix timestamp (in seconds)",
 	Eval:      evalEXPIREAT,
 }
 
 func init() {
-	commandRegistry.AddCommand(cEXPIREAT)
+	CommandRegistry.AddCommand(cEXPIREAT)
 }
 
 func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {

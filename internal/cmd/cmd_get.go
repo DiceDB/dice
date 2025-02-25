@@ -11,14 +11,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cGET = &DiceDBCommand{
+var cGET = &CommandMeta{
 	Name:      "GET",
 	HelpShort: "GET returns the value for the key in args",
 	Eval:      evalGET,
 }
 
 func init() {
-	commandRegistry.AddCommand(cGET)
+	CommandRegistry.AddCommand(cGET)
 }
 
 func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {

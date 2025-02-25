@@ -25,14 +25,14 @@ const (
 	MaxEXDurationSec = 10 * 24 * 60 * 60 // 10 days in seconds
 )
 
-var cSET = &DiceDBCommand{
+var cSET = &CommandMeta{
 	Name:      "SET",
 	HelpShort: "SET puts a new <key, value> pair. If the key already exists then the value will be overwritten.",
 	Eval:      evalSET,
 }
 
 func init() {
-	commandRegistry.AddCommand(cSET)
+	CommandRegistry.AddCommand(cSET)
 }
 
 //nolint:gocyclo

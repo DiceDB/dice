@@ -24,6 +24,7 @@ type Cmd struct {
 	IsReplay bool
 	ClientID string
 	Mode     string
+	Meta     *CommandMeta
 }
 
 func (c *Cmd) String() string {
@@ -46,47 +47,39 @@ type CmdRes struct {
 	ClientID string
 }
 
-type DiceDBCommand struct {
+type CommandMeta struct {
 	Name      string
 	HelpShort string
 	Eval      func(c *Cmd, s *store.Store) (*CmdRes, error)
 }
 
 type CmdRegistry struct {
-	cmds []*DiceDBCommand
+	CommandMetas []*CommandMeta
 }
 
 func Total() int {
-	return len(commandRegistry.cmds)
+	return len(CommandRegistry.CommandMetas)
 }
 
-func (r *CmdRegistry) AddCommand(cmd *DiceDBCommand) {
-	r.cmds = append(r.cmds, cmd)
+func (r *CmdRegistry) AddCommand(cmd *CommandMeta) {
+	r.CommandMetas = append(r.CommandMetas, cmd)
 }
 
-var commandRegistry CmdRegistry = CmdRegistry{
-	cmds: []*DiceDBCommand{},
+var CommandRegistry CmdRegistry = CmdRegistry{
+	CommandMetas: []*CommandMeta{},
 }
 
 func Execute(c *Cmd, s *store.Store) (*CmdRes, error) {
-	// TODO: Replace this iteration with a HashTable lookup.
-	for _, cmd := range commandRegistry.cmds {
-		if cmd.Name != c.C.Cmd {
-			continue
-		}
+	start := time.Now()
+	resp, err := c.Meta.Eval(c, s)
 
-		start := time.Now()
-		resp, err := cmd.Eval(c, s)
-
-		slog.Debug("command executed",
-			slog.Any("cmd", c.String()),
-			slog.String("client_id", c.ClientID),
-			slog.String("mode", c.Mode),
-			slog.Int("shard_id", s.ShardID),
-			slog.Any("took_ns", time.Since(start).Nanoseconds()))
-		return resp, err
-	}
-	return cmdResNil, fmt.Errorf("command '%s' not found", c.C.Cmd)
+	slog.Debug("command executed",
+		slog.Any("cmd", c.String()),
+		slog.String("client_id", c.ClientID),
+		slog.String("mode", c.Mode),
+		slog.Int("shard_id", s.ShardID),
+		slog.Any("took_ns", time.Since(start).Nanoseconds()))
+	return resp, err
 }
 
 // DiceDBCmd represents a command structure to be executed

@@ -8,14 +8,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cExpireTime *DiceDBCommand = &DiceDBCommand{
+var cExpireTime *CommandMeta = &CommandMeta{
 	Name:      "EXPIRETIME",
 	HelpShort: `EXPIRETIME returns the absolute Unix timestamp in seconds at which the given key will expire`,
 	Eval:      evalExpireTime,
 }
 
 func init() {
-	commandRegistry.AddCommand(cExpireTime)
+	CommandRegistry.AddCommand(cExpireTime)
 }
 
 // evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire

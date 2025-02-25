@@ -8,14 +8,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cType = &DiceDBCommand{
+var cType = &CommandMeta{
 	Name:      "TYPE",
 	HelpShort: "returns the type of the value stored at a specified key",
 	Eval:      evalTYPE,
 }
 
 func init() {
-	commandRegistry.AddCommand(cType)
+	CommandRegistry.AddCommand(cType)
 }
 
 func evalTYPE(c *Cmd, s *dstore.Store) (*CmdRes, error) {

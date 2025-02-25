@@ -7,14 +7,14 @@ import (
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
-var cDECR = &DiceDBCommand{
+var cDECR = &CommandMeta{
 	Name:      "DECR",
 	HelpShort: "DECR decrements the value of the specified key in args by 1",
 	Eval:      evalDECR,
 }
 
 func init() {
-	commandRegistry.AddCommand(cDECR)
+	CommandRegistry.AddCommand(cDECR)
 }
 
 // evalDECR decrements an integer value stored at the specified key by 1.

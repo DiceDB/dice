@@ -5,6 +5,7 @@ package ironhawk
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -39,12 +40,23 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 			return err
 		}
 
-		_c := &cmd.Cmd{C: c}
+		// TODO: Replace this iteration with a HashTable lookup.
+		var _meta *cmd.CommandMeta
+		for _, _meta = range cmd.CommandRegistry.CommandMetas {
+			if _meta.Name == c.Cmd {
+				break
+			}
+		}
+		if _meta == nil {
+			return fmt.Errorf("command '%s' not found", c.Cmd)
+		}
+
+		_c := &cmd.Cmd{C: c, Meta: _meta}
 		_c.ClientID = t.ClientID
 		_c.Mode = t.Mode
+		_c.Meta = _meta
 
 		res, err := shardManager.Execute(_c)
-
 		if err != nil {
 			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
 		}

@@ -8,14 +8,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cEXISTS = &DiceDBCommand{
+var cEXISTS = &CommandMeta{
 	Name:      "EXISTS",
 	HelpShort: "Returns the count of keys that exist among the given arguments without modifying them",
 	Eval:      evalEXISTS,
 }
 
 func init() {
-	commandRegistry.AddCommand(cEXISTS)
+	CommandRegistry.AddCommand(cEXISTS)
 }
 
 // TODO: EXISTS command is actually a multi-key command so this needs

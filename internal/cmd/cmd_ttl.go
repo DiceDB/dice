@@ -9,14 +9,14 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-var cTTL = &DiceDBCommand{
+var cTTL = &CommandMeta{
 	Name:      "TTL",
 	HelpShort: "TTL return the remaining time to live of a key that has an expiration set",
 	Eval:      evalTTL,
 }
 
 func init() {
-	commandRegistry.AddCommand(cTTL)
+	CommandRegistry.AddCommand(cTTL)
 }
 
 func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
