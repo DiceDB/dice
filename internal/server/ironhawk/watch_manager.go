@@ -125,7 +125,7 @@ func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *shardmanager.Sha
 			continue
 		}
 
-		r, err := _c.Meta.Execute(_c, shardManager)
+		r, err := _c.Execute(shardManager)
 		if err != nil {
 			slog.Error("failed to execute command as part of watch notification",
 				slog.Any("cmd", _c.String()),

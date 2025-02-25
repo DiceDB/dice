@@ -50,6 +50,16 @@ func evalDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	shard := sm.GetShardForKey(c.C.Args[0])
-	return evalDEL(c, shard.Thread.Store())
+	var count int64
+	for _, key := range c.C.Args {
+		shard := sm.GetShardForKey(key)
+		r, err := evalDEL(c, shard.Thread.Store())
+		if err != nil {
+			return nil, err
+		}
+		count += r.R.GetVInt()
+	}
+	return &CmdRes{R: &wire.Response{
+		Value: &wire.Response_VInt{VInt: count},
+	}}, nil
 }

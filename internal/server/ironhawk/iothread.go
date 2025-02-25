@@ -12,6 +12,7 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/shardmanager"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 type IOThread struct {
@@ -57,7 +58,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 
 		res, err := _c.Execute(shardManager)
 		if err != nil {
-			return err
+			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
 		}
 
 		// TODO: Optimize this. We are doing this for all command execution
@@ -82,9 +83,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 
 		watchManager.RegisterThread(t)
 
-		err = t.IoHandler.WriteSync(ctx, res.R)
-
-		if err != nil {
+		if err := t.IoHandler.WriteSync(ctx, res.R); err != nil {
 			return err
 		}
 

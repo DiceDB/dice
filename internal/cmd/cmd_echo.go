@@ -31,6 +31,6 @@ func evalECHO(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeECHO(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	shard := sm.GetShardForKey(c.C.Args[0])
+	shard := sm.GetShardForKey("-")
 	return evalECHO(c, shard.Thread.Store())
 }

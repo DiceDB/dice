@@ -53,17 +53,13 @@ func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 			}
 		}
 	}
-	fmt.Println("c.Meta", c.Meta)
 	res, err := c.Meta.Execute(c, sm)
-	if err != nil {
-		return nil, err
-	}
 	slog.Debug("command executed",
 		slog.Any("cmd", c.String()),
 		slog.String("client_id", c.ClientID),
 		slog.String("mode", c.Mode),
 		slog.Any("took_ns", time.Since(start).Nanoseconds()))
-	return res, nil
+	return res, err
 }
 
 type CmdRes struct {
