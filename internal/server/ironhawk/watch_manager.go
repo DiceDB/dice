@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/internal/shardmanager"
 )
 
 type WatchManager struct {
@@ -115,7 +116,7 @@ func (w *WatchManager) CleanupThreadWatchSubscriptions(t *IOThread) {
 	}
 }
 
-func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *ShardManager, t *IOThread) {
+func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *shardmanager.ShardManager, t *IOThread) {
 	key := c.Key()
 	for fp := range w.keyFPMap[key] {
 		_c := w.fpCmdMap[fp]
@@ -124,7 +125,7 @@ func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *ShardManager, t 
 			continue
 		}
 
-		r, err := shardManager.Execute(_c)
+		r, err := _c.Meta.Execute(_c, shardManager)
 		if err != nil {
 			slog.Error("failed to execute command as part of watch notification",
 				slog.Any("cmd", _c.String()),

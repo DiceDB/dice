@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/server/ironhawk"
+	"github.com/dicedb/dice/internal/shardmanager"
 
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
@@ -107,7 +108,7 @@ func getLocalSdk() *dicedb.Client {
 func RunTestServer(wg *sync.WaitGroup) {
 	// #1261: Added here to prevent resp integration tests from failing on lower-spec machines
 	gec := make(chan error)
-	shardManager := ironhawk.NewShardManager(1, gec)
+	shardManager := shardmanager.NewShardManager(1, gec)
 	ioThreadManager := ironhawk.NewIOThreadManager()
 	watchManager := &ironhawk.WatchManager{}
 

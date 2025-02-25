@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -12,6 +13,7 @@ var cECHO = &CommandMeta{
 	Name:      "ECHO",
 	HelpShort: "ECHO returns the message passed to it",
 	Eval:      evalECHO,
+	Execute:   executeECHO,
 }
 
 func init() {
@@ -26,4 +28,9 @@ func evalECHO(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VStr{VStr: c.C.Args[0]},
 	}}, nil
+}
+
+func executeECHO(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalECHO(c, shard.Thread.Store())
 }

@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -13,6 +14,7 @@ var cGETDEL = &CommandMeta{
 	Name:      "GETDEL",
 	HelpShort: "GETDEL returns the value of the key and then deletes the key.",
 	Eval:      evalGETDEL,
+	Execute:   executeGETDEL,
 }
 
 func init() {
@@ -66,4 +68,9 @@ func evalGETDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	default:
 		return cmdResNil, errWrongTypeOperation("GETDEL")
 	}
+}
+
+func executeGETDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalGETDEL(c, shard.Thread.Store())
 }

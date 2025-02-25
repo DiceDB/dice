@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -11,6 +12,7 @@ var cDECR = &CommandMeta{
 	Name:      "DECR",
 	HelpShort: "DECR decrements the value of the specified key in args by 1",
 	Eval:      evalDECR,
+	Execute:   executeDECR,
 }
 
 func init() {
@@ -36,4 +38,9 @@ func evalDECR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	return doIncr(c, s, -1)
+}
+
+func executeDECR(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalDECR(c, shard.Thread.Store())
 }

@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -12,6 +13,7 @@ var cEXISTS = &CommandMeta{
 	Name:      "EXISTS",
 	HelpShort: "Returns the count of keys that exist among the given arguments without modifying them",
 	Eval:      evalEXISTS,
+	Execute:   executeEXISTS,
 }
 
 func init() {
@@ -39,4 +41,9 @@ func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VInt{VInt: count},
 	}}, nil
+}
+
+func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalEXISTS(c, shard.Thread.Store())
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -18,6 +19,7 @@ var cGETEX = &CommandMeta{
 	Name:      "GETEX",
 	HelpShort: "Get the value of key and optionally set its expiration.",
 	Eval:      evalGETEX,
+	Execute:   executeGETEX,
 }
 
 func init() {
@@ -130,4 +132,9 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	return resp, nil
+}
+
+func executeGETEX(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalGETEX(c, shard.Thread.Store())
 }
