@@ -43,6 +43,7 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			params[arg] = "true"
 		}
 	}
+
 	// Raise errors if incompatible parameters are provided
 	// in one command
 	if params[EX] != "" && params[PX] != "" {
@@ -127,7 +128,7 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	if params[PERSIST] != "" {
 		dstore.DelExpiry(existingObj, s)
-	} else {
+	} else if exDurationMs != -1 {
 		s.SetExpiry(existingObj, exDurationMs)
 	}
 
@@ -135,6 +136,10 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeGETEX(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 1 {
+		return cmdResNil, errWrongArgumentCount("GETEX")
+	}
+
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalGETEX(c, shard.Thread.Store())
 }
