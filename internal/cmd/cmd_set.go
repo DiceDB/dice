@@ -11,7 +11,6 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 const (
@@ -178,17 +177,7 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			return cmdResNil, nil
 		}
 
-		// If existingObj is not nil then the key exists
-		// and we need to fetch the value of the key
-		crExistingKey, err := evalGET(&Cmd{
-			C: &wire.Command{
-				Cmd:  "GET",
-				Args: []string{key},
-			},
-		}, s)
-		if err != nil {
-			return crExistingKey, err
-		}
+		return cmdResFromObject(existingObj)
 	}
 
 	return cmdResOK, nil
