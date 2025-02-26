@@ -71,6 +71,10 @@ func evalGETDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeGETDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 1 {
+		return cmdResNil, errWrongArgumentCount("GETDEL")
+	}
+
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalGETDEL(c, shard.Thread.Store())
 }
