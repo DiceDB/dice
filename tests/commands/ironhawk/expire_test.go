@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
+	"errors"
 )
 
 func TestEXPIRE(t *testing.T) {
@@ -176,6 +177,13 @@ func TestEXPIRE(t *testing.T) {
 				"ERR NX and XX, GT or LT options at the same time are not compatible",
 				"ERR NX and XX, GT or LT options at the same time are not compatible",
 				"ERR NX and XX, GT or LT options at the same time are not compatible"},
+		},
+		{
+			name:     "EXPIRE with no keys or arguments",
+			commands: []string{"EXPIRE"},
+			expected: []interface{}{
+				errors.New("wrong number of arguments for 'EXPIRE' command"),
+			},
 		},
 	}
 	runTestcases(t, client, testCases)
