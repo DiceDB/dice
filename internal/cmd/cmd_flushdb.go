@@ -19,10 +19,6 @@ func init() {
 	CommandRegistry.AddCommand(cFLUSHDB)
 }
 
-// TODO: FLUSHDB is a multi-shard command.
-// It should be executed on all shards, hence we need to
-// scatter and gather the results.
-
 // FLUSHDB deletes all keys.
 // The function expects no arguments
 //
@@ -43,6 +39,11 @@ func evalFLUSHDB(c *Cmd, s *store.Store) (*CmdRes, error) {
 }
 
 func executeFLUSHDB(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	shard := sm.GetShardForKey("-")
-	return evalFLUSHDB(c, shard.Thread.Store())
+	for _, shard := range sm.Shards() {
+		_, err := evalFLUSHDB(c, shard.Thread.Store())
+		if err != nil {
+			return nil, err
+		}
+	}
+	return cmdResOK, nil
 }
