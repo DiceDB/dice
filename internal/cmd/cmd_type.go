@@ -45,6 +45,10 @@ func evalTYPE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeTYPE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) == 0 {
+		return cmdResNil, errWrongArgumentCount("TYPE")
+	}
+
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalTYPE(c, shard.Thread.Store())
 }
