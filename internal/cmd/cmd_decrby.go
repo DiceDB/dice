@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -13,6 +14,7 @@ var cDECRBY = &CommandMeta{
 	Name:      "DECRBY",
 	HelpShort: "DECRBY decrements the value of the specified key in args by the specified decrement",
 	Eval:      evalDECRBY,
+	Execute:   executeDECRBY,
 }
 
 func init() {
@@ -30,4 +32,9 @@ func evalDECRBY(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	return doIncr(c, s, -delta)
+}
+
+func executeDECRBY(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalDECRBY(c, shard.Thread.Store())
 }

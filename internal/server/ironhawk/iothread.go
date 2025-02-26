@@ -11,6 +11,7 @@ import (
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
+	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dicedb-go/wire"
 )
 
@@ -33,7 +34,7 @@ func NewIOThread(clientFD int) (*IOThread, error) {
 	}, nil
 }
 
-func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, watchManager *WatchManager) error {
+func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.ShardManager, watchManager *WatchManager) error {
 	for {
 		c, err := t.IoHandler.ReadSync()
 		if err != nil {
@@ -51,12 +52,11 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 			return fmt.Errorf("command '%s' not found", c.Cmd)
 		}
 
-		_c := &cmd.Cmd{C: c, Meta: _meta}
+		_c := &cmd.Cmd{C: c}
 		_c.ClientID = t.ClientID
 		_c.Mode = t.Mode
-		_c.Meta = _meta
 
-		res, err := shardManager.Execute(_c)
+		res, err := _c.Execute(shardManager)
 		if err != nil {
 			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
 		}
@@ -83,9 +83,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *ShardManager, wa
 
 		watchManager.RegisterThread(t)
 
-		err = t.IoHandler.WriteSync(ctx, res.R)
-
-		if err != nil {
+		if err := t.IoHandler.WriteSync(ctx, res.R); err != nil {
 			return err
 		}
 

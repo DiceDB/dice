@@ -4,10 +4,12 @@
 package cmd
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -18,6 +20,7 @@ var cGETEX = &CommandMeta{
 	Name:      "GETEX",
 	HelpShort: "Get the value of key and optionally set its expiration.",
 	Eval:      evalGETEX,
+	Execute:   executeGETEX,
 }
 
 func init() {
@@ -41,6 +44,7 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			params[arg] = "true"
 		}
 	}
+
 	// Raise errors if incompatible parameters are provided
 	// in one command
 	if params[EX] != "" && params[PX] != "" {
@@ -60,6 +64,8 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 	var err error
 	var exDurationSec, exDurationMs int64
+
+	fmt.Println(params)
 
 	// Default to -1 to indicate that the value is not set
 	// and the key will not expire
@@ -125,9 +131,18 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	if params[PERSIST] != "" {
 		dstore.DelExpiry(existingObj, s)
-	} else {
+	} else if exDurationMs != -1 {
 		s.SetExpiry(existingObj, exDurationMs)
 	}
 
 	return resp, nil
+}
+
+func executeGETEX(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) == 0 {
+		return cmdResNil, errWrongArgumentCount("GETEX")
+	}
+
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalGETEX(c, shard.Thread.Store())
 }

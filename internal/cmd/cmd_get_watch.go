@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -14,6 +15,7 @@ var cGETWATCH = &CommandMeta{
 	Name:      "GET.WATCH",
 	HelpShort: "GET.WATCH creates a query subscription over the GET command",
 	Eval:      evalGETWATCH,
+	Execute:   executeGETWATCH,
 }
 
 func init() {
@@ -38,4 +40,9 @@ func evalGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	r.R.Attrs.Fields["fingerprint"] = structpb.NewStringValue(strconv.FormatUint(uint64(c.Fingerprint()), 10))
 	return r, nil
+}
+
+func executeGETWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalGETWATCH(c, shard.Thread.Store())
 }

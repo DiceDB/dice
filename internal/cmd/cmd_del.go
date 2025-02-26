@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -12,6 +13,7 @@ var cDEL = &CommandMeta{
 	Name:      "DEL",
 	HelpShort: "DEL deletes all the specified keys in args list",
 	Eval:      evalDEL,
+	Execute:   executeDEL,
 }
 
 func init() {
@@ -44,5 +46,20 @@ func evalDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VInt{VInt: int64(count)},
+	}}, nil
+}
+
+func executeDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	var count int64
+	for _, key := range c.C.Args {
+		shard := sm.GetShardForKey(key)
+		r, err := evalDEL(c, shard.Thread.Store())
+		if err != nil {
+			return nil, err
+		}
+		count += r.R.GetVInt()
+	}
+	return &CmdRes{R: &wire.Response{
+		Value: &wire.Response_VInt{VInt: count},
 	}}, nil
 }

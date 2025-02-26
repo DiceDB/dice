@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -12,6 +13,7 @@ var cType = &CommandMeta{
 	Name:      "TYPE",
 	HelpShort: "returns the type of the value stored at a specified key",
 	Eval:      evalTYPE,
+	Execute:   executeTYPE,
 }
 
 func init() {
@@ -40,4 +42,13 @@ func evalTYPE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			VStr: typeStr,
 		},
 	}}, nil
+}
+
+func executeTYPE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) == 0 {
+		return cmdResNil, errWrongArgumentCount("TYPE")
+	}
+
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalTYPE(c, shard.Thread.Store())
 }

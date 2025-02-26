@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -12,6 +13,7 @@ var cPING = &CommandMeta{
 	Name:      "PING",
 	HelpShort: "PING returns with an encoded \"PONG\" if no message is added with the ping command, the message will be returned.",
 	Eval:      evalPING,
+	Execute:   executePING,
 }
 
 func init() {
@@ -30,4 +32,9 @@ func evalPING(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VStr{VStr: c.C.Args[0]},
 	}}, nil
+}
+
+func executePING(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey("-")
+	return evalPING(c, shard.Thread.Store())
 }

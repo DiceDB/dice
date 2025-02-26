@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
 )
 
@@ -11,15 +12,12 @@ var cFLUSHDB = &CommandMeta{
 	Name:      "FLUSHDB",
 	HelpShort: "FLUSHDB deletes all keys.",
 	Eval:      evalFLUSHDB,
+	Execute:   executeFLUSHDB,
 }
 
 func init() {
 	CommandRegistry.AddCommand(cFLUSHDB)
 }
-
-// TODO: FLUSHDB is a multi-shard command.
-// It should be executed on all shards, hence we need to
-// scatter and gather the results.
 
 // FLUSHDB deletes all keys.
 // The function expects no arguments
@@ -37,5 +35,15 @@ func evalFLUSHDB(c *Cmd, s *store.Store) (*CmdRes, error) {
 	}
 
 	store.Reset(s)
+	return cmdResOK, nil
+}
+
+func executeFLUSHDB(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	for _, shard := range sm.Shards() {
+		_, err := evalFLUSHDB(c, shard.Thread.Store())
+		if err != nil {
+			return nil, err
+		}
+	}
 	return cmdResOK, nil
 }

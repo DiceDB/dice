@@ -1,14 +1,13 @@
 // Copyright (c) 2022-present, DiceDB contributors
 // All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
 
-package ironhawk
+package shardthread
 
 import (
 	"context"
 	"time"
 
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -54,14 +53,13 @@ func (shard *ShardThread) runCronTasks() {
 	shard.lastCronExecTime = utils.GetCurrentTime()
 }
 
-// processRequest processes a Store operation for the shard.
-func (shard *ShardThread) processRequest(c *cmd.Cmd) (*cmd.CmdRes, error) {
-	return cmd.Execute(c, shard.store)
-}
-
 // cleanup handles cleanup logic when the shard stops.
 func (shard *ShardThread) cleanup() {
 	if !config.Config.EnableWAL {
 		return
 	}
+}
+
+func (shard *ShardThread) Store() *dstore.Store {
+	return shard.store
 }

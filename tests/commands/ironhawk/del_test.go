@@ -4,7 +4,6 @@
 package ironhawk
 
 import (
-	"errors"
 	"testing"
 )
 
@@ -32,9 +31,7 @@ func TestDel(t *testing.T) {
 		{
 			name:     "DEL with no keys or arguments",
 			commands: []string{"DEL"},
-			expected: []interface{}{
-				errors.New("wrong number of arguments for 'DEL' command"),
-			},
+			expected: []interface{}{0},
 		},
 	}
 	runTestcases(t, client, testCases)

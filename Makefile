@@ -116,3 +116,8 @@ add-license-notice:
 
 kill:
 	@lsof -t -i :7379 | xargs -r kill -9
+
+git-repair:
+	find .git/objects/ -type f -empty | xargs rm
+	git fetch -p
+	git fsck --full

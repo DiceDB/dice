@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -13,6 +14,7 @@ var cEXPIREAT = &CommandMeta{
 	Name:      "EXPIREAT",
 	HelpShort: "EXPIREAT sets the expiration time of a key as an absolute Unix timestamp (in seconds)",
 	Eval:      evalEXPIREAT,
+	Execute:   executeEXPIREAT,
 }
 
 func init() {
@@ -42,4 +44,9 @@ func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	return cmdResInt0, nil
+}
+
+func executeEXPIREAT(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalEXPIREAT(c, shard.Thread.Store())
 }

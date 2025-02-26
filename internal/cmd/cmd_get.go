@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/dicedb/dice/internal/object"
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -15,6 +16,7 @@ var cGET = &CommandMeta{
 	Name:      "GET",
 	HelpShort: "GET returns the value for the key in args",
 	Eval:      evalGET,
+	Execute:   executeGET,
 }
 
 func init() {
@@ -28,6 +30,15 @@ func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	obj := s.Get(key)
 
+	return cmdResFromObject(obj)
+}
+
+func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalGET(c, shard.Thread.Store())
+}
+
+func cmdResFromObject(obj *object.Obj) (*CmdRes, error) {
 	if obj == nil {
 		return cmdResNil, nil
 	}

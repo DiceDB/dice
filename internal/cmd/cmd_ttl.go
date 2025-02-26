@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -13,6 +14,7 @@ var cTTL = &CommandMeta{
 	Name:      "TTL",
 	HelpShort: "TTL return the remaining time to live of a key that has an expiration set",
 	Eval:      evalTTL,
+	Execute:   executeTTL,
 }
 
 func init() {
@@ -47,4 +49,9 @@ func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VInt{VInt: int64(durationMs / 1000)},
 	}}, nil
+}
+
+func executeTTL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalTTL(c, shard.Thread.Store())
 }
