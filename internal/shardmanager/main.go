@@ -78,3 +78,7 @@ func (manager *ShardManager) GetShardForKey(key string) *shard.Shard {
 func (manager *ShardManager) ShardCount() int8 {
 	return int8(len(manager.shards))
 }
+
+func (manager *ShardManager) Shards() []*shard.Shard {
+	return manager.shards
+}

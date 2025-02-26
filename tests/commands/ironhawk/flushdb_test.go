@@ -5,52 +5,27 @@ package ironhawk
 
 import (
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestFLUSHDB(t *testing.T) {
 	client := getLocalConnection()
 	defer client.Close()
 
-	testCases := []struct {
-		name     string
-		setup    []string
-		commands []string
-		expected []interface{}
-		delay    []time.Duration
-		cleanUp  []string
-	}{
+	testCases := []TestCase{
 		{
-			name:     "FLUSHDB",
-			setup:    []string{"MSET k1 v1 k2 v2 k3 v3"},
-			commands: []string{"FLUSHDB", "DBSIZE"},
-			expected: []interface{}{"OK", int64(0)},
-			delay:    []time.Duration{0, 0, 0},
-			cleanUp:  []string{"DEL k1 k2 k3"},
+			name: "FLUSHDB",
+			commands: []string{
+				"SET k1 v1",
+				"SET k2 v2",
+				"SET k3 v3",
+				"FLUSHDB",
+				"GET k1",
+				"GET k2",
+				"GET k3",
+			},
+			expected: []interface{}{"OK", "OK", "OK", "OK", nil, nil, nil},
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-
-			for _, cmd := range tc.setup {
-				result := client.FireString(cmd)
-				assert.Equal(t, "OK", result, "Setup Failed")
-			}
-
-			for i, cmd := range tc.commands {
-				if tc.delay[i] > 0 {
-					time.Sleep(tc.delay[i])
-				}
-				result := client.FireString(cmd)
-				assert.Equal(t, tc.expected[i], result)
-			}
-
-			for _, cmd := range tc.cleanUp {
-				client.FireString(cmd)
-			}
-		})
-	}
+	runTestcases(t, client, testCases)
 }
