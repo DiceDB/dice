@@ -30,6 +30,15 @@ func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	obj := s.Get(key)
 
+	return cmdResFromObject(obj)
+}
+
+func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalGET(c, shard.Thread.Store())
+}
+
+func cmdResFromObject(obj *object.Obj) (*CmdRes, error) {
 	if obj == nil {
 		return cmdResNil, nil
 	}
@@ -51,9 +60,4 @@ func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		slog.Error("unknown object type", "type", obj.Type)
 		return cmdResNil, errUnknownObjectType
 	}
-}
-
-func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	shard := sm.GetShardForKey(c.C.Args[0])
-	return evalGET(c, shard.Thread.Store())
 }
