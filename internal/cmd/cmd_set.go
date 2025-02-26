@@ -184,6 +184,9 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeSET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) <= 1 {
+		return cmdResNil, errWrongArgumentCount("SET")
+	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalSET(c, shard.Thread.Store())
 }
