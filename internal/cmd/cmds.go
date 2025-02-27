@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
@@ -43,22 +44,33 @@ func (c *Cmd) Key() string {
 }
 
 func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
+
+	res := cmdResNil
+	err := errors.ErrUnknownCmd(c.C.Cmd)
 	start := time.Now()
 	if c.Meta == nil {
-		for _, meta := range CommandRegistry.CommandMetas {
-			if meta.Name == c.C.Cmd {
-				c.Meta = meta
-				break
-			}
+		meta, found := findCommandMeta(c.C.Cmd)
+		if !found {
+			return res, err
 		}
+		c.Meta = meta
 	}
-	res, err := c.Meta.Execute(c, sm)
+	res, err = c.Meta.Execute(c, sm)
 	slog.Debug("command executed",
 		slog.Any("cmd", c.String()),
 		slog.String("client_id", c.ClientID),
 		slog.String("mode", c.Mode),
 		slog.Any("took_ns", time.Since(start).Nanoseconds()))
 	return res, err
+}
+
+func findCommandMeta(cmdName string) (*CommandMeta, bool) {
+	for _, meta := range CommandRegistry.CommandMetas {
+		if meta.Name == cmdName {
+			return meta, true
+		}
+	}
+	return nil, false
 }
 
 type CmdRes struct {
