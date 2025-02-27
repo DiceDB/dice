@@ -51,7 +51,7 @@ func doIncr(c *Cmd, s *dstore.Store, delta int64) (*CmdRes, error) {
 	case object.ObjTypeInt:
 		break
 	default:
-		return cmdResNil, errWrongTypeOperation("DECRBY")
+		return cmdResNil, errWrongTypeOperation(c.C.Cmd)
 	}
 
 	value, _ := obj.Value.(int64)
