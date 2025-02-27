@@ -4,6 +4,7 @@
 package ironhawk
 
 import (
+	"errors"
 	"strconv"
 	"testing"
 	"time"
@@ -46,7 +47,7 @@ func TestEXPIRE(t *testing.T) {
 				"EXPIRE test_key -1",
 				"GET test_key",
 			},
-			expected: []interface{}{"OK", "ERR invalid expire time in 'EXPIRE' command", "test_value"},
+			expected: []interface{}{"OK", errors.New("invalid expire time in 'EXPIRE' command"), "test_value"},
 		},
 		{
 			name: "EXPIRE with invalid syntax",

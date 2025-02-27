@@ -6,6 +6,7 @@ package cmd
 import (
 	"log/slog"
 
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -25,7 +26,7 @@ func init() {
 
 func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("GET")
+		return cmdResNil, errors.ErrWrongArgumentCount("GET")
 	}
 	key := c.C.Args[0]
 	obj := s.Get(key)
@@ -58,6 +59,6 @@ func cmdResFromObject(obj *object.Obj) (*CmdRes, error) {
 		}}, nil
 	default:
 		slog.Error("unknown object type", "type", obj.Type)
-		return cmdResNil, errUnknownObjectType
+		return cmdResNil, errors.ErrUnknownObjectType
 	}
 }

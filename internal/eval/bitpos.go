@@ -134,7 +134,7 @@ func parseOptionalParams(args []string, byteLen int) (start, end int, rangeType 
 	if len(args) > 2 {
 		rangeType = strings.ToUpper(args[2])
 		if rangeType != BYTE && rangeType != BIT {
-			return 0, 0, "", false, diceerrors.ErrSyntax
+			return 0, 0, "", false, diceerrors.ErrInvalidSyntax("BITPOS")
 		}
 	}
 	return start, end, rangeType, endRangeProvided, err

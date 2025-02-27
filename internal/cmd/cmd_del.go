@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
@@ -34,7 +35,7 @@ func init() {
 //   - error: Error if wrong number of arguments or wrong value type
 func evalDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errWrongArgumentCount("DEL")
+		return cmdResNil, errors.ErrWrongArgumentCount("DEL")
 	}
 
 	var count int

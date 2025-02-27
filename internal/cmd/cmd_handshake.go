@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -21,7 +22,7 @@ func init() {
 
 func evalHANDSHAKE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 2 {
-		return cmdResNil, errWrongArgumentCount("HANDSHAKE")
+		return cmdResNil, errors.ErrWrongArgumentCount("HANDSHAKE")
 	}
 	c.ClientID = c.C.Args[0]
 	c.Mode = c.C.Args[1]

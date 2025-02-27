@@ -4,6 +4,7 @@
 package ironhawk
 
 import (
+	"errors"
 	"strconv"
 	"testing"
 	"time"
@@ -46,7 +47,7 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(-1, 10),
 				"GET test_key",
 			},
-			expected: []interface{}{"OK", 1, "ERR invalid expire time in 'expireat' command", "test_value"},
+			expected: []interface{}{"OK", 1, errors.New("invalid expire time in 'EXPIREAT' command"), "test_value"},
 		},
 		{
 			name: "EXPIREAT with invalid syntax",

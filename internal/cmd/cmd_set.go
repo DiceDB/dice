@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -39,7 +40,7 @@ func init() {
 //nolint:gocyclo
 func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
-		return cmdResNil, errWrongArgumentCount("SET")
+		return cmdResNil, errors.ErrWrongArgumentCount("SET")
 	}
 
 	var key, value = c.C.Args[0], c.C.Args[1]
@@ -59,21 +60,21 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// Raise errors if incompatible parameters are provided
 	// in one command
 	if params[EX] != "" && params[PX] != "" {
-		return cmdResNil, errInvalidSyntax("SET")
+		return cmdResNil, errors.ErrInvalidSyntax("SET")
 	} else if params[EX] != "" && params[EXAT] != "" {
-		return cmdResNil, errInvalidSyntax("SET")
+		return cmdResNil, errors.ErrInvalidSyntax("SET")
 	} else if params[EX] != "" && params[PXAT] != "" {
-		return cmdResNil, errInvalidSyntax("SET")
+		return cmdResNil, errors.ErrInvalidSyntax("SET")
 	} else if params[PX] != "" && params[EXAT] != "" {
-		return cmdResNil, errInvalidSyntax("SET")
+		return cmdResNil, errors.ErrInvalidSyntax("SET")
 	} else if params[PX] != "" && params[PXAT] != "" {
-		return cmdResNil, errInvalidSyntax("SET")
+		return cmdResNil, errors.ErrInvalidSyntax("SET")
 	} else if params[EXAT] != "" && params[PXAT] != "" {
-		return cmdResNil, errInvalidSyntax("SET")
+		return cmdResNil, errors.ErrInvalidSyntax("SET")
 	} else if params[XX] != "" && params[NX] != "" {
-		return cmdResNil, errInvalidSyntax("SET")
+		return cmdResNil, errors.ErrInvalidSyntax("SET")
 	} else if params[KEEPTTL] != "" && (params[EX] != "" || params[PX] != "" || params[EXAT] != "" || params[PXAT] != "") {
-		return cmdResNil, errInvalidSyntax("SET")
+		return cmdResNil, errors.ErrInvalidSyntax("SET")
 	}
 
 	var err error
@@ -86,10 +87,10 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[EX] != "" {
 		exDurationSec, err = strconv.ParseInt(params[EX], 10, 64)
 		if err != nil {
-			return cmdResNil, errInvalidValue("SET", "EX")
+			return cmdResNil, errors.ErrInvalidValue("SET", "EX")
 		}
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return cmdResNil, errInvalidValue("SET", "EX")
+			return cmdResNil, errors.ErrInvalidValue("SET", "EX")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
@@ -97,21 +98,21 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[PX] != "" {
 		exDurationMs, err = strconv.ParseInt(params[PX], 10, 64)
 		if err != nil {
-			return cmdResNil, errInvalidValue("SET", "PX")
+			return cmdResNil, errors.ErrInvalidValue("SET", "PX")
 		}
 		if exDurationMs <= 0 || exDurationMs >= MaxEXDurationSec {
-			return cmdResNil, errInvalidValue("SET", "PX")
+			return cmdResNil, errors.ErrInvalidValue("SET", "PX")
 		}
 	}
 
 	if params[EXAT] != "" {
 		tv, err := strconv.ParseInt(params[EXAT], 10, 64)
 		if err != nil {
-			return cmdResNil, errInvalidValue("SET", "EXAT")
+			return cmdResNil, errors.ErrInvalidValue("SET", "EXAT")
 		}
 		exDurationSec = tv - utils.GetCurrentTime().Unix()
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return cmdResNil, errInvalidValue("SET", "EXAT")
+			return cmdResNil, errors.ErrInvalidValue("SET", "EXAT")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
@@ -119,11 +120,11 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[PXAT] != "" {
 		tv, err := strconv.ParseInt(params[PXAT], 10, 64)
 		if err != nil {
-			return cmdResNil, errInvalidValue("SET", "PXAT")
+			return cmdResNil, errors.ErrInvalidValue("SET", "PXAT")
 		}
 		exDurationMs = tv - utils.GetCurrentTime().UnixMilli()
 		if exDurationMs <= 0 || exDurationMs >= MaxEXDurationSec {
-			return cmdResNil, errInvalidValue("SET", "PXAT")
+			return cmdResNil, errors.ErrInvalidValue("SET", "PXAT")
 		}
 	}
 

@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
@@ -26,11 +27,6 @@ func init() {
 // Returns -1 if the key exists but has no associated expiration time.
 // Returns -2 if the key does not exist.
 func evalEXPIRETIME(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
-	// check for correct number of arguments
-	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("EXPIRETIME")
-	}
-
 	key := c.C.Args[0]
 	obj := dst.Get(key)
 
@@ -56,7 +52,7 @@ func evalEXPIRETIME(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
 
 func executeEXPIRETIME(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("EXPIRETIME")
+		return cmdResNil, errors.ErrWrongArgumentCount("EXPIRETIME")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalEXPIRETIME(c, shard.Thread.Store())

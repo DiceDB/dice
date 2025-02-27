@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -23,12 +24,12 @@ func init() {
 
 func evalDECRBY(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 2 {
-		return cmdResNil, errWrongArgumentCount("DECRBY")
+		return cmdResNil, errors.ErrWrongArgumentCount("DECRBY")
 	}
 
 	delta, err := strconv.ParseInt(c.C.Args[1], 10, 64)
 	if err != nil {
-		return cmdResNil, errIntegerOutOfRange
+		return cmdResNil, errors.ErrIntegerOutOfRange
 	}
 
 	return doIncr(c, s, -delta)

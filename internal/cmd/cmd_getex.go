@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -29,7 +30,7 @@ func init() {
 
 func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errWrongArgumentCount("GETEX")
+		return cmdResNil, errors.ErrWrongArgumentCount("GETEX")
 	}
 
 	var key = c.C.Args[0]
@@ -48,19 +49,19 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// Raise errors if incompatible parameters are provided
 	// in one command
 	if params[EX] != "" && params[PX] != "" {
-		return cmdResNil, errInvalidSyntax("GETEX")
+		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
 	} else if params[EX] != "" && params[EXAT] != "" {
-		return cmdResNil, errInvalidSyntax("GETEX")
+		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
 	} else if params[EX] != "" && params[PXAT] != "" {
-		return cmdResNil, errInvalidSyntax("GETEX")
+		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
 	} else if params[PX] != "" && params[EXAT] != "" {
-		return cmdResNil, errInvalidSyntax("GETEX")
+		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
 	} else if params[PX] != "" && params[PXAT] != "" {
-		return cmdResNil, errInvalidSyntax("GETEX")
+		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
 	} else if params[EXAT] != "" && params[PXAT] != "" {
-		return cmdResNil, errInvalidSyntax("GETEX")
+		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
 	} else if params[PERSIST] != "" && (params[EX] != "" || params[PX] != "" || params[EXAT] != "" || params[PXAT] != "") {
-		return cmdResNil, errInvalidSyntax("GETEX")
+		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
 	}
 	var err error
 	var exDurationSec, exDurationMs int64
@@ -74,10 +75,10 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[EX] != "" {
 		exDurationSec, err = strconv.ParseInt(params[EX], 10, 64)
 		if err != nil {
-			return cmdResNil, errInvalidValue("GETEX", "EX")
+			return cmdResNil, errors.ErrInvalidValue("GETEX", "EX")
 		}
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return cmdResNil, errInvalidValue("GETEX", "EX")
+			return cmdResNil, errors.ErrInvalidValue("GETEX", "EX")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
@@ -85,21 +86,21 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[PX] != "" {
 		exDurationMs, err = strconv.ParseInt(params[PX], 10, 64)
 		if err != nil {
-			return cmdResNil, errInvalidValue("GETEX", "PX")
+			return cmdResNil, errors.ErrInvalidValue("GETEX", "PX")
 		}
 		if exDurationMs <= 0 || exDurationMs >= MaxEXDurationSec {
-			return cmdResNil, errInvalidValue("GETEX", "PX")
+			return cmdResNil, errors.ErrInvalidValue("GETEX", "PX")
 		}
 	}
 
 	if params[EXAT] != "" {
 		tv, err := strconv.ParseInt(params[EXAT], 10, 64)
 		if err != nil {
-			return cmdResNil, errInvalidValue("GETEX", "EXAT")
+			return cmdResNil, errors.ErrInvalidValue("GETEX", "EXAT")
 		}
 		exDurationSec = tv - utils.GetCurrentTime().Unix()
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return cmdResNil, errInvalidValue("GETEX", "EXAT")
+			return cmdResNil, errors.ErrInvalidValue("GETEX", "EXAT")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
@@ -107,11 +108,11 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[PXAT] != "" {
 		tv, err := strconv.ParseInt(params[PXAT], 10, 64)
 		if err != nil {
-			return cmdResNil, errInvalidValue("GETEX", "PXAT")
+			return cmdResNil, errors.ErrInvalidValue("GETEX", "PXAT")
 		}
 		exDurationMs = tv - utils.GetCurrentTime().UnixMilli()
 		if exDurationMs <= 0 || exDurationMs >= MaxEXDurationSec {
-			return cmdResNil, errInvalidValue("GETEX", "PXAT")
+			return cmdResNil, errors.ErrInvalidValue("GETEX", "PXAT")
 		}
 	}
 
@@ -140,7 +141,7 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 func executeGETEX(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) == 0 {
-		return cmdResNil, errWrongArgumentCount("GETEX")
+		return cmdResNil, errors.ErrWrongArgumentCount("GETEX")
 	}
 
 	shard := sm.GetShardForKey(c.C.Args[0])

@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -36,7 +37,7 @@ func init() {
 //   - error: Error if wrong number of arguments or wrong value type.
 func evalGETDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("GETDEL")
+		return cmdResNil, errors.ErrWrongArgumentCount("GETDEL")
 	}
 
 	key := c.C.Args[0]
@@ -66,13 +67,13 @@ func evalGETDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			Value: &wire.Response_VStr{VStr: objVal.Value.(string)},
 		}}, nil
 	default:
-		return cmdResNil, errWrongTypeOperation("GETDEL")
+		return cmdResNil, errors.ErrWrongTypeOperation
 	}
 }
 
 func executeGETDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("GETDEL")
+		return cmdResNil, errors.ErrWrongArgumentCount("GETDEL")
 	}
 
 	shard := sm.GetShardForKey(c.C.Args[0])

@@ -875,13 +875,6 @@ var (
 		Arity:      -2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
-	flushdbCmdMeta = DiceCmdMeta{
-		Name:       "FLUSHDB",
-		Info:       `FLUSHDB deletes all the keys of the currently selected DB`,
-		NewEval:    evalFLUSHDB,
-		IsMigrated: true,
-		Arity:      -1,
-	}
 	bitposCmdMeta = DiceCmdMeta{
 		Name: "BITPOS",
 		Info: `BITPOS returns the position of the first bit set to 1 or 0 in a string
@@ -1379,7 +1372,6 @@ func init() {
 	DiceCmds["EXPIRE"] = expireCmdMeta
 	DiceCmds["EXPIREAT"] = expireatCmdMeta     // moved to ironhawk
 	DiceCmds["EXPIRETIME"] = expiretimeCmdMeta // moved to ironhawk
-	DiceCmds["FLUSHDB"] = flushdbCmdMeta       // moved to ironhawk
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
 	DiceCmds["GEOPOS"] = geoPosCmdMeta

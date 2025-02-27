@@ -116,7 +116,6 @@ func TestEval(t *testing.T) {
 	testEvalHSETNX(t, store)
 	testEvalPING(t, store)
 	testEvalSETEX(t, store)
-	testEvalFLUSHDB(t, store)
 	testEvalINCRBYFLOAT(t, store)
 	testEvalAPPEND(t, store)
 	testEvalHRANDFIELD(t, store)
@@ -6357,27 +6356,6 @@ func BenchmarkEvalSETEX(b *testing.B) {
 	}
 }
 
-func testEvalFLUSHDB(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"one key exists in db": {
-			setup: func() {
-				evalSET([]string{"key", "val"}, store)
-			},
-			input:          nil,
-			migratedOutput: EvalResponse{Result: OK, Error: nil},
-		},
-		"two keys exist in db": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-			},
-			input:          nil,
-			migratedOutput: EvalResponse{Result: OK, Error: nil},
-		},
-	}
-	runMigratedEvalTests(t, tests, evalFLUSHDB, store)
-}
-
 func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 	tests := []evalTestCase{
 		{
@@ -7381,7 +7359,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			input: []string{"myzset", "0", "-1", "INVALIDOPTION"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+				Error:  diceerrors.ErrInvalidSyntax("ZRANGE"),
 			},
 		},
 		"ZRANGE with REV option": {
@@ -7629,7 +7607,7 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 			input: []string{"myzset", "member2", "INVALID_OPTION"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+				Error:  diceerrors.ErrInvalidSyntax("ZRANK"),
 			},
 		},
 		"ZRANK with multiple members having same score": {
@@ -7852,7 +7830,7 @@ func testEvalBitField(t *testing.T, store *dstore.Store) {
 		},
 		"BITFIELD invalid combination of commands in a single operation": {
 			input:          []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrSyntax},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidSyntax("BITFIELD")},
 		},
 		"BITFIELD invalid bitfield type": {
 			input:          []string{"bits", "SET", "a8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
@@ -8131,7 +8109,7 @@ func testEvalBitFieldRO(t *testing.T, store *dstore.Store) {
 		},
 		"BITFIELD_RO syntax error": {
 			input:          []string{"bits", "GET", "u8"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrSyntax},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidSyntax("BITFIELD_RO")},
 		},
 		"BITFIELD_RO invalid bitfield type": {
 			input:          []string{"bits", "GET", "a8", "0", "255"},
