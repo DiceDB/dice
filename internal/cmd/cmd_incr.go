@@ -41,6 +41,9 @@ func evalINCR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeINCR(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 1 {
+		return cmdResNil, errors.ErrWrongArgumentCount("INCR")
+	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalINCR(c, shard.Thread.Store())
 }

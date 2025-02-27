@@ -48,6 +48,10 @@ func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeEXPIREAT(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) < 2 {
+		return cmdResNil, errors.ErrWrongArgumentCount("EXPIREAT")
+	}
+
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalEXPIREAT(c, shard.Thread.Store())
 }

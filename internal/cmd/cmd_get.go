@@ -35,6 +35,9 @@ func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 1 {
+		return cmdResNil, errors.ErrWrongArgumentCount("GET")
+	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalGET(c, shard.Thread.Store())
 }
