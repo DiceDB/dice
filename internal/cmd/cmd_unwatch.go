@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -21,7 +22,7 @@ func init() {
 
 func evalUNWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("UNWATCH")
+		return cmdResNil, errors.ErrWrongArgumentCount("UNWATCH")
 	}
 
 	return cmdResOK, nil

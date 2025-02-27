@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
@@ -22,7 +23,7 @@ func init() {
 
 func evalECHO(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("ECHO")
+		return cmdResNil, errors.ErrWrongArgumentCount("ECHO")
 	}
 
 	return &CmdRes{R: &wire.Response{

@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
@@ -22,7 +23,7 @@ func init() {
 
 func evalTYPE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("TYPE")
+		return cmdResNil, errors.ErrWrongArgumentCount("TYPE")
 	}
 
 	key := c.C.Args[0]
@@ -46,7 +47,7 @@ func evalTYPE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 func executeTYPE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) == 0 {
-		return cmdResNil, errWrongArgumentCount("TYPE")
+		return cmdResNil, errors.ErrWrongArgumentCount("TYPE")
 	}
 
 	shard := sm.GetShardForKey(c.C.Args[0])

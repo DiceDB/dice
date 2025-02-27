@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -23,7 +24,7 @@ func init() {
 
 func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("TTL")
+		return cmdResNil, errors.ErrWrongArgumentCount("TTL")
 	}
 
 	var key = c.C.Args[0]

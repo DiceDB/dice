@@ -215,14 +215,14 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 		switch arg {
 		case Ex, Px:
 			if state != Uninitialized {
-				return makeEvalError(diceerrors.ErrSyntax)
+				return makeEvalError(diceerrors.ErrInvalidSyntax("SET"))
 			}
 			if keepttl {
-				return makeEvalError(diceerrors.ErrSyntax)
+				return makeEvalError(diceerrors.ErrInvalidSyntax("SET"))
 			}
 			i++
 			if i == len(args) {
-				return makeEvalError(diceerrors.ErrSyntax)
+				return makeEvalError(diceerrors.ErrInvalidSyntax("SET"))
 			}
 
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
@@ -243,14 +243,14 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 
 		case Pxat, Exat:
 			if state != Uninitialized {
-				return makeEvalError(diceerrors.ErrSyntax)
+				return makeEvalError(diceerrors.ErrInvalidSyntax("SET"))
 			}
 			if keepttl {
-				return makeEvalError(diceerrors.ErrSyntax)
+				return makeEvalError(diceerrors.ErrInvalidSyntax("SET"))
 			}
 			i++
 			if i == len(args) {
-				return makeEvalError(diceerrors.ErrSyntax)
+				return makeEvalError(diceerrors.ErrInvalidSyntax("SET"))
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
 			if err != nil {
@@ -287,7 +287,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			}
 		case KeepTTL:
 			if state != Uninitialized {
-				return makeEvalError(diceerrors.ErrSyntax)
+				return makeEvalError(diceerrors.ErrInvalidSyntax("SET"))
 			}
 			keepttl = true
 		case GET:
@@ -297,7 +297,7 @@ func evalSET(args []string, store *dstore.Store) *EvalResponse {
 			}
 			oldVal = &getResult.Result
 		default:
-			return makeEvalError(diceerrors.ErrSyntax)
+			return makeEvalError(diceerrors.ErrInvalidSyntax("SET"))
 		}
 	}
 
@@ -987,7 +987,7 @@ func evalZRANGE(args []string, store *dstore.Store) *EvalResponse {
 		} else {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+				Error:  diceerrors.ErrInvalidSyntax("ZRANGE"),
 			}
 		}
 	}
@@ -1164,7 +1164,7 @@ func evalZRANK(args []string, store *dstore.Store) *EvalResponse {
 		if !strings.EqualFold(args[2], WithScore) {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+				Error:  diceerrors.ErrInvalidSyntax("ZRANK"),
 			}
 		}
 		withScore = true
@@ -1466,7 +1466,7 @@ func evalJSONSET(args []string, store *dstore.Store) *EvalResponse {
 			if i != len(args)-1 {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrSyntax,
+					Error:  diceerrors.ErrInvalidSyntax("JSONSET"),
 				}
 			}
 			obj := store.Get(key)
@@ -1480,7 +1480,7 @@ func evalJSONSET(args []string, store *dstore.Store) *EvalResponse {
 			if i != len(args)-1 {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrSyntax,
+					Error:  diceerrors.ErrInvalidSyntax("JSONSET"),
 				}
 			}
 			obj := store.Get(key)
@@ -1494,7 +1494,7 @@ func evalJSONSET(args []string, store *dstore.Store) *EvalResponse {
 		default:
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+				Error:  diceerrors.ErrInvalidSyntax("JSONSET"),
 			}
 		}
 	}
@@ -2258,7 +2258,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
 			if !strings.EqualFold(args[2], WithValues) {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrSyntax,
+					Error:  diceerrors.ErrInvalidSyntax("HRANDFIELD"),
 				}
 			}
 			withValues = true
@@ -4207,14 +4207,14 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 			if state != Uninitialized {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrSyntax,
+					Error:  diceerrors.ErrInvalidSyntax("GETEX"),
 				}
 			}
 			i++
 			if i == len(args) {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrSyntax,
+					Error:  diceerrors.ErrInvalidSyntax("GETEX"),
 				}
 			}
 
@@ -4243,14 +4243,14 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 			if state != Uninitialized {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrSyntax,
+					Error:  diceerrors.ErrInvalidSyntax("GETEX"),
 				}
 			}
 			i++
 			if i == len(args) {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrSyntax,
+					Error:  diceerrors.ErrInvalidSyntax("GETEX"),
 				}
 			}
 			exDuration, err := strconv.ParseInt(args[i], 10, 64)
@@ -4283,7 +4283,7 @@ func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
 			if state != Uninitialized {
 				return &EvalResponse{
 					Result: nil,
-					Error:  diceerrors.ErrSyntax,
+					Error:  diceerrors.ErrInvalidSyntax("GETEX"),
 				}
 			}
 			persist = true
@@ -5197,7 +5197,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) *EvalResponse {
 	if len(args) > 4 {
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrSyntax,
+			Error:  diceerrors.ErrInvalidSyntax("GETBIT"),
 		}
 	}
 
@@ -5248,7 +5248,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) *EvalResponse {
 		if len(args) <= 2 {
 			return &EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+				Error:  diceerrors.ErrInvalidSyntax("BITCOUNT"),
 			}
 		}
 		end, err = strconv.ParseInt(args[2], 10, 64)
@@ -5341,7 +5341,7 @@ func evalBITCOUNT(args []string, store *dstore.Store) *EvalResponse {
 	default:
 		return &EvalResponse{
 			Result: nil,
-			Error:  diceerrors.ErrSyntax,
+			Error:  diceerrors.ErrInvalidSyntax("BITCOUNT"),
 		}
 	}
 }
@@ -6659,26 +6659,6 @@ func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
 // 	return makeEvalResult(len(result))
 // }
 
-func evalFLUSHDB(args []string, store *dstore.Store) *EvalResponse {
-	if len(args) > 1 {
-		return makeEvalError(diceerrors.ErrWrongArgumentCount("FLUSHDB"))
-	}
-
-	flushType := Sync
-	if len(args) == 1 {
-		flushType = strings.ToUpper(args[0])
-	}
-
-	switch flushType {
-	case Sync, Async:
-		store.ResetStore()
-	default:
-		return makeEvalError(diceerrors.ErrSyntax)
-	}
-
-	return makeEvalResult(OK)
-}
-
 func evalObjectIdleTime(key string, store *dstore.Store) *EvalResponse {
 	obj := store.GetNoTouch(key)
 	if obj == nil {
@@ -6700,7 +6680,7 @@ func evalOBJECT(args []string, store *dstore.Store) *EvalResponse {
 	case "IDLETIME":
 		return evalObjectIdleTime(key, store)
 	default:
-		return makeEvalError(diceerrors.ErrSyntax)
+		return makeEvalError(diceerrors.ErrInvalidSyntax("OBJECT"))
 	}
 }
 

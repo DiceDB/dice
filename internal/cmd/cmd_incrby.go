@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -25,12 +26,12 @@ func init() {
 
 func evalINCRBY(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 2 {
-		return cmdResNil, errWrongArgumentCount("INCRBY")
+		return cmdResNil, errors.ErrWrongArgumentCount("INCRBY")
 	}
 
 	delta, err := strconv.ParseInt(c.C.Args[1], 10, 64)
 	if err != nil {
-		return cmdResNil, errIntegerOutOfRange
+		return cmdResNil, errors.ErrIntegerOutOfRange
 	}
 
 	return doIncr(c, s, delta)
@@ -51,7 +52,7 @@ func doIncr(c *Cmd, s *dstore.Store, delta int64) (*CmdRes, error) {
 	case object.ObjTypeInt:
 		break
 	default:
-		return cmdResNil, errWrongTypeOperation(c.C.Cmd)
+		return cmdResNil, errors.ErrWrongTypeOperation
 	}
 
 	value, _ := obj.Value.(int64)
