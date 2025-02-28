@@ -29,7 +29,7 @@ func generateDocs(tmpl *template.Template, c *cmd.CommandMeta) {
 func main() {
 	tmpl := template.Must(template.ParseFiles("scripts/generate-docs/doc.tmpl"))
 	for _, c := range cmd.CommandRegistry.CommandMetas {
-		if c.Documentation == "" {
+		if c.HelpLong == "" {
 			continue
 		}
 

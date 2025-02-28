@@ -14,13 +14,12 @@ description: ECHO returns the message passed to it
 ECHO message
 ```
 
-
 ECHO command returns the message passed to it.
 
-## Examples
+#### Examples
 
 ```
-localhost:7379> ECHO hello!
+
+	localhost:7379> ECHO hello!
 OK hello!
 ```
-	

@@ -12,9 +12,19 @@ import (
 
 var cEXISTS = &CommandMeta{
 	Name:      "EXISTS",
-	HelpShort: "Returns the count of keys that exist among the given arguments without modifying them",
-	Eval:      evalEXISTS,
-	Execute:   executeEXISTS,
+	Syntax:    "EXISTS key [key ...]",
+	HelpShort: "EXISTS returns the count of keys that exist among the given",
+	HelpLong:  `EXISTS command returns the count of keys that exist among the given arguments without modifying them.`,
+	Examples: `
+localhost:7379> SET k1 v1
+OK
+localhost:7379> SET k2 v2
+OK
+localhost:7379> EXISTS k1 k2 k3
+OK 2
+	`,
+	Eval:    evalEXISTS,
+	Execute: executeEXISTS,
 }
 
 func init() {
