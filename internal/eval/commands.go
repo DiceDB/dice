@@ -63,21 +63,6 @@ var (
 // their implementation for HTTP and WebSocket protocols is still pending.
 // As a result, their Eval functions remain defined but not yet migrated.
 var (
-	echoCmdMeta = DiceCmdMeta{
-		Name:  "ECHO",
-		Info:  `ECHO returns the string given as argument.`,
-		Eval:  evalECHO,
-		Arity: 1,
-	}
-
-	pingCmdMeta = DiceCmdMeta{
-		Name:  "PING",
-		Info:  `PING returns with an encoded "PONG" If any message is added with the ping command,the message will be returned.`,
-		Arity: -1,
-		// TODO: Move this to true once compatible with HTTP server
-		IsMigrated: false,
-		Eval:       evalPING,
-	}
 	helloCmdMeta = DiceCmdMeta{
 		Name:  "HELLO",
 		Info:  `HELLO always replies with a list of current server and connection properties, such as: versions, modules loaded, client ID, replication role and so forth`,
@@ -137,52 +122,6 @@ var (
 // compose the results. Although http and websocket always uses shard - 0 still logic
 // remains same in case of RESP as well. As a result following commands are successfully migrated
 var (
-	setCmdMeta = DiceCmdMeta{
-		Name: "SET",
-		Info: `SET puts a new <key, value> pair in db as in the args
-		args must contain key and value.
-		args can also contain multiple options -
-		EX or ex which will set the expiry time(in secs) for the key
-		Returns encoded error response if at least a <key, value> pair is not part of args
-		Returns encoded error response if expiry tme value in not integer
-		Returns encoded OK RESP once new entry is added
-		If the key already exists then the value will be overwritten and expiry will be discarded`,
-		Arity:      -3,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
-		IsMigrated: true,
-		NewEval:    evalSET,
-	}
-	getCmdMeta = DiceCmdMeta{
-		Name: "GET",
-		Info: `GET returns the value for the queried key in args
-		The key should be the only param in args
-		The RESP value of the key is encoded and then returned
-		GET returns RespNIL if key is expired or it does not exist`,
-		Arity:      2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
-		IsMigrated: true,
-		NewEval:    evalGET,
-	}
-
-	getSetCmdMeta = DiceCmdMeta{
-		Name:       "GETSET",
-		Info:       `GETSET returns the previous string value of a key after setting it to a new value.`,
-		Arity:      2,
-		IsMigrated: true,
-		NewEval:    evalGETSET,
-	}
-
-	getDelCmdMeta = DiceCmdMeta{
-		Name: "GETDEL",
-		Info: `GETDEL returns the value for the queried key in args
-		The key should be the only param in args And If the key exists, it will be deleted before its value is returned.
-		The RESP value of the key is encoded and then returned
-		GETDEL returns RespNIL if key is expired or it does not exist`,
-		Arity:      2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
-		IsMigrated: true,
-		NewEval:    evalGETDEL,
-	}
 	jsonsetCmdMeta = DiceCmdMeta{
 		Name: "JSON.SET",
 		Info: `JSON.SET key path json-string
@@ -383,76 +322,6 @@ var (
 		IsMigrated: true,
 		Arity:      -5,
 	}
-	ttlCmdMeta = DiceCmdMeta{
-		Name: "TTL",
-		Info: `TTL returns Time-to-Live in secs for the queried key in args
-		The key should be the only param in args else returns with an error
-		Returns
-		RESP encoded time (in secs) remaining for the key to expire
-		RESP encoded -2 stating key doesn't exist or key is expired
-		RESP encoded -1 in case no expiration is set on the key`,
-		NewEval:    evalTTL,
-		IsMigrated: true,
-		Arity:      2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
-	}
-	delCmdMeta = DiceCmdMeta{
-		Name: "DEL",
-		Info: `DEL deletes all the specified keys in args list
-		returns the count of total deleted keys after encoding`,
-		IsMigrated: true,
-		NewEval:    evalDEL,
-		Arity:      -2,
-		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1, LastKey: -1},
-	}
-	expireCmdMeta = DiceCmdMeta{
-		Name: "EXPIRE",
-		Info: `EXPIRE sets a expiry time(in secs) on the specified key in args
-		args should contain 2 values, key and the expiry time to be set for the key
-		The expiry time should be in integer format; if not, it returns encoded error response
-		Returns RespOne if expiry was set on the key successfully.
-		Once the time is lapsed, the key will be deleted automatically`,
-		NewEval:    evalEXPIRE,
-		IsMigrated: true,
-		Arity:      -3,
-		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	expiretimeCmdMeta = DiceCmdMeta{
-		Name: "EXPIRETIME",
-		Info: `EXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds
-		at which the given key will expire`,
-		NewEval:    evalEXPIRETIME,
-		IsMigrated: true,
-		Arity:      -2,
-		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	expireatCmdMeta = DiceCmdMeta{
-		Name: "EXPIREAT",
-		Info: `EXPIREAT sets a expiry time(in unix-time-seconds) on the specified key in args
-		args should contain 2 values, key and the expiry time to be set for the key
-		The expiry time should be in integer format; if not, it returns encoded error response
-		Returns RespOne if expiry was set on the key successfully.
-		Once the time is lapsed, the key will be deleted automatically`,
-		NewEval:    evalEXPIREAT,
-		IsMigrated: true,
-		Arity:      -3,
-		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	incrCmdMeta = DiceCmdMeta{
-		Name: "INCR",
-		Info: `INCR increments the value of the specified key in args by 1,
-		if the key exists and the value is integer format.
-		The key should be the only param in args.
-		If the key does not exist, new key is created with value 0,
-		the value of the new key is then incremented.
-		The value for the queried key should be of integer format,
-		if not INCR returns encoded error response.
-		evalINCR returns the incremented value for the key if there are no errors.`,
-		NewEval:    evalINCR,
-		IsMigrated: true,
-		Arity:      2,
-		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
-	}
 	incrByFloatCmdMeta = DiceCmdMeta{
 		Name: "INCRBYFLOAT",
 		Info: `INCRBYFLOAT increments the value of the key in args by the specified increment,
@@ -615,53 +484,6 @@ var (
 		NewEval:    evalKEYS,
 		Arity:      1,
 		IsMigrated: true,
-	}
-
-	decrCmdMeta = DiceCmdMeta{
-		Name: "DECR",
-		Info: `DECR decrements the value of the specified key in args by 1,
-		if the key exists and the value is integer format.
-		The key should be the only param in args.
-		If the key does not exist, new key is created with value 0,
-		the value of the new key is then decremented.
-		The value for the queried key should be of integer format,
-		if not DECR returns encoded error response.
-		evalDECR returns the decremented value for the key if there are no errors.`,
-		NewEval:    evalDECR,
-		IsMigrated: true,
-		Arity:      2,
-		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	decrByCmdMeta = DiceCmdMeta{
-		Name: "DECRBY",
-		Info: `DECRBY decrements the value of the specified key in args by the specified decrement,
-		if the key exists and the value is in integer format.
-		The key should be the first parameter in args, and the decrement should be the second parameter.
-		If the key does not exist, new key is created with value 0,
-		the value of the new key is then decremented by specified decrement.
-		The value for the queried key should be of integer format,
-		if not, DECRBY returns an encoded error response.
-		evalDECRBY returns the decremented value for the key after applying the specified decrement if there are no errors.`,
-		NewEval:    evalDECRBY,
-		IsMigrated: true,
-		Arity:      3,
-		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
-	}
-	existsCmdMeta = DiceCmdMeta{
-		Name: "EXISTS",
-		Info: `EXISTS key1 key2 ... key_N
-		Return value is the number of keys existing.`,
-		IsMigrated: true,
-		NewEval:    evalEXISTS,
-	}
-	getexCmdMeta = DiceCmdMeta{
-		Name: "GETEX",
-		Info: `Get the value of key and optionally set its expiration.
-		GETEX is similar to GET, but is a write command with additional options.`,
-		Arity:      -2,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
-		IsMigrated: true,
-		NewEval:    evalGETEX,
 	}
 	pttlCmdMeta = DiceCmdMeta{
 		Name: "PTTL",
@@ -1007,30 +829,6 @@ var (
 		Arity:      2,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
 	}
-	typeCmdMeta = DiceCmdMeta{
-		Name:       "TYPE",
-		Info:       `Returns the string representation of the type of the value stored at key. The different types that can be returned are: string, list, set, zset, hash and stream.`,
-		IsMigrated: true,
-		NewEval:    evalTYPE,
-		Arity:      1,
-
-		KeySpecs: KeySpecs{BeginIndex: 1},
-	}
-	incrbyCmdMeta = DiceCmdMeta{
-		Name: "INCRBY",
-		Info: `INCRBY increments the value of the specified key in args by increment integer specified,
-		if the key exists and the value is integer format.
-		The key and the increment integer should be the only param in args.
-		If the key does not exist, new key is created with value 0,
-		the value of the new key is then incremented.
-		The value for the queried key should be of integer format,
-		if not INCRBY returns encoded error response.
-		evalINCRBY returns the incremented value for the key if there are no errors.`,
-		NewEval:    evalINCRBY,
-		IsMigrated: true,
-		Arity:      2,
-		KeySpecs:   KeySpecs{BeginIndex: 1, Step: 1},
-	}
 	getRangeCmdMeta = DiceCmdMeta{
 		Name:       "GETRANGE",
 		Info:       `Returns a substring of the string stored at a key.`,
@@ -1038,19 +836,6 @@ var (
 		NewEval:    evalGETRANGE,
 		Arity:      3,
 		KeySpecs:   KeySpecs{BeginIndex: 1},
-	}
-	setexCmdMeta = DiceCmdMeta{
-		Name: "SETEX",
-		Info: `SETEX puts a new <key, value> pair in along with expity
-		args must contain key and value and expiry.
-		Returns encoded error response if <key,exp,value> is not part of args
-		Returns encoded error response if expiry time value in not integer
-		Returns encoded OK RESP once new entry is added
-		If the key already exists then the value and expiry will be overwritten`,
-		Arity:      3,
-		KeySpecs:   KeySpecs{BeginIndex: 1},
-		IsMigrated: true,
-		NewEval:    evalSETEX,
 	}
 	hrandfieldCmdMeta = DiceCmdMeta{
 		Name:       "HRANDFIELD",
@@ -1339,7 +1124,6 @@ var (
 
 func init() {
 	PreProcessing["COPY"] = evalGetObject
-	PreProcessing["RENAME"] = evalGET
 	PreProcessing["GETOBJECT"] = evalGetObject
 
 	DiceCmds["ABORT"] = abortCmdMeta
@@ -1363,25 +1147,13 @@ func init() {
 	DiceCmds["COMMAND|DOCS"] = commandDocsCmdMeta
 	DiceCmds["COMMAND|GETKEYSANDFLAGS"] = commandGetKeysAndFlagsCmdMeta
 	DiceCmds["OBJECTCOPY"] = objectCopyCmdMeta
-	DiceCmds["DECR"] = decrCmdMeta     // moved to ironhawk
-	DiceCmds["DECRBY"] = decrByCmdMeta // moved to ironhawk
-	DiceCmds["DEL"] = delCmdMeta       // moved to ironhawk
 	DiceCmds["DUMP"] = dumpkeyCMmdMeta
-	DiceCmds["ECHO"] = echoCmdMeta // moved to ironhawk
-	DiceCmds["EXISTS"] = existsCmdMeta
-	DiceCmds["EXPIRE"] = expireCmdMeta
-	DiceCmds["EXPIREAT"] = expireatCmdMeta     // moved to ironhawk
-	DiceCmds["EXPIRETIME"] = expiretimeCmdMeta // moved to ironhawk
 	DiceCmds["GEOADD"] = geoAddCmdMeta
 	DiceCmds["GEODIST"] = geoDistCmdMeta
 	DiceCmds["GEOPOS"] = geoPosCmdMeta
 	DiceCmds["GEOHASH"] = geoHashCmdMeta
-	DiceCmds["GET"] = getCmdMeta // moved to ironhawk
 	DiceCmds["GETBIT"] = getBitCmdMeta
-	DiceCmds["GETDEL"] = getDelCmdMeta // moved to ironhawk
-	DiceCmds["GETEX"] = getexCmdMeta   // moved to ironhawk
 	DiceCmds["GETRANGE"] = getRangeCmdMeta
-	DiceCmds["GETSET"] = getSetCmdMeta
 	DiceCmds["HDEL"] = hdelCmdMeta
 	DiceCmds["HELLO"] = helloCmdMeta
 	DiceCmds["HEXISTS"] = hexistsCmdMeta
@@ -1399,9 +1171,7 @@ func init() {
 	DiceCmds["HSETNX"] = hsetnxCmdMeta
 	DiceCmds["HSTRLEN"] = hstrLenCmdMeta
 	DiceCmds["HVALS"] = hValsCmdMeta
-	DiceCmds["INCR"] = incrCmdMeta // moved to ironhawk
 	DiceCmds["INCRBYFLOAT"] = incrByFloatCmdMeta
-	DiceCmds["INCRBY"] = incrbyCmdMeta // moved to ironhawk
 	DiceCmds["JSON.ARRAPPEND"] = jsonarrappendCmdMeta
 	DiceCmds["JSON.ARRINSERT"] = jsonarrinsertCmdMeta
 	DiceCmds["JSON.ARRLEN"] = jsonarrlenCmdMeta
@@ -1431,21 +1201,16 @@ func init() {
 	DiceCmds["PFADD"] = pfAddCmdMeta
 	DiceCmds["PFCOUNT"] = pfCountCmdMeta
 	DiceCmds["PFMERGE"] = pfMergeCmdMeta
-	DiceCmds["PING"] = pingCmdMeta // moved to ironhawk
 	DiceCmds["PTTL"] = pttlCmdMeta
 	DiceCmds["RESTORE"] = restorekeyCmdMeta
 	DiceCmds["RPOP"] = rpopCmdMeta
 	DiceCmds["RPUSH"] = rpushCmdMeta
 	DiceCmds["SADD"] = saddCmdMeta
 	DiceCmds["SCARD"] = scardCmdMeta
-	DiceCmds["SET"] = setCmdMeta // moved to ironhawk
 	DiceCmds["SETBIT"] = setBitCmdMeta
-	DiceCmds["SETEX"] = setexCmdMeta
 	DiceCmds["SLEEP"] = sleepCmdMeta
 	DiceCmds["SMEMBERS"] = smembersCmdMeta
 	DiceCmds["SREM"] = sremCmdMeta
-	DiceCmds["TTL"] = ttlCmdMeta   // moved to ironhawk
-	DiceCmds["TYPE"] = typeCmdMeta // moved to ironhawk
 	DiceCmds["ZADD"] = zaddCmdMeta
 	DiceCmds["ZCOUNT"] = zcountCmdMeta
 	DiceCmds["ZRANGE"] = zrangeCmdMeta
