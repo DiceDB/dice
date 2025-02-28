@@ -19,13 +19,15 @@ DECRBY command decrements the integer at 'key' by the delta specified. Creates '
 Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
 
 Returns the new value of 'key' on success.
+	
 
-## Examples
+#### Examples
 
 ```
+
 localhost:7379> SET k 43
 OK OK
 localhost:7379> DECRBY k 10
 OK 33
-```
 	
+```

@@ -12,22 +12,16 @@ import (
 
 var cDEL = &CommandMeta{
 	Name:      "DEL",
-	HelpShort: "DEL deletes all the specified keys",
 	Syntax:    "DEL key [key ...]",
-	Documentation: `
-DEL command deletes all the specified keys and returns the number of keys deleted on success.
-
-## Examples
-
-` + "```" + `
-localhost:7379> SET k1 v1
+	HelpShort: "DEL deletes all the specified keys",
+	HelpLong:  `DEL command deletes all the specified keys and returns the number of keys deleted on success.`,
+	Examples: `
+	localhost:7379> SET k1 v1
 OK OK
 localhost:7379> SET k2 v2
 OK OK
 localhost:7379> DEL k1 k2 k3
-OK 2
-` + "```" + `
-	`,
+OK 2`,
 	Eval:    evalDEL,
 	Execute: executeDEL,
 }

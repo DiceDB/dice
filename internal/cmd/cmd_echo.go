@@ -12,18 +12,12 @@ import (
 
 var cECHO = &CommandMeta{
 	Name:      "ECHO",
-	HelpShort: "ECHO returns the message passed to it",
 	Syntax:    "ECHO message",
-	Documentation: `
-ECHO command returns the message passed to it.
-
-## Examples
-
-` + "```" + `
-localhost:7379> ECHO hello!
-OK hello!
-` + "```" + `
-	`,
+	HelpShort: "ECHO returns the message passed to it",
+	HelpLong:  `ECHO command returns the message passed to it.`,
+	Examples: `
+	localhost:7379> ECHO hello!
+OK hello!`,
 	Eval:    evalECHO,
 	Execute: executeECHO,
 }
