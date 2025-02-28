@@ -134,6 +134,19 @@ func (cmd *DiceDBCmd) Fingerprint() uint32 {
 	return farm.Fingerprint32([]byte(cmd.Repr()))
 }
 
+func checkIsFullString(s []string) bool{
+	return strings.HasPrefix(s[0],"\"")  && len(s) > 0 && strings.HasSuffix(s[len(s)-1],"\"");
+}
+
+func stripString(s []string) string{
+	if checkIsFullString(s){
+		resStr := strings.Join(s, " ")
+		resStr = resStr[1:len(resStr)-1]
+		return resStr
+	}
+	return s[0]
+}
+
 // Key Returns the key which the command operates on.
 //
 // TODO: This is a naive implementation which assumes that the first argument is the key.

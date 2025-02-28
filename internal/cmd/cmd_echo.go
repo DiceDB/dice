@@ -22,12 +22,13 @@ func init() {
 }
 
 func evalECHO(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) != 1 {
+	checkString := checkIsFullString(c.C.Args)
+	if len(c.C.Args) != 1 && !checkString{
 		return cmdResNil, errors.ErrWrongArgumentCount("ECHO")
 	}
 
 	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VStr{VStr: c.C.Args[0]},
+		Value: &wire.Response_VStr{VStr: stripString(c.C.Args)},
 	}}, nil
 }
 
