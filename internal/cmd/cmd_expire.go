@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -25,14 +26,14 @@ func init() {
 
 func evalEXPIRE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
-		return cmdResNil, errWrongArgumentCount("EXPIRE")
+		return cmdResNil, errors.ErrWrongArgumentCount("EXPIRE")
 	}
 
 	var key = c.C.Args[0]
 	exDurationSec, err := strconv.ParseInt(c.C.Args[1], 10, 64)
 
 	if err != nil || exDurationSec < 0 {
-		return cmdResNil, errInvalidExpireTime("EXPIRE")
+		return cmdResNil, errors.ErrInvalidExpireTime("EXPIRE")
 	}
 
 	obj := s.Get(key)
@@ -62,7 +63,7 @@ func evalEXPIRE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 func executeEXPIRE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
-		return cmdResNil, errWrongArgumentCount("EXPIRE")
+		return cmdResNil, errors.ErrWrongArgumentCount("EXPIRE")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalEXPIRE(c, shard.Thread.Store())

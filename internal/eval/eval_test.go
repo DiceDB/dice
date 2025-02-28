@@ -116,7 +116,6 @@ func TestEval(t *testing.T) {
 	testEvalHSETNX(t, store)
 	testEvalPING(t, store)
 	testEvalSETEX(t, store)
-	testEvalFLUSHDB(t, store)
 	testEvalINCRBYFLOAT(t, store)
 	testEvalAPPEND(t, store)
 	testEvalHRANDFIELD(t, store)
@@ -534,80 +533,6 @@ func testEvalGET(t *testing.T, store *dstore.Store) {
 			}
 
 			response := evalGET(tt.input, store)
-
-			// Handle comparison for byte slices
-			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
-				if expectedBytes, ok := tt.migratedOutput.Result.([]byte); ok {
-					assert.True(t, bytes.Equal(b, expectedBytes), "expected and actual byte slices should be equal")
-				}
-			} else {
-				assert.Equal(t, tt.migratedOutput.Result, response.Result)
-			}
-
-			if tt.migratedOutput.Error != nil {
-				assert.EqualError(t, response.Error, tt.migratedOutput.Error.Error())
-			} else {
-				assert.NoError(t, response.Error)
-			}
-		})
-	}
-}
-
-func testEvalGETSET(t *testing.T, store *dstore.Store) {
-	tests := []evalTestCase{
-		{
-			name:           "GETSET with 1 arg",
-			input:          []string{"HELLO"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'getset' command")},
-		},
-		{
-			name:           "GETSET with 3 args",
-			input:          []string{"HELLO", "WORLD", "WORLD1"},
-			migratedOutput: EvalResponse{Result: nil, Error: errors.New("ERR wrong number of arguments for 'getset' command")},
-		},
-		{
-			name:           "GETSET key not exists",
-			input:          []string{"HELLO", "WORLD"},
-			migratedOutput: EvalResponse{Result: NIL, Error: nil},
-		},
-		{
-			name: "GETSET key exists",
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "mock_value"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-			},
-			input:          []string{"EXISTING_KEY", "WORLD"},
-			migratedOutput: EvalResponse{Result: "mock_value", Error: nil},
-		},
-		{
-			name: "GETSET key exists TTL should be reset",
-			setup: func() {
-				key := "EXISTING_KEY"
-				value := "mock_value"
-				obj := &object.Obj{
-					Value:          value,
-					LastAccessedAt: uint32(time.Now().Unix()),
-				}
-				store.Put(key, obj)
-			},
-			input:          []string{"EXISTING_KEY", "WORLD"},
-			migratedOutput: EvalResponse{Result: "mock_value", Error: nil},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup the test store
-			if tt.setup != nil {
-				tt.setup()
-			}
-
-			response := evalGETSET(tt.input, store)
 
 			// Handle comparison for byte slices
 			if b, ok := response.Result.([]byte); ok && tt.migratedOutput.Result != nil {
@@ -6357,27 +6282,6 @@ func BenchmarkEvalSETEX(b *testing.B) {
 	}
 }
 
-func testEvalFLUSHDB(t *testing.T, store *dstore.Store) {
-	tests := map[string]evalTestCase{
-		"one key exists in db": {
-			setup: func() {
-				evalSET([]string{"key", "val"}, store)
-			},
-			input:          nil,
-			migratedOutput: EvalResponse{Result: OK, Error: nil},
-		},
-		"two keys exist in db": {
-			setup: func() {
-				evalSET([]string{"key1", "val1"}, store)
-				evalSET([]string{"key2", "val2"}, store)
-			},
-			input:          nil,
-			migratedOutput: EvalResponse{Result: OK, Error: nil},
-		},
-	}
-	runMigratedEvalTests(t, tests, evalFLUSHDB, store)
-}
-
 func testEvalINCRBYFLOAT(t *testing.T, store *dstore.Store) {
 	tests := []evalTestCase{
 		{
@@ -7381,7 +7285,7 @@ func testEvalZRANGE(t *testing.T, store *dstore.Store) {
 			input: []string{"myzset", "0", "-1", "INVALIDOPTION"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+				Error:  diceerrors.ErrInvalidSyntax("ZRANGE"),
 			},
 		},
 		"ZRANGE with REV option": {
@@ -7629,7 +7533,7 @@ func testEvalZRANK(t *testing.T, store *dstore.Store) {
 			input: []string{"myzset", "member2", "INVALID_OPTION"},
 			migratedOutput: EvalResponse{
 				Result: nil,
-				Error:  diceerrors.ErrSyntax,
+				Error:  diceerrors.ErrInvalidSyntax("ZRANK"),
 			},
 		},
 		"ZRANK with multiple members having same score": {
@@ -7852,7 +7756,7 @@ func testEvalBitField(t *testing.T, store *dstore.Store) {
 		},
 		"BITFIELD invalid combination of commands in a single operation": {
 			input:          []string{"bits", "SET", "u8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrSyntax},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidSyntax("BITFIELD")},
 		},
 		"BITFIELD invalid bitfield type": {
 			input:          []string{"bits", "SET", "a8", "0", "255", "INCRBY", "u8", "0", "100", "GET", "u8"},
@@ -8131,7 +8035,7 @@ func testEvalBitFieldRO(t *testing.T, store *dstore.Store) {
 		},
 		"BITFIELD_RO syntax error": {
 			input:          []string{"bits", "GET", "u8"},
-			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrSyntax},
+			migratedOutput: EvalResponse{Result: nil, Error: diceerrors.ErrInvalidSyntax("BITFIELD_RO")},
 		},
 		"BITFIELD_RO invalid bitfield type": {
 			input:          []string{"bits", "GET", "a8", "0", "255"},

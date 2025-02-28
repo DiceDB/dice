@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -145,29 +144,6 @@ func (cmd *DiceDBCmd) Key() string {
 		c = cmd.Args[0]
 	}
 	return c
-}
-
-func errWrongArgumentCount(command string) error {
-	return fmt.Errorf("wrong number of arguments for '%s' command", strings.ToUpper(command))
-}
-
-var errUnknownObjectType = errors.New("unknown object type")
-var errIntegerOutOfRange = errors.New("ERR value is not an integer or out of range")
-
-func errInvalidSyntax(command string) error {
-	return fmt.Errorf("invalid syntax for '%s' command", strings.ToUpper(command))
-}
-
-func errInvalidValue(command, param string) error {
-	return fmt.Errorf("invalid value for a parameter in '%s' command for %s parameter", strings.ToUpper(command), strings.ToUpper(param))
-}
-
-func errWrongTypeOperation(command string) error {
-	return fmt.Errorf("wrong type operation for '%s' command", strings.ToUpper(command))
-}
-
-func errInvalidExpireTime(command string) error {
-	return fmt.Errorf("ERR invalid expire time in '%s' command", strings.ToUpper(command))
 }
 
 var cmdResNil = &CmdRes{R: &wire.Response{

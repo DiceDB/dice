@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
@@ -22,7 +23,7 @@ func init() {
 
 func evalPING(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) >= 2 {
-		return cmdResNil, errWrongArgumentCount("PING")
+		return cmdResNil, errors.ErrWrongArgumentCount("PING")
 	}
 	if len(c.C.Args) == 0 {
 		return &CmdRes{R: &wire.Response{

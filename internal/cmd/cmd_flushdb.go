@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
 )
@@ -31,7 +32,7 @@ func init() {
 //   - error: Error if wrong number of arguments
 func evalFLUSHDB(c *Cmd, s *store.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 0 {
-		return cmdResNil, errWrongArgumentCount("FLUSHDB")
+		return cmdResNil, errors.ErrWrongArgumentCount("FLUSHDB")
 	}
 
 	store.Reset(s)

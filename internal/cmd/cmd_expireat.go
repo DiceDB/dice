@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -24,14 +25,14 @@ func init() {
 func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// We need at least 2 arguments.
 	if len(c.C.Args) < 2 {
-		return cmdResNil, errWrongArgumentCount("EXPIREAT")
+		return cmdResNil, errors.ErrWrongArgumentCount("EXPIREAT")
 	}
 
 	var key = c.C.Args[0]
 	exUnixTimeSec, err := strconv.ParseInt(c.C.Args[1], 10, 64)
 	if err != nil || exUnixTimeSec < 0 {
 		// TODO: Check for the upper bound of the input.
-		return cmdResNil, errInvalidExpireTime("EXPIREAT")
+		return cmdResNil, errors.ErrInvalidExpireTime("EXPIREAT")
 	}
 
 	isExpirySet, err := dstore.EvaluateAndSetExpiry(c.C.Args[2:], exUnixTimeSec, key, s)
@@ -47,6 +48,10 @@ func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeEXPIREAT(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) < 2 {
+		return cmdResNil, errors.ErrWrongArgumentCount("EXPIREAT")
+	}
+
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalEXPIREAT(c, shard.Thread.Store())
 }

@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -24,7 +25,7 @@ func init() {
 
 func evalGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("GET.WATCH")
+		return cmdResNil, errors.ErrWrongArgumentCount("GET.WATCH")
 	}
 
 	r, err := evalGET(c, s)

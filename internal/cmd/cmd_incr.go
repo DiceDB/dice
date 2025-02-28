@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -34,12 +35,15 @@ func init() {
 //   - error: Error if wrong number of arguments or wrong value type
 func evalINCR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errWrongArgumentCount("INCR")
+		return cmdResNil, errors.ErrWrongArgumentCount("INCR")
 	}
 	return doIncr(c, s, 1)
 }
 
 func executeINCR(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 1 {
+		return cmdResNil, errors.ErrWrongArgumentCount("INCR")
+	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalINCR(c, shard.Thread.Store())
 }
