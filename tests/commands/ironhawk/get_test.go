@@ -9,7 +9,7 @@ import (
 	"errors"
 )
 
-func TestGet(t *testing.T) {
+func TestGET(t *testing.T) {
 	client := getLocalConnection()
 	defer client.Close()
 
