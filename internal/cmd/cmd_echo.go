@@ -23,7 +23,7 @@ func init() {
 
 func evalECHO(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	checkString := checkIsFullString(c.C.Args)
-	if len(c.C.Args) != 1 && !checkString{
+	if len(c.C.Args) != 1 && !checkString {
 		return cmdResNil, errors.ErrWrongArgumentCount("ECHO")
 	}
 
