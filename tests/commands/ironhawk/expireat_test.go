@@ -47,11 +47,7 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(-1, 10),
 				"GET test_key",
 			},
-<<<<<<< HEAD
 			expected: []interface{}{"OK", 1, errors.New("invalid expire time in 'EXPIREAT' command"), "test_value"},
-=======
-			expected: []interface{}{"OK", errors.New("ERR invalid expire time in 'EXPIREAT' command"), "test_value"},
->>>>>>> 314a0ec (expireat tests done)
 		},
 		{
 			name: "EXPIREAT with invalid syntax",
