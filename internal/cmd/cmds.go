@@ -135,7 +135,14 @@ func (cmd *DiceDBCmd) Fingerprint() uint32 {
 }
 
 func checkIsFullString(s []string) bool {
-	return strings.HasPrefix(s[0], "\"") && len(s) > 0 && strings.HasSuffix(s[len(s)-1], "\"")
+	closingInd := -1
+	for ind, arg := range s {
+		if strings.HasSuffix(arg, "\"") {
+			closingInd = ind
+			break
+		}
+	}
+	return closingInd != -1 && strings.HasPrefix(s[0], "\"") && len(s) > 0 && len(s) <= closingInd+1
 }
 
 func stripString(s []string) string {
