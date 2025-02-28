@@ -16,7 +16,7 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-//nolint: stylecheck
+// nolint: stylecheck
 const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
@@ -69,6 +69,7 @@ type CmdRes struct {
 type CommandMeta struct {
 	Name          string
 	HelpShort     string
+	Syntax        string
 	Documentation string
 	Eval          func(c *Cmd, s *store.Store) (*CmdRes, error)
 	Execute       func(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error)

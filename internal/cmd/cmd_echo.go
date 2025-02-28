@@ -13,8 +13,19 @@ import (
 var cECHO = &CommandMeta{
 	Name:      "ECHO",
 	HelpShort: "ECHO returns the message passed to it",
-	Eval:      evalECHO,
-	Execute:   executeECHO,
+	Syntax:    "ECHO message",
+	Documentation: `
+ECHO command returns the message passed to it.
+
+## Examples
+
+` + "```" + `
+localhost:7379> ECHO hello!
+OK hello!
+` + "```" + `
+	`,
+	Eval:    evalECHO,
+	Execute: executeECHO,
 }
 
 func init() {
