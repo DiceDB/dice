@@ -29,6 +29,9 @@ func evalUNWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeUNWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 1 {
+		return cmdResNil, errors.ErrWrongArgumentCount("UNWATCH")
+	}
 	shard := sm.GetShardForKey("-")
 	return evalUNWATCH(c, shard.Thread.Store())
 }

@@ -53,6 +53,9 @@ func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeTTL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 1 {
+		return cmdResNil, errors.ErrWrongArgumentCount("TTL")
+	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalTTL(c, shard.Thread.Store())
 }

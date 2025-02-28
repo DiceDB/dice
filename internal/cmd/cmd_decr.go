@@ -42,6 +42,10 @@ func evalDECR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeDECR(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 1 {
+		return cmdResNil, errors.ErrWrongArgumentCount("DECR")
+	}
+
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalDECR(c, shard.Thread.Store())
 }

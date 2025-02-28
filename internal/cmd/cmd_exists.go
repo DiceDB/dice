@@ -45,6 +45,9 @@ func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) < 1 {
+		return cmdResNil, errors.ErrWrongArgumentCount("EXISTS")
+	}
 	var count int64
 	for _, key := range c.C.Args {
 		shard := sm.GetShardForKey(key)

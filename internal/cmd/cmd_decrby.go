@@ -36,6 +36,9 @@ func evalDECRBY(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeDECRBY(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 2 {
+		return cmdResNil, errors.ErrWrongArgumentCount("DECRBY")
+	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalDECRBY(c, shard.Thread.Store())
 }
