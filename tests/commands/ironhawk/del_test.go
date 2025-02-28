@@ -19,7 +19,7 @@ func TestDEL(t *testing.T) {
 		},
 		{
 			name:     "DEL multiple keys",
-			commands: []string{"SET k1 v1", "SET k2 v2", "DEL k1 DEL k2", "GET k1", "GET k2"},
+			commands: []string{"SET k1 v1", "SET k2 v2", "DEL k1 k2", "GET k1", "GET k2"},
 			expected: []interface{}{"OK", "OK", 2, nil, nil},
 		},
 		{
