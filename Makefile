@@ -38,7 +38,7 @@ build-debug: ## generate the dicedb binary for the current OS and architecture
 # Changing the parallel package count to 1 due to a possible race condition which causes the tests to get stuck.
 # TODO: Fix the tests to run in parallel, and remove the -p=1 flag.
 test: ## run the integration tests
-	CGO_ENABLED=1 go test -v -race -count=1 -p=1 ./tests/...
+	CGO_ENABLED=1 go test -race -count=1 -p=1 ./tests/...
 
 test-one: ## run a single integration test function by name (e.g. make test-one TEST_FUNC=TestSetGet)
 	CGO_ENABLED=1 go test -v -race -count=1 --run $(TEST_FUNC) ./tests/...
@@ -121,3 +121,6 @@ git-repair:
 	find .git/objects/ -type f -empty | xargs rm
 	git fetch -p
 	git fsck --full
+
+generate-docs:
+	go run ./scripts/generate-docs/main.go
