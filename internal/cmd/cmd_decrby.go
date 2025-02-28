@@ -14,17 +14,12 @@ import (
 var cDECRBY = &CommandMeta{
 	Name:      "DECRBY",
 	HelpShort: "DECRBY decrements the specified key by the specified delta",
+	Syntax:    "DECRBY key delta",
 	Documentation: `
-DECRBY decrements the integer at 'key' by the delta specified. Creates 'key' with value (-delta) if absent.
+DECRBY command decrements the integer at 'key' by the delta specified. Creates 'key' with value (-delta) if absent.
 Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
 
 Returns the new value of 'key' on success.
-
-## Syntax
-
-` + "```" + `
-DECRBY key delta
-` + "```" + `
 
 ## Examples
 

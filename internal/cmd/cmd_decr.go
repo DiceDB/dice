@@ -12,17 +12,12 @@ import (
 var cDECR = &CommandMeta{
 	Name:      "DECR",
 	HelpShort: "DECR decrements the value of the specified key in args by 1",
+	Syntax:    "DECR key",
 	Documentation: `
-Decrements the integer at 'key' by one. Creates 'key' as -1 if absent.
+DECR command decrements the integer at 'key' by one. Creates 'key' as -1 if absent.
 Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
 
 Returns the new value of 'key' on success.
-
-## Syntax
-
-` + "```" + `
-DECR key
-` + "```" + `
 
 ## Examples
 

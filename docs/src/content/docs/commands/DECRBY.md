@@ -8,17 +8,17 @@ description: DECRBY decrements the specified key by the specified delta
   the related commands, refer to the documentation available in the `internal/cmd/cmd_*.go` files.
 -->
 
-
-DECRBY decrements the integer at 'key' by the delta specified. Creates 'key' with value (-delta) if absent.
-Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
-
-Returns the new value of 'key' on success.
-
-## Syntax
+#### Syntax
 
 ```
 DECRBY key delta
 ```
+
+
+DECRBY command decrements the integer at 'key' by the delta specified. Creates 'key' with value (-delta) if absent.
+Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
+
+Returns the new value of 'key' on success.
 
 ## Examples
 
