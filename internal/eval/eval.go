@@ -82,34 +82,6 @@ func init() {
 	TxnCommands = map[string]bool{"EXEC": true, "DISCARD": true}
 }
 
-// evalPING returns with an encoded "PONG"
-// If any message is added with the ping command,
-// the message will be returned.
-func evalPING(args []string, store *dstore.Store) []byte {
-	var b []byte
-
-	if len(args) >= 2 {
-		return diceerrors.NewErrArity("PING")
-	}
-
-	if len(args) == 0 {
-		b = Encode("PONG", true)
-	} else {
-		b = Encode(args[0], false)
-	}
-
-	return b
-}
-
-// evalECHO returns the argument passed by the user
-func evalECHO(args []string, store *dstore.Store) []byte {
-	if len(args) != 1 {
-		return diceerrors.NewErrArity("ECHO")
-	}
-
-	return Encode(args[0], false)
-}
-
 // EvalAUTH returns with an encoded "OK" if the user is authenticated
 // If the user is not authenticated, it returns with an encoded error message
 // TODO: Needs to be removed after http and websocket migrated to the multithreading
