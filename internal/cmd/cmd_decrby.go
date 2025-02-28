@@ -13,9 +13,30 @@ import (
 
 var cDECRBY = &CommandMeta{
 	Name:      "DECRBY",
-	HelpShort: "DECRBY decrements the value of the specified key in args by the specified decrement",
-	Eval:      evalDECRBY,
-	Execute:   executeDECRBY,
+	HelpShort: "DECRBY decrements the specified key by the specified delta",
+	Documentation: `
+DECRBY decrements the integer at 'key' by the delta specified. Creates 'key' with value (-delta) if absent.
+Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
+
+Returns the new value of 'key' on success.
+
+## Syntax
+
+` + "```" + `
+DECRBY key delta
+` + "```" + `
+
+## Examples
+
+` + "```" + `
+localhost:7379> SET k 43
+OK OK
+localhost:7379> DECRBY k 10
+OK 33
+` + "```" + `
+	`,
+	Eval:    evalDECRBY,
+	Execute: executeDECRBY,
 }
 
 func init() {
