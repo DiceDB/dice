@@ -47,7 +47,7 @@ func TestEXPIRE(t *testing.T) {
 				"EXPIRE test_key -1",
 				"GET test_key",
 			},
-			expected: []interface{}{"OK", errors.New("invalid expire time in 'expire' command"), "test_value"},
+			expected: []interface{}{"OK", errors.New("invalid expire time in 'EXPIRE' command"), "test_value"},
 		},
 		{
 			name: "EXPIRE with invalid syntax",
@@ -89,10 +89,19 @@ func TestEXPIRE(t *testing.T) {
 			expected: []interface{}{"OK", 0, -1, 1, 1},
 		},
 		{
+			name: "TEST(LT): Set the expiration only if previous expiry time exist",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIRE test_key " + strconv.FormatInt(20, 10) + " LT",
+			},
+			expected: []interface{}{"OK", 0},
+		},
+
+		{
 			name: "TEST(LT): Set the expiration only if the new expiration time is less than the current one",
 			commands: []string{
-				"SET test_key test_value EX 15",
-				"EXPIRE test_key " + strconv.FormatInt(10, 10) + " LT",
+				"SET test_key test_value",
+				"EXPIRE test_key " + strconv.FormatInt(10, 10),
 				"EXPIRE test_key " + strconv.FormatInt(20, 10) + " LT",
 			},
 			expected: []interface{}{"OK", 1, 0},
@@ -100,11 +109,11 @@ func TestEXPIRE(t *testing.T) {
 		{
 			name: "TEST(LT): Set the expiration only if the new expiration time is less than the current one",
 			commands: []string{
-				"SET test_key test_value EX 15",
+				"SET test_key test_value",
+				"EXPIRE test_key " + strconv.FormatInt(20, 10),
 				"EXPIRE test_key " + strconv.FormatInt(10, 10) + " LT",
-				"EXPIRE test_key " + strconv.FormatInt(20, 10) + " LT",
 			},
-			expected: []interface{}{"OK", 1, 0},
+			expected: []interface{}{"OK", 1, 1},
 		},
 		{
 			name: "TEST(NX + LT/GT)",
