@@ -16,7 +16,7 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-//nolint: stylecheck
+// nolint: stylecheck
 const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
@@ -45,14 +45,10 @@ func (c *Cmd) Key() string {
 func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 	start := time.Now()
 	if c.Meta == nil {
-		for _, meta := range CommandRegistry.CommandMetas {
-			if meta.Name == c.C.Cmd {
-				c.Meta = meta
-				break
-			}
-		}
+		c.Meta = CommandRegistry.CommandMetas[c.C.Cmd]
 	}
 	res, err := c.Meta.Execute(c, sm)
+
 	slog.Debug("command executed",
 		slog.Any("cmd", c.String()),
 		slog.String("client_id", c.ClientID),
@@ -77,7 +73,7 @@ type CommandMeta struct {
 }
 
 type CmdRegistry struct {
-	CommandMetas []*CommandMeta
+	CommandMetas map[string]*CommandMeta
 }
 
 func Total() int {
@@ -85,11 +81,11 @@ func Total() int {
 }
 
 func (r *CmdRegistry) AddCommand(cmd *CommandMeta) {
-	r.CommandMetas = append(r.CommandMetas, cmd)
+	r.CommandMetas[cmd.Name] = cmd
 }
 
 var CommandRegistry CmdRegistry = CmdRegistry{
-	CommandMetas: []*CommandMeta{},
+	CommandMetas: map[string]*CommandMeta{},
 }
 
 // DiceDBCmd represents a command structure to be executed
