@@ -23,7 +23,7 @@ const (
 	NX               = "NX"
 	KEEPTTL          = "KEEPTTL"
 	GET              = "GET"
-	MaxEXDurationSec = 10 * 24 * 60 * 60 // 10 days in seconds
+	MaxEXDurationSec = 365 * 24 * 60 * 60 // 1 year in seconds
 )
 
 var cSET = &CommandMeta{

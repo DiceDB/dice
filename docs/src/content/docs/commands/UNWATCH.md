@@ -1,5 +1,5 @@
 ---
-title: GET.WATCH
+title: UNWATCH
 description: The `GET.WATCH` command is a novel feature designed to provide real-time updates to clients based on changes in underlying data.
 sidebar:
   badge:

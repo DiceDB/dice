@@ -55,7 +55,7 @@ func TestEXPIRE(t *testing.T) {
 				"SET test_key test_value",
 				"EXPIRE test_key",
 			},
-			expected: []interface{}{"OK", errors.New("wrong number of arguments for 'EXPIRE' command"),},
+			expected: []interface{}{"OK", errors.New("wrong number of arguments for 'EXPIRE' command")},
 		},
 		{
 			name: "Test(NX): Set the expiration only if the key has no expiration time",

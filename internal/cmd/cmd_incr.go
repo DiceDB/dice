@@ -11,9 +11,22 @@ import (
 
 var cINCR = &CommandMeta{
 	Name:      "INCR",
+	Syntax:    "INCR key",
 	HelpShort: "INCR increments the value of the specified key in args by 1",
-	Eval:      evalINCR,
-	Execute:   executeINCR,
+	HelpLong: `
+INCR command increments the integer at 'key' by one. Creates 'key' as 1 if absent.
+Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
+
+Returns the new value of 'key' on success.
+	`,
+	Examples: `
+localhost:7379> SET k 43
+OK OK
+localhost:7379> INCR k
+OK 44
+	`,
+	Eval:    evalINCR,
+	Execute: executeINCR,
 }
 
 func init() {

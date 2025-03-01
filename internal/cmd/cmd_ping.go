@@ -12,9 +12,19 @@ import (
 
 var cPING = &CommandMeta{
 	Name:      "PING",
-	HelpShort: "PING returns with an encoded \"PONG\" if no message is added with the ping command, the message will be returned.",
-	Eval:      evalPING,
-	Execute:   executePING,
+	Syntax:    "PING",
+	HelpShort: "PING returns PONG if no argument is provided, otherwise it returns PONG with the message.",
+	HelpLong: `
+PING returns PONG if no argument is provided, otherwise it returns PONG with the message argument.
+	`,
+	Examples: `
+localhost:7379> PING
+PONG
+localhost:7379> PING Hello
+PONG Hello
+	`,
+	Eval:    evalPING,
+	Execute: executePING,
 }
 
 func init() {

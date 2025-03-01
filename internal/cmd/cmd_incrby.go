@@ -15,9 +15,22 @@ import (
 
 var cINCRBY = &CommandMeta{
 	Name:      "INCRBY",
-	HelpShort: "INCRBY decrements the value of the specified key in args by the specified decrement",
-	Eval:      evalINCRBY,
-	Execute:   executeINCRBY,
+	Syntax:    "INCRBY key delta",
+	HelpShort: "INCRBY increments the specified key by the specified delta",
+	HelpLong: `
+INCRBY command increments the integer at 'key' by the delta specified. Creates 'key' with value (delta) if absent.
+Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
+
+Returns the new value of 'key' on success.
+	`,
+	Examples: `
+localhost:7379> SET k 43
+OK OK
+localhost:7379> INCRBY k 10
+OK 53
+	`,
+	Eval:    evalINCRBY,
+	Execute: executeINCRBY,
 }
 
 func init() {

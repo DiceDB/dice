@@ -12,9 +12,26 @@ import (
 
 var cType = &CommandMeta{
 	Name:      "TYPE",
-	HelpShort: "returns the type of the value stored at a specified key",
-	Eval:      evalTYPE,
-	Execute:   executeTYPE,
+	Syntax:    "TYPE key",
+	HelpShort: "TYPE returns the type of the value stored at a specified key",
+	HelpLong: `
+TYPE returns the type of the value stored at a specified key. The type can be one of the following:
+
+ - string
+ - int
+ 
+ Returns "none" if the key does not exist.
+	`,
+	Examples: `
+localhost:7379> SET k 43
+OK OK
+localhost:7379> TYPE k
+int
+localhost:7379> TYPE kn
+none
+	`,
+	Eval:    evalTYPE,
+	Execute: executeTYPE,
 }
 
 func init() {
