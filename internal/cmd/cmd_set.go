@@ -28,9 +28,48 @@ const (
 
 var cSET = &CommandMeta{
 	Name:      "SET",
-	HelpShort: "SET puts a new <key, value> pair. If the key already exists then the value will be overwritten.",
-	Eval:      evalSET,
-	Execute:   executeSET,
+	Syntax:    "SET key value [EX seconds] [PX milliseconds] [EXAT timestamp] [PXAT timestamp] [XX] [NX] [KEEPTTL]",
+	HelpShort: "SET puts or updates an existing <key, value> pair",
+	HelpLong: `
+SET puts or updates an existing <key, value> pair.
+
+SET identifies the type of the value based on the value itself. If the value is an integer,
+it will be stored as an integer. Otherwise, it will be stored as a string.
+
+- EX seconds: Set the expiration time in seconds
+- PX milliseconds: Set the expiration time in milliseconds
+- EXAT timestamp: Set the expiration time in seconds since epoch
+- PXAT timestamp: Set the expiration time in milliseconds since epoch
+- XX: Only set the key if it already exists
+- NX: Only set the key if it does not already exist
+- KEEPTTL: Keep the existing TTL of the key
+- GET: Return the value of the key after setting it
+
+Returns "OK" if the key was set or updated. Returns (nil) if the key was not set or updated.
+Returns the value of the key if the GET option is provided.
+	`,
+	Examples: `
+localhost:7379> SET k 43
+OK OK
+localhost:7379> SET k 43 EX 10
+OK OK
+localhost:7379> SET k 43 PX 10000
+OK OK
+localhost:7379> SET k 43 EXAT 1772377267
+OK OK
+localhost:7379> SET k 43 PXAT 1772377267000
+OK OK
+localhost:7379> SET k 43 XX
+OK OK
+localhost:7379> SET k 43 NX
+OK (nil)
+localhost:7379> SET k 43 KEEPTTL
+OK OK
+localhost:7379> SET k 43 GET
+OK 43
+	`,
+	Eval:    evalSET,
+	Execute: executeSET,
 }
 
 func init() {
@@ -123,7 +162,7 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			return cmdResNil, errors.ErrInvalidValue("SET", "PXAT")
 		}
 		exDurationMs = tv - utils.GetCurrentTime().UnixMilli()
-		if exDurationMs <= 0 || exDurationMs >= MaxEXDurationSec {
+		if exDurationMs <= 0 || exDurationMs >= (MaxEXDurationSec*1000) {
 			return cmdResNil, errors.ErrInvalidValue("SET", "PXAT")
 		}
 	}
