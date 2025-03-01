@@ -125,18 +125,12 @@ func TestEXPIRE(t *testing.T) {
 				"GET test_key",
 			},
 			expected: []interface{}{"OK", 1,
-<<<<<<< HEAD
-<<<<<<< HEAD
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
-=======
 				errors.New("ERR NX and XX, GT or LT options at the same time are not compatible"),
 				errors.New("ERR NX and XX, GT or LT options at the same time are not compatible"),
->>>>>>> 801af6f (expire tests done)
-=======
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
->>>>>>> 1b05d06 (all test case done except case-sesintive)
 				"test_value"},
 		},
 		{
@@ -184,17 +178,12 @@ func TestEXPIRE(t *testing.T) {
 				"EXPIRE test_key " + strconv.FormatInt(1, 10) + " nx" + " " + "xx" + " " + "gt",
 				"EXPIRE test_key " + strconv.FormatInt(1, 10) + " nx" + " " + "xx" + " " + "lt",
 			},
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 1b05d06 (all test case done except case-sesintive)
 			expected: []interface{}{"OK", errors.New("unsupported option rr"),
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
 				errors.New("GT and LT options at the same time are not compatible"),
 				errors.New("GT and LT options at the same time are not compatible"),
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
-<<<<<<< HEAD
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
 			},
 		},
@@ -204,18 +193,6 @@ func TestEXPIRE(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'EXPIRE' command"),
 			},
-=======
-			expected: []interface{}{"OK", errors.New("ERR unsupported option rr"),
-				errors.New("ERR NX and XX, GT or LT options at the same time are not compatible"),
-				errors.New("ERR GT and LT options at the same time are not compatible"),
-				errors.New("ERR GT and LT options at the same time are not compatible"),
-				errors.New("ERR NX and XX, GT or LT options at the same time are not compatible"),
-				errors.New("ERR NX and XX, GT or LT options at the same time are not compatible"),
-				errors.New("ERR NX and XX, GT or LT options at the same time are not compatible")},
->>>>>>> 801af6f (expire tests done)
-=======
-				errors.New("NX and XX, GT or LT options at the same time are not compatible")},
->>>>>>> 1b05d06 (all test case done except case-sesintive)
 		},
 	}
 	runTestcases(t, client, testCases)
