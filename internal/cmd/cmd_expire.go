@@ -10,14 +10,38 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cEXPIRE = &CommandMeta{
 	Name:      "EXPIRE",
-	HelpShort: "EXPIRE sets an expiry(in seconds) on a specified key",
-	Eval:      evalEXPIRE,
-	Execute:   executeEXPIRE,
+	Syntax:    "EXPIRE key seconds [NX | XX]",
+	HelpShort: "EXPIRE sets an expiry (in seconds) on a specified key",
+	HelpLong: `
+EXPIRE sets an expiry (in seconds) on a specified key. After the expiry time has elapsed, the key will be automatically deleted.
+
+> If you want to delete the expirtation time on the key, you can use the PERSIST command.
+
+The command returns 1 if the expiry was set, and 0 if the key already had an expiry set. The command supports the following options:
+
+- NX: Set the expiration only if the key does not already have an expiration time.
+- XX: Set the expiration only if the key already has an expiration time.
+	`,
+	Examples: `
+locahost:7379> SET k1 v1
+OK OK
+locahost:7379> EXPIRE k1 10
+OK 1
+locahost:7379> SET k2 v2
+OK OK
+locahost:7379> EXPIRE k2 10 NX
+OK 1
+locahost:7379> EXPIRE k2 20 XX
+OK 1
+locahost:7379> EXPIRE k2 20 NX
+OK 0
+	`,
+	Eval:    evalEXPIRE,
+	Execute: executeEXPIRE,
 }
 
 func init() {
@@ -30,35 +54,27 @@ func evalEXPIRE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	var key = c.C.Args[0]
-	exDurationSec, err := strconv.ParseInt(c.C.Args[1], 10, 64)
 
+	exDurationSec, err := strconv.ParseInt(c.C.Args[1], 10, 64)
 	if err != nil || exDurationSec < 0 {
 		return cmdResNil, errors.ErrInvalidExpireTime("EXPIRE")
 	}
 
 	obj := s.Get(key)
-
 	if obj == nil {
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VInt{VInt: 0},
-		}}, nil
+		return cmdResInt0, nil
 	}
 
-	isExpirySet, err2 := dstore.EvaluateAndSetExpiry(c.C.Args[2:], utils.AddSecondsToUnixEpoch(exDurationSec), key, s)
-
-	if err2 != nil {
-		return cmdResNil, err2
+	isExpirySet, err := dstore.EvaluateAndSetExpiry(c.C.Args[2:], utils.AddSecondsToUnixEpoch(exDurationSec), key, s)
+	if err != nil {
+		return cmdResNil, err
 	}
 
 	if isExpirySet {
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VInt{VInt: 1},
-		}}, nil
+		return cmdResInt1, nil
 	}
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: 0},
-	}}, nil
+	return cmdResInt0, nil
 }
 
 func executeEXPIRE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
