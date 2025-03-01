@@ -11,9 +11,25 @@ import (
 
 var cFLUSHDB = &CommandMeta{
 	Name:      "FLUSHDB",
+	Syntax:    "FLUSHDB",
 	HelpShort: "FLUSHDB deletes all keys.",
-	Eval:      evalFLUSHDB,
-	Execute:   executeFLUSHDB,
+	HelpLong: `
+FLUSHDB deletes all keys present in the database.
+	`,
+	Examples: `
+locahost:7379> SET k1 v1
+OK OK
+locahost:7379> SET k2 v2
+OK OK
+locahost:7379> FLUSHDB
+OK OK
+localhost:7379> GET k1
+OK (nil)
+localhost:7379> GET k2
+OK (nil)
+	`,
+	Eval:    evalFLUSHDB,
+	Execute: executeFLUSHDB,
 }
 
 func init() {
