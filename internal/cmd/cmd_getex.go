@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -19,9 +18,40 @@ const PERSIST = "PERSIST"
 
 var cGETEX = &CommandMeta{
 	Name:      "GETEX",
-	HelpShort: "Get the value of key and optionally set its expiration.",
-	Eval:      evalGETEX,
-	Execute:   executeGETEX,
+	Syntax:    "GETEX key [EX seconds] [PX milliseconds] [EXAT timestamp-seconds] [PXAT timestamp-milliseconds] [PERSIST]",
+	HelpShort: "GETEX gets the value of key and optionally set its expiration.",
+	HelpLong: `
+GETEX gets the value of key and optionally set its expiration. The behavior of the command
+is similar to the GET command with the addition of the ability to set an expiration on the key.
+
+The command returns (nil) if the key does not exist. The command supports the following options:
+
+- EX seconds: Set the expiration to seconds from now.
+- PX milliseconds: Set the expiration to milliseconds from now.
+- EXAT timestamp: Set the expiration to a Unix timestamp.
+- PXAT timestamp: Set the expiration to a Unix timestamp in milliseconds.
+- PERSIST: Remove the expiration from the key.
+	`,
+	Examples: `
+localhost:7379> SET k v
+OK OK
+localhost:7379> GETEX k EX 1000
+OK v
+localhost:7379> TTL k
+OK 996
+localhost:7379> GETEX k PX 100000
+OK v
+localhost:7379> GETEX k EXAT 1740831030
+OK v
+localhost:7379> GETEX k PXAT 1740831030000
+OK v
+localhost:7379> GETEX k PERSIST
+OK v
+localhost:7379> GET k
+(nil)
+	`,
+	Eval:    evalGETEX,
+	Execute: executeGETEX,
 }
 
 func init() {
@@ -65,8 +95,6 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 	var err error
 	var exDurationSec, exDurationMs int64
-
-	fmt.Println(params)
 
 	// Default to -1 to indicate that the value is not set
 	// and the key will not expire

@@ -14,9 +14,34 @@ import (
 
 var cGETWATCH = &CommandMeta{
 	Name:      "GET.WATCH",
+	Syntax:    "GET.WATCH key",
 	HelpShort: "GET.WATCH creates a query subscription over the GET command",
-	Eval:      evalGETWATCH,
-	Execute:   executeGETWATCH,
+	HelpLong: `
+GET.WATCH creates a query subscription over the GET command. The client invoking the command
+will receive the output of the GET command (not just the notification) whenever the value against
+the key is updated.
+
+> This is part of the [Reactivity](https://dicedb.io/reactivity) paradigm offered by DiceDB.
+
+You can update the key in any other client. The GET.WATCH client will receive the updated value.
+	`,
+	Examples: `
+client1:7379> SET k1 v1
+OK OK
+client1:7379> GET.WATCH k1
+entered the watch mode for GET.WATCH k1
+
+
+client2:7379> SET k1 v2
+OK OK
+
+
+client1:7379> ...
+entered the watch mode for GET.WATCH k1
+OK [fingerprint=2356444921] v2
+	`,
+	Eval:    evalGETWATCH,
+	Execute: executeGETWATCH,
 }
 
 func init() {

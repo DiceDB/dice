@@ -15,9 +15,23 @@ import (
 
 var cGET = &CommandMeta{
 	Name:      "GET",
-	HelpShort: "GET returns the value for the key in args",
-	Eval:      evalGET,
-	Execute:   executeGET,
+	Syntax:    "GET key",
+	HelpShort: "GET returns the value for the key",
+	HelpLong: `
+GET returns the value for the key in args.
+
+The command returns (nil) if the key does not exist.
+	`,
+	Examples: `
+localhost:7379> SET k1 v1
+OK OK
+localhost:7379> GET k1
+OK v1
+localhost:7379> GET k2
+(nil)
+	`,
+	Eval:    evalGET,
+	Execute: executeGET,
 }
 
 func init() {

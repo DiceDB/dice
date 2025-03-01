@@ -13,9 +13,23 @@ import (
 
 var cGETDEL = &CommandMeta{
 	Name:      "GETDEL",
+	Syntax:    "GETDEL key",
 	HelpShort: "GETDEL returns the value of the key and then deletes the key.",
-	Eval:      evalGETDEL,
-	Execute:   executeGETDEL,
+	HelpLong: `
+GETDEL returns the value of the key and then deletes the key.
+
+The command returns (nil) if the key does not exist.
+	`,
+	Examples: `
+localhost:7379> SET k v
+OK OK
+localhost:7379> GETDEL k
+OK v
+localhost:7379> GET k
+(nil)
+	`,
+	Eval:    evalGETDEL,
+	Execute: executeGETDEL,
 }
 
 func init() {
