@@ -4,9 +4,9 @@
 package ironhawk
 
 import (
+	"errors"
 	"testing"
 	"time"
-	"errors"
 )
 
 func TestGET(t *testing.T) {

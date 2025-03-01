@@ -39,11 +39,11 @@ localhost:7379> GETEX k EX 1000
 OK v
 localhost:7379> TTL k
 OK 996
-localhost:7379> GETEX k PX 100000
+localhost:7379> GETEX k PX 200000
 OK v
-localhost:7379> GETEX k EXAT 1740831030
+localhost:7379> GETEX k EXAT 1772377267
 OK v
-localhost:7379> GETEX k PXAT 1740831030000
+localhost:7379> GETEX k PXAT 1772377267000
 OK v
 localhost:7379> GETEX k PERSIST
 OK v
@@ -139,7 +139,7 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			return cmdResNil, errors.ErrInvalidValue("GETEX", "PXAT")
 		}
 		exDurationMs = tv - utils.GetCurrentTime().UnixMilli()
-		if exDurationMs <= 0 || exDurationMs >= MaxEXDurationSec {
+		if exDurationMs <= 0 || exDurationMs >= (MaxEXDurationSec*1000) {
 			return cmdResNil, errors.ErrInvalidValue("GETEX", "PXAT")
 		}
 	}
