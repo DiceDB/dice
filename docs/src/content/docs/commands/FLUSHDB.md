@@ -15,7 +15,7 @@ FLUSHDB
 ```
 
 
-FLUSHDB deletes all keys and this command never fails.
+FLUSHDB deletes all keys present in the database.
 	
 
 #### Examples
