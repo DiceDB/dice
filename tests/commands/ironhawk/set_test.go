@@ -127,6 +127,13 @@ func TestSET(t *testing.T) {
 				errors.New("invalid syntax for 'SET' command"),
 			},
 		},
+		{
+			name:     "SET with no keys or arguments",
+			commands: []string{"SET"},
+			expected: []interface{}{
+				errors.New("wrong number of arguments for 'SET' command"),
+			},
+		},
 	}
 	runTestcases(t, client, testCases)
 }

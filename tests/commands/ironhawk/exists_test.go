@@ -35,6 +35,11 @@ func TestExists(t *testing.T) {
 			expected: []interface{}{"OK", "OK", "OK", 3, 2},
 			delay:    []time.Duration{0, 0, 0, 0, 2 * time.Second},
 		},
+		{
+			name:     "EXISTS with no keys or arguments",
+			commands: []string{"EXISTS"},
+			expected: []interface{}{0},
+		},
 	}
 
 	runTestcases(t, client, testCases)

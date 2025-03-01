@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestDel(t *testing.T) {
+func TestDEL(t *testing.T) {
 	client := getLocalConnection()
 	defer client.Close()
 
