@@ -4,6 +4,7 @@
 package ironhawk
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -24,9 +25,27 @@ func TestTTL(t *testing.T) {
 			expected: []interface{}{-2},
 		},
 		{
+			name:     "TTL with negative expiry",
+			commands: []string{"SET foo bar", "GETEX foo EX -5"},
+			expected: []interface{}{"OK",
+				errors.New("invalid value for a parameter in 'GETEX' command for EX parameter"),
+			},
+		},
+		{
 			name:     "TTL without Expiry",
 			commands: []string{"SET foo2 bar", "GET foo2", "TTL foo2"},
 			expected: []interface{}{"OK", "bar", -1},
+		},
+		{
+			name:     "TTL after DEL",
+			commands: []string{"SET foo bar", "GETEX foo EX 5", "DEL foo", "TTL foo"},
+			expected: []interface{}{"OK", "bar", 1, -2},
+		},
+		{
+			name:     "Multiple TTL updates",
+			commands: []string{"SET foo bar", "GETEX foo EX 10", "GETEX foo EX 5", "TTL foo"},
+			expected: []interface{}{"OK", "bar", "bar", 5},
+			delay:    []time.Duration{0, 0, 0, 0},
 		},
 		{
 			name:     "TTL with Persist",
@@ -35,9 +54,9 @@ func TestTTL(t *testing.T) {
 		},
 		{
 			name:     "TTL with Expire and Expired Key",
-			commands: []string{"SET foo bar", "GETEX foo ex 5", "GET foo", "TTL foo", "TTL foo"},
-			expected: []interface{}{"OK", "bar", "bar", 5, -2},
-			delay:    []time.Duration{0, 0, 0, 0, 5 * time.Second},
+			commands: []string{"SET foo bar", "GETEX foo ex 5", "GET foo", "TTL foo", "TTL foo", "GET foo"},
+			expected: []interface{}{"OK", "bar", "bar", 5, 1, nil},
+			delay:    []time.Duration{0, 0, 0, 0, 3 * time.Second, 2 * time.Second},
 		},
 	}
 
