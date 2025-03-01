@@ -76,7 +76,7 @@ var (
 		return fmt.Errorf("wrong number of arguments for '%s' command", strings.ToUpper(command))
 	}
 	ErrInvalidExpireTime = func(command string) error {
-		return fmt.Errorf("invalid expire time in '%s' command", strings.ToLower(command)) // Represents an invalid expiration time for a specific command.
+		return fmt.Errorf("invalid expire time in '%s' command", strings.ToUpper(command)) // Represents an invalid expiration time for a specific command.
 	}
 
 	ErrInvalidElementPeekCount = func(max int) error {
