@@ -13,9 +13,28 @@ import (
 
 var cTTL = &CommandMeta{
 	Name:      "TTL",
-	HelpShort: "TTL return the remaining time to live of a key that has an expiration set",
-	Eval:      evalTTL,
-	Execute:   executeTTL,
+	Syntax:    "TTL key",
+	HelpShort: "TTL returns the remaining time to live in seconds",
+	HelpLong: `
+TTL returns the remaining time to live (in seconds) of a key that has an expiration set.
+
+- Returns -1 if the key has no expiration.
+- Returns -2 if the key does not exist.
+	`,
+	Examples: `
+localhost:7379> SET k 43
+OK OK
+localhost:7379> TTL k
+OK -1
+localhost:7379> SET k 43 EX 10
+OK OK
+localhost:7379> TTL k
+OK 9
+localhost:7379> TTL kn
+OK -2
+	`,
+	Eval:    evalTTL,
+	Execute: executeTTL,
 }
 
 func init() {
@@ -30,7 +49,6 @@ func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	var key = c.C.Args[0]
 
 	obj := s.Get(key)
-
 	if obj == nil {
 		return &CmdRes{R: &wire.Response{
 			Value: &wire.Response_VInt{VInt: -2},
