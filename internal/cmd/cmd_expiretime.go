@@ -12,9 +12,24 @@ import (
 
 var cExpireTime *CommandMeta = &CommandMeta{
 	Name:      "EXPIRETIME",
+	Syntax:    "EXPIRETIME key",
 	HelpShort: `EXPIRETIME returns the absolute Unix timestamp in seconds at which the given key will expire`,
-	Eval:      evalEXPIRETIME,
-	Execute:   executeEXPIRETIME,
+	HelpLong: `
+EXPIRETIME returns the absolute Unix timestamp in seconds at which the given key will expire.
+
+The command returns -1 if the key exists but has no associated expiration time.
+The command returns -2 if the key does not exist.
+	`,
+	Examples: `
+locahost:7379> SET k1 v1
+OK OK
+locahost:7379> EXPIRE k1 10
+OK 1
+locahost:7379> EXPIRETIME k1
+OK 1740829178
+	`,
+	Eval:    evalEXPIRETIME,
+	Execute: executeEXPIRETIME,
 }
 
 func init() {
@@ -35,17 +50,16 @@ func evalEXPIRETIME(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
 		return cmdResIntNegTwo, nil
 	}
 
-	getExpiry, ok := dstore.GetExpiry(obj, dst)
-
-	// returns -1 as the key doesn't have an expiration time set
+	expiry, ok := dstore.GetExpiry(obj, dst)
 	if !ok {
+		// returns -1 as the key doesn't have an expiration time set
 		return cmdResIntNegOne, nil
 	}
 
 	// returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VInt{
-			VInt: int64(getExpiry / 1000),
+			VInt: int64(expiry / 1000),
 		},
 	}}, nil
 }
