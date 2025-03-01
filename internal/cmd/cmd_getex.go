@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -96,8 +95,6 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 	var err error
 	var exDurationSec, exDurationMs int64
-
-	fmt.Println(params)
 
 	// Default to -1 to indicate that the value is not set
 	// and the key will not expire
