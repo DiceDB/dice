@@ -11,7 +11,7 @@ import (
 
 var cHANDSHAKE = &CommandMeta{
 	Name:      "HANDSHAKE",
-	Syntax:    "HANDSHAKE <client_id> <execution_mode>",
+	Syntax:    "HANDSHAKE client_id execution_mode",
 	HelpShort: "HANDSHAKE tells the server the purpose of the connection",
 	HelpLong: `
 HANDSHAKE is used to tell the DiceDB server the purpose of the connection. It
