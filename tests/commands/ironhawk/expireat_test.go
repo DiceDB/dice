@@ -47,14 +47,14 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(-1, 10),
 				"GET test_key",
 			},
-			expected: []interface{}{"OK", 1, errors.New("invalid expire time in 'EXPIREAT' command"), "test_value"},
+			expected: []interface{}{"OK", errors.New("invalid expire time in 'EXPIREAT' command"), "test_value"},
 		},
 		{
 			name: "EXPIREAT with invalid syntax",
 			commands: []string{
 				"EXPIREAT test_key",
 			},
-			expected: []interface{}{"ERR wrong number of arguments for 'expireat' command"},
+			expected: []interface{}{errors.New("wrong number of arguments for 'EXPIREAT' command")},
 		},
 		{
 			name: "Test(NX): Set the expiration only if the key has no expiration time",
@@ -94,7 +94,7 @@ func TestEXPIREAT(t *testing.T) {
 			name: "TEST(LT): Set the expiration only if the new expiration time is less than the current one",
 			commands: []string{
 				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " LT",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " LT",
 			},
 			expected: []interface{}{"OK", 1, int64(0)},
@@ -104,10 +104,10 @@ func TestEXPIREAT(t *testing.T) {
 			name: "TEST(LT): Set the expiration only if the new expiration time is less than the current one",
 			commands: []string{
 				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10),
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " LT",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " LT",
 			},
-			expected: []interface{}{"OK", 1, int64(0)},
+			expected: []interface{}{"OK", 1, 1},
 		},
 
 		{
@@ -120,8 +120,8 @@ func TestEXPIREAT(t *testing.T) {
 				"GET test_key",
 			},
 			expected: []interface{}{"OK", 1,
-				"ERR NX and XX, GT or LT options at the same time are not compatible",
-				"ERR NX and XX, GT or LT options at the same time are not compatible",
+				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
+				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
 				"test_value"},
 		},
 		{
@@ -169,13 +169,13 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " nx" + " " + "xx" + " " + "gt",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " nx" + " " + "xx" + " " + "lt",
 			},
-			expected: []interface{}{"OK", "ERR Unsupported option rr",
-				"ERR NX and XX, GT or LT options at the same time are not compatible",
-				"ERR GT and LT options at the same time are not compatible",
-				"ERR GT and LT options at the same time are not compatible",
-				"ERR NX and XX, GT or LT options at the same time are not compatible",
-				"ERR NX and XX, GT or LT options at the same time are not compatible",
-				"ERR NX and XX, GT or LT options at the same time are not compatible"},
+			expected: []interface{}{"OK", errors.New("unsupported option rr"),
+				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
+				errors.New("GT and LT options at the same time are not compatible"),
+				errors.New("GT and LT options at the same time are not compatible"),
+				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
+				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
+				errors.New("NX and XX, GT or LT options at the same time are not compatible")},
 		},
 	}
 	runTestcases(t, client, testCases)
