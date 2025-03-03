@@ -73,7 +73,7 @@ func TestGETEX(t *testing.T) {
 			},
 		},
 		{
-			name:     "GETEX with PXAT option",
+			name: "GETEX with PXAT option",
 			commands: []string{
 				"SET foo bar",
 				"GETEX foo PXAT " + strconv.FormatInt(time.Now().Add(24*time.Hour).UnixMilli(), 10),

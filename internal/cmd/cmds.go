@@ -44,7 +44,6 @@ func (c *Cmd) Key() string {
 }
 
 func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
-
 	res := cmdResNil
 	err := errors.ErrUnknownCmd(c.C.Cmd)
 	start := time.Now()
