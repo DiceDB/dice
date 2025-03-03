@@ -17,7 +17,7 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-//nolint: stylecheck
+// nolint: stylecheck
 const INFINITE_EXPIRATION = int64(-1)
 
 type Cmd struct {
@@ -49,8 +49,8 @@ func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 	err := errors.ErrUnknownCmd(c.C.Cmd)
 	start := time.Now()
 	if c.Meta == nil {
-		meta, found := findCommandMeta(c.C.Cmd)
-		if !found {
+		meta, ok := CommandRegistry.CommandMetas[c.C.Cmd]
+		if !ok {
 			return res, err
 		}
 		c.Meta = meta
@@ -62,15 +62,6 @@ func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 		slog.String("mode", c.Mode),
 		slog.Any("took_ns", time.Since(start).Nanoseconds()))
 	return res, err
-}
-
-func findCommandMeta(cmdName string) (*CommandMeta, bool) {
-	for _, meta := range CommandRegistry.CommandMetas {
-		if meta.Name == cmdName {
-			return meta, true
-		}
-	}
-	return nil, false
 }
 
 type CmdRes struct {
@@ -89,7 +80,7 @@ type CommandMeta struct {
 }
 
 type CmdRegistry struct {
-	CommandMetas []*CommandMeta
+	CommandMetas map[string]*CommandMeta
 }
 
 func Total() int {
@@ -97,11 +88,11 @@ func Total() int {
 }
 
 func (r *CmdRegistry) AddCommand(cmd *CommandMeta) {
-	r.CommandMetas = append(r.CommandMetas, cmd)
+	r.CommandMetas[cmd.Name] = cmd
 }
 
 var CommandRegistry CmdRegistry = CmdRegistry{
-	CommandMetas: []*CommandMeta{},
+	CommandMetas: map[string]*CommandMeta{},
 }
 
 // DiceDBCmd represents a command structure to be executed

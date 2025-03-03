@@ -40,7 +40,6 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 			return err
 		}
 
-		// TODO: Replace this iteration with a HashTable lookup.
 		_c := &cmd.Cmd{
 			C:        c,
 			ClientID: t.ClientID,
