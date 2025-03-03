@@ -1,0 +1,17 @@
+{
+    "[python]": {
+        "editor.detectIndentation" : false,
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4   
+    },
+    "[astro]": {
+        "editor.detectIndentation" : false,
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2
+    },
+    "[scss]": {
+        "editor.detectIndentation" : false,
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2
+    }
+}

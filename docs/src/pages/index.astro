@@ -10,92 +10,11 @@ const recentBlogs = blogs
   .sort((a, b) => b.data.published_at - a.data.published_at)
   .slice(0, 3);
 
-const title = "DiceDB - an in-memory database;";
+const title = "DiceDB - a faster, reactive, and familiar cache;";
 const description =
-  "DiceDB is an open-source in-memory database with query subscriptions.";
+  "DiceDB is an open-source in-memory high-performance reactive database with a familiar interface.";
 ---
 
 <Layout {title} {description}>
   <Hero />
-  <div class="section content">
-    <p>DiceDB is</p>
-    <ul>
-      <li>
-        open source under <a
-          target="_blank"
-          href="https://github.com/DiceDB/dice/blob/master/LICENSE"
-          >BSD 3-Clause License</a
-        >
-      </li>
-      <li>
-        <a href="/reactivity">Reactive</a> - native support for query subscriptions
-      </li>
-      <li>... and more as we ship</li>
-      <!-- <li>
-        Scalable - scales out and scales in with load <span
-          class="has-text-danger">*</span
-        >
-      </li>
-      <li>
-        Highly available - failovers and durability <span
-          class="has-text-danger">*</span
-        >
-      </li>
-      <li>
-        Unified cache - multi-tenant and shared everything architecture <span
-          class="has-text-danger">*</span
-        >
-      </li>
-      <li>
-        Optimized for modern hardware - multi-threaded with shared-nothing
-        architecture <span class="has-text-danger">*</span>
-      </li> -->
-    </ul>
-    <p>
-      and we aim to be the high-performance caching backbone for modern
-      architecture.
-    </p>
-  </div>
-  <div class="section content has-text-centered">
-    <p class="has-text-weight-bold has-text-danger">DICEDB BLOG</p>
-    <h2 class="is-size-3">Explore our insights</h2>
-    <p>
-      Explore our blogs to stay informed on internal details, announcements, and
-      use cases; and see what we are up to.
-    </p>
-    <br />
-    <div class="columns is-centered has-text-left">
-      {
-        recentBlogs.map((blog) => {
-          return (
-            <div class="column is-4 hero">
-              <div class="box content" style="height: 100%;">
-                <div
-                  class="is-flex is-flex-direction-column"
-                  style="height: inherit;"
-                >
-                  <p class="title is-size-5">
-                    <a href={`/blog/${blog.slug}`} class="has-text-danger">
-                      {blog.data.title}
-                    </a>
-                  </p>
-                  <p class="is-flex-grow-1">
-                    {blog.data.description.slice(0, 128)}...
-                  </p>
-                  <p class="has-text-right">
-                    <a class="button is-small" href={`/blog/${blog.slug}`}>
-                      <span>Read post</span>
-                      <span class="icon">
-                        <MoveUpRight />
-                      </span>
-                    </a>
-                  </p>
-                </div>
-              </div>
-            </div>
-          );
-        })
-      }
-    </div>
-  </div>
 </Layout>
