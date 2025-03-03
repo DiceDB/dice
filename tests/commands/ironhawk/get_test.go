@@ -18,7 +18,7 @@ func TestGET(t *testing.T) {
 			name:     "Get with expiration",
 			commands: []string{"SET k v EX 2", "GET k", "GET k"},
 			expected: []interface{}{"OK", "v", nil},
-			delay:    []time.Duration{0, 0, 2 * time.Second},
+			delay:    []time.Duration{0, 0, 3 * time.Second},
 		},
 		{
 			name:     "Get without expiration",

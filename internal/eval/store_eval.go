@@ -4832,19 +4832,18 @@ func incrMultValue(value any, multiplier interface{}, operation jsonOperation) (
 			}
 			resultString := strconv.FormatFloat(newVal, 'f', -1, 64)
 			return newVal, resultString, true
-		} else {
-			v, _ := multiplier.(int64)
-			oldVal := value.(int64)
-			var newVal int64
-			switch operation {
-			case IncrBy:
-				newVal = oldVal + v
-			case MultBy:
-				newVal = oldVal * v
-			}
-			resultString := strconv.FormatInt(newVal, 10)
-			return newVal, resultString, true
 		}
+		v, _ := multiplier.(int64)
+		oldVal := value.(int64)
+		var newVal int64
+		switch operation {
+		case IncrBy:
+			newVal = oldVal + v
+		case MultBy:
+			newVal = oldVal * v
+		}
+		resultString := strconv.FormatInt(newVal, 10)
+		return newVal, resultString, true
 	default:
 		return value, "null", false
 	}
@@ -5075,12 +5074,11 @@ func incrementValue(value any, isIncrFloat bool, incrFloat float64, incrInt int6
 			newVal := oldVal + incrFloat
 			resultString := formatFloat(newVal, isIncrFloat)
 			return newVal, resultString, true
-		} else {
-			oldVal := value.(int64)
-			newVal := oldVal + incrInt
-			resultString := fmt.Sprintf("%d", newVal)
-			return newVal, resultString, true
 		}
+		oldVal := value.(int64)
+		newVal := oldVal + incrInt
+		resultString := fmt.Sprintf("%d", newVal)
+		return newVal, resultString, true
 	default:
 		return value, null, false
 	}

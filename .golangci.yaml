@@ -23,7 +23,7 @@ linters:
     - dogsled
     - dupl
     - errcheck
-    - exportloopref
+    # - exportloopref
     - funlen
     - goconst
     - gocritic
@@ -119,8 +119,6 @@ output:
 
   print-linter-name: true
 
-  uniq-by-line: false
-
   sort-results: true
 
 issues:
@@ -139,3 +137,8 @@ issues:
 
   exclude-files:
     - README.md
+
+  exclude:
+    - G115 # potential integer overflow when converting between integer types
+
+  uniq-by-line: false

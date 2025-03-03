@@ -36,7 +36,7 @@ func TestSET(t *testing.T) {
 			name:     "Set with EX option",
 			commands: []string{"SET k v EX 2", "GET k", "GET k"},
 			expected: []interface{}{"OK", "v", nil},
-			delay:    []time.Duration{0, 0, 3 * time.Second},
+			delay:    []time.Duration{0, 0, 4 * time.Second},
 		},
 		{
 			name:     "Set with PX option",

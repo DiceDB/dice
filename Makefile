@@ -97,6 +97,7 @@ check-golangci-lint:
 
 clean: ## clean the dicedb binary
 	@echo "Cleaning build artifacts..."
+	go clean -cache -modcache
 	rm -f dicedb
 	@echo "Clean complete."
 

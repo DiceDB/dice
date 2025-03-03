@@ -42,7 +42,7 @@ require (
 	github.com/bytedance/sonic v1.12.4
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
-	github.com/dicedb/dicedb-go v1.0.1
+	github.com/dicedb/dicedb-go v1.0.3
 	github.com/gobwas/glob v0.2.3
 	github.com/google/btree v1.1.3
 	github.com/google/go-cmp v0.6.0
@@ -57,5 +57,5 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/twmb/murmur3 v1.1.8
 	golang.org/x/crypto v0.29.0
-	google.golang.org/protobuf v1.36.4
+	google.golang.org/protobuf v1.36.5
 )
