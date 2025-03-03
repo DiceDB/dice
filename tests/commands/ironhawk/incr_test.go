@@ -4,6 +4,7 @@
 package ironhawk
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"testing"
@@ -62,11 +63,11 @@ func TestINCR(t *testing.T) {
 			},
 			expected: []interface{}{
 				"OK",
-				fmt.Errorf("wrong type operation for 'INCR' command"),
+				errors.New("wrongtype operation against a key holding the wrong kind of value"),
 				"OK",
-				fmt.Errorf("wrong type operation for 'INCR' command"),
+				errors.New("wrongtype operation against a key holding the wrong kind of value"),
 				"OK",
-				fmt.Errorf("wrong type operation for 'INCR' command"),
+				errors.New("wrongtype operation against a key holding the wrong kind of value"),
 			},
 		},
 		{
