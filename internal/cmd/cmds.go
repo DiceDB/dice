@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
+	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
@@ -43,16 +44,18 @@ func (c *Cmd) Key() string {
 }
 
 func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
+
+	res := cmdResNil
+	err := errors.ErrUnknownCmd(c.C.Cmd)
 	start := time.Now()
 	if c.Meta == nil {
-		for _, meta := range CommandRegistry.CommandMetas {
-			if meta.Name == c.C.Cmd {
-				c.Meta = meta
-				break
-			}
+		meta, ok := CommandRegistry.CommandMetas[c.C.Cmd]
+		if !ok {
+			return res, err
 		}
+		c.Meta = meta
 	}
-	res, err := c.Meta.Execute(c, sm)
+	res, err = c.Meta.Execute(c, sm)
 	slog.Debug("command executed",
 		slog.Any("cmd", c.String()),
 		slog.String("client_id", c.ClientID),
@@ -77,7 +80,7 @@ type CommandMeta struct {
 }
 
 type CmdRegistry struct {
-	CommandMetas []*CommandMeta
+	CommandMetas map[string]*CommandMeta
 }
 
 func Total() int {
@@ -85,11 +88,11 @@ func Total() int {
 }
 
 func (r *CmdRegistry) AddCommand(cmd *CommandMeta) {
-	r.CommandMetas = append(r.CommandMetas, cmd)
+	r.CommandMetas[cmd.Name] = cmd
 }
 
 var CommandRegistry CmdRegistry = CmdRegistry{
-	CommandMetas: []*CommandMeta{},
+	CommandMetas: map[string]*CommandMeta{},
 }
 
 // DiceDBCmd represents a command structure to be executed
