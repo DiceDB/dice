@@ -31,7 +31,7 @@ func TestEXPIREAT(t *testing.T) {
 				"GET test_key",
 			},
 			expected: []interface{}{"OK", 1, nil},
-			delay:    []time.Duration{0, 2 * time.Second},
+			delay:    []time.Duration{0, 0, 3 * time.Second},
 		},
 		{
 			name: "EXPIREAT non-existent key",

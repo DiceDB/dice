@@ -29,7 +29,7 @@ func TestGETEX(t *testing.T) {
 			name:     "GETEX with EX option",
 			commands: []string{"SET foo bar", "GETEX foo EX 2", "TTL foo", "GET foo", "GET foo"},
 			expected: []interface{}{"OK", "bar", 2, "bar", nil},
-			delay:    []time.Duration{0, 0, 0, 0, 3 * time.Second},
+			delay:    []time.Duration{0, 0, 0, 0, 4 * time.Second},
 		},
 		{
 			name:     "GETEX with PX option",

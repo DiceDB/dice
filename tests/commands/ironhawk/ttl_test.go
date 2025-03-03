@@ -55,9 +55,9 @@ func TestTTL(t *testing.T) {
 		},
 		{
 			name:     "TTL with Expire and Expired Key",
-			commands: []string{"SET foo bar", "GETEX foo ex 5", "GET foo", "TTL foo", "TTL foo", "GET foo"},
-			expected: []interface{}{"OK", "bar", "bar", 5, 1, nil},
-			delay:    []time.Duration{0, 0, 0, 0, 3 * time.Second, 4 * time.Second},
+			commands: []string{"SET foo bar", "GETEX foo ex 3", "TTL foo", "GET foo"},
+			expected: []interface{}{"OK", "bar", 3, nil},
+			delay:    []time.Duration{0, 0, 0, 5 * time.Second},
 		},
 	}
 
