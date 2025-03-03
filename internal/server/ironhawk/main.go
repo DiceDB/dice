@@ -10,7 +10,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"os"
 	"sync"
 	"syscall"
 
@@ -39,7 +38,7 @@ func NewServer(shardManager *shardmanager.ShardManager, ioThreadManager *IOThrea
 	}
 }
 
-func (s *Server) Run(ctx context.Context, sigCh chan<- os.Signal) (err error) {
+func (s *Server) Run(ctx context.Context) (err error) {
 	if err = s.BindAndListen(); err != nil {
 		slog.Error("failed to bind server", slog.Any("error", err))
 		return err
@@ -53,7 +52,7 @@ func (s *Server) Run(ctx context.Context, sigCh chan<- os.Signal) (err error) {
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		if err := s.AcceptConnectionRequests(ctx, sigCh, wg); err != nil {
+		if err := s.AcceptConnectionRequests(ctx, wg); err != nil {
 			errChan <- fmt.Errorf("failed to accept connections %w", err)
 		}
 	}(wg)
@@ -127,7 +126,7 @@ func releasePort(serverFD int) {
 	}
 }
 
-func (s *Server) AcceptConnectionRequests(ctx context.Context, sigCh chan<- os.Signal, wg *sync.WaitGroup) error {
+func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGroup) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -149,14 +148,14 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, sigCh chan<- os.S
 			}
 
 			wg.Add(1)
-			go s.startIOThread(ctx, sigCh, wg, thread)
+			go s.startIOThread(ctx, wg, thread)
 		}
 	}
 }
 
-func (s *Server) startIOThread(ctx context.Context, sigCh chan<- os.Signal, wg *sync.WaitGroup, thread *IOThread) {
+func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *IOThread) {
 	wg.Done()
-	err := thread.StartSync(ctx, sigCh, s.shardManager, s.watchManager)
+	err := thread.StartSync(ctx, s.shardManager, s.watchManager)
 	if err != nil {
 		if err == io.EOF {
 			s.watchManager.CleanupThreadWatchSubscriptions(thread)
