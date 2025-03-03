@@ -4,6 +4,7 @@
 package ironhawk
 
 import (
+	"errors"
 	"strconv"
 	"testing"
 	"time"
@@ -48,7 +49,11 @@ func TestEXPIRETIME(t *testing.T) {
 				"EXPIRETIME",
 				"EXPIRETIME key1 key2",
 			},
-			expected: []interface{}{"OK", "ERR wrong number of arguments for 'expiretime' command", "ERR wrong number of arguments for 'expiretime' command"},
+			expected: []interface{}{
+				"OK",
+				errors.New("wrong number of arguments for 'EXPIRETIME' command"),
+				errors.New("wrong number of arguments for 'EXPIRETIME' command"),
+			},
 		},
 	}
 	runTestcases(t, client, testCases)
