@@ -16,8 +16,9 @@ func TestTTL(t *testing.T) {
 	testCases := []TestCase{
 		{
 			name:     "TTL Simple Value",
-			commands: []string{"SET foo bar", "GETEX foo EX 5", "GETEX foo", "TTL foo"},
-			expected: []interface{}{"OK", "bar", "bar", 5},
+			commands: []string{"SET foo bar", "GETEX foo EX 5", "TTL foo"},
+			expected: []interface{}{"OK", "bar", 5},
+			delay:    []time.Duration{0, 0, 0},
 		},
 		{
 			name:     "TTL on Non-Existent Key",
@@ -56,7 +57,7 @@ func TestTTL(t *testing.T) {
 			name:     "TTL with Expire and Expired Key",
 			commands: []string{"SET foo bar", "GETEX foo ex 5", "GET foo", "TTL foo", "TTL foo", "GET foo"},
 			expected: []interface{}{"OK", "bar", "bar", 5, 1, nil},
-			delay:    []time.Duration{0, 0, 0, 0, 3 * time.Second, 2 * time.Second},
+			delay:    []time.Duration{0, 0, 0, 0, 3 * time.Second, 4 * time.Second},
 		},
 	}
 

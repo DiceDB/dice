@@ -104,7 +104,7 @@ Do not check-in the `go.mod` file with this change.
 
 ```bash
 sudo su
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /bin v1.60.1
+sudo curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo sh -s -- -b /bin v1.64.6
 ```
 
 ### Local Setup with Custom Config

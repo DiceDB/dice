@@ -4,6 +4,7 @@
 package ironhawk
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"testing"
@@ -80,7 +81,7 @@ func TestINCRBY(t *testing.T) {
 				"INCRBY key abc",
 			},
 			expected: []interface{}{
-				"OK", fmt.Errorf("ERR value is not an integer or out of range"),
+				"OK", errors.New("value is not an integer or out of range"),
 			},
 		},
 	}

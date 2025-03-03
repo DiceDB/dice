@@ -37,7 +37,7 @@ go mod init url-shortener
 Install the DiceDB Go SDK and other dependencies:
 
 ```bash
-go get github.com/dicedb/dicedb-go@v1.0.2
+go get github.com/dicedb/dicedb-go@v1.0.3
 go get github.com/gin-gonic/gin
 go get github.com/google/uuid
 ```

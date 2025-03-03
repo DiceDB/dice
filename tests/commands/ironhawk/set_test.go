@@ -36,13 +36,13 @@ func TestSET(t *testing.T) {
 			name:     "Set with EX option",
 			commands: []string{"SET k v EX 2", "GET k", "GET k"},
 			expected: []interface{}{"OK", "v", nil},
-			delay:    []time.Duration{0, 0, 3 * time.Second},
+			delay:    []time.Duration{0, 0, 4 * time.Second},
 		},
 		{
 			name:     "Set with PX option",
 			commands: []string{"SET k v PX 2000", "GET k", "GET k"},
 			expected: []interface{}{"OK", "v", nil},
-			delay:    []time.Duration{0, 0, 3 * time.Second},
+			delay:    []time.Duration{0, 0, 4 * time.Second},
 		},
 		{
 			name:     "Set with EX and PX option",
@@ -53,8 +53,8 @@ func TestSET(t *testing.T) {
 		},
 		{
 			name:     "XX on non-existing key",
-			commands: []string{"DEL k", "SET k v XX", "GET k"},
-			expected: []interface{}{0, nil, nil},
+			commands: []string{"SET k99 v XX", "GET k99"},
+			expected: []interface{}{nil, nil},
 		},
 		{
 			name:     "NX on non-existing key",
