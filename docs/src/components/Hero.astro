@@ -3,17 +3,23 @@ import { Github } from "lucide-astro";
 ---
 
 <div>
-  <div>
-    <div class="columns is-vcentered is-centered">
-      <div class="column content section is-8 has-text-centered">
-        <h1 class="title is-size-1">an in-memory database;</h1>
+  <div class="columns content">
+    <div class="column is-8">
+      <div style="padding: 100px 0;">
+        <h1 class="title is-size-1">cache;</h1>
+        <p class="is-size-4">
+          Make your applications run at warp speed.
+        </p>
         <p class="is-size-5">
-          an open-source in-memory database with query subscriptions.
+          DiceDB
+          <ul class="is-size-5">
+            <li>is <a href="/benchmarks">faster</a></li>
+            <li>is <a href="/reactivity">reactive</a></li>
+            <li>is familiar</li>
+            <li>is <a target="_blank" href="https://github.com/DiceDB/dice/blob/master/LICENSE">open source</a></li>
+          </ul>
         </p>
-        <p class="notification has-text-weight-bold">
-          docker run -p 7379:7379 dicedb/dicedb
-        </p>
-        <div class="buttons is-centered">
+        <div class="buttons">
           <a href="/get-started/installation/" class="button is-primary">
             <strong>Get Started →</strong>
           </a>
@@ -27,11 +33,9 @@ import { Github } from "lucide-astro";
             <span>GitHub (7k+)</span>
           </a>
         </div>
-        <p class="is-small has-text-grey">
-          <span class="has-text-danger">*</span> DiceDB is a work in progress; track
-          <a href="/roadmap">roadmap</a> and follow along.
-        </p>
       </div>
+    </div>
+    <div class="column is-4">
     </div>
   </div>
 </div>

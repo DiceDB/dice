@@ -15,7 +15,7 @@ import { ArrowUpRight } from "lucide-astro";
     <div class="navbar-brand">
       <a href="/" class="navbar-item">
         <div class="image">
-          <img src="/dicedb-logo-light.png" style="width: auto;" />
+          <img src="/dicedb-logo-dark.png" style="width: auto;" />
         </div>
       </a>
       <a
@@ -41,36 +41,12 @@ import { ArrowUpRight } from "lucide-astro";
           <span class="has-text-weight-bold"> Benchmarks</span>
         </a>
 
-        <a
+        <!-- <a
           class={`navbar-item ${currentPage === "blog" && "is-active"}`}
           href="/blog"
         >
           <span class="has-text-weight-bold"> Blog</span>
-        </a>
-        <a
-          class={`navbar-item ${currentPage === "community" && "is-active"}`}
-          href="/community"
-        >
-          <span class="has-text-weight-bold"> Community</span>
-        </a>
-        <a
-          class={`navbar-item ${currentPage === "team" && "is-active"}`}
-          href="/team"
-        >
-          <span class="has-text-weight-bold"> Team</span>
-        </a>
-        <a
-          class={`navbar-item`}
-          href="https://playground.dicedb.io"
-          target="_blank"
-        >
-          <span class="icon-text">
-            <span class="has-text-weight-bold"> Playground</span>
-            <span class="icon">
-              <ArrowUpRight size={20} />
-            </span>
-          </span>
-        </a>
+        </a> -->
         <a
           class={`navbar-item ${currentPage === "docs" && "is-active"}`}
           href="/get-started/installation/"

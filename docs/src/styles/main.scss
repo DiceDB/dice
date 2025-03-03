@@ -5,215 +5,130 @@ $family-serif: "Spline Sans Mono", monospace;
 $family-primary: $family-serif;
 $family-secondary: "Merriweather", serif;
 
+// Dark theme colors
 $body-size: 1em;
-$text: #333;
+$text: #e4e4e4;
 $white: #fff;
-$primary: #e60000;
-$link: #22f;
-$link-hover: $link;
+$primary: #ff4444;
+$link: #66b3ff;
+$link-hover: lighten($link, 10%);
 
-$navbar-background-color: white;
+$title-color: $white;
+$subtitle-color: darken($white, 20%);
+$label-color: $primary;
+$label-weight: normal;
+$weight-bold: 600;
+
+// Dark theme background colors
+$body-background-color: #1a1a1a;
+$navbar-background-color: #242424;
 $navbar-box-shadow-size: 0 2px 0 0;
-$navbar-item-hover-background-color: #ececec;
-$navbar-item-active-background-color: #ececec;
-$navbar-box-shadow-color: #f00;
+$navbar-item-hover-background-color: #333333;
+$navbar-item-active-background-color: #333333;
+$navbar-item-active-color: $text;
+$navbar-box-shadow-color: $primary;
 $navbar-fixed-z: 1000;
-$navbar-item-hover-color: black;
+$navbar-item-hover-color: $white;
+$navbar-item-color: $text;
 
-// Potential color for background: #f5f5ed
-
-$body-background-color: #ffffff;
-$title-size: 26px;
+$title-color: $white;
+$subtitle-color: darken($white, 20%);
 $label-color: $primary;
 $label-weight: normal;
 $weight-bold: 600;
 
 $dimensions: 16 24 32 48 64 96 128 256 320 512;
-$button-border-color: #111;
+$button-border-color: #444;
 $button-hover-border-color: $link;
+$button-background-color: #333;
+$button-color: $text;
+$button-hover-color: $white;
+
+blockquote {
+  background-color: transparent !important;
+}
+
+// Box modifications for dark theme
+.box {
+  background-color: #242424;
+  border: 1px solid #444;
+  color: $text;
+  box-shadow: 2px 2px 10px 3px rgba(0, 0, 0, 0.3);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: $white !important;
+}
 
 pre {
   background-color: #111 !important;
+  color: #e4e4e4 !important;
 }
 
-figcaption.header {
-  display: none !important;
-}
-
-.hnavbar {
-  border: 0px solid #aaa;
-  padding: 0.5em;
-
-  overflow-y: hidden;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
-
-  .navbar-item {
-    display: inline-block;
-  }
-}
-
-.navbar.is-fixed-top {
-  padding: 0.5em;
-}
-
+// Navbar modifications
 .navbar {
-  border: 0px solid #aaa;
+  border: 0px solid #444;
   padding: 0.5em;
+  border-radius: 0 0 1em 1em;
+  color: $text;
 }
 
 .navbar-item {
-  border-radius: 0.75em;
-}
-
-.navbar-end {
-  display: flex;
-  gap: 0.3rem;
-}
-
-@media screen and (max-width: 1024px) {
-  .navbar-end {
-    flex-direction: column;
+  color: $text;
+  border-radius: 1em;
+  &:hover {
+    color: $white;
   }
 }
 
-.section {
-  padding: 1.5rem 0.5rem !important;
-}
-
-.breadcrumb {
-  margin: 0.5em 0 !important;
-}
-
+// Button modifications
 .button {
-  border-radius: 8px !important;
+  background-color: $button-background-color;
+  color: $button-color;
+  &:hover {
+    color: $button-hover-color;
+  }
 }
 
-.box {
-  background-color: #fff;
-  border: 1px solid #aaa;
-  margin: 0 0 0em 0;
-  position: relative;
-  padding: 1.25em;
-  top: 0;
-  transition: box-shadow ease 0.3s;
-  box-shadow: 2px 2px 10px 3px #ddd;
-}
-
-ul.horizontal a {
-  margin-right: 0.75em;
-}
-
-.has-image-centered {
-  margin-left: auto;
-  margin-right: auto;
-}
-
+// Topic image modifications for dark theme
 .topic-image:hover,
 .topic-image:active {
-  transition: box-shadow 200ms;
-  box-shadow:
-    0 4px 8px 0 rgba(100, 100, 100, 0.2),
-    0 6px 20px 0 rgba(500, 500, 500, 0.19);
-  cursor: pointer;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.4),
+    0 6px 20px 0 rgba(0, 0, 0, 0.3);
 }
 
-.content img {
-  border-radius: 0.5em;
-}
-
-img.logo {
-  filter: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='grayscale'><feColorMatrix type='matrix' values='0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0'/></filter></svg>#grayscale"); /* Firefox 10+, Firefox on Android */
-  -webkit-filter: grayscale(100%);
-  -moz-filter: grayscale(100%);
-  -ms-filter: grayscale(100%);
-  filter: grayscale(100%);
-  filter: gray; /* IE 6-9 */
-}
-
-img.logo:hover {
-  -webkit-filter: none;
-  -moz-filter: none;
-  -ms-filter: none;
-  filter: none;
-}
-
-.content a {
-  font-weight: 500;
-}
-
-ul.horizontal {
-  list-style-type: none;
-  overflow: hidden;
-}
-
-.horizontal li {
-  float: left;
-}
-
-.horizontal li a {
-  display: block;
-}
-
+// Clickable div modifications
 div.clickable {
-  cursor: pointer;
-  padding: 0.5em;
-  margin-bottom: 0.2em;
-  border-radius: 0.5em;
-  border: 1px solid transparent;
+  &.is-active {
+    background-color: #333;
+    border: 1px solid #444;
+  }
+  
+  &:hover {
+    border: 1px solid #444;
+    background-color: #2a2a2a;
+  }
 }
 
-div.clickable.is-active {
-  font-weight: bold;
-  background-color: #efefef;
-  border: 1px solid #cecece;
-}
-
-div.clickable:hover {
-  border: 1px solid #cecece;
-}
-
-hr {
-  margin-top: 0em !important;
-  margin-bottom: 0em !important;
-  border-bottom: 1px solid #cecece !important;
-}
-
+// Banner modifications
 .banner {
-  position: fixed;
-  top: 0;
-  text-align: center;
-  z-index: 10000;
-  width: 100%;
-  background-color: #79102a;
+  background-color: darken($primary, 15%);
   color: $white;
-  padding: 0.7em 0;
-  letter-spacing: 0.05em;
 }
 
-a {
-  text-decoration: none;
+// Horizontal rule modifications
+hr {
+  border-bottom: 1px solid #444 !important;
 }
 
-a:hover {
-  text-decoration: none;
+.foot {
+  border-radius: 1em 1em 0 0;
 }
 
-.content a:hover {
-  text-decoration: underline;
+.foot a {
+  color: $text;
 }
 
-pre {
-  border-radius: 1em;
-  padding: 1.75em !important;
-}
-
-.title {
-  line-height: 1.5em !important;
-}
-
-.content-fit {
-  width: fit-content;
-}
+// ... existing code ...
 
 @import "../../node_modules/bulma/bulma.sass";
