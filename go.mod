@@ -1,6 +1,6 @@
 module github.com/dicedb/dice
 
-go 1.23.5
+go 1.24.0
 
 require gotest.tools/v3 v3.5.1
 
@@ -41,7 +41,6 @@ require (
 	github.com/axiomhq/hyperloglog v0.2.0
 	github.com/bytedance/sonic v1.12.4
 	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
 	github.com/dicedb/dicedb-go v1.0.1
 	github.com/gobwas/glob v0.2.3
