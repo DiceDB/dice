@@ -10,9 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/dicedb/dice/internal/server/ironhawk"
@@ -117,9 +115,6 @@ func RunTestServer(wg *sync.WaitGroup) {
 	testServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
-
 	fmt.Println("Starting the test server on port", config.Config.Port)
 
 	shardManagerCtx, cancelShardManager := context.WithCancel(ctx)
@@ -133,7 +128,7 @@ func RunTestServer(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := testServer.Run(ctx, sigCh); err != nil {
+		if err := testServer.Run(ctx); err != nil {
 			if errors.Is(err, derrors.ErrAborted) {
 				cancelShardManager()
 				return
@@ -141,14 +136,6 @@ func RunTestServer(wg *sync.WaitGroup) {
 			slog.Error("Test server encountered an error", slog.Any("error", err))
 			os.Exit(1)
 		}
-	}()
-
-	// Go routine to check for SIGINT or SIGTERM
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-sigCh
-		cancel()
 	}()
 
 	go func() {

@@ -147,7 +147,7 @@ func Start() {
 	ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager)
 
 	serverWg.Add(1)
-	go runServer(ctx, sigs, &serverWg, ironhawkServer, serverErrCh)
+	go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
 
 	// Recovery from WAL logs
 	if config.Config.EnableWAL {
@@ -204,9 +204,9 @@ func Start() {
 	wg.Wait()
 }
 
-func runServer(ctx context.Context, sigCh chan<- os.Signal, wg *sync.WaitGroup, srv *ironhawk.Server, errCh chan<- error) {
+func runServer(ctx context.Context, wg *sync.WaitGroup, srv *ironhawk.Server, errCh chan<- error) {
 	defer wg.Done()
-	if err := srv.Run(ctx, sigCh); err != nil {
+	if err := srv.Run(ctx); err != nil {
 		switch {
 		case errors.Is(err, context.Canceled):
 			slog.Debug(fmt.Sprintf("%T was canceled", srv))

@@ -6,9 +6,7 @@ package ironhawk
 import (
 	"context"
 	"log/slog"
-	"os"
 	"strings"
-	"syscall"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
@@ -35,7 +33,7 @@ func NewIOThread(clientFD int) (*IOThread, error) {
 	}, nil
 }
 
-func (t *IOThread) StartSync(ctx context.Context, sigCh chan<- os.Signal, shardManager *shardmanager.ShardManager, watchManager *WatchManager) error {
+func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.ShardManager, watchManager *WatchManager) error {
 	for {
 		c, err := t.IoHandler.ReadSync()
 		if err != nil {
@@ -59,10 +57,6 @@ func (t *IOThread) StartSync(ctx context.Context, sigCh chan<- os.Signal, shardM
 		// Also, we shouldn't allow execution/registration incase of invalid commands
 		// like for B.WATCH cmd since it'll err out we shall return and not create subscription
 		t.ClientID = _c.ClientID
-
-		if c.Cmd == "ABORT" && err == nil {
-			sigCh <- syscall.SIGINT
-		}
 
 		if c.Cmd == "HANDSHAKE" {
 			t.ClientID = _c.C.Args[0]
