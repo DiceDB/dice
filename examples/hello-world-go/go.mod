@@ -1,6 +1,6 @@
 module hello-world-go
 
-go 1.23.5
+go 1.24.0
 
 require github.com/dicedb/dicedb-go v1.0.2
 
