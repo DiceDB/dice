@@ -141,35 +141,34 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 				return fmt.Errorf("error accepting connection: %w", err)
 			}
 
-			thread, err := NewIOThread(clientFD)
+			thread, err := NewIOThread(clientFD, ctx)
 			if err != nil {
 				slog.Error("failed to create io-thread", slog.String("id", "-xxx"), slog.Any("error", err))
 				continue
 			}
 
 			wg.Add(1)
-			go s.startIOThread(ctx, wg, thread)
+			go s.startIOThread(wg, thread)
 		}
 	}
 }
 
-func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *IOThread) {
-	wg.Done()
-	err := thread.StartSync(ctx, s.shardManager, s.watchManager)
-	if err != nil {
-		if err == io.EOF {
-			s.watchManager.CleanupThreadWatchSubscriptions(thread)
-			slog.Debug("client disconnected. io-thread stopped",
-				slog.String("client_id", thread.ClientID),
-				slog.String("mode", thread.Mode),
-			)
-		} else {
-			slog.Debug("io-thread errored out",
-				slog.String("client_id", thread.ClientID),
-				slog.String("mode", thread.Mode),
-				slog.Any("error", err))
-		}
+func (s *Server) startIOThread(wg *sync.WaitGroup, thread *IOThread) {
+	defer wg.Done()
+	err := thread.StartSync(s.shardManager, s.watchManager)
+	s.watchManager.CleanupThreadWatchSubscriptions(thread)
+	if err == io.EOF {
+		slog.Debug("client disconnected. io-thread stopped",
+			slog.String("client_id", thread.ClientID),
+			slog.String("mode", thread.Mode),
+		)
+	} else {
+		slog.Debug("io-thread errored out",
+			slog.String("client_id", thread.ClientID),
+			slog.String("mode", thread.Mode),
+			slog.Any("error", err))
 	}
+
 }
 
 func (s *Server) Shutdown() {
