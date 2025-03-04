@@ -130,6 +130,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 	for {
 		select {
 		case <-ctx.Done():
+			s.Shutdown()
 			slog.Info("no new connections will be accepted")
 			return ctx.Err()
 		default:
