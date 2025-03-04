@@ -27,12 +27,9 @@ func init() {
 }
 
 func evalECHO(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ECHO")
-	}
-
+	message := strings.Join(c.C.Args, " ")
 	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VStr{VStr: c.C.Args[0]},
+		Value: &wire.Response_VStr{VStr: message},
 	}}, nil
 }
 
