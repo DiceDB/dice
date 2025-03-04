@@ -155,7 +155,14 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 }
 
 func (s *Server) startIOThread(wg *sync.WaitGroup, thread *IOThread) {
-	defer thread.Stop()
+	defer func() {
+		if err := thread.Stop(); err != nil {
+			slog.Error("Error stopping thread:",
+				slog.String("client_id", thread.ClientID),
+				slog.String("mode", thread.Mode),
+				slog.Any("error", err))
+		}
+	}()
 	defer s.watchManager.CleanupThreadWatchSubscriptions(thread)
 	defer wg.Done()
 	err := thread.StartSync(s.shardManager, s.watchManager)
