@@ -93,6 +93,5 @@ func (t *IOThread) StartSync(shardManager *shardmanager.ShardManager, watchManag
 
 func (t *IOThread) Stop() error {
 	t.Session.Expire()
-	t.IoHandler.Close()
-	return nil
+	return t.IoHandler.Close()
 }
