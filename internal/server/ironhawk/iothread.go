@@ -23,8 +23,8 @@ type IOThread struct {
 	Ctx       context.Context
 }
 
-func NewIOThread(clientFD int, ctx context.Context) (*IOThread, error) {
-	io, err := NewIOHandler(clientFD, ctx)
+func NewIOThread(ctx context.Context, clientFD int) (*IOThread, error) {
+	io, err := NewIOHandler(ctx, clientFD)
 	if err != nil {
 		slog.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
 		return nil, err
@@ -87,7 +87,6 @@ func (t *IOThread) StartSync(shardManager *shardmanager.ShardManager, watchManag
 			// TODO: Streamline this because we need ordering of updates
 			// that are being sent to watchers.
 			watchManager.NotifyWatchers(_c, shardManager, t)
-
 		}
 	}
 }

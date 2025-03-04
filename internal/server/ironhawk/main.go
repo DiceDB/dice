@@ -141,7 +141,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 				return fmt.Errorf("error accepting connection: %w", err)
 			}
 
-			thread, err := NewIOThread(clientFD, ctx)
+			thread, err := NewIOThread(ctx, clientFD)
 			if err != nil {
 				slog.Error("failed to create io-thread", slog.String("id", "-xxx"), slog.Any("error", err))
 				continue
@@ -168,7 +168,6 @@ func (s *Server) startIOThread(wg *sync.WaitGroup, thread *IOThread) {
 			slog.String("mode", thread.Mode),
 			slog.Any("error", err))
 	}
-
 }
 
 func (s *Server) Shutdown() {

@@ -33,7 +33,7 @@ type IOHandler struct {
 }
 
 // NewIOHandler creates a new IOHandler from a file descriptor
-func NewIOHandler(clientFD int, ctx context.Context) (*IOHandler, error) {
+func NewIOHandler(ctx context.Context, clientFD int) (*IOHandler, error) {
 	file := os.NewFile(uintptr(clientFD), "client-connection")
 	if file == nil {
 		return nil, fmt.Errorf("failed to create file from file descriptor")
@@ -73,7 +73,7 @@ func NewIOHandler(clientFD int, ctx context.Context) (*IOHandler, error) {
 	}, nil
 }
 
-func NewIOHandlerWithConn(conn net.Conn, ctx context.Context) *IOHandler {
+func NewIOHandlerWithConn(ctx context.Context, conn net.Conn) *IOHandler {
 	return &IOHandler{
 		conn: conn,
 		Ctx:  ctx,
@@ -101,7 +101,7 @@ func (h *IOHandler) ReadSync() (*wire.Command, error) {
 		}
 		c := &wire.Command{}
 		if err := proto.Unmarshal(result, c); err != nil {
-			return nil, errors.New(fmt.Sprintf("failed to unmarshal command: %w", err))
+			return nil, fmt.Errorf("failed to unmarshal command: %w", err)
 		}
 		return c, nil
 	case err := <-errorChan:
@@ -144,7 +144,6 @@ func (h *IOHandler) readDataFromBuffer(resultChan chan<- []byte, errorChan chan<
 				return
 			}
 		}
-
 	}
 }
 
