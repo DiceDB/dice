@@ -29,10 +29,11 @@ type IOHandler struct {
 	fd   int
 	file *os.File
 	conn net.Conn
+	Ctx  context.Context
 }
 
 // NewIOHandler creates a new IOHandler from a file descriptor
-func NewIOHandler(clientFD int) (*IOHandler, error) {
+func NewIOHandler(clientFD int, ctx context.Context) (*IOHandler, error) {
 	file := os.NewFile(uintptr(clientFD), "client-connection")
 	if file == nil {
 		return nil, fmt.Errorf("failed to create file from file descriptor")
@@ -68,12 +69,14 @@ func NewIOHandler(clientFD int) (*IOHandler, error) {
 		fd:   clientFD,
 		file: file,
 		conn: conn,
+		Ctx:  ctx,
 	}, nil
 }
 
-func NewIOHandlerWithConn(conn net.Conn) *IOHandler {
+func NewIOHandlerWithConn(conn net.Conn, ctx context.Context) *IOHandler {
 	return &IOHandler{
 		conn: conn,
+		Ctx:  ctx,
 	}
 }
 
@@ -84,47 +87,72 @@ func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 
 // ReadRequest reads data from the network connection
 func (h *IOHandler) ReadSync() (*wire.Command, error) {
-	var result []byte
-	reader := bufio.NewReaderSize(h.conn, config.IoBufferSize)
-	buf := make([]byte, config.IoBufferSize)
+	resultChan := make(chan []byte)
+	errorChan := make(chan error)
 
-	for {
-		n, err := reader.Read(buf)
-		if n > 0 {
-			if len(result)+n > config.MaxRequestSize {
-				return nil, fmt.Errorf("request too large")
-			}
+	go h.readDataFromBuffer(resultChan, errorChan)
 
-			result = append(result, buf[:n]...)
-		}
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-
-		if n < len(buf) {
-			break
-		}
-	}
-
-	if len(result) == 0 {
+	select {
+	case <-h.Ctx.Done():
 		return nil, io.EOF
+	case result := <-resultChan:
+		if len(result) == 0 {
+			return nil, io.EOF
+		}
+		c := &wire.Command{}
+		if err := proto.Unmarshal(result, c); err != nil {
+			return nil, errors.New(fmt.Sprintf("failed to unmarshal command: %w", err))
+		}
+		return c, nil
+	case err := <-errorChan:
+		return nil, err
 	}
-
-	c := &wire.Command{}
-	if err := proto.Unmarshal(result, c); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal command: %w", err)
-	}
-	return c, nil
 }
 
-func (h *IOHandler) Write(ctx context.Context, r interface{}) error {
+func (h *IOHandler) readDataFromBuffer(resultChan chan<- []byte, errorChan chan<- error) {
+	defer close(resultChan)
+	defer close(errorChan)
+	reader := bufio.NewReaderSize(h.conn, config.IoBufferSize)
+
+	for {
+		select {
+		case <-h.Ctx.Done():
+			h.Close()
+			errorChan <- io.EOF
+			return
+		default:
+			var result []byte
+			buf := make([]byte, config.IoBufferSize)
+			n, err := reader.Read(buf)
+			if n > 0 {
+				if len(result)+n > config.MaxRequestSize {
+					errorChan <- fmt.Errorf("request too large")
+					return
+				}
+
+				result = append(result, buf[:n]...)
+			}
+			if err != nil {
+				if err == io.EOF {
+					resultChan <- result
+					return
+				}
+				errorChan <- err
+			}
+			if n < len(buf) {
+				resultChan <- result
+				return
+			}
+		}
+
+	}
+}
+
+func (h *IOHandler) Write(r interface{}) error {
 	return nil
 }
 
-func (h *IOHandler) WriteSync(ctx context.Context, r *wire.Response) error {
+func (h *IOHandler) WriteSync(r *wire.Response) error {
 	var b []byte
 	var err error
 
