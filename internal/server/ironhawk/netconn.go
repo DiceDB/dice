@@ -117,7 +117,6 @@ func (h *IOHandler) readDataFromBuffer(resultChan chan<- []byte, errorChan chan<
 	for {
 		select {
 		case <-h.Ctx.Done():
-			h.Close()
 			errorChan <- io.EOF
 			return
 		default:

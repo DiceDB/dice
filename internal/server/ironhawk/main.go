@@ -154,9 +154,10 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 }
 
 func (s *Server) startIOThread(wg *sync.WaitGroup, thread *IOThread) {
+	defer thread.Stop()
+	defer s.watchManager.CleanupThreadWatchSubscriptions(thread)
 	defer wg.Done()
 	err := thread.StartSync(s.shardManager, s.watchManager)
-	s.watchManager.CleanupThreadWatchSubscriptions(thread)
 	if err == io.EOF {
 		slog.Debug("client disconnected. io-thread stopped",
 			slog.String("client_id", thread.ClientID),
