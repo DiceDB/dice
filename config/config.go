@@ -54,7 +54,6 @@ func Load(flags *pflag.FlagSet) {
 	configureMetadataDir()
 	viper.SetConfigName("dicedb")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
 	viper.AddConfigPath(MetadataDir)
 
 	err := viper.ReadInConfig()
