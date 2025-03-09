@@ -17,7 +17,7 @@ DiceDB is an open-source, fast, reactive, in-memory database optimized for moder
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```bash
-docker run -p 7379:7379 dicedb/dicedb
+$ docker run -p 7379:7379 dicedb/dicedb:v1.0.0
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
@@ -34,9 +34,9 @@ To build DiceDB from source, you need to have the following
     3. WSL under Windows
 
 ```sh
-git clone https://github.com/dicedb/dice
-cd dice
-make build
+$ git clone https://github.com/dicedb/dice
+$ cd dice
+$ make build
 ```
 
 The above command will create a binary `dicedb`. Execute the binary and that will
@@ -44,7 +44,7 @@ start the DiceDB server., or, you can run the following command to run like a us
 Go program
 
 ```sh
-go run main.go --enable-watch
+$ go run main.go
 ```
 
 You can skip passing the flag if you are not working with `.WATCH` feature.
@@ -56,8 +56,8 @@ You can skip passing the flag if you are not working with `.WATCH` feature.
 The best way to connect to DiceDB is using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and you can install it by running the following command
 
 ```bash
-sudo su
-curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
+$ sudo su
+$ curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master/install.sh | sh
 ```
 
 If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
@@ -65,9 +65,9 @@ If you are working on unsupported OS (as per above script), you can always follo
 ### Building from source
 
 ```sh
-git clone https://github.com/DiceDB/dicedb-cli
-cd dicedb-cli
-make build
+$ git clone https://github.com/DiceDB/dicedb-cli
+$ cd dicedb-cli
+$ make build
 ```
 
 The above command will create a binary `dicedb-cli`. Execute the binary will
@@ -101,8 +101,8 @@ Do not check-in the `go.mod` file with this change.
 ### Install GoLangCI
 
 ```bash
-sudo su
-sudo curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo sh -s -- -b /bin v1.64.6
+$ sudo su
+$ sudo curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo sh -s -- -b /bin v1.64.6
 ```
 
 ### Local Setup with Custom Config
@@ -110,7 +110,7 @@ sudo curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/
 Follow these steps to generate and customize your dicedb configuration in a local setup:
 
 ```bash
-go run main.go config-init
+$ go run main.go config-init
 ```
 
 This will generate configuration file (`dicedb.yaml`) in metadata directory.
@@ -156,13 +156,7 @@ TEST_FUNC=^TestSet$ make test-one
 ### Running all integration tests
 
 ```bash
-make test
-```
-
-## Running Benchmark
-
-```bash
-make run_benchmark
+$ make test
 ```
 
 ## Getting Started
@@ -174,9 +168,9 @@ To get started with building and contributing to DiceDB, please refer to the [is
 We use [Astro](https://astro.build/) framework to power the [dicedb.io website](https://dicedb.io) and [Starlight](https://starlight.astro.build/) to power the docs. Once you have NodeJS installed, fire the following commands to get your local version of [dicedb.io](https://dicedb.io) running.
 
 ```bash
-cd docs
-npm install
-npm run dev
+$ cd docs
+$ npm install
+$ npm run dev
 ```
 
 Once the server starts, visit http://localhost:4321/ in your favourite browser. This runs with a hot reload which means any changes you make in the website and the documentation can be instantly viewed on the browser.
@@ -201,12 +195,3 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
 ## License
 
 This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
-
-## Troubleshoot
-
-### Forcefully killing the process
-
-```
-$ sudo netstat -atlpn | grep :7379
-$ sudo kill -9 <process_id>
-```

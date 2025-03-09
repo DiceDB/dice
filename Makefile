@@ -1,35 +1,14 @@
-# Adapted from https://www.thapaliya.com/en/writings/well-documented-makefiles/
-
-THREADS ?= 4 #number of threads
-CLIENTS ?= 50 #number of clients per thread
-REQUESTS ?= 10000 #number of requests per client
-DATA_SIZE ?= 32 #Object data size
-KEY_PATTERN ?= R:R #Set:Get pattern
-RATIO ?= 1:10 #Set:Get ratio
-PORT ?= 7379 #Port for dicedb
-
-# Default OS and architecture
+VERSION := $(shell cat VERSION)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
-VERSION=$(shell bash -c 'grep -oP "DiceDBVersion string = \"\K[^\"]+" config/config.go')
-
 .PHONY: build test build-docker run test-one
 
-.DEFAULT_GOAL := help
-
-##@ Helpers
-
-help:  ## Display this help
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
-
-##@ Building
-
-build: ## generate the dicedb binary for the current OS and architecture
+build:
 	@echo "Building for $(GOOS)/$(GOARCH)"
-	CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./dicedb
+	CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags "-X config.DiceDBVersion=$VERSION" -o ./dicedb
 
-build-debug: ## generate the dicedb binary for the current OS and architecture
+build-debug:
 	@echo "Building for $(GOOS)/$(GOARCH)"
 	CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -gcflags="all=-N -l" -o ./dicedb
 
@@ -50,26 +29,6 @@ unittest: ## run the unit tests
 
 unittest-one: ## run a single unit test function by name (e.g. make unittest-one TEST_FUNC=TestSetGet)
 	CGO_ENABLED=1 go test -race -count=1 --run $(TEST_FUNC) ./internal/...
-
-##@ Benchmarking
-
-run_benchmark: ## run the memtier benchmark with the specified parameters
-	@echo "Running memtier benchmark..."
-	memtier_benchmark \
-		--threads=$(THREADS) \
-		--data-size=$(DATA_SIZE) \
-		--key-pattern=$(KEY_PATTERN) \
-		--clients=$(CLIENTS) \
-		--requests=$(REQUESTS) \
-		--port=$(PORT)
-	@echo "Benchmark complete."
-
-run-benchmark-small: ## run the memtier benchmark with small parameters
-	$(MAKE) run_benchmark THREADS=2 DATA_SIZE=512 CLIENTS=20 REQUESTS=5000
-
-run-benchmark-large: ## run the memtier benchmark with large parameters
-	$(MAKE) run_benchmark THREADS=8 DATA_SIZE=4096 CLIENTS=100 REQUESTS=50000
-
 
 ##@ Development
 run: ## run dicedb with the default configuration
@@ -100,8 +59,6 @@ clean: ## clean the dicedb binary
 	go clean -cache -modcache
 	rm -f dicedb
 	@echo "Clean complete."
-
-##@ Deployment
 
 release: ## build and push the Docker image to Docker Hub with the latest tag and the version tag
 	git tag $(VERSION)
