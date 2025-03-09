@@ -13,9 +13,8 @@ On a Hetzner CCX13 machine with 2 vCPU and 8GB RAM here are our numbers around t
 | ----------- | -------------------- | ------------ | ------------ | ------------ | ------------ |
 | 1           | 3159                 | 0.288767     | 0.354303     | 0.294911     | 0.364543     |
 | 2           | 5415                 | 0.325631     | 0.473087     | 0.327679     | 0.473087     |
-| 3           | 9628                 | 0.309247     | 0.518143     | 0.315391     | 0.528383     |
-| 4           | 13030                | 0.344063     | 0.757759     | 0.350207     | 0.765951     |
-| 16          | 13687                | 0.487423     | 2.850815     | 0.491519     | 2.850815     |
+| 4           | 9628                 | 0.309247     | 0.518143     | 0.315391     | 0.528383     |
+| 8           | 13030                | 0.344063     | 0.757759     | 0.350207     | 0.765951     |
 
 On a Hetzner CCX23 machine with 4 vCPU and 16GB RAM here are our numbers around throughput and GET/SET latencies.
 
@@ -23,9 +22,22 @@ On a Hetzner CCX23 machine with 4 vCPU and 16GB RAM here are our numbers around 
 | ----------- | -------------------- | ------------ | ------------ | ------------ | ------------ |
 | 1           | 3694                 | 0.258047     | 0.309247     | 0.264191     | 0.315391     |
 | 2           | 7310                 | 0.251903     | 0.323583     | 0.254975     | 0.325631     |
-| 3           | 15655                | 0.227327     | 0.337919     | 0.230399     | 0.339967     |
-| 4           | 26459                | 0.248831     | 0.475135     | 0.250879     | 0.483327     |
-| 16          | 28969                | 0.325631     | 1.187839     | 0.327679     | 1.196031     |
+| 4           | 15655                | 0.227327     | 0.337919     | 0.230399     | 0.339967     |
+| 8           | 26459                | 0.248831     | 0.475135     | 0.250879     | 0.483327     |
+
+### Comparing with other in-mem databases
+
+On a Hetzner CCX23 machine with 4 vCPU and 16GB RAM here are our numbers around
+throughput and GET/SET latencies when compared with other in-memory databases
+for `num_clients = 4`.
+
+|        Metric        |   DiceDB   |   Redis   |
+| -------------------- | -----------| --------- |
+| Throughput (ops/sec) | 15655      | 12267     |
+| GET p50 (ms)         | 0.227327   | 0.270335  |
+| GET p90 (ms)         | 0.337919   | 0.329727  |
+| SET p50 (ms)         | 0.230399   | 0.272383  |
+| SET p90 (ms)         | 0.339967   | 0.331775  |
 
 ## Execution Configuration
 
@@ -45,8 +57,8 @@ $ ./dicedb
 2025-03-09T16:46:03+05:30 INF running with total_commands=21
 2025-03-09T16:46:03+05:30 INF running with engine=ironhawk
 2025-03-09T16:46:03+05:30 INF running with port=7379
-2025-03-09T16:46:03+05:30 INF running on cores=16
-2025-03-09T16:46:03+05:30 INF running with shards=16
+2025-03-09T16:46:03+05:30 INF running on cores=4
+2025-03-09T16:46:03+05:30 INF running with shards=4
 ```
 
 [membench](https://github.com/DiceDB/membench) was run with the following configuration.
@@ -57,10 +69,10 @@ creating one connection each on `dicedb` (running on `host` and `port`). Each cl
 ```
 $ ./membench benchmark \
     --database dicedb \
-    --host 37.27.245.72 \
+    --host xx.xx.xx.xx \
     --port 7379 \
     --num-requests 100000 \
-    --num-clients 1
+    --num-clients 4
 ```
 
 We iterated `num_clients` and underlying DiceDB VM and the numbers are as shown above.
