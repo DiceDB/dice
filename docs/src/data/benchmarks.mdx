@@ -1,0 +1,78 @@
+# Benchmarks
+
+> Last updated: 8th March, 2025
+
+We benchmarked DiceDB using our [membench](https://github.com/DiceDB/membench) benchmark
+utility with various configurations and various machine types, here are the details
+
+## Results Observed
+
+On a Hetzner CCX13 machine with 2 vCPU and 8GB RAM here are our numbers around throughput and GET/SET latencies.
+
+| num-clients | Throughput (ops/sec) | GET p50 (ms) | GET p90 (ms) | SET p50 (ms) | SET p90 (ms) |
+| ----------- | -------------------- | ------------ | ------------ | ------------ | ------------ |
+| 1           | 3159                 | 0.288767     | 0.354303     | 0.294911     | 0.364543     |
+| 2           | 5415                 | 0.325631     | 0.473087     | 0.327679     | 0.473087     |
+| 4           | 9628                 | 0.309247     | 0.518143     | 0.315391     | 0.528383     |
+| 8           | 13030                | 0.344063     | 0.757759     | 0.350207     | 0.765951     |
+
+On a Hetzner CCX23 machine with 4 vCPU and 16GB RAM here are our numbers around throughput and GET/SET latencies.
+
+| num-clients | Throughput (ops/sec) | GET p50 (ms) | GET p90 (ms) | SET p50 (ms) | SET p90 (ms) |
+| ----------- | -------------------- | ------------ | ------------ | ------------ | ------------ |
+| 1           | 3694                 | 0.258047     | 0.309247     | 0.264191     | 0.315391     |
+| 2           | 7310                 | 0.251903     | 0.323583     | 0.254975     | 0.325631     |
+| 4           | 15655                | 0.227327     | 0.337919     | 0.230399     | 0.339967     |
+| 8           | 26459                | 0.248831     | 0.475135     | 0.250879     | 0.483327     |
+
+### Comparing with other in-mem databases
+
+On a Hetzner CCX23 machine with 4 vCPU and 16GB RAM here are our numbers around
+throughput and GET/SET latencies when compared with other in-memory databases
+for `num_clients = 4`.
+
+|        Metric        |   DiceDB   |   Redis   |
+| -------------------- | -----------| --------- |
+| Throughput (ops/sec) | 15655      | 12267     |
+| GET p50 (ms)         | 0.227327   | 0.270335  |
+| GET p90 (ms)         | 0.337919   | 0.329727  |
+| SET p50 (ms)         | 0.230399   | 0.272383  |
+| SET p90 (ms)         | 0.339967   | 0.331775  |
+
+## Execution Configuration
+
+We ran DiceDB with default configuration on one VM and membench on another.
+
+```
+$ ./dicedb
+
+        ██████╗ ██╗ ██████╗███████╗██████╗ ██████╗
+        ██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
+        ██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
+        ██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
+        ██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
+        ╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
+
+2025-03-09T16:46:03+05:30 INF starting DiceDB version=0.1.0
+2025-03-09T16:46:03+05:30 INF running with total_commands=21
+2025-03-09T16:46:03+05:30 INF running with engine=ironhawk
+2025-03-09T16:46:03+05:30 INF running with port=7379
+2025-03-09T16:46:03+05:30 INF running on cores=4
+2025-03-09T16:46:03+05:30 INF running with shards=4
+```
+
+[membench](https://github.com/DiceDB/membench) was run with the following configuration.
+The following command creates a load of `num-clients` concurrent clients
+creating one connection each on `dicedb` (running on `host` and `port`). Each client fires
+`num-requests` operations on the database.
+
+```
+$ ./membench benchmark \
+    --database dicedb \
+    --host xx.xx.xx.xx \
+    --port 7379 \
+    --num-requests 100000 \
+    --num-clients 4
+```
+
+We iterated `num_clients` and underlying DiceDB VM and the numbers are as shown above.
