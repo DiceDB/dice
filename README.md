@@ -6,19 +6,9 @@ DiceDB
 <a target="_blank" href="https://discord.gg/6r8uXWtXh7"><img src="https://dcbadge.limes.pink/api/server/6r8uXWtXh7?style=flat" alt="discord community" /></a>
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
-DiceDB is an open-source in-memory database with query subscriptions.
+### What is DiceDB?
 
-> [!CAUTION]
-> DiceDB is under active development and supports a wide [range of commands](https://dicedb.io/commands/get/). Inconsistent behavior is expected. Feel free to go through the [open issues](https://github.com/DiceDB/dice/issues) and contribute to help us speed up the development.
-
-## Want to contribute?
-
-We have multiple repositories where you can contribute. So, as per your interest, you can pick one and build a deeper understanding of the project on the go.
-
-- [dicedb/dice](https://github.com/dicedb/dice) for core database features and engine / Stack - Go
-- [dicedb/dicedb-cli](https://github.com/dicedb/dicedb-cli) command line interface for DiceDB / Stack - Go
-- [dicedb/playground-mono](https://github.com/dicedb/playground-mono) backend APIs for DiceDB playground / Stack - Go
-- [dicedb/alloy](https://github.com/dicedb/alloy) frontend and marketplace for DiceDB playground / Stack - NextJS
+DiceDB is an open-source, fast, reactive, in-memory database optimized for modern hardware. Commonly used as a cache, it offers a familiar interface while enabling real-time data updates through query subscriptions. It delivers higher throughput and lower median latencies, making it ideal for modern workloads.
 
 ## Get started
 
@@ -27,7 +17,7 @@ We have multiple repositories where you can contribute. So, as per your interest
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```bash
-docker run -p 7379:7379 dicedb/dicedb --enable-watch
+docker run -p 7379:7379 dicedb/dicedb
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
@@ -82,6 +72,14 @@ make build
 
 The above command will create a binary `dicedb-cli`. Execute the binary will
 start the CLI and will try to connect to the DiceDB server.
+
+## Want to contribute?
+
+We have multiple repositories where you can contribute. So, as per your interest, you can pick one and build a deeper understanding of the project on the go.
+
+- [dicedb/dice](https://github.com/dicedb/dice) for core database features and engine / Stack - Go
+- [dicedb/dicedb-cli](https://github.com/dicedb/dicedb-cli) command line interface for DiceDB / Stack - Go
+- [dicedb/dicedb-go](https://github.com/dicedb/dicedb-go) Go Client for DiceDB
 
 ## Essentials for Development
 
