@@ -38,6 +38,15 @@ export default defineConfig({
           autogenerate: { directory: "sdk" },
         },
         {
+          label: "Examples and Tutorials",
+          items: [
+            {
+              label: "CLI Chatroom",
+              "link": "https://github.com/DiceDB/dice/tree/master/examples/chatroom-go",
+            },
+          ],
+        },
+        {
           label: "Commands",
           autogenerate: { directory: "commands" },
         },
