@@ -14,9 +14,18 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	DiceDBVersion = "0.1.0"
+var (
+	DiceDBVersion = "-"
 )
+
+func init() {
+	version, err := os.ReadFile("VERSION")
+	if err != nil {
+		slog.Error("could not read the version file", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	DiceDBVersion = string(version)
+}
 
 var Config *DiceDBConfig
 
@@ -58,7 +67,9 @@ func Load(flags *pflag.FlagSet) {
 
 	err := viper.ReadInConfig()
 	if _, ok := err.(viper.ConfigFileNotFoundError); !ok && err != nil {
-		panic(err)
+		if err.Error() != "While parsing config: yaml: control characters are not allowed" {
+			panic(err)
+		}
 	}
 
 	flags.VisitAll(func(flag *pflag.Flag) {
