@@ -1,13 +1,11 @@
 FROM golang:1.24 AS builder
-WORKDIR /dicedb
-COPY go.mod go.sum ./
-RUN go mod download -x
+WORKDIR /src
 COPY . .
 RUN make build
 
-FROM gcr.io/distroless/static-debian12:nonroot
-WORKDIR /app
-COPY --from=builder /dicedb/dicedb ./
-EXPOSE  7379
+RUN chmod +x /src/dicedb
 
-ENTRYPOINT ["/app/dicedb"]
+EXPOSE 7379
+
+ENTRYPOINT ["/src/dicedb"]
+CMD []
