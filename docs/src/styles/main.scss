@@ -12,6 +12,8 @@ $white: #fff;
 $primary: #ff4444;
 $link: #66b3ff;
 $link-hover: lighten($link, 10%);
+$info: #66b3ff;
+$warning: #ff4444;
 
 $title-color: $white;
 $subtitle-color: darken($white, 20%);
@@ -30,6 +32,10 @@ $navbar-box-shadow-color: $primary;
 $navbar-fixed-z: 1000;
 $navbar-item-hover-color: $white;
 $navbar-item-color: $text;
+
+th {
+  color: $subtitle-color !important;
+}
 
 $title-color: $white;
 $subtitle-color: darken($white, 20%);
@@ -127,6 +133,12 @@ hr {
 
 .foot a {
   color: $text;
+}
+
+code {
+  background-color: black !important;
+  color: $text !important;
+  padding: 0.5em !important;
 }
 
 // ... existing code ...
