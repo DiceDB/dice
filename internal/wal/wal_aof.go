@@ -82,13 +82,13 @@ func (wal *AOF) Init(t time.Time) error {
 
 	// Create the directory if it doesn't exist
 	if err := os.MkdirAll(wal.logDir, 0755); err != nil {
-		return nil
+		return err
 	}
 
 	// Get the list of log segment files in the directory
 	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"+segmentSuffix))
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if len(files) > 0 {
