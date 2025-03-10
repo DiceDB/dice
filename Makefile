@@ -12,6 +12,9 @@ build-debug:
 	@echo "Building for $(GOOS)/$(GOARCH)"
 	CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -gcflags="all=-N -l" -o ./dicedb
 
+build-docker:
+	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:$(VERSION) .
+
 ##@ Testing
 
 # Changing the parallel package count to 1 due to a possible race condition which causes the tests to get stuck.
@@ -33,9 +36,6 @@ unittest-one: ## run a single unit test function by name (e.g. make unittest-one
 ##@ Development
 run: ## run dicedb with the default configuration
 	go run main.go --engine ironhawk --log-level debug
-
-run-docker: ## run dicedb in a Docker container
-	docker run -p 7379:7379 dicedb/dicedb:latest
 
 format: ## format the code using go fmt
 	go fmt ./...
@@ -63,7 +63,7 @@ clean: ## clean the dicedb binary
 release: ## build and push the Docker image to Docker Hub with the latest tag and the version tag
 	git tag $(VERSION)
 	git push origin --tags
-	docker build --tag dicedb/dicedb:latest --tag dicedb/dicedb:$(VERSION) .
+	$(MAKE) build-docker
 	docker push dicedb/dicedb:$(VERSION)
 	docker push dicedb/dicedb:latest
 
