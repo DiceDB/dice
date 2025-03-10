@@ -9,7 +9,7 @@ COPY . .
 RUN make build
 
 # Stage 2: Create a minimal final image
-FROM gcr.io/distroless/static-debian12
+FROM gcr.io/distroless/base-debian12
 WORKDIR /
 COPY --from=builder /src/dicedb /src/dicedb
 
