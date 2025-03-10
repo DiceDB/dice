@@ -10,13 +10,16 @@ RUN make build
 
 # Stage 2: Create a minimal final image
 FROM debian:bullseye-slim
+WORKDIR /
 COPY --from=builder /src/dicedb /src/dicedb
 
 # Ensure the binary has execute permissions (if needed)
-# RUN chmod +x /dicedb # Usually not needed, as it's already executable after build
+# RUN chmod +x /dicedb
 
 # Expose the required port
 EXPOSE 7379
+
+COPY VERSION .
 
 # Set the entrypoint to run the binary
 ENTRYPOINT ["/src/dicedb"]
