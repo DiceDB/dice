@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -18,12 +19,27 @@ var (
 	DiceDBVersion = "-"
 )
 
+// init initializes the DiceDBVersion variable by reading the
+// VERSION file from the project root.
+// This function runs automatically when the package is imported.
 func init() {
-	version, err := os.ReadFile("VERSION")
+	// Get the absolute path of the current file (config.go)
+	// using runtime reflection
+	_, currentFile, _, _ := runtime.Caller(0)
+
+	// Navigate up two directories from config.go to reach the project root
+	// (config.go is in the config/ directory, so we need to go up twice)
+	projectRoot := filepath.Dir(filepath.Dir(currentFile))
+
+	// Read the VERSION file from the project root
+	// This approach works regardless of where the program is executed from
+	version, err := os.ReadFile(filepath.Join(projectRoot, "VERSION"))
 	if err != nil {
 		slog.Error("could not read the version file", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	// Store the version string in the package-level DiceDBVersion variable
 	DiceDBVersion = string(version)
 }
 
