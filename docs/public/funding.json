@@ -6,7 +6,7 @@
     "name": "DiceDB",
     "email": "arpit@dicedb.io",
     "phone": "",
-    "description": "DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware.",
+    "description": "DiceDB is an open-source, fast, reactive, in-memory database optimized for modern hardware.",
     "webpageUrl": {
       "url": "https://dicedb.io"
     }
@@ -15,7 +15,7 @@
     {
       "guid": "dicedb",
       "name": "DiceDB",
-      "description": "DiceDB is an open source, reactive, scalable, highly available, unified cache optimized for modern hardware.",
+      "description": "DiceDB is an open-source, fast, reactive, in-memory database optimized for modern hardware. Commonly used as a cache, it offers a familiar interface while enabling real-time data updates through query subscriptions. It delivers higher throughput and lower median latencies, making it ideal for modern workloads.",
       "webpageUrl": {
         "url": "https://dicedb.io"
       },
@@ -90,6 +90,14 @@
     "history": [
       {
         "year": 2024,
+        "income": 0,
+        "expenses": 100,
+        "taxes": 0,
+        "currency": "USD",
+        "description": "Infrastrucuture cost"
+      },
+      {
+        "year": 2025,
         "income": 0,
         "expenses": 100,
         "taxes": 0,
