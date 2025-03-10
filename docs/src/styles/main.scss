@@ -49,6 +49,7 @@ $button-hover-border-color: $link;
 $button-background-color: #333;
 $button-color: $text;
 $button-hover-color: $white;
+$button-active-color: $white;
 
 blockquote {
   background-color: transparent !important;
@@ -96,14 +97,14 @@ pre {
   }
 }
 
-// Button modifications
-.button {
-  background-color: $button-background-color;
-  color: $button-color;
-  &:hover {
-    color: $button-hover-color;
-  }
-}
+// // Button modifications
+// .button {
+//   background-color: $button-background-color;
+//   color: $button-color;
+//   &:hover {
+//     color: $button-hover-color;
+//   }
+// }
 
 // Topic image modifications for dark theme
 .topic-image:hover,
