@@ -9,7 +9,7 @@ COPY . .
 RUN make build
 
 # Stage 2: Create a minimal final image
-FROM debian:bullseye-slim
+FROM gcr.io/distroless/static-debian12
 WORKDIR /
 COPY --from=builder /src/dicedb /src/dicedb
 
