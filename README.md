@@ -17,7 +17,7 @@ DiceDB is an open-source, fast, reactive, in-memory database optimized for moder
 The easiest way to get started with DiceDB is using [Docker](https://www.docker.com/) by running the following command.
 
 ```bash
-$ docker run -p 7379:7379 dicedb/dicedb:v1.0.0
+$ docker run -p 7379:7379 dicedb/dicedb:latest
 ```
 
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
