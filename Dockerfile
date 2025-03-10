@@ -9,8 +9,7 @@ COPY . .
 RUN make build
 
 # Stage 2: Create a minimal final image
-FROM scratch
-WORKDIR /
+FROM debian:bullseye-slim
 COPY --from=builder /src/dicedb /src/dicedb
 
 # Ensure the binary has execute permissions (if needed)
