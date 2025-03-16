@@ -25,7 +25,7 @@ var (
 func init() {
 	// Get the absolute path of the current file (config.go)
 	// using runtime reflection
-	_, currentFile, _, _ := runtime.Caller(0)
+	_, currentFile, _, _ := runtime.Caller(0) //nolint:dogsled
 
 	// Navigate up two directories from config.go to reach the project root
 	// (config.go is in the config/ directory, so we need to go up twice)
