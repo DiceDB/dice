@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -40,7 +41,7 @@ func init() {
 	}
 
 	// Store the version string in the package-level DiceDBVersion variable
-	DiceDBVersion = string(version)
+	DiceDBVersion = strings.TrimSpace(string(version))
 }
 
 var Config *DiceDBConfig
