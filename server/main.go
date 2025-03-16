@@ -97,10 +97,10 @@ func Start() {
 		wl = _wl
 
 		if err := wl.Init(time.Now()); err != nil {
-			slog.Error("could not initialize WAL", slog.Any("error", err))
-		} else {
-			go wal.InitBG(wl)
+			slog.Fatal("WAL initialization failed, shutting down", slog.Any("error", err))
 		}
+		go wal.InitBG(wl)
+		
 
 		slog.Debug("WAL initialization complete")
 	}
