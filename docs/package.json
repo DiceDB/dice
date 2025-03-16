@@ -14,6 +14,7 @@
     "@astrojs/sitemap": "^3.2.1",
     "@astrojs/starlight": "^0.31.1",
     "astro-analytics": "^2.7.0",
+    "astro-embed": "^0.9.0",
     "bulma": "^0.9.4",
     "lucide-astro": "^0.438.0",
     "sass": "^1.62.1",
