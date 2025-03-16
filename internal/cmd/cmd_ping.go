@@ -13,15 +13,15 @@ import (
 var cPING = &CommandMeta{
 	Name:      "PING",
 	Syntax:    "PING",
-	HelpShort: "PING returns PONG if no argument is provided, otherwise it returns PONG with the message.",
+	HelpShort: "PING returns PONG if no argument is provided, otherwise it returns the argument.",
 	HelpLong: `
-PING returns PONG if no argument is provided, otherwise it returns PONG with the message argument.
+PING returns PONG if no argument is provided, otherwise it returns the argument.
 	`,
 	Examples: `
 localhost:7379> PING
 PONG
 localhost:7379> PING Hello
-PONG Hello
+Hello
 	`,
 	Eval:    evalPING,
 	Execute: executePING,
