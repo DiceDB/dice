@@ -27,6 +27,8 @@ type (
 		fingerprintCmdMap        map[uint32]*cmd.DiceDBCmd                   // fingerprintCmdMap is a map of fingerprint -> DiceDBCmd
 		cmdWatchSubscriptionChan chan WatchSubscription                      // cmdWatchSubscriptionChan is the channel to send/receive watch subscription requests.
 		cmdWatchChan             chan dstore.CmdWatchEvent                   // cmdWatchChan is the channel to send/receive watch events.
+
+		mu sync.Mutex
 	}
 )
 
@@ -48,6 +50,7 @@ func NewManager(cmdWatchSubscriptionChan chan WatchSubscription, cmdWatchChan ch
 		fingerprintCmdMap:        make(map[uint32]*cmd.DiceDBCmd),
 		cmdWatchSubscriptionChan: cmdWatchSubscriptionChan,
 		cmdWatchChan:             cmdWatchChan,
+		mu:                       sync.Mutex{},
 	}
 }
 
@@ -85,6 +88,9 @@ func (m *Manager) listenForEvents(ctx context.Context) {
 
 // handleSubscription processes a new subscription request
 func (m *Manager) handleSubscription(sub WatchSubscription) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	fingerprint := sub.WatchCmd.Fingerprint()
 	key := sub.WatchCmd.Key()
 	slog.Debug("creating a new subscription",
@@ -111,6 +117,9 @@ func (m *Manager) handleSubscription(sub WatchSubscription) {
 
 // handleUnsubscription processes an unsubscription request
 func (m *Manager) handleUnsubscription(sub WatchSubscription) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	fingerprint := sub.Fingerprint
 
 	// Remove clientID from tcpSubscriptionMap
