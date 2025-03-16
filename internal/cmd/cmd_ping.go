@@ -41,7 +41,7 @@ func evalPING(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		}}, nil
 	}
 	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VStr{VStr: c.C.Args[0]},
+		Value: &wire.Response_VStr{VStr: "PONG " + c.C.Args[0]},
 	}}, nil
 }
 
