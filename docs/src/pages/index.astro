@@ -7,7 +7,7 @@ import { getCollection } from "astro:content";
 
 const blogs = await getCollection("blog", ({ id }) => id !== null);
 const recentBlogs = blogs
-  .sort((a, b) => b.data.published_at - a.data.published_at)
+  .sort((a:any, b: any) => b.data.published_at - a.data.published_at)
   .slice(0, 3);
 
 const title =
@@ -71,7 +71,7 @@ const description =
               title="DiceDB source code on GitHub"
             >
               <span class="icon"><Github /></span>
-              <span>GitHub (7k+)</span>
+              <span>GitHub (8.9k+)</span>
             </a>
             <a
               class="button"
