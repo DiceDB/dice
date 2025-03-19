@@ -40,7 +40,12 @@ import { ArrowUpRight } from "lucide-astro";
         >
           <span class="has-text-weight-bold"> Benchmarks</span>
         </a>
-
+        <a
+          class={`navbar-item ${currentPage === "roadmap" && "is-active"}`}
+          href="/roadmap"
+        >
+          <span class="has-text-weight-bold"> Roadmap</span>
+        </a>
         <!-- <a
           class={`navbar-item ${currentPage === "blog" && "is-active"}`}
           href="/blog"
