@@ -2,9 +2,9 @@
 import { Github, Book } from "lucide-astro";
 import { YouTube } from "astro-embed";
 
-import { fetchStars } from "../data/fetch-stars";
+import { fetchGitHubRepoData } from "../utils/github.ts";
 
-const stars = await fetchStars();
+const {stars} = await fetchGitHubRepoData();
 ---
 
 <div>

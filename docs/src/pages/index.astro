@@ -4,9 +4,9 @@ import Hero from "../components/Hero.astro";
 import KeyFeatures from "../components/KeyFeatures.astro";
 import { Github, Users, Twitter } from "lucide-astro";
 import { getCollection } from "astro:content";
-import { fetchStars } from "../data/fetch-stars";
+import { fetchGitHubRepoData } from "../utils/github.ts";
 
-const stars = await fetchStars();
+const {stars} = await fetchGitHubRepoData();
 
 const blogs = await getCollection("blog", ({ id }) => id !== null);
 const recentBlogs = blogs
@@ -74,7 +74,7 @@ const description =
               title="DiceDB source code on GitHub"
             >
               <span class="icon"><Github /></span>
-              <span>{`GitHub ${stars || '9k'} `}</span>
+              <span>{`GitHub ${stars} `}</span>
             </a>
             <a
               class="button"

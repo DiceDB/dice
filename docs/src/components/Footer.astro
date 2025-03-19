@@ -2,9 +2,9 @@
 import SocialHandlesIcons from "./SocialHandlesIcons.astro";
 import { Github } from "lucide-astro";
 
-import { fetchStars } from "../data/fetch-stars";
+import { fetchGitHubRepoData } from "../utils/github.ts";
 
-const stars = await fetchStars();
+const {stars} = await fetchGitHubRepoData();
 ---
 
 <div>
