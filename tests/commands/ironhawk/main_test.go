@@ -5,6 +5,7 @@ package ironhawk
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dicedb-go"
 	"github.com/dicedb/dicedb-go/wire"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestMain(m *testing.M) {
@@ -39,6 +41,10 @@ func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) bool
 		areEqual = actual.GetVNil()
 	case error:
 		areEqual = v.Error() == actual.Err
+	case []*structpb.Value:
+		if actual.VList != nil {
+			areEqual = reflect.DeepEqual(v, actual.GetVList())
+		}
 	}
 	if !areEqual {
 		t.Errorf("expected %v, got %v", expected, actual)
