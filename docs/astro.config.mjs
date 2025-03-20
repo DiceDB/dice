@@ -42,7 +42,7 @@ export default defineConfig({
           items: [
             {
               label: "CLI Chatroom",
-              "link": "https://github.com/DiceDB/dice/tree/master/examples/chatroom-go",
+              link: "https://github.com/DiceDB/dice/tree/master/examples/chatroom-go",
             },
           ],
         },

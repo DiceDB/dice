@@ -50,6 +50,7 @@ $button-background-color: #333;
 $button-color: $text;
 $button-hover-color: $white;
 $button-active-color: $white;
+$button-focus-color: $text;
 
 blockquote {
   background-color: transparent !important;
@@ -140,6 +141,7 @@ hr {
 
 .foot {
   border-radius: 1em 1em 0 0;
+  line-height: 1.75em;
 }
 
 .foot a {

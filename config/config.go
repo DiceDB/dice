@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -25,7 +26,7 @@ var (
 func init() {
 	// Get the absolute path of the current file (config.go)
 	// using runtime reflection
-	_, currentFile, _, _ := runtime.Caller(0)
+	_, currentFile, _, _ := runtime.Caller(0) //nolint:dogsled
 
 	// Navigate up two directories from config.go to reach the project root
 	// (config.go is in the config/ directory, so we need to go up twice)
@@ -40,7 +41,7 @@ func init() {
 	}
 
 	// Store the version string in the package-level DiceDBVersion variable
-	DiceDBVersion = string(version)
+	DiceDBVersion = strings.TrimSpace(string(version))
 }
 
 var Config *DiceDBConfig

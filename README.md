@@ -5,6 +5,7 @@ DiceDB
 <a href="https://dicedb.io/get-started/installation/">![Docs](https://img.shields.io/badge/docs-00A1FF?style=flat-square)</a>
 <a target="_blank" href="https://discord.gg/6r8uXWtXh7"><img src="https://dcbadge.limes.pink/api/server/6r8uXWtXh7?style=flat" alt="discord community" /></a>
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
+![GitHub Sponsor](https://img.shields.io/github/sponsors/arpitbbhayani?label=Sponsor&logo=GitHub)
 
 ### What is DiceDB?
 
@@ -75,11 +76,18 @@ start the CLI and will try to connect to the DiceDB server.
 
 ## Want to contribute?
 
-We have multiple repositories where you can contribute. So, as per your interest, you can pick one and build a deeper understanding of the project on the go.
+Before youu start, please refer [CONTRIBUTING/README.md](CONTRIBUTING/README.md). We have multiple repositories where you can contribute. So, as per your interest, you can pick one and build a deeper understanding of the project on the go.
 
 - [dicedb/dice](https://github.com/dicedb/dice) for core database features and engine / Stack - Go
 - [dicedb/dicedb-cli](https://github.com/dicedb/dicedb-cli) command line interface for DiceDB / Stack - Go
 - [dicedb/dicedb-go](https://github.com/dicedb/dicedb-go) Go Client for DiceDB
+
+## Support and Sponsor Us
+
+DiceDB is a project with a very strong vision and [roadmap](https://dicedb.io/roadmap/). If you like what
+we do and find DiceDB useful, please consider supporting and [sponsoring us on GitHub](https://github.com/sponsors/arpitbbhayani).
+
+![GitHub Sponsor](https://img.shields.io/github/sponsors/arpitbbhayani?label=Sponsor&logo=GitHub)
 
 ## Essentials for Development
 

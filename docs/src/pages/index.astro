@@ -2,8 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Hero from "../components/Hero.astro";
 import KeyFeatures from "../components/KeyFeatures.astro";
-import { Github, Users, Twitter } from "lucide-astro";
-
+import { Github, Users, Twitter, Map } from "lucide-astro";
 import { getCollection } from "astro:content";
 
 const blogs = await getCollection("blog", ({ id }) => id !== null);
@@ -23,15 +22,14 @@ const description =
   <div class="columns" style="margin-bottom: 5em;">
     <div class="column is-7">
       <div class="content">
-        <h2 class="title is-size-3 is-size-4-mobile">
-          Performance Benchmarks
-        </h2>
+        <h2 class="title is-size-3 is-size-4-mobile">Performance Benchmarks</h2>
         <p>
-          On a Hetzner CCX23 machine with 4 vCPU and 16GB RAM here are our numbers around
-    throughput and GET/SET latencies when compared with other in-memory databases
-    for `num_clients = 4`.
+          On a Hetzner CCX23 machine with 4 vCPU and 16GB RAM here are our
+          numbers around throughput and GET/SET latencies when compared with
+          other in-memory databases for `num_clients = 4`.
         </p>
-        <pre style="font-size: 1.2em;">
+        <pre
+          style="font-size: 1.2em;">
 | Metric               | DiceDB   | Redis    |
 | -------------------- | -------- | -------- |
 | Throughput (ops/sec) | 15655    | 12267    |
@@ -40,7 +38,8 @@ const description =
 | SET p50 (ms)         | 0.230399 | 0.272383 |
 | SET p90 (ms)         | 0.339967 | 0.331775 |</pre>
         <p>
-          -&gt; detailed <a href="/benchmarks">benchmark numbers</a> and ways to reproduce them.
+          -&gt; detailed <a href="/benchmarks">benchmark numbers</a> and ways to
+          reproduce them.
         </p>
       </div>
     </div>
@@ -52,12 +51,15 @@ const description =
           DiceDB is proudly open-source
         </h2>
         <p>
-          DiceDB and all of its dependent packages, libraries, and modules are open-sourced under the
-          <a href="https://github.com/dicedb/dice/blob/master/LICENSE">BSD 3-Clause License</a>.
+          DiceDB and all of its dependent packages, libraries, and modules are
+          open-sourced under the
+          <a href="https://github.com/dicedb/dice/blob/master/LICENSE"
+            >BSD 3-Clause License</a
+          >.
         </p>
         <p>
-          We're building DiceDB to be a fast, reactive, in-memory database
-          that is easy to use and deploy. We're open-sourcing it to allow the
+          We're building DiceDB to be a fast, reactive, in-memory database that
+          is easy to use and deploy. We're open-sourcing it to allow the
           community to contribute and make it better.
         </p>
         <p>
@@ -88,6 +90,38 @@ const description =
             >
               <span class="icon"><Twitter /></span>
               <span>Follow on Twitter</span>
+            </a>
+          </div>
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="columns" style="margin-bottom: 5em;">
+    <div class="column is-7">
+      <div class="content">
+        <h2 class="title is-size-3 is-size-4-mobile">
+          Like what we do?, support us!
+        </h2>
+        <p>
+          DiceDB is a project with a very strong vision and <a href="/roadmap"
+            >roadmap</a
+          >. If you like what we do and find DiceDB useful, please consider
+          supporting us.
+        </p>
+        <p>
+          <div class="buttons">
+            <a
+              class="button is-info"
+              target="_blank"
+              href="https://github.com/sponsors/arpitbbhayani"
+              title="Sponsor us on GitHub"
+            >
+              <span class="icon"><Github /></span>
+              <span>Sponsor us on GitHub</span>
+            </a>
+            <a class="button" href="/roadmap" title="Our roadmap">
+              <span class="icon"><Map /></span>
+              <span>Our roadmap</span>
             </a>
           </div>
         </p>
