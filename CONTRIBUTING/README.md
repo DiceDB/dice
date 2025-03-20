@@ -1,9 +1,15 @@
-DiceDB welcomes your contributions! Whether you're fixing bugs, adding new features, or improving the documentation, your help is valuable. 
+DiceDB welcomes your contributions! Whether you're fixing bugs, adding new features, or improving the documentation, your help is valuable.
 
 To maintain the project's quality and consistency, please follow these guidelines:
 
 - Keep the code consistent: Use the same coding style and conventions throughout the project. 
 - Keep the git repository consistent: Follow proper git practices to avoid conflicts and ensure a clean history. 
+
+### Contributor License Agreement (CLA)
+
+By contributing to any [DiceDB repositories](https://github.com/dicedb), you acknowledge and agree to the terms of the [DiceDB CLA](https://gist.github.com/arpitbbhayani/3bb42965630961c2b3b02f222c3338e0).
+
+Please follow the steps outlined in the CLA to complete the agreement. If not done beforehand, this process will be triggered automatically when you open a Pull Request.
 
 # Contribution Guidelines
 
