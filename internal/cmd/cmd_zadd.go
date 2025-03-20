@@ -78,7 +78,6 @@ func getOrCreateSortedSet(store *dsstore.Store, key string) (*sortedset.Set, err
 }
 
 // parseFlags identifies and parses the flags used in ZADD.
-// parseFlags identifies and parses the flags used in ZADD.
 func parseFlags(args []string) (parsedFlags map[string]bool, nextIndex int) {
 	parsedFlags = map[string]bool{
 		"NX":   false,
