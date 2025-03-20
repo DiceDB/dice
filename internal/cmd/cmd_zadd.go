@@ -92,7 +92,7 @@ func parseFlags(args []string) (parsedFlags map[string]bool, nextIndex int) {
 		switch strings.ToUpper(args[i]) {
 		case "NX":
 			parsedFlags["NX"] = true
-		case XX:
+		case "XX":
 			parsedFlags["XX"] = true
 		case "LT":
 			parsedFlags["LT"] = true
