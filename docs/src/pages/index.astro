@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Hero from "../components/Hero.astro";
 import KeyFeatures from "../components/KeyFeatures.astro";
-import { Github, Users, Twitter } from "lucide-astro";
+import { Github, Users, Twitter, Map } from "lucide-astro";
 import { getCollection } from "astro:content";
 
 const blogs = await getCollection("blog", ({ id }) => id !== null);
@@ -90,6 +90,38 @@ const description =
             >
               <span class="icon"><Twitter /></span>
               <span>Follow on Twitter</span>
+            </a>
+          </div>
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="columns" style="margin-bottom: 5em;">
+    <div class="column is-7">
+      <div class="content">
+        <h2 class="title is-size-3 is-size-4-mobile">
+          Like what we do?, support us!
+        </h2>
+        <p>
+          DiceDB is a project with a very strong vision and <a href="/roadmap"
+            >roadmap</a
+          >. If you like what we do and find DiceDB useful, please consider
+          supporting us.
+        </p>
+        <p>
+          <div class="buttons">
+            <a
+              class="button is-info"
+              target="_blank"
+              href="https://github.com/sponsors/arpitbbhayani"
+              title="Sponsor us on GitHub"
+            >
+              <span class="icon"><Github /></span>
+              <span>Sponsor us on GitHub</span>
+            </a>
+            <a class="button" href="/roadmap" title="Our roadmap">
+              <span class="icon"><Map /></span>
+              <span>Our roadmap</span>
             </a>
           </div>
         </p>
