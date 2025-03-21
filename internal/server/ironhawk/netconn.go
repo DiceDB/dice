@@ -4,8 +4,8 @@
 package ironhawk
 
 import (
-	"bufio"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +22,10 @@ var (
 	ErrRequestTooLarge = errors.New("request too large")
 	ErrIdleTimeout     = errors.New("connection idle timeout")
 	ErrorClosed        = errors.New("connection closed")
+)
+
+const (
+	headerSize = 4
 )
 
 // IOHandler handles I/O operations for a network connection
@@ -84,55 +88,48 @@ func (h *IOHandler) Read(ctx context.Context) ([]byte, error) {
 
 // ReadRequest reads data from the network connection
 func (h *IOHandler) ReadSync() (*wire.Command, error) {
-	var result []byte
-	reader := bufio.NewReaderSize(h.conn, config.IoBufferSize)
-	buf := make([]byte, config.IoBufferSize)
-
-	for {
-		n, err := reader.Read(buf)
-		if n > 0 {
-			if len(result)+n > config.MaxRequestSize {
-				return nil, fmt.Errorf("request too large")
-			}
-
-			result = append(result, buf[:n]...)
-		}
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-
-		if n < len(buf) {
-			break
-		}
+	headerBuffer := make([]byte, headerSize)
+	if _, err := io.ReadFull(h.conn, headerBuffer); err != nil {
+		return nil, fmt.Errorf("failed to read message header: %w", err)
 	}
 
-	if len(result) == 0 {
-		return nil, io.EOF
+	messageSize := binary.BigEndian.Uint32(headerBuffer)
+	if messageSize == 0 {
+		return nil, fmt.Errorf("invalid message size: 0 bytes")
+	}
+	if messageSize > uint32(config.MaxRequestSize) {
+		return nil, fmt.Errorf("message too large: %d bytes (max: %d)", messageSize, config.MaxRequestSize)
 	}
 
-	c := &wire.Command{}
-	if err := proto.Unmarshal(result, c); err != nil {
+	messageBuffer := make([]byte, messageSize)
+	if _, err := io.ReadFull(h.conn, messageBuffer); err != nil {
+		return nil, fmt.Errorf("failed to read message into buffer: %w", err)
+	}
+
+	cmd := &wire.Command{}
+	if err := proto.Unmarshal(messageBuffer, cmd); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal command: %w", err)
 	}
-	return c, nil
+
+	return cmd, nil
 }
 
 func (h *IOHandler) Write(ctx context.Context, r interface{}) error {
 	return nil
 }
 
-func (h *IOHandler) WriteSync(ctx context.Context, r *wire.Response) error {
-	var b []byte
-	var err error
-
-	if b, err = proto.Marshal(r); err != nil {
+func (h *IOHandler) WriteSync(ctx context.Context, response *wire.Response) error {
+	message, err := proto.Marshal(response)
+	if err != nil {
 		return err
 	}
 
-	if _, err := h.conn.Write(b); err != nil {
+	messageSize := len(message)
+	messageBuffer := make([]byte, headerSize+messageSize)
+	binary.BigEndian.PutUint32(messageBuffer[:headerSize], uint32(messageSize))
+	copy(messageBuffer[headerSize:], message)
+
+	if _, err := h.conn.Write(messageBuffer); err != nil {
 		return err
 	}
 

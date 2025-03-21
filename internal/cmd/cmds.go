@@ -45,6 +45,7 @@ func (c *Cmd) Key() string {
 
 func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 	res := cmdResNil
+	res.R.CorrId = c.C.GetCorrId()
 	err := errors.ErrUnknownCmd(c.C.Cmd)
 	start := time.Now()
 	if c.Meta == nil {
@@ -55,6 +56,7 @@ func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 		c.Meta = meta
 	}
 	res, err = c.Meta.Execute(c, sm)
+	res.R.CorrId = c.C.GetCorrId()
 	slog.Debug("command executed",
 		slog.Any("cmd", c.String()),
 		slog.String("client_id", c.ClientID),
