@@ -7,6 +7,8 @@ import (
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var cZPOPMAX = &CommandMeta{
@@ -99,4 +101,21 @@ func executeZPOPMAX(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	// Determine the appropriate shard based on the key.
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalZPOPMAX(c, shard.Thread.Store())
+}
+
+func createResponseWithList(strings []string) (*wire.Response, error) {
+	var values []*structpb.Value
+
+	// Convert each string to structpb.Value
+	for _, str := range strings {
+		val, err := structpb.NewValue(str)
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, val)
+	}
+
+	return &wire.Response{
+		VList: values,
+	}, nil
 }
