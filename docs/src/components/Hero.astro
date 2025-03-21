@@ -1,6 +1,10 @@
 ---
 import { Github, Book } from "lucide-astro";
 import { YouTube } from "astro-embed";
+import { fetchGitHubRepository, formatRepositoryStats } from "../utils/github";
+
+const repository = await fetchGitHubRepository();
+const formattedStars = formatRepositoryStats(repository);
 ---
 
 <div>
@@ -40,7 +44,7 @@ import { YouTube } from "astro-embed";
             title="DiceDB source code on GitHub"
           >
             <span class="icon"><Github /></span>
-            <span>GitHub (7k+)</span>
+            <span>GitHub ({formattedStars})</span>
           </a>
           <a class="button" href="/commands/get/" title="DiceDB documentation">
             <span class="icon"><Book /></span>

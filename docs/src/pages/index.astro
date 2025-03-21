@@ -4,11 +4,15 @@ import Hero from "../components/Hero.astro";
 import KeyFeatures from "../components/KeyFeatures.astro";
 import { Github, Users, Twitter, Map } from "lucide-astro";
 import { getCollection } from "astro:content";
+import { fetchGitHubRepository, formatRepositoryStats } from "../utils/github";
 
 const blogs = await getCollection("blog", ({ id }) => id !== null);
 const recentBlogs = blogs
   .sort((a, b) => b.data.published_at - a.data.published_at)
   .slice(0, 3);
+
+const repository = await fetchGitHubRepository();
+const formattedStars = formatRepositoryStats(repository);
 
 const title =
   "DiceDB - an open-source, fast, reactive, in-memory database optimized for modern hardware.";
@@ -71,7 +75,7 @@ const description =
               title="DiceDB source code on GitHub"
             >
               <span class="icon"><Github /></span>
-              <span>GitHub (7k+)</span>
+              <span>GitHub ({formattedStars})</span>
             </a>
             <a
               class="button"
