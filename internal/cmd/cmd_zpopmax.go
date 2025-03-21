@@ -7,8 +7,6 @@ import (
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
-	structpb "google.golang.org/protobuf/types/known/structpb"
 )
 
 var cZPOPMAX = &CommandMeta{
@@ -77,14 +75,18 @@ func evalZPOPMAX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	// Attempt to cast the object to a sorted set.
-	sortedSet, err := sortedset.FromObject(obj)
-	if err != nil {
+	sortedSet, errMsg := sortedset.FromObject(obj)
+	if errMsg != nil {
 		return cmdResNil, errors.ErrWrongTypeOperation
 	}
 
 	// Remove and return the maximum elements from the sorted set.
 	res := sortedSet.PopMax(count)
-	return cmdResFromZPOPMAX(res)
+	response, err := createResponseWithList(res)
+	if err != nil {
+		return cmdResNil, err
+	}
+	return &CmdRes{R: response}, nil
 }
 
 // executeZPOPMAX retrieves the appropriate shard for the key and evaluates the ZPOPMAX command.
@@ -97,19 +99,4 @@ func executeZPOPMAX(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	// Determine the appropriate shard based on the key.
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalZPOPMAX(c, shard.Thread.Store())
-}
-
-// cmdResFromZPOPMAX constructs a command response from a slice of strings.
-// Each string is wrapped in a protobuf Value and added to the response list.
-func cmdResFromZPOPMAX(res []string) (*CmdRes, error) {
-	// Preallocate slice for performance.
-	vList := make([]*structpb.Value, 0, len(res))
-	for _, v := range res {
-		vList = append(vList, &structpb.Value{
-			Kind: &structpb.Value_StringValue{StringValue: v},
-		})
-	}
-	return &CmdRes{R: &wire.Response{
-		VList: vList,
-	}}, nil
 }
