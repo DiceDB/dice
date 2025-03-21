@@ -24,7 +24,7 @@ a UUID.
 The execution_mode is the mode of the connection, it can be one of the following:
 
 1. "command" - The client will send commands to the server and receive responses.
-2. "watch" - The connection in the watch mode will be used to receoive the responses of query subscriptions.
+2. "watch" - The connection in the watch mode will be used to receive the responses of query subscriptions.
 
 If you use DiceDB SDK or CLI then this HANDSHAKE command is automatically sent when the connection is established
 or when you establish a subscription.
