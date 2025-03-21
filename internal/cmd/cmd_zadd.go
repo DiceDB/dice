@@ -15,7 +15,7 @@ import (
 
 var cZADD = &CommandMeta{
 	Name:      "ZADD",
-	Syntax:    "ZADD key",
+	Syntax:    "ZADD key [NX | XX] [GT | LT] [CH] [INCR] score member [score member...]",
 	HelpShort: "Adds all the specified members with the specified scores to the sorted set stored at key",
 	HelpLong: `
 Adds all the specified members with the specified scores to the sorted set stored at key
@@ -29,7 +29,7 @@ Options: NX, XX, CH, INCR, GT, LT, CH
 Returns the number of elements added to the sorted set, not including elements already existing for which the score was updated.
 	`,
 	Examples: `
-localhost:7379> ZADD mySortedSet [NX | XX] [GT | LT] [CH] [INCR] 1 foo 2 bar
+localhost:7379> ZADD mySortedSet 1 foo 2 bar
 OK 2
 `,
 	Eval:    evalZADD,
