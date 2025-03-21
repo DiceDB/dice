@@ -19,12 +19,18 @@ var cZADD = &CommandMeta{
 	HelpShort: "Adds all the specified members with the specified scores to the sorted set stored at key",
 	HelpLong: `
 Adds all the specified members with the specified scores to the sorted set stored at key
-Options: NX, XX, CH, INCR
+Options: NX, XX, CH, INCR, GT, LT, CH
+- NX: Only add new elements and do not update existing elements
+- XX: Only update existing elements and do not add new elements
+- CH: Modify the return value from the number of new elements added, to the total number of elements changed
+- INCR: When this option is specified, the elements are treated as increments to the score of the existing elements
+- GT: Only add new elements if the score is greater than the existing score
+- LT: Only add new elements if the score is less than the existing score
 Returns the number of elements added to the sorted set, not including elements already existing for which the score was updated.
 	`,
 	Examples: `
-localhost:7379> ZADD key [NX | XX] [CH] [INCR] k 43
-OK OK
+localhost:7379> ZADD mySortedSet [NX | XX] [GT | LT] [CH] [INCR] 1 foo 2 bar
+OK 2
 `,
 	Eval:    evalZADD,
 	Execute: executeZADD,
