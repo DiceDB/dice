@@ -76,7 +76,7 @@ start the CLI and will try to connect to the DiceDB server.
 
 ## Want to contribute?
 
-Before youu start, please refer [CONTRIBUTING/README.md](CONTRIBUTING/README.md). We have multiple repositories where you can contribute. So, as per your interest, you can pick one and build a deeper understanding of the project on the go.
+Before you start, please refer [CONTRIBUTING/README.md](CONTRIBUTING/README.md). We have multiple repositories where you can contribute. So, as per your interest, you can pick one and build a deeper understanding of the project on the go.
 
 - [dicedb/dice](https://github.com/dicedb/dice) for core database features and engine / Stack - Go
 - [dicedb/dicedb-cli](https://github.com/dicedb/dicedb-cli) command line interface for DiceDB / Stack - Go
