@@ -13,28 +13,29 @@ import (
 
 var cZCARD *CommandMeta = &CommandMeta{
 	Name:      "ZCARD",
-	Syntax:    "EXPIRETIME key",
-	HelpShort: `EXPIRETIME returns the absolute Unix timestamp in seconds at which the given key will expire`,
+	Syntax:    "ZCARD key",
+	HelpShort: `ZCARD returns the cardinality (number of elements) of the sorted set stored at key.`,
 	HelpLong: `
-EXPIRETIME returns the absolute Unix timestamp in seconds at which the given key will expire.
+		ZCARD returns the cardinality (number of elements) of the sorted set stored at key.
 
-The command returns -1 if the key exists but has no associated expiration time.
-The command returns -2 if the key does not exist.
+		Returns 0 if key is not found
 	`,
 	Examples: `
-locahost:7379> SET k1 v1
-OK OK
-locahost:7379> EXPIRE k1 10
+locahost:7379> ZADD myzset 1 "one"
 OK 1
-locahost:7379> EXPIRETIME k1
-OK 1740829178
+locahost:7379> ZADD myset 2 "two" 3 "three"
+OK 2
+locahost:7379> ZCARD myset
+OK 3
+localhost:7379> ZCARD myzset
+OK 0
 	`,
-	Eval:    evalEXPIRETIME,
-	Execute: executeEXPIRETIME,
+	Eval:    evalZCARD,
+	Execute: executeZCARD,
 }
 
 func init() {
-	CommandRegistry.AddCommand(cExpireTime)
+	CommandRegistry.AddCommand(cZCARD)
 }
 
 // evalZCARD returns the cardinality (number of elements) of the sorted set stored at key.
