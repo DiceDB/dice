@@ -21,8 +21,6 @@ HGETALL.WATCH creates a query subscription over the HGETALL command. The client 
 will receive the output of the HGETALL command (not just the notification) whenever the value against
 the key is updated.
 
-> This is part of the [Reactivity](https://dicedb.io/reactivity) paradigm offered by DiceDB.
-
 You can update the key in any other client. The HGETALL.WATCH client will receive the updated value.
 	`,
 	Examples: `
@@ -38,7 +36,9 @@ OK 1
 
 client1:7379> ...
 entered the watch mode for HGETALL.WATCH k
-OK [fingerprint=2356444921] f2 v2
+OK [fingerprint=4237011426]
+f1=v1
+f2=v2
 	`,
 	Eval:    evalHGETALLWATCH,
 	Execute: executeHGETALLWATCH,

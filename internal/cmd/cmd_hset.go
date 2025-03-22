@@ -11,20 +11,23 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-type HashMap map[string]string
+type SSMap map[string]string
 
 var cHSET = &CommandMeta{
 	Name:      "HSET",
 	Syntax:    "HSET key field value [field value ...]",
-	HelpShort: "HSET sets field value in the hash stored at key",
+	HelpShort: "HSET sets field value in the string-string map stored at key",
 	HelpLong: `
-HSET sets the field and value for the key in args.
+HSET sets the field and value for the key in the string-string map.
 
-Returns "OK" if the field value was set or updated to hash key. Returns (nil) if the field value was not set or updated to hash key.
+Returns "OK" if the field value was set or updated in the map. Returns (nil) if the
+field value was not set or updated.
 	`,
 	Examples: `
 localhost:7379> HSET k1 f1 v1
-OK OK
+OK 1
+localhost:7379> HSET k1 f1 v1 f2 v2 f3 v3
+OK 2
 localhost:7379> HGET k1 f1
 OK v1
 localhost:7379> HGET k2 f1
@@ -38,82 +41,68 @@ func init() {
 	CommandRegistry.AddCommand(cHSET)
 }
 
-func (h HashMap) Get(k string) (*string, bool) {
+// Get returns the value for the key in the SSMap.
+// Returns false if the key does not exist.
+// Returns the value if the key exists.
+func (h SSMap) Get(k string) (string, bool) {
 	value, ok := h[k]
 	if !ok {
-		return nil, false
+		return "", false
 	}
-	return &value, true
+	return value, true
 }
 
-func (h HashMap) Set(k, v string) (*string, bool) {
+// Set sets the value v for the key k in the SSMap.
+// Returns the old value if the key exists.
+// The bool return value indicates if the key was already present in the SSMap.
+func (h SSMap) Set(k, v string) (string, bool) {
 	value, ok := h[k]
 	if ok {
 		oldValue := value
 		h[k] = v
-		return &oldValue, true
+		return oldValue, true
 	}
 
 	h[k] = v
-	return nil, false
-}
-
-func hashMapBuilder(keyValuePairs []string, currentHashMap HashMap) (HashMap, int64, error) {
-	var hmap HashMap
-	var numKeysNewlySet int64
-
-	if currentHashMap == nil {
-		hmap = make(HashMap)
-	} else {
-		hmap = currentHashMap
-	}
-
-	iter := 0
-	argLength := len(keyValuePairs)
-
-	for iter <= argLength-1 {
-		if iter >= argLength-1 || iter+1 > argLength-1 {
-			return hmap, -1, errors.ErrWrongArgumentCount("HSET")
-		}
-
-		k := keyValuePairs[iter]
-		v := keyValuePairs[iter+1]
-
-		_, present := hmap.Set(k, v)
-		if !present {
-			numKeysNewlySet++
-		}
-		iter += 2
-	}
-
-	return hmap, numKeysNewlySet, nil
+	return "", false
 }
 
 func evalHSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
+
+	var m SSMap
+	var newFields int64
+
 	obj := s.Get(key)
-
-	var hashMap HashMap
-
 	if obj != nil {
-		if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 			return cmdResNil, errors.ErrWrongTypeOperation
 		}
-		hashMap = obj.Value.(HashMap)
+		m = obj.Value.(SSMap)
+	} else {
+		m = make(SSMap)
 	}
 
-	keyValuePairs := c.C.Args[1:]
-
-	hashMap, numKeys, err := hashMapBuilder(keyValuePairs, hashMap)
-	if err != nil {
-		return cmdResNil, err
+	// kvs is the list of key-value pairs to set in the SSMap
+	// key and value are alternating elements in the list
+	kvs := c.C.Args[1:]
+	if (len(kvs) & 1) == 1 {
+		return cmdResNil, errors.ErrWrongArgumentCount("HSET")
 	}
 
-	obj = s.NewObj(hashMap, -1, object.ObjTypeHashMap)
+	for i := 0; i < len(kvs); i += 2 {
+		k, v := kvs[i], kvs[i+1]
+		if _, ok := m[k]; !ok {
+			newFields++
+		}
+		m[k] = v
+	}
+
+	obj = s.NewObj(m, -1, object.ObjTypeSSMap)
 	s.Put(key, obj)
 
 	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: numKeys},
+		Value: &wire.Response_VInt{VInt: newFields},
 	}}, nil
 }
 

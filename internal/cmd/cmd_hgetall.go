@@ -9,26 +9,27 @@ import (
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var cHGETALL = &CommandMeta{
 	Name:      "HGETALL",
 	Syntax:    "HGETALL key",
-	HelpShort: "HGET returns all the field and value for the key",
+	HelpShort: "HGETALL returns all the field-value pairs for the key from the string-string map",
 	HelpLong: `
-HGET returns all the field and value for the key.
+HGETALL returns all the field-value pairs for the key from the string-string map.
 
-The command returns (nil) if the key does not exist.
+The command returns (nil) if the key does not exist or the map is empty.
 	`,
 	Examples: `
-localhost:7379> HSET k1 f1 v1
-OK OK
+localhost:7379> HSET k1 f1 v1 f2 v2 f3 v3
+OK 3
 localhost:7379> HGETALL k1
-OK f1
-v1
+OK 
+f1=v1
+f2=v2
+f3=v3
 localhost:7379> HGETALL k2
-(nil)
+OK (nil)
 	`,
 	Eval:    evalHGETALL,
 	Execute: executeHGETALL,
@@ -40,29 +41,22 @@ func init() {
 
 func evalHGETALL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
+	var m SSMap
+
 	obj := s.Get(key)
-
-	var hashMap HashMap
-
 	if obj != nil {
-		if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 			return cmdResNil, errors.ErrWrongTypeOperation
 		}
-		hashMap = obj.Value.(HashMap)
+		m = obj.Value.(SSMap)
 	}
 
-	var vlist []*structpb.Value
-	for key, val := range hashMap {
-		field, err1 := structpb.NewValue(key)
-		value, err2 := structpb.NewValue(val)
-		if err1 != nil || err2 != nil {
-			return nil, errors.ErrUnknownObjectType
-		}
-		vlist = append(vlist, field, value)
+	if len(m) == 0 {
+		return cmdResNil, nil
 	}
 
 	return &CmdRes{R: &wire.Response{
-		VList: vlist,
+		VSsMap: m,
 	}}, nil
 }
 
