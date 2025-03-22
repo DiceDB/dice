@@ -33,7 +33,7 @@ var cZCOUNT = &CommandMeta{
 		localhost:7379> ZCOUNT myzset 11
 		ERR wrong number of arguments for 'ZCOUNT' command
 	`,
-	Eval:     evalZCOUNT,
+	Eval:    evalZCOUNT,
 	Execute: executeZCOUNT,
 }
 
@@ -87,4 +87,3 @@ func executeZCOUNT(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalZCOUNT(c, shard.Thread.Store())
 }
-
