@@ -1,4 +1,4 @@
-export async function fetchGitHubRepoData() {
+export async function fetchRepoDetails() {
   try {
     const response = await fetch("https://api.github.com/repos/DiceDB/dice");
     if (!response.ok) {
