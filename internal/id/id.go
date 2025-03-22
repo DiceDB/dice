@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-var mu sync.Mutex
+var mu sync.RWMutex // Use RWMutex for read-write concurrency
 var turn, cycle, counter uint32 = 0, 0, 0
 
 var totalBits uint32 = 32
@@ -20,13 +20,18 @@ func init() {
 	cycleMap = make([]uint32, 1<<turnBits)
 }
 
+// ExpandID expands a 32-bit ID to a 64-bit ID using the cycle value from cycleMap.
+// It uses a read lock to safely access cycleMap concurrently with other reads.
 func ExpandID(id uint32) uint64 {
+	mu.RLock()
+	defer mu.RUnlock()
 	_id := uint64(id)
 	_id |= uint64(cycleMap[id>>counterBits]) << counterBits
 	return _id
 }
 
-// NextID returns a new unique ID
+// NextID returns a new unique 32-bit ID, incrementing counter and updating cycleMap as needed.
+// It uses a write lock to ensure thread-safe updates to shared state.
 // TODO: Persisting the cycle on disk and reloading it when we start the server
 func NextID() uint32 {
 	mu.Lock()
