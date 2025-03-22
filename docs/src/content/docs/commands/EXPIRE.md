@@ -17,7 +17,7 @@ EXPIRE key seconds [NX | XX]
 
 EXPIRE sets an expiry (in seconds) on a specified key. After the expiry time has elapsed, the key will be automatically deleted.
 
-> If you want to delete the expirtation time on the key, you can use the PERSIST command.
+> If you want to delete the expiration time on the key, you can use the PERSIST command.
 
 The command returns 1 if the expiry was set, and 0 if the key already had an expiry set. The command supports the following options:
 
