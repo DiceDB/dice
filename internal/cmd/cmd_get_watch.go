@@ -21,8 +21,6 @@ GET.WATCH creates a query subscription over the GET command. The client invoking
 will receive the output of the GET command (not just the notification) whenever the value against
 the key is updated.
 
-> This is part of the [Reactivity](https://dicedb.io/reactivity) paradigm offered by DiceDB.
-
 You can update the key in any other client. The GET.WATCH client will receive the updated value.
 	`,
 	Examples: `

@@ -41,7 +41,7 @@ func init() {
 	CommandRegistry.AddCommand(cHSET)
 }
 
-// Get returns the value for the key in the hashtable.
+// Get returns the value for the key in the SSMap.
 // Returns false if the key does not exist.
 // Returns the value if the key exists.
 func (h SSMap) Get(k string) (string, bool) {
@@ -52,9 +52,9 @@ func (h SSMap) Get(k string) (string, bool) {
 	return value, true
 }
 
-// Set sets the value v for the key k in the hashtable.
+// Set sets the value v for the key k in the SSMap.
 // Returns the old value if the key exists.
-// The bool return value indicates if the key was already present in the hashtable.
+// The bool return value indicates if the key was already present in the SSMap.
 func (h SSMap) Set(k, v string) (string, bool) {
 	value, ok := h[k]
 	if ok {
@@ -75,7 +75,7 @@ func evalHSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	obj := s.Get(key)
 	if obj != nil {
-		if err := object.AssertType(obj.Type, object.ObjTypeHashTable); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 			return cmdResNil, errors.ErrWrongTypeOperation
 		}
 		m = obj.Value.(SSMap)
@@ -83,7 +83,7 @@ func evalHSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		m = make(SSMap)
 	}
 
-	// kvs is the list of key-value pairs to set in the hashtable
+	// kvs is the list of key-value pairs to set in the SSMap
 	// key and value are alternating elements in the list
 	kvs := c.C.Args[1:]
 	if (len(kvs) & 1) == 1 {
@@ -98,7 +98,7 @@ func evalHSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		m[k] = v
 	}
 
-	obj = s.NewObj(m, -1, object.ObjTypeHashTable)
+	obj = s.NewObj(m, -1, object.ObjTypeSSMap)
 	s.Put(key, obj)
 
 	return &CmdRes{R: &wire.Response{

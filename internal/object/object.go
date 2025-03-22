@@ -87,7 +87,7 @@ const (
 	ObjTypeByteArray
 	ObjTypeInt
 	ObjTypeSet
-	ObjTypeHashTable
+	ObjTypeSSMap
 	ObjTypeSortedSet
 	ObjTypeCountMinSketch
 	ObjTypeBF
@@ -106,7 +106,7 @@ func (ot ObjectType) String() string {
 		"bytes",
 		"int",
 		"set",
-		"hashmap",
+		"ssmap",
 		"sortedset",
 		"countminsketch",
 		"bf",

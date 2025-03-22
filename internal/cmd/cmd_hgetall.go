@@ -45,7 +45,7 @@ func evalHGETALL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	obj := s.Get(key)
 	if obj != nil {
-		if err := object.AssertType(obj.Type, object.ObjTypeHashTable); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 			return cmdResNil, errors.ErrWrongTypeOperation
 		}
 		m = obj.Value.(SSMap)
