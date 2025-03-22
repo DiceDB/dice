@@ -44,8 +44,8 @@ func init() {
 // Returns -1 if the key exists but has no associated expiration time.
 // Returns -2 if the key does not exist.
 func evalZCARD(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) != 1{
-		return cmdResNil,errors.ErrWrongArgumentCount("ZCARD")
+	if len(c.C.Args) != 1 {
+		return cmdResNil, errors.ErrWrongArgumentCount("ZCARD")
 	}
 
 	key := c.C.Args[0]
@@ -54,10 +54,10 @@ func evalZCARD(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
 		return cmdResInt0, nil
 	}
 
-	sortedSet,err := sortedset.FromObject(obj)
+	sortedSet, err := sortedset.FromObject(obj)
 
-	if err != nil{
-		return cmdResNil,errors.ErrWrongTypeOperation
+	if err != nil {
+		return cmdResNil, errors.ErrWrongTypeOperation
 	}
 
 	return &CmdRes{R: &wire.Response{
