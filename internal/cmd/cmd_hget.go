@@ -13,21 +13,21 @@ import (
 var cHGET = &CommandMeta{
 	Name:      "HGET",
 	Syntax:    "HGET key field",
-	HelpShort: "HGET returns the value of field for the key",
+	HelpShort: "HGET returns the value of field present in the string-string map held at key.",
 	HelpLong: `
-HGET returns the field value for the hash key in args.
+HGET returns the value of field present in the string-string map held at key.
 
 The command returns (nil) if the key or field does not exist.
 	`,
 	Examples: `
 localhost:7379> HSET k1 f1 v1
-OK OK
+OK 1
 localhost:7379> HGET k1 f1
 OK v1
-localhost:7379> HGET k2
-(nil)
+localhost:7379> HGET k2 f1
+OK (nil)
 localhost:7379> HGET k1 f2
-(nil)
+OK (nil)
 	`,
 	Eval:    evalHGET,
 	Execute: executeHGET,
@@ -38,27 +38,25 @@ func init() {
 }
 
 func evalHGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	key := c.C.Args[0]
-	field := c.C.Args[1]
-	obj := s.Get(key)
+	key, field := c.C.Args[0], c.C.Args[1]
 
+	obj := s.Get(key)
 	if obj == nil {
 		return cmdResNil, nil
 	}
 
-	hashMap, ok := obj.Value.(HashMap)
-
+	m, ok := obj.Value.(SSMap)
 	if !ok {
 		return cmdResNil, errors.ErrWrongTypeOperation
 	}
 
-	val, present := hashMap.Get(field)
-	if !present {
+	val, ok := m.Get(field)
+	if !ok {
 		return cmdResNil, nil
 	}
 
 	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VStr{VStr: *val},
+		Value: &wire.Response_VStr{VStr: val},
 	}}, nil
 }
 

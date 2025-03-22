@@ -87,7 +87,7 @@ const (
 	ObjTypeByteArray
 	ObjTypeInt
 	ObjTypeSet
-	ObjTypeHashMap
+	ObjTypeHashTable
 	ObjTypeSortedSet
 	ObjTypeCountMinSketch
 	ObjTypeBF
