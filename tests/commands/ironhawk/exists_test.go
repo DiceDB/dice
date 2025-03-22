@@ -40,6 +40,16 @@ func TestExists(t *testing.T) {
 			commands: []string{"EXISTS"},
 			expected: []interface{}{0},
 		},
+		{
+			name:     "EXISTS with duplicate keys",
+			commands: []string{"SET key value", "EXISTS key key"},
+			expected: []interface{}{"OK", 1},
+		},
+		{
+			name:     "EXISTS with duplicate keys multiple keys",
+			commands: []string{"SET key value", "SET key1 value", "EXISTS key key key1"},
+			expected: []interface{}{"OK", "OK", 2},
+		},
 	}
 
 	runTestcases(t, client, testCases)
