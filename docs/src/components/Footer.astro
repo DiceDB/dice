@@ -1,6 +1,10 @@
 ---
 import SocialHandlesIcons from "./SocialHandlesIcons.astro";
 import { Github } from "lucide-astro";
+
+import { fetchGitHubRepoData } from "../utils/github.ts";
+
+const {stars} = await fetchGitHubRepoData();
 ---
 
 <div>
@@ -26,7 +30,7 @@ import { Github } from "lucide-astro";
             title="DiceDB source code on GitHub"
           >
             <span class="icon"><Github /></span>
-            <span>GitHub (7k+)</span>
+            <span>{`GitHub ${stars} `}</span>
           </a>
         </p>
       </div>
