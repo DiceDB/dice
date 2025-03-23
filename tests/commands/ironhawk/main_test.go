@@ -5,7 +5,6 @@ package ironhawk
 
 import (
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -13,7 +12,7 @@ import (
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dicedb-go"
 	"github.com/dicedb/dicedb-go/wire"
-	"google.golang.org/protobuf/types/known/structpb"
+	assert "github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
@@ -28,28 +27,45 @@ type TestCase struct {
 	delay    []time.Duration
 }
 
-func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) bool {
-	var areEqual bool
+func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) {
 	switch v := expected.(type) {
 	case string:
-		areEqual = v == actual.GetVStr()
+		assert.Equal(t, v, actual.GetVStr())
 	case int64:
-		areEqual = v == actual.GetVInt()
+		assert.Equal(t, v, actual.GetVInt())
+	case float64:
+		assert.Equal(t, v, actual.GetVFloat())
 	case int:
-		areEqual = int64(v) == actual.GetVInt()
+		assert.Equal(t, int64(v), actual.GetVInt())
 	case nil:
-		areEqual = actual.GetVNil()
+		assert.Nil(t, actual.GetVNil())
 	case error:
-		areEqual = v.Error() == actual.Err
-	case []*structpb.Value:
-		if actual.VList != nil {
-			areEqual = reflect.DeepEqual(v, actual.GetVList())
+		assert.Equal(t, v.Error(), actual.Err)
+	case []interface{}:
+		expected := expected.([]interface{})
+
+		if !assert.Equal(t, len(expected), len(actual.GetVList())) {
+			return
 		}
+
+		var actualArray []interface{}
+		for i, v := range actual.GetVList() {
+			//TODO: handle structpb.Value_StructValue & structpb.Value_ListValue
+			switch expected[i].(type) {
+			case string:
+				actualArray = append(actualArray, v.GetStringValue())
+			case float64:
+				actualArray = append(actualArray, v.GetNumberValue())
+			case int64:
+				actualArray = append(actualArray, v.GetNumberValue())
+			case int:
+				actualArray = append(actualArray, int64(v.GetNumberValue()))
+			case nil:
+				actualArray = append(actualArray, nil)
+			}
+		}
+		assert.ElementsMatch(t, expected, actualArray)
 	}
-	if !areEqual {
-		t.Errorf("expected %v, got %v", expected, actual)
-	}
-	return areEqual
 }
 
 func runTestcases(t *testing.T, client *dicedb.Client, testCases []TestCase) {
