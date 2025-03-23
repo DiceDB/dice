@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"github.com/dicedb/dice/internal/cmd/utils"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shard"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -42,7 +41,7 @@ func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	var count int64
-	for _, key := range utils.GetUniqueList(c.C.Args) {
+	for _, key := range c.C.Args {
 		// GetNoTouch is used to check if a key exists in the store
 		// without updating its last access time.
 		if s.GetNoTouch(key) != nil {
@@ -61,15 +60,14 @@ func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 		return cmdResNil, errors.ErrWrongArgumentCount("EXISTS")
 	}
 	var count int64
-	shardMap := make(map[int]*shard.Shard)
-	for _, key := range utils.GetUniqueList(c.C.Args) {
-		s := sm.GetShardForKey(key)
-		if _, exists := shardMap[s.ID]; ! exists {
-			shardMap[s.ID] = s
-		}
+	var shardMap = make(map[*shard.Shard][]string)
+	for _, key := range c.C.Args {
+		shard := sm.GetShardForKey(key)
+		shardMap[shard] = append(shardMap[shard], key)
 	}
 
-	for _, shard := range shardMap {
+	for shard, keys := range shardMap {
+		c.C.Args = keys
 		r, err := evalEXISTS(c, shard.Thread.Store())
 		if err != nil {
 			return nil, err
