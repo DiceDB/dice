@@ -13,6 +13,7 @@ import (
 	"github.com/dicedb/dicedb-go"
 	"github.com/dicedb/dicedb-go/wire"
 	assert "github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestMain(m *testing.M) {
@@ -41,6 +42,10 @@ func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) {
 		assert.Nil(t, actual.GetVNil())
 	case error:
 		assert.Equal(t, v.Error(), actual.Err)
+	case []*structpb.Value:
+		if actual.VList != nil {
+			assert.ElementsMatch(t, v, actual.GetVList())
+		}
 	case []interface{}:
 		expected := expected.([]interface{})
 
