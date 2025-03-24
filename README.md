@@ -42,42 +42,22 @@ If you are working on unsupported OS (as per above script), you can always follo
 
 ## Want to contribute?
 
-To start contributing to DiceDB, [CONTRIBUTING/README.md](CONTRIBUTING/README.md) is a good starting point.
+The Code Contribution Guidelines are published at [CONTRIBUTING/README.md](CONTRIBUTING/README.md); please read them before you start making any changes. This would allow us to have a consistent standard of coding practices and developer experience.
 
-### Support and Sponsor Us
+Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for quick collaboration.
+
+## Sponsors
+
+We are incredibly grateful to our sponsors for their generous support, which makes the development of DiceDB possible.
+
+[![CodeRabbit](https://www.coderabbit.ai/images/logo-white.svg)](https://www.coderabbit.ai/?utm_source=github&utm_medium=social&utm_campaign=sponsor&utm_term=dicedb)
+
+## Support and Sponsor Us
 
 DiceDB is a project with a very strong vision and [roadmap](https://dicedb.io/roadmap/). If you like what
 we do and find DiceDB useful, please consider supporting and [sponsoring us on GitHub](https://github.com/sponsors/arpitbbhayani).
 
 ![GitHub Sponsor](https://img.shields.io/github/sponsors/arpitbbhayani?label=Sponsor&logo=GitHub)
-
-
-## Getting Started
-
-To get started with building and contributing to DiceDB, please refer to the [issues](https://github.com/DiceDB/dice/issues) created in this repository.
-
-## Docs
-
-We use [Astro](https://astro.build/) framework to power the [dicedb.io website](https://dicedb.io) and [Starlight](https://starlight.astro.build/) to power the docs. Once you have NodeJS installed, fire the following commands to get your local version of [dicedb.io](https://dicedb.io) running.
-
-```bash
-$ cd docs
-$ npm install
-$ npm run dev
-```
-
-Once the server starts, visit http://localhost:4321/ in your favourite browser. This runs with a hot reload which means any changes you make in the website and the documentation can be instantly viewed on the browser.
-
-### Docs directory structure
-
-1. `docs/src/content/docs/commands` is where all the commands are documented
-2. `docs/src/content/docs/tutorials` is where all the tutorials are documented
-
-## How to contribute
-
-The Code Contribution Guidelines are published at [CONTRIBUTING/README.md](CONTRIBUTING/README.md); please read them before you start making any changes. This would allow us to have a consistent standard of coding practices and developer experience.
-
-Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for quick collaboration.
 
 ## Contributors
 

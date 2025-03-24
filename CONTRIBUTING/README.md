@@ -11,6 +11,7 @@ We have multiple repositories where you can contribute. So, as per your interest
 ## Important Resources
 
 - [Development Setup](https://github.com/dicedb/dice/blob/master/CONTRIBUTING/development-setup.md)
+- [Development Setup for Docs](https://github.com/dicedb/dice/blob/master/CONTRIBUTING/docs.md)
 - [Git Best Practices](https://github.com/dicedb/dice/blob/master/CONTRIBUTING/git.md)
 - [Go Best Practices](https://github.com/dicedb/dice/blob/master/CONTRIBUTING/go.md)
 - [Logging Best Practices](https://github.com/dicedb/dice/blob/master/CONTRIBUTING/logging.md)
