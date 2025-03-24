@@ -8,7 +8,6 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cTTL = &CommandMeta{
@@ -61,7 +60,7 @@ func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
 
-	return cmdResInt(int64(durationMs / 1000), nil
+	return cmdResInt(int64(durationMs / 1000)), nil
 }
 
 func executeTTL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
