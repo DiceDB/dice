@@ -1,5 +1,6 @@
-Golang best practices we follow
-===
+# Go Best Practices
+
+## Language Specifics
 
 1. Functions that return something are given noun-like names
 
@@ -29,3 +30,7 @@ func AppendInt64(buf []byte, value int64) []byte  // okay
 func (c *Config) Marshal() ([]byte, error)  // okay
 func (c *Config) MarshalText() (string, error)  // okay
 ```
+
+## Formatting and Linting
+
+Please complete the [development setup](https://github.com/DiceDB/dice/blob/master/CONTRIBUTING/development-setup.md) and run `make lint`. This command lints the code and formats it according to best practices.
