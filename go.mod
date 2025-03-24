@@ -47,7 +47,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/mmcloughlin/geohash v0.10.0
-	github.com/ohler55/ojg v1.25.0
+	github.com/ohler55/ojg v1.26.2
 	github.com/rs/xid v1.6.0
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/cobra v1.8.1
