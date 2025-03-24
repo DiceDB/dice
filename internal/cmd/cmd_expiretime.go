@@ -7,7 +7,6 @@ import (
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cExpireTime *CommandMeta = &CommandMeta{
@@ -57,11 +56,7 @@ func evalEXPIRETIME(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
 	}
 
 	// returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{
-			VInt: int64(expiry / 1000),
-		},
-	}}, nil
+	return cmdResInt(int64(expiry / 1000)), nil
 }
 
 func executeEXPIRETIME(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

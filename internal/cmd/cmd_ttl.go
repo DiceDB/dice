@@ -50,24 +50,18 @@ func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	obj := s.Get(key)
 	if obj == nil {
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VInt{VInt: -2},
-		}}, nil
+		return cmdResInt(-2), nil
 	}
 
 	exp, isExpirySet := dstore.GetExpiry(obj, s)
 
 	if !isExpirySet {
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VInt{VInt: -1},
-		}}, nil
+		return cmdResInt(-1), nil
 	}
 
 	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: int64(durationMs / 1000)},
-	}}, nil
+	return cmdResInt(int64(durationMs / 1000), nil
 }
 
 func executeTTL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

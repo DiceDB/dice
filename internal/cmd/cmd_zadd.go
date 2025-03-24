@@ -10,7 +10,6 @@ import (
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dsstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cZADD = &CommandMeta{
@@ -178,9 +177,7 @@ func processMembersWithFlags(args []string, sortedSet *sortedset.Set, store *dss
 
 		// If INCR is used, exit after processing one score-member pair
 		if flags["INCR"] {
-			return &CmdRes{R: &wire.Response{
-				Value: &wire.Response_VFloat{VFloat: score},
-			}}, nil
+			return cmdResFloat(score), nil
 		}
 	}
 
@@ -188,15 +185,11 @@ func processMembersWithFlags(args []string, sortedSet *sortedset.Set, store *dss
 	storeUpdatedSet(store, key, sortedSet)
 
 	if flags["CH"] {
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VInt{VInt: int64(added) + int64(updated)},
-		}}, nil
+		return cmdResInt(int64(added + updated)), nil
 	}
 
 	// Return only the count of added members
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: int64(added)},
-	}}, nil
+	return cmdResInt(int64(added)), nil
 }
 
 // shouldSkipMember determines if a member should be skipped based on flags.
