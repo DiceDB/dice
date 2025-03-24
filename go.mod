@@ -12,6 +12,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/kamstrup/intmap v0.5.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -37,7 +38,7 @@ require (
 )
 
 require (
-	github.com/axiomhq/hyperloglog v0.2.0
+	github.com/axiomhq/hyperloglog v0.2.5
 	github.com/bytedance/sonic v1.13.1
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
