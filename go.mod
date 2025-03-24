@@ -38,7 +38,7 @@ require (
 
 require (
 	github.com/axiomhq/hyperloglog v0.2.0
-	github.com/bytedance/sonic v1.13.1
+	github.com/bytedance/sonic v1.13.2
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
 	github.com/dicedb/dicedb-go v1.0.4
