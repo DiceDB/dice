@@ -24,8 +24,9 @@ $ docker run -p 7379:7379 dicedb/dicedb:latest
 The above command will start the DiceDB server running locally on the port `7379` and you can connect
 to it using [DiceDB CLI](https://github.com/DiceDB/dicedb-cli) and SDKs.
 
+> [!NOTE]
 > If you are looking to setup DiceDB for development or want to setup from source, refer
-> our [CONTRIBUTING/development-setup.md](https://github.com/DiceDB/dice/blob/master/CONTRIBUTING/development-setup.md) guide.
+> our [CONTRIBUTING/README.md](https://github.com/DiceDB/dice/blob/master/CONTRIBUTING/README.md) guide.
 
 ## Setting up CLI
 
@@ -39,6 +40,10 @@ $ curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master
 ```
 
 If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
+
+> [!NOTE]
+> If you are looking to setup DiceDB for development or want to setup from source, refer
+> our [CONTRIBUTING/README.md](https://github.com/DiceDB/dice/blob/master/CONTRIBUTING/README.md) guide.
 
 ## Want to contribute?
 

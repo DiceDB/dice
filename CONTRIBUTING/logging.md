@@ -1,5 +1,4 @@
-Logging best practices we follow
-===
+# Logging Best Practices
 
 1. Use lowercase for log messages, except for proper nouns
 
