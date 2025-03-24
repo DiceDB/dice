@@ -2,7 +2,7 @@ module github.com/dicedb/dice
 
 go 1.24.1
 
-require gotest.tools/v3 v3.5.1
+require gotest.tools/v3 v3.5.2
 
 require (
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
