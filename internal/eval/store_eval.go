@@ -58,7 +58,7 @@ func evalHEXISTS(args []string, store *dstore.Store) *EvalResponse {
 			Error:  nil,
 		}
 	}
-	if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 		return &EvalResponse{
 			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
 			Result: nil,
@@ -103,7 +103,7 @@ func evalHKEYS(args []string, store *dstore.Store) *EvalResponse {
 	var result []string
 
 	if obj != nil {
-		if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 			return &EvalResponse{
 				Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
 				Result: nil,
@@ -150,7 +150,7 @@ func evalHVALS(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 		return &EvalResponse{
 			Error:  diceerrors.ErrGeneral(diceerrors.WrongTypeErr),
 			Result: nil,
@@ -1620,7 +1620,7 @@ func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
 	key := args[0]
 	obj := store.Get(key)
 	if obj != nil {
-		if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongTypeOperation,
@@ -1642,7 +1642,7 @@ func evalHINCRBY(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap)
+	obj = store.NewObj(hashmap, -1, object.ObjTypeSSMap)
 	store.Put(key, obj)
 
 	return &EvalResponse{
@@ -1679,7 +1679,7 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
 	obj := store.Get(key)
 	var hashmap HashMap
 	if obj != nil {
-		if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongTypeOperation,
@@ -1701,7 +1701,7 @@ func evalHINCRBYFLOAT(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	obj = store.NewObj(hashmap, -1, object.ObjTypeHashMap)
+	obj = store.NewObj(hashmap, -1, object.ObjTypeSSMap)
 	store.Put(key, obj)
 
 	return &EvalResponse{
@@ -1733,7 +1733,7 @@ func evalHRANDFIELD(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -2010,7 +2010,7 @@ func evalHLEN(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -2046,7 +2046,7 @@ func evalHSTRLEN(args []string, store *dstore.Store) *EvalResponse {
 	var hashMap HashMap
 
 	if obj != nil {
-		if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongTypeOperation,
@@ -2107,7 +2107,7 @@ func evalHSCAN(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -3562,7 +3562,7 @@ func insertInHashMap(args []string, store *dstore.Store) (int64, error) {
 	var hashMap HashMap
 
 	if obj != nil {
-		if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 			return 0, diceerrors.ErrWrongTypeOperation
 		}
 		hashMap = obj.Value.(HashMap)
@@ -3575,7 +3575,7 @@ func insertInHashMap(args []string, store *dstore.Store) (int64, error) {
 		return 0, err
 	}
 
-	obj = store.NewObj(hashMap, -1, object.ObjTypeHashMap)
+	obj = store.NewObj(hashMap, -1, object.ObjTypeSSMap)
 	store.Put(key, obj)
 
 	return numKeys, nil
@@ -3674,7 +3674,7 @@ func evalHMGET(args []string, store *dstore.Store) *EvalResponse {
 	}
 
 	// Assert that the object is of type HashMap
-	if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,
@@ -3741,7 +3741,7 @@ func evalHGETALL(args []string, store *dstore.Store) *EvalResponse {
 	var results []string
 
 	if obj != nil {
-		if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 			return &EvalResponse{
 				Result: nil,
 				Error:  diceerrors.ErrWrongTypeOperation,
@@ -3814,7 +3814,7 @@ func evalHDEL(args []string, store *dstore.Store) *EvalResponse {
 		}
 	}
 
-	if err := object.AssertType(obj.Type, object.ObjTypeHashMap); err != nil {
+	if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
 		return &EvalResponse{
 			Result: nil,
 			Error:  diceerrors.ErrWrongTypeOperation,

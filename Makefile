@@ -6,7 +6,7 @@ GOARCH ?= $(shell go env GOARCH)
 
 build:
 	@echo "Building for $(GOOS)/$(GOARCH)"
-	CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags "-s -w -X config.DiceDBVersion=$VERSION" -o ./dicedb
+	CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags "-s -w -X config.DiceDBVersion=$(VERSION)" -o ./dicedb
 
 build-debug:
 	@echo "Building for $(GOOS)/$(GOARCH)"

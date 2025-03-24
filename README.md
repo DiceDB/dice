@@ -128,7 +128,7 @@ Metadata directory is OS-specific,
  - Linux: `/etc/dicedb/dicedb.yaml`
 
 If you run with a `sudo` privileges, then these directories are used, otherwise
-the current working directory is used as the metada directory.
+the current working directory is used as the metadata directory.
 
 ### Running Tests
 
