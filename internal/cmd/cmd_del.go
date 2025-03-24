@@ -70,5 +70,5 @@ func executeDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 		}
 		count += r.R.GetVInt()
 	}
-	return cmdResInt(int64(count)), nil
+	return cmdResInt(count), nil
 }

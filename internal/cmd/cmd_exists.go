@@ -48,7 +48,7 @@ func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	// Return the count as a response
-	return cmdResInt(int64(count)), nil
+	return cmdResInt(count), nil
 }
 
 func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
@@ -64,5 +64,5 @@ func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 		}
 		count += r.R.GetVInt()
 	}
-	return cmdResInt(int64(count)), nil
+	return cmdResInt(count), nil
 }
