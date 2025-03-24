@@ -55,7 +55,13 @@ Contributors can join the [Discord Server](https://discord.gg/6r8uXWtXh7) for qu
 
 We are incredibly grateful to our sponsors for their generous support, which makes the development of DiceDB possible.
 
-[![CodeRabbit](https://www.coderabbit.ai/images/logo-white.svg)](https://www.coderabbit.ai/?utm_source=github&utm_medium=social&utm_campaign=sponsor&utm_term=dicedb)
+<a href="https://www.coderabbit.ai/?utm_source=github&utm_medium=social&utm_campaign=sponsor&utm_term=dicedb">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://www.coderabbit.ai/images/logo-white.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://www.coderabbit.ai/images/logo-orange.svg">
+    <img alt="CodeRabbit" src="https://www.coderabbit.ai/images/logo-orange.svg">
+  </picture>
+</a>
 
 ## Support and Sponsor Us
 
