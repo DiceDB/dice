@@ -41,10 +41,6 @@ $ curl -sL https://raw.githubusercontent.com/DiceDB/dicedb-cli/refs/heads/master
 
 If you are working on unsupported OS (as per above script), you can always follow the installation instructions mentioned in the [dicedb/cli](https://github.com/DiceDB/dicedb-cli) repository.
 
-> [!NOTE]
-> If you are looking to setup DiceDB for development or want to setup from source, refer
-> our [CONTRIBUTING/README.md](https://github.com/DiceDB/dice/blob/master/CONTRIBUTING/README.md) guide.
-
 ## Want to contribute?
 
 The Code Contribution Guidelines are published at [CONTRIBUTING/README.md](CONTRIBUTING/README.md); please read them before you start making any changes. This would allow us to have a consistent standard of coding practices and developer experience.
