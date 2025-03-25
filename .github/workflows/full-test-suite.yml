@@ -24,7 +24,7 @@ on:
       - "LICENSE"
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
