@@ -24,7 +24,7 @@ on:
       - "LICENSE"
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -49,8 +49,6 @@ jobs:
               - '**/*.go'
       - name: Install dependencies
         run: go get -v . # Check if there is any version changes from the cache
-      - name: Build
-        run: make build
       - name: Run Unit tests
         if: steps.file_types.outputs.watch_file_changes == 'true'
         run: make unittest
