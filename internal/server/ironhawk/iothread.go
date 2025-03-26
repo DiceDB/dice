@@ -48,7 +48,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 
 		res, err := _c.Execute(shardManager)
 		if err != nil {
-			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
+			res = &cmd.CmdRes{R: &wire.Response{CorrId: c.GetCorrId(), Err: err.Error()}}
 		}
 
 		// TODO: Optimize this. We are doing this for all command execution
