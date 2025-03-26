@@ -58,7 +58,7 @@ func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 
 func cmdResFromObject(obj *object.Obj) (*CmdRes, error) {
 	if obj == nil {
-		return cmdResNil, nil
+		return GetNilRes(), nil
 	}
 
 	switch obj.Type {
