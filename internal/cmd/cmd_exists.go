@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/shard"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
@@ -59,8 +60,14 @@ func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 		return cmdResNil, errors.ErrWrongArgumentCount("EXISTS")
 	}
 	var count int64
+	var shardMap = make(map[*shard.Shard][]string)
 	for _, key := range c.C.Args {
 		shard := sm.GetShardForKey(key)
+		shardMap[shard] = append(shardMap[shard], key)
+	}
+
+	for shard, keys := range shardMap {
+		c.C.Args = keys
 		r, err := evalEXISTS(c, shard.Thread.Store())
 		if err != nil {
 			return nil, err
