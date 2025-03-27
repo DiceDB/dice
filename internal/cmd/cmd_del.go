@@ -7,7 +7,6 @@ import (
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cDEL = &CommandMeta{
@@ -54,9 +53,7 @@ func evalDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		}
 	}
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: int64(count)},
-	}}, nil
+	return cmdResInt(int64(count)), nil
 }
 
 func executeDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
@@ -73,7 +70,5 @@ func executeDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 		}
 		count += r.R.GetVInt()
 	}
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: count},
-	}}, nil
+	return cmdResInt(count), nil
 }
