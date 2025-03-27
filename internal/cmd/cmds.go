@@ -44,7 +44,8 @@ func (c *Cmd) Key() string {
 }
 
 func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
-	res := cmdResNil
+	res := GetNilRes()
+
 	err := errors.ErrUnknownCmd(c.C.Cmd)
 	start := time.Now()
 	if c.Meta == nil {
@@ -149,6 +150,12 @@ func (cmd *DiceDBCmd) Key() string {
 		c = cmd.Args[0]
 	}
 	return c
+}
+
+func GetNilRes() *CmdRes {
+	return &CmdRes{R: &wire.Response{
+		Value: &wire.Response_VNil{VNil: true},
+	}}
 }
 
 var cmdResNil = &CmdRes{R: &wire.Response{

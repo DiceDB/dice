@@ -8,12 +8,14 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/shardmanager"
 )
 
 type WatchManager struct {
+	mu                   sync.RWMutex
 	clientWatchThreadMap map[string]*IOThread
 
 	keyFPMap    map[string]map[uint32]bool
@@ -32,12 +34,17 @@ func NewWatchManager() *WatchManager {
 }
 
 func (w *WatchManager) RegisterThread(t *IOThread) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	if t.Mode == "watch" {
 		w.clientWatchThreadMap[t.ClientID] = t
 	}
 }
 
 func (w *WatchManager) HandleWatch(c *cmd.Cmd, t *IOThread) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	fp, key := c.Fingerprint(), c.Key()
 	slog.Debug("creating a new subscription",
 		slog.String("key", key),
@@ -68,6 +75,9 @@ func (w *WatchManager) HandleWatch(c *cmd.Cmd, t *IOThread) {
 }
 
 func (w *WatchManager) HandleUnwatch(c *cmd.Cmd, t *IOThread) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	if len(c.C.Args) != 1 {
 		return
 	}
@@ -102,6 +112,9 @@ func (w *WatchManager) HandleUnwatch(c *cmd.Cmd, t *IOThread) {
 }
 
 func (w *WatchManager) CleanupThreadWatchSubscriptions(t *IOThread) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	// Delete the mapping of Watch thread to client id
 	delete(w.clientWatchThreadMap, t.ClientID)
 
@@ -117,6 +130,9 @@ func (w *WatchManager) CleanupThreadWatchSubscriptions(t *IOThread) {
 }
 
 func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *shardmanager.ShardManager, t *IOThread) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	key := c.Key()
 	for fp := range w.keyFPMap[key] {
 		_c := w.fpCmdMap[fp]
