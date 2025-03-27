@@ -22,6 +22,16 @@ func TestKEYS(t *testing.T) {
 			commands: []string{"KEYS a*"},
 			expected: []interface{}{[]interface{}{}},
 		},
+		{
+			name:     "KEYS with single character wildcard",
+			commands: []string{"SET k1 v1", "SET k2 v2", "SET ka va", "KEYS k?"},
+			expected: []interface{}{"OK", "OK", "OK", []interface{}{"k1", "k2", "ka"}},
+		},
+		{
+			name:     "KEYS with single matching key",
+			commands: []string{"SET unique_key value", "KEYS unique*"},
+			expected: []interface{}{"OK", []interface{}{"unique_key"}},
+		},
 	}
 
 	runTestcases(t, client, testCases)

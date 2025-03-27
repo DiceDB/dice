@@ -4,10 +4,7 @@
 package cmd
 
 import (
-	"strconv"
-
 	"github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 )
@@ -44,18 +41,9 @@ func evalGETSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	value := c.C.Args[1]
 	obj := s.Get(key)
-	intValue, err := strconv.ParseInt(value, 10, 64)
+	newObj := CreateObjectFromValue(s, value, -1)
+	s.Put(key, newObj)
 
-	if err == nil {
-		s.Put(key, s.NewObj(intValue, -1, object.ObjTypeInt))
-	} else {
-		floatValue, err := strconv.ParseFloat(value, 64)
-		if err == nil {
-			s.Put(key, s.NewObj(floatValue, -1, object.ObjTypeFloat))
-		} else {
-			s.Put(key, s.NewObj(value, -1, object.ObjTypeString))
-		}
-	}
 	if obj == nil {
 		return cmdResNil, nil
 	}

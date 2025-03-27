@@ -39,7 +39,7 @@ func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) {
 	case int:
 		assert.Equal(t, int64(v), actual.GetVInt())
 	case nil:
-		assert.Nil(t, actual.GetVNil())
+		assert.Equal(t, true, actual.GetVNil())
 	case error:
 		assert.Equal(t, v.Error(), actual.Err)
 	case []*structpb.Value:
