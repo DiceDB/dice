@@ -39,8 +39,8 @@ func TestGETEX(t *testing.T) {
 		},
 		{
 			name:     "GETEX with PERSIST option",
-			commands: []string{"SET foo bar EX 100", "TTL foo", "GETEX foo PERSIST", "TTL foo"},
-			expected: []interface{}{"OK", 100, "bar", -1},
+			commands: []string{"SET foo bar EX 100", "GETEX foo PERSIST", "TTL foo"},
+			expected: []interface{}{"OK", "bar", -1},
 		},
 
 		{

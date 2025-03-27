@@ -194,17 +194,8 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return cmdResNil, nil
 	}
 
-	intValue, err := strconv.ParseInt(value, 10, 64)
-	if err == nil {
-		s.Put(key, s.NewObj(intValue, exDurationMs, object.ObjTypeInt), dstore.WithKeepTTL(params[KEEPTTL] != ""))
-	} else {
-		floatValue, err := strconv.ParseFloat(value, 64)
-		if err == nil {
-			s.Put(key, s.NewObj(floatValue, exDurationMs, object.ObjTypeFloat), dstore.WithKeepTTL(params[KEEPTTL] != ""))
-		} else {
-			s.Put(key, s.NewObj(value, exDurationMs, object.ObjTypeString), dstore.WithKeepTTL(params[KEEPTTL] != ""))
-		}
-	}
+	newObj := CreateObjectFromValue(s, value, exDurationMs)
+	s.Put(key, newObj, dstore.WithKeepTTL(params[KEEPTTL] != ""))
 
 	if params[GET] != "" {
 		// TODO: Optimize this because we have alread fetched the
@@ -229,4 +220,16 @@ func executeSET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalSET(c, shard.Thread.Store())
+}
+
+func CreateObjectFromValue(s *dstore.Store, value string, expiryMs int64) *object.Obj {
+	intValue, err := strconv.ParseInt(value, 10, 64)
+	if err == nil {
+		return s.NewObj(intValue, expiryMs, object.ObjTypeInt)
+	}
+	floatValue, err := strconv.ParseFloat(value, 64)
+	if err == nil {
+		return s.NewObj(floatValue, expiryMs, object.ObjTypeFloat)
+	}
+	return s.NewObj(value, expiryMs, object.ObjTypeString)
 }
