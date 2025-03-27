@@ -11,7 +11,7 @@ import (
 )
 
 func TestCountMinSketch(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, 0)
 
 	testCMSInitByDim(t, store)
 	testCMSInitByProb(t, store)
