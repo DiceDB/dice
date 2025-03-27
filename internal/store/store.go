@@ -4,7 +4,9 @@
 package store
 
 import (
+	"log"
 	"path"
+	"sync"
 
 	"github.com/dicedb/dice/internal/common"
 	"github.com/dicedb/dice/internal/object"
@@ -54,6 +56,17 @@ type Store struct {
 	cmdWatchChan     chan CmdWatchEvent
 	evictionStrategy EvictionStrategy
 	ShardID          int
+
+	// Snapshot related fields
+	ongoingSnapshots map[uint64]Snapshotter
+	snapLock         *sync.RWMutex
+}
+
+type Snapshotter interface {
+	TempAdd(string, interface{}) error
+	TempGet(string) (interface{}, error)
+	Store(string, interface{}) error
+	Close() error
 }
 
 func NewStore(cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy, shardID int) *Store {
@@ -62,6 +75,8 @@ func NewStore(cmdWatchChan chan CmdWatchEvent, evictionStrategy EvictionStrategy
 		expires:          NewExpireRegMap(),
 		cmdWatchChan:     cmdWatchChan,
 		evictionStrategy: evictionStrategy,
+		ongoingSnapshots: make(map[uint64]Snapshotter),
+		snapLock:         &sync.RWMutex{},
 		ShardID:          shardID,
 	}
 	if evictionStrategy == nil {
@@ -95,6 +110,56 @@ func (store *Store) ResetStore() {
 	store.numKeys = 0
 	store.store = NewStoreMap()
 	store.expires = NewExpireMap()
+}
+
+func (store *Store) StartSnapshot(snapshotID uint64, snapshot Snapshotter) {
+	store.snapLock.Lock()
+	store.ongoingSnapshots[snapshotID] = snapshot
+	store.snapLock.Unlock()
+
+	// Iterate and store all the keys in the snapshot
+	store.IterateAllKeysForSnapshot(snapshotID)
+
+}
+
+func (store *Store) StopSnapshot(snapshotID uint64) {
+	store.snapLock.Lock()
+	if snapshot, isPresent := store.ongoingSnapshots[snapshotID]; isPresent {
+		snapshot.Close()
+		delete(store.ongoingSnapshots, snapshotID)
+	}
+	store.snapLock.Unlock()
+}
+
+func (store *Store) IterateAllKeysForSnapshot(snapshotID uint64) (err error) {
+	var (
+		snapshot  Snapshotter
+		isPresent bool
+	)
+	// If there are no ongoing snapshots, then there won't be any temp data to store
+	if len(store.ongoingSnapshots) == 0 {
+		return
+	}
+	store.snapLock.RLock()
+	if snapshot, isPresent = store.ongoingSnapshots[snapshotID]; !isPresent {
+		return
+	}
+	store.snapLock.RUnlock()
+
+	store.store.All(func(k string, v *object.Obj) bool {
+		// Check if the data is overridden
+		tempVal, _ := snapshot.TempGet(k)
+		if tempVal != nil {
+			v = tempVal.(*object.Obj)
+		}
+		err = snapshot.Store(k, v)
+		if err != nil {
+			log.Println("Error storing data in snapshot", "error", err)
+		}
+		return true
+	})
+	store.StopSnapshot(snapshotID)
+	return
 }
 
 func (store *Store) Put(k string, obj *object.Obj, opts ...PutOption) {
@@ -147,6 +212,10 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 		store.numKeys++
 	}
 
+	// Take a snapshot of the existing data since it's going to be overridden
+	for _, snapshot := range store.ongoingSnapshots {
+		snapshot.TempAdd(k, obj)
+	}
 	store.store.Put(k, obj)
 	store.evictionStrategy.OnAccess(k, obj, AccessSet)
 
@@ -295,6 +364,10 @@ func (store *Store) deleteKey(k string, obj *object.Obj, opts ...DelOption) bool
 	}
 
 	if obj != nil {
+		// Take a snapshot of the existing data since it's going to be overridden
+		for _, snapshot := range store.ongoingSnapshots {
+			snapshot.TempAdd(k, obj)
+		}
 		store.store.Delete(k)
 		store.expires.Delete(obj)
 		store.numKeys--
