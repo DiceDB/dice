@@ -144,11 +144,18 @@ func evalSLEEP(args []string, store *dstore.Store) []byte {
 }
 
 func evalPING(args []string, store *dstore.Store) []byte {
-	return nil
+	// PING command returns PONG if no argument is provided, otherwise it returns the argument
+	if len(args) == 0 {
+		return Encode("PONG", false)
+	}
+	return Encode(args[0], false)
 }
 
 func evalECHO(args []string, store *dstore.Store) []byte {
-	return nil
+	if len(args) == 1 {
+		return diceerrors.NewErrArity("ECHO")
+	}
+	return Encode(args[0], false)
 }
 
 func evalSET(args []string, store *dstore.Store) *EvalResponse {
