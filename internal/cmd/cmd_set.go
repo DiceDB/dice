@@ -230,7 +230,6 @@ func CreateObjectFromValue(s *dstore.Store, value string, expiryMs int64) *objec
 	floatValue, err := strconv.ParseFloat(value, 64)
 	if err == nil {
 		return s.NewObj(floatValue, expiryMs, object.ObjTypeFloat)
-	} else {
-		return s.NewObj(value, expiryMs, object.ObjTypeString)
 	}
+	return s.NewObj(value, expiryMs, object.ObjTypeString)
 }
