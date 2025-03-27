@@ -11,7 +11,6 @@ import (
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
-	"github.com/dicedb/dice/internal/store"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -223,16 +222,15 @@ func executeSET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	return evalSET(c, shard.Thread.Store())
 }
 
-func CreateObjectFromValue(s *store.Store, value string, expiryMs int64) *object.Obj {
+func CreateObjectFromValue(s *dstore.Store, value string, expiryMs int64) *object.Obj {
 	intValue, err := strconv.ParseInt(value, 10, 64)
 	if err == nil {
 		return s.NewObj(intValue, expiryMs, object.ObjTypeInt)
+	}
+	floatValue, err := strconv.ParseFloat(value, 64)
+	if err == nil {
+		return s.NewObj(floatValue, expiryMs, object.ObjTypeFloat)
 	} else {
-		floatValue, err := strconv.ParseFloat(value, 64)
-		if err == nil {
-			return s.NewObj(floatValue, expiryMs, object.ObjTypeFloat)
-		} else {
-			return s.NewObj(value, expiryMs, object.ObjTypeString)
-		}
+		return s.NewObj(value, expiryMs, object.ObjTypeString)
 	}
 }
