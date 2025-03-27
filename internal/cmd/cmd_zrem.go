@@ -16,7 +16,7 @@ var cZREM = &CommandMeta{
 Removes the specified members from the sorted set stored at key. Non existing members are ignored.
 	`,
 	Examples: `
-localhost:7379> ZRREM mySortedSet "key1" "key2"
+localhost:7379> ZREM mySortedSet "key1" "key2"
 `,
 	Eval:    evalZREM,
 	Execute: executeZREM,
@@ -52,7 +52,7 @@ func evalZREM(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	countRem := 0
 	for i := 1; i < len(c.C.Args); i++ {
 		if sortedSet.Remove(c.C.Args[i]) {
-			countRem += 1
+			countRem++
 		}
 	}
 
