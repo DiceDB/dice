@@ -74,6 +74,10 @@ func cmdResFromObject(obj *object.Obj) (*CmdRes, error) {
 		return &CmdRes{R: &wire.Response{
 			Value: &wire.Response_VBytes{VBytes: obj.Value.([]byte)},
 		}}, nil
+	case object.ObjTypeFloat:
+		return &CmdRes{R: &wire.Response{
+			Value: &wire.Response_VFloat{VFloat: obj.Value.(float64)},
+		}}, nil
 	default:
 		slog.Error("unknown object type", "type", obj.Type)
 		return cmdResNil, errors.ErrUnknownObjectType
