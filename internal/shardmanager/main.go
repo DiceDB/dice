@@ -15,15 +15,17 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 	"github.com/dicedb/dice/internal/shardthread"
 	"github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/wal"
 )
 
 type ShardManager struct {
 	shards  []*shard.Shard
 	sigChan chan os.Signal // sigChan is the signal channel for the shard manager
+	Wal     wal.AbstractWAL
 }
 
 // NewShardManager creates a new ShardManager instance with the given number of Shards and a parent context.
-func NewShardManager(shardCount int, globalErrorChan chan error) *ShardManager {
+func NewShardManager(shardCount int, globalErrorChan chan error, wal wal.AbstractWAL) *ShardManager {
 	shards := make([]*shard.Shard, shardCount)
 	maxKeysPerShard := config.DefaultKeysLimit / shardCount
 	for i := 0; i < shardCount; i++ {
@@ -36,6 +38,7 @@ func NewShardManager(shardCount int, globalErrorChan chan error) *ShardManager {
 	return &ShardManager{
 		shards:  shards,
 		sigChan: make(chan os.Signal, 1),
+		Wal:     wal,
 	}
 }
 
