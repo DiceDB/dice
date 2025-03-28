@@ -81,11 +81,11 @@ func Start() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		serverErrCh = make(chan error, 2)
-		wl          wal.AbstractWAL
+		serverErrCh       = make(chan error, 2)
+		wl                wal.AbstractWAL
+		walInitSuccessful = false
 	)
 
-	wl, _ = wal.NewNullWAL()
 	if config.Config.EnableWAL {
 		_wl, err := wal.NewAOFWAL(config.Config.WALDir)
 		if err != nil {
@@ -100,9 +100,9 @@ func Start() {
 			slog.Error("could not initialize WAL", slog.Any("error", err))
 		} else {
 			go wal.InitBG(wl)
+			slog.Debug("WAL initialization complete")
+			walInitSuccessful = true
 		}
-
-		slog.Debug("WAL initialization complete")
 	}
 
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().
@@ -144,20 +144,20 @@ func Start() {
 	}
 
 	ioThreadManager := ironhawk.NewIOThreadManager()
-	ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager)
+	ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager, wl)
 
 	serverWg.Add(1)
 	go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
 
 	// Recovery from WAL logs
-	if config.Config.EnableWAL {
+	if config.Config.EnableWAL && walInitSuccessful {
 		slog.Info("restoring database from WAL")
 		callback := func(entry *wal.WALEntry) error {
-			command := strings.Split(string(entry.Data), " ")
+			data := strings.Split(string(entry.EntryData), " ")
 			cmdTemp := cmd.Cmd{
 				C: &wire.Command{
-					Cmd:  command[0],
-					Args: command[1:],
+					Cmd:  data[0],
+					Args: data[1:],
 				},
 				IsReplay: true,
 			}

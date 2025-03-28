@@ -26,7 +26,6 @@ import (
 const (
 	segmentPrefix     = "seg-"
 	segmentSuffix     = ".wal"
-	defaultVersion    = "v0.0.1"
 	RotationModeTime  = "time"
 	RetentionModeTime = "time"
 	WALModeUnbuffered = "unbuffered"
@@ -82,13 +81,13 @@ func (wal *AOF) Init(t time.Time) error {
 
 	// Create the directory if it doesn't exist
 	if err := os.MkdirAll(wal.logDir, 0755); err != nil {
-		return nil
+		return err
 	}
 
 	// Get the list of log segment files in the directory
 	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"+segmentSuffix))
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if len(files) > 0 {
@@ -135,11 +134,11 @@ func (wal *AOF) writeEntry(data []byte) error {
 
 	wal.lastSequenceNo++
 	entry := &WALEntry{
-		Version:           defaultVersion,
 		LogSequenceNumber: wal.lastSequenceNo,
-		Data:              data,
 		Crc32:             crc32.ChecksumIEEE(append(data, byte(wal.lastSequenceNo))),
 		Timestamp:         time.Now().UnixNano(),
+		EntryType:         EntryType_ENTRY_TYPE_COMMAND,
+		EntryData:         data,
 	}
 
 	entrySize := getEntrySize(data)
@@ -375,8 +374,10 @@ func (wal *AOF) Replay(callback func(*WALEntry) error) error {
 }
 
 func (wal *AOF) ForEachCommand(entry *WALEntry, callback func(*WALEntry) error) error {
-	// Validate CRC
-	expectedCRC := crc32.ChecksumIEEE(append(entry.Data, byte(entry.LogSequenceNumber)))
+	// Get the command data from the entry
+
+	// Calculate CRC32 on just the command data and sequence number
+	expectedCRC := crc32.ChecksumIEEE(append(entry.EntryData, byte(entry.LogSequenceNumber)))
 	if entry.Crc32 != expectedCRC {
 		return fmt.Errorf("checksum mismatch for log sequence %d: expected %d, got %d",
 			entry.LogSequenceNumber, expectedCRC, entry.Crc32)

@@ -5,6 +5,7 @@ package ironhawk
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -19,9 +20,10 @@ type IOThread struct {
 	Mode      string
 	IoHandler *IOHandler
 	Session   *auth.Session
+	server    *Server
 }
 
-func NewIOThread(clientFD int) (*IOThread, error) {
+func NewIOThread(clientFD int, server *Server) (*IOThread, error) {
 	io, err := NewIOHandler(clientFD)
 	if err != nil {
 		slog.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
@@ -30,6 +32,7 @@ func NewIOThread(clientFD int) (*IOThread, error) {
 	return &IOThread{
 		IoHandler: io,
 		Session:   auth.NewSession(),
+		server:    server,
 	}, nil
 }
 
@@ -49,6 +52,14 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 		res, err := _c.Execute(shardManager)
 		if err != nil {
 			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
+		}
+
+		// Log command to WAL if enabled and not a replay
+		if err == nil && t.server.WAL != nil && !_c.IsReplay {
+			// Create WAL entry using protobuf message
+			if err := t.server.WAL.LogCommand([]byte(fmt.Sprintf("%s %s", _c.C.Cmd, strings.Join(_c.C.Args, " ")))); err != nil {
+				slog.Error("failed to log command to WAL", slog.Any("error", err))
+			}
 		}
 
 		// TODO: Optimize this. We are doing this for all command execution

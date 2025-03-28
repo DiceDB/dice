@@ -24,6 +24,7 @@ func BenchmarkLogCommandAOF(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		wl.LogCommand([]byte("SET key value"))
+		// Create WAL entry using protobuf message
+		wl.LogCommand([]byte("SET K V"))
 	}
 }

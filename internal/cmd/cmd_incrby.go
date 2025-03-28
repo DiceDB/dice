@@ -10,7 +10,6 @@ import (
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cINCRBY = &CommandMeta{
@@ -56,9 +55,7 @@ func doIncr(c *Cmd, s *dstore.Store, delta int64) (*CmdRes, error) {
 	if obj == nil {
 		obj = s.NewObj(delta, -1, object.ObjTypeInt)
 		s.Put(key, obj)
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VInt{VInt: delta},
-		}}, nil
+		return cmdResInt(delta), nil
 	}
 
 	switch obj.Type {
@@ -73,9 +70,7 @@ func doIncr(c *Cmd, s *dstore.Store, delta int64) (*CmdRes, error) {
 	value += delta
 	obj.Value = value
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: value},
-	}}, nil
+	return cmdResInt(value), nil
 }
 
 func executeINCRBY(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
