@@ -86,5 +86,5 @@ func evalZRANGE(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 
 	result := sortedSet.GetRange(start, stop, withScores, reverse)
 
-	return GetCmdResStringArray(result)
+	return cmdResStringArray(result)
 }
