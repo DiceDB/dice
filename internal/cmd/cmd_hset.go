@@ -8,7 +8,6 @@ import (
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 type SSMap map[string]string
@@ -101,9 +100,7 @@ func evalHSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	obj = s.NewObj(m, -1, object.ObjTypeSSMap)
 	s.Put(key, obj)
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: newFields},
-	}}, nil
+	return cmdResInt(newFields), nil
 }
 
 func executeHSET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

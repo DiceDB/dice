@@ -8,7 +8,6 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cEXISTS = &CommandMeta{
@@ -50,9 +49,7 @@ func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	// Return the count as a response
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: count},
-	}}, nil
+	return cmdResInt(count), nil
 }
 
 func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
@@ -74,7 +71,5 @@ func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 		}
 		count += r.R.GetVInt()
 	}
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: count},
-	}}, nil
+	return cmdResInt(count), nil
 }
