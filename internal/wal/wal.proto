@@ -3,10 +3,22 @@ syntax = "proto3";
 package wal;
 option go_package = "internal/wal";
 
+enum EntryType {
+    ENTRY_TYPE_COMMAND = 0;
+    ENTRY_TYPE_CHECKPOINT = 1;
+    ENTRY_TYPE_TRANSACTION = 2;
+    ENTRY_TYPE_REPLICATION = 3;
+}
+
 message WALEntry {
     string   version = 1;               // Version of the WAL entry (e.g., "v1.0")
-    uint64   log_sequence_number = 2;     // Log Sequence Number (LSN)
-    bytes    data = 3;                  // The actual data being logged
-    uint32   crc32 = 4;                   // Cyclic Redundancy Check for integrity
+    uint64   log_sequence_number = 2;   // Log Sequence Number (LSN)
+    uint32   crc32 = 4;                 // Cyclic Redundancy Check for integrity
     int64    timestamp = 5;             // Timestamp for the WAL entry (epoch time in nanoseconds)
+    
+    // Cmd related fields
+    EntryType entry_type = 6;           // Type of the WAL entry
+    string    command = 7;              // The command being executed
+    repeated string args = 8;           // Additional command arguments
+    string    client_id = 9;            // ID of the client that issued the command
 }

@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -26,7 +27,7 @@ import (
 const (
 	segmentPrefix     = "seg-"
 	segmentSuffix     = ".wal"
-	defaultVersion    = "v0.0.1"
+	walVersion        = "v1.0.0"
 	RotationModeTime  = "time"
 	RetentionModeTime = "time"
 	WALModeUnbuffered = "unbuffered"
@@ -82,13 +83,13 @@ func (wal *AOF) Init(t time.Time) error {
 
 	// Create the directory if it doesn't exist
 	if err := os.MkdirAll(wal.logDir, 0755); err != nil {
-		return nil
+		return err
 	}
 
 	// Get the list of log segment files in the directory
 	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"+segmentSuffix))
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if len(files) > 0 {
@@ -125,24 +126,33 @@ func (wal *AOF) Init(t time.Time) error {
 }
 
 // WriteEntry writes an entry to the WAL.
-func (wal *AOF) LogCommand(data []byte) error {
+func (wal *AOF) LogCommand(data WalEntry) error {
 	return wal.writeEntry(data)
 }
 
-func (wal *AOF) writeEntry(data []byte) error {
+func (wal *AOF) writeEntry(data WalEntry) error {
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
 
-	wal.lastSequenceNo++
-	entry := &WALEntry{
-		Version:           defaultVersion,
-		LogSequenceNumber: wal.lastSequenceNo,
-		Data:              data,
-		Crc32:             crc32.ChecksumIEEE(append(data, byte(wal.lastSequenceNo))),
-		Timestamp:         time.Now().UnixNano(),
+	bt, err := json.Marshal(data)
+	if err != nil {
+		slog.Error("failed to marshal WalEntry", slog.Any("error", err))
+		return err
 	}
 
-	entrySize := getEntrySize(data)
+	wal.lastSequenceNo++
+	entry := &WALEntry{
+		Version:           walVersion,
+		LogSequenceNumber: wal.lastSequenceNo,
+		Crc32:             crc32.ChecksumIEEE(append(bt, byte(wal.lastSequenceNo))),
+		Timestamp:         time.Now().UnixNano(),
+		EntryType:         EntryType_ENTRY_TYPE_COMMAND,
+		Command:           data.Command,
+		Args:              data.Args,
+		ClientId:          data.ClientID,
+	}
+
+	entrySize := getEntrySize(bt)
 	if err := wal.rotateLogIfNeeded(entrySize); err != nil {
 		return err
 	}
@@ -375,8 +385,17 @@ func (wal *AOF) Replay(callback func(*WALEntry) error) error {
 }
 
 func (wal *AOF) ForEachCommand(entry *WALEntry, callback func(*WALEntry) error) error {
-	// Validate CRC
-	expectedCRC := crc32.ChecksumIEEE(append(entry.Data, byte(entry.LogSequenceNumber)))
+	// Create a buffer to hold all fields for checksum calculation
+	data := WalEntry{
+		Command:  entry.Command,
+		Args:     entry.Args,
+		ClientID: entry.ClientId,
+	}
+
+	bt, _ := json.Marshal(data)
+
+	// Calculate CRC32
+	expectedCRC := crc32.ChecksumIEEE(append(bt, byte(entry.LogSequenceNumber)))
 	if entry.Crc32 != expectedCRC {
 		return fmt.Errorf("checksum mismatch for log sequence %d: expected %d, got %d",
 			entry.LogSequenceNumber, expectedCRC, entry.Crc32)

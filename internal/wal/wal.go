@@ -10,11 +10,17 @@ import (
 )
 
 type AbstractWAL interface {
-	LogCommand([]byte) error
+	LogCommand(WalEntry) error
 	Close() error
 	Init(t time.Time) error
 	Replay(c func(*WALEntry) error) error
 	ForEachCommand(e *WALEntry, c func(*WALEntry) error) error
+}
+
+type WalEntry struct {
+	Command  string   // The command being executed
+	Args     []string // Additional command arguments
+	ClientID string
 }
 
 var (
@@ -24,7 +30,7 @@ var (
 )
 
 func init() {
-	ticker = time.NewTicker(1 * time.Minute)
+	ticker = time.NewTicker(10 * time.Second)
 	stopCh = make(chan struct{})
 }
 
