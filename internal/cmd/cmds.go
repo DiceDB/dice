@@ -159,7 +159,7 @@ func GetNilRes() *CmdRes {
 	}}
 }
 
-func GetCmdResStringArray(strings []string) (*CmdRes, error) {
+func cmdResStringArray(strings []string) (*CmdRes, error) {
 	var values []*structpb.Value
 
 	// Convert each string to structpb.Value
