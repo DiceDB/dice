@@ -38,15 +38,18 @@ func evalGETSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 2 {
 		return cmdResNil, errors.ErrWrongArgumentCount("GETSET")
 	}
-	key := c.C.Args[0]
-	value := c.C.Args[1]
+	key, value := c.C.Args[0], c.C.Args[1]
 	obj := s.Get(key)
-	newObj := CreateObjectFromValue(s, value, -1)
-	s.Put(key, newObj)
 
+	// Put the new value in the store
+	s.Put(key, CreateObjectFromValue(s, value, -1))
+
+	// Return the old value, if the key does not exist, return nil
 	if obj == nil {
 		return cmdResNil, nil
 	}
+
+	// Return the old value
 	return cmdResFromObject(obj)
 }
 
