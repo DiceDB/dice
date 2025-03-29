@@ -11,6 +11,7 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/shardmanager"
+	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dicedb-go/wire"
 )
 
@@ -19,9 +20,10 @@ type IOThread struct {
 	Mode      string
 	IoHandler *IOHandler
 	Session   *auth.Session
+	server    *Server
 }
 
-func NewIOThread(clientFD int) (*IOThread, error) {
+func NewIOThread(clientFD int, server *Server) (*IOThread, error) {
 	io, err := NewIOHandler(clientFD)
 	if err != nil {
 		slog.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
@@ -30,6 +32,7 @@ func NewIOThread(clientFD int) (*IOThread, error) {
 	return &IOThread{
 		IoHandler: io,
 		Session:   auth.NewSession(),
+		server:    server,
 	}, nil
 }
 
@@ -49,6 +52,20 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 		res, err := _c.Execute(shardManager)
 		if err != nil {
 			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
+		}
+
+		// Log command to WAL if enabled and not a replay
+		if err == nil && t.server.WAL != nil && !_c.IsReplay {
+			// Marshal the command for WAL logging
+			walData := wal.WalEntry{
+				Command:  _c.C.Cmd,
+				Args:     _c.C.Args,
+				ClientID: t.ClientID,
+			}
+
+			if err := t.server.WAL.LogCommand(walData); err != nil {
+				slog.Error("failed to log command to WAL", slog.Any("error", err))
+			}
 		}
 
 		// TODO: Optimize this. We are doing this for all command execution

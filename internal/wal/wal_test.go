@@ -24,6 +24,11 @@ func BenchmarkLogCommandAOF(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		wl.LogCommand([]byte("SET key value"))
+
+		wl.LogCommand(wal.WalEntry{
+			Command:  "SET",
+			Args:     []string{"KEY VALUE"},
+			ClientID: "0d63ae29-cc09-44e3-a408-99e55604ed34",
+		})
 	}
 }

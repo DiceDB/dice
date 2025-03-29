@@ -55,6 +55,7 @@ func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 		}
 		c.Meta = meta
 	}
+
 	res, err = c.Meta.Execute(c, sm)
 	slog.Debug("command executed",
 		slog.Any("cmd", c.String()),
