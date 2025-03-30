@@ -58,16 +58,13 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 		// like for B.WATCH cmd since it'll err out we shall return and not create subscription
 		t.ClientID = _c.ClientID
 
+		// If command is HANDSHAKE, then it can't have a suffix of WATCH or UNWATCH thus use if..else if.. else if.
 		if c.Cmd == "HANDSHAKE" {
 			t.ClientID = _c.C.Args[0]
 			t.Mode = _c.C.Args[1]
-		}
-
-		if strings.HasSuffix(c.Cmd, ".WATCH") {
+		} else if strings.HasSuffix(c.Cmd, ".WATCH") {
 			watchManager.HandleWatch(_c, t)
-		}
-
-		if strings.HasSuffix(c.Cmd, "UNWATCH") {
+		} else if strings.HasSuffix(c.Cmd, "UNWATCH") {
 			watchManager.HandleUnwatch(_c, t)
 		}
 

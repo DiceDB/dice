@@ -34,9 +34,10 @@ func NewWatchManager() *WatchManager {
 }
 
 func (w *WatchManager) RegisterThread(t *IOThread) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
 	if t.Mode == "watch" {
+		// Only acquire lock if we are in "watch" mode.
+		w.mu.Lock()
+		defer w.mu.Unlock()
 		w.clientWatchThreadMap[t.ClientID] = t
 	}
 }
