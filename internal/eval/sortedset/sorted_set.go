@@ -239,6 +239,32 @@ func (ss *Set) PopMax(count int) []string {
 	return result
 }
 
+// This func is used to remove the minimum element from the sortedset.
+// It takes count as an argument which tells the number of elements to be removed from the sortedset.
+func (ss *Set) PopMin(count int) []string {
+	result := make([]string, 2*count)
+
+	size := 0
+	for i := 0; i < count; i++ {
+		item := ss.tree.DeleteMin()
+		if item == nil {
+			break
+		}
+		ssi := item.(*Item)
+		result[2*i] = ssi.Member
+		result[2*i+1] = strconv.FormatFloat(ssi.Score, 'g', -1, 64)
+
+		delete(ss.memberMap, ssi.Member)
+		size++
+	}
+
+	if size < count {
+		result = result[:2*size]
+	}
+
+	return result
+}
+
 // Iterate over elements in the B-Tree with scores in the [min, max] range
 func (ss *Set) CountInRange(minVal, maxVal float64) int {
 	count := 0
