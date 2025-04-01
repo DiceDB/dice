@@ -11,7 +11,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, 0)
 	store.ResetStore()
 
 	exitCode := m.Run()
