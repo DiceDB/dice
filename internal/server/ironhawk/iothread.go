@@ -58,7 +58,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 		// like for B.WATCH cmd since it'll err out we shall return and not create subscription
 		t.ClientID = _c.ClientID
 
-		if c.Cmd == "HANDSHAKE" {
+		if c.Cmd == "HANDSHAKE" && err == nil {
 			t.ClientID = _c.C.Args[0]
 			t.Mode = _c.C.Args[1]
 		}
