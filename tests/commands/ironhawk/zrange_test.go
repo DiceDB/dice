@@ -30,6 +30,21 @@ func TestZrange(t *testing.T) {
 			commands: []string{"SET key value", "ZRANGE key 1 2"},
 			expected: []interface{}{"OK", errors.New("wrongtype operation against a key holding the wrong kind of value")},
 		},
+		{
+			name: "Test ZRANGE on set",
+			commands: []string{
+				"ZADD sorted_set 1 mem1 2 mem2",
+				"ZRANGE sorted_set 0 1",
+				"ZRANGE sorted_set 0 1 REV",
+				"ZRANGE sorted_set 0 1 WITHSCORES",
+				"ZRANGE sorted_set 0 1 REV WITHSCORES"},
+			expected: []interface{}{
+				int64(2),
+				[]string{"mem1", "mem2"},
+				[]string{"mem2", "mem1"},
+				[]string{"mem1", "1", "mem2", "2"},
+				[]string{"mem2", "2", "mem1", "1"}},
+		},
 	}
 
 	runTestcases(t, client, testCases)
