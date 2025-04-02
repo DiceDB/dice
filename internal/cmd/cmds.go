@@ -15,6 +15,7 @@ import (
 	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // nolint: stylecheck
@@ -192,5 +193,19 @@ func cmdResInt(i int64) *CmdRes {
 func cmdResFloat(f float64) *CmdRes {
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VFloat{VFloat: f},
+	}}
+}
+
+var cmdResEmptySlice = &CmdRes{R: &wire.Response{
+	VList: []*structpb.Value{},
+}}
+
+func cmdResSlice(res []string) *CmdRes {
+	var values []*structpb.Value
+	for _, str := range res {
+		values = append(values, structpb.NewStringValue(str))
+	}
+	return &CmdRes{R: &wire.Response{
+		VList: values,
 	}}
 }
