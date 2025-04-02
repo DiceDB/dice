@@ -5,7 +5,6 @@ import (
 	"github.com/dicedb/dice/internal/eval/sortedset"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dsstore "github.com/dicedb/dice/internal/store"
-	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cZREM = &CommandMeta{
@@ -56,7 +55,5 @@ func evalZREM(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 		}
 	}
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: int64(countRem)},
-	}}, nil
+	return cmdResInt(int64(countRem)), nil
 }
