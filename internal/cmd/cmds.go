@@ -55,6 +55,11 @@ func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 		}
 		c.Meta = meta
 	}
+	if !c.IsReplay && sm.Wal != nil {
+		if err := sm.Wal.LogCommand([]byte(fmt.Sprintf("%s %s", c.C.Cmd, strings.Join(c.C.Args, " ")))); err != nil {
+			return res, err
+		}
+	}
 	res, err = c.Meta.Execute(c, sm)
 	slog.Debug("command executed",
 		slog.Any("cmd", c.String()),
