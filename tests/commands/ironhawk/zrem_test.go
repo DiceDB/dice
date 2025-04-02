@@ -38,15 +38,11 @@ func TestZREM(t *testing.T) {
 		{
 			name: "Call ZREM with existing key and members",
 			commands: []string{
-				"ZADD key 1 member1",
-				"ZADD key 2 member2",
-				"ZADD key 3 member3",
-				"ZREM key member1 member2",
+				"ZADD key1 1 member1 2 member2 3 member3",
+				"ZREM key1 member1 member2",
 			},
 			expected: []interface{}{
-				int64(1), // member1 added
-				int64(1), // member2 added
-				int64(1), // member3 added
+				int64(3), // member1 added
 				int64(2), // member1,member2 removed
 			},
 		},
