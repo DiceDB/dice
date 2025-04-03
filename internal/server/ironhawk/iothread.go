@@ -56,9 +56,11 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 		// Also, CLientID is duplicated in command and io-thread.
 		// Also, we shouldn't allow execution/registration incase of invalid commands
 		// like for B.WATCH cmd since it'll err out we shall return and not create subscription
-		t.ClientID = _c.ClientID
+		if err == nil {
+			t.ClientID = _c.ClientID
+		}
 
-		if c.Cmd == "HANDSHAKE" {
+		if c.Cmd == "HANDSHAKE" && err == nil {
 			t.ClientID = _c.C.Args[0]
 			t.Mode = _c.C.Args[1]
 		}
@@ -79,7 +81,9 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		watchManager.NotifyWatchers(_c, shardManager, t)
+		if err == nil {
+			watchManager.NotifyWatchers(_c, shardManager, t)
+		}
 	}
 }
 
