@@ -47,7 +47,7 @@ func init() {
 var Config *DiceDBConfig
 
 type DiceDBConfig struct {
-	Host string `mapstructure:"host" default:"0.0.0.0" description:"The host address to Bind to"`
+	Host string `mapstructure:"host" default:"0.0.0.0" description:"The host address to bind to"`
 	Port int    `mapstructure:"port" default:"7379" description:"The port to bind to"`
 
 	Username string `mapstructure:"username" default:"dicedb" description:"The username to use for authentication"`
@@ -71,7 +71,7 @@ type DiceDBConfig struct {
 	WALMaxSegmentRotationTimeSec      int    `mapstructure:"wal-max-segment-rotation-time-sec" default:"60" description:"The time interval (in seconds) after which WAL a segment is rotated"`
 	WALBufferSyncIntervalMillis       int    `mapstructure:"wal-buffer-sync-interval-ms" default:"200" description:"The interval (in milliseconds) at which The WAL write buffer is synced to disk"`
 	WALRetentionMode                  string `mapstructure:"wal-retention-mode" default:"num-segments" description:"The new horizon for WAL segment post cleanup" values:"num-segments, time, checkpoint"`
-	WALMaxSegmentCount                int    `mapstructure:"wal-max-segment-count" default:"10" description:"The maximum number of segments to retain, if The retention mode is 'num-segments'"`
+	WALMaxSegmentCount                int    `mapstructure:"wal-max-segment-count" default:"10" description:"The maximum number of segments to retain, if the retention mode is 'num-segments'"`
 	WALMaxSegmentRetentionDurationSec int    `mapstructure:"wal-max-segment-retention-duration-sec" default:"600" description:"The maximum duration (in seconds) for WAL segments retention"`
 	WALRecoveryMode                   string `mapstructure:"wal-recovery-mode" default:"strict" description:"WAL recovery mode in case of a corruption" values:"strict, truncate, ignore"`
 }

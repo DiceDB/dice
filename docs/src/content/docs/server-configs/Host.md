@@ -1,6 +1,6 @@
 ---
 title: Host
-description: The host address to Bind to
+description: The host address to bind to
 sidebar:
   order: 0
 ---
@@ -12,7 +12,7 @@ sidebar:
 
 #### Description
 
-The host address to Bind to
+The host address to bind to
 
 #### CLI Command
 

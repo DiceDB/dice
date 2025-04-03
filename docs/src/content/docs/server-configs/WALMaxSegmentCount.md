@@ -1,6 +1,6 @@
 ---
 title: WALMaxSegmentCount
-description: The maximum number of segments to retain, if The retention mode is 'num-segments'
+description: The maximum number of segments to retain, if the retention mode is 'num-segments'
 sidebar:
   order: 19
 ---
@@ -12,7 +12,7 @@ sidebar:
 
 #### Description
 
-The maximum number of segments to retain, if The retention mode is 'num-segments'
+The maximum number of segments to retain, if the retention mode is 'num-segments'
 
 #### CLI Command
 
