@@ -3,12 +3,26 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# Define the directory where the proto file resides
+# Define the directory where the proto file will be downloaded
 PROTO_DIR=$(dirname "$0")
+OUTPUT_DIR="$PROTO_DIR"
 
-# Define the proto file and the output file
+# Define the GitHub repository and file path
+GITHUB_REPO="AshwinKul28/dicedb-protos"
+GITHUB_BRANCH="patch-1"
+PROTO_FILE_PATH="wal/wal.proto"
 PROTO_FILE="$PROTO_DIR/wal.proto"
-OUTPUT_DIR="."
+
+# Function to download the proto file from GitHub
+download_proto_file() {
+    echo "Downloading wal.proto from GitHub..."
+    curl -s "https://raw.githubusercontent.com/$GITHUB_REPO/$GITHUB_BRANCH/$PROTO_FILE_PATH" -o "$PROTO_FILE"
+    if [ $? -ne 0 ]; then
+        echo "Failed to download wal.proto"
+        exit 1
+    fi
+    echo "Successfully downloaded wal.proto to $PROTO_FILE"
+}
 
 # Function to install protoc if not present
 install_protoc() {
@@ -32,6 +46,19 @@ install_protoc_gen_go() {
     export PATH="$PATH:$(go env GOPATH)/bin"
     echo "Make sure $(go env GOPATH)/bin is in your PATH."
 }
+
+# Function to clean up downloaded files
+cleanup() {
+    echo "Cleaning up..."
+    rm -f "$PROTO_FILE"
+    echo "Cleanup complete."
+}
+
+# Set up trap to ensure cleanup happens even if script fails
+trap cleanup EXIT
+
+# Download the proto file
+download_proto_file
 
 # Check if protoc is installed, install if necessary
 if ! command -v protoc &>/dev/null; then
