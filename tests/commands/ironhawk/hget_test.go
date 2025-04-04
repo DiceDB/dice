@@ -32,6 +32,21 @@ func TestHGET(t *testing.T) {
 				errors.New("wrong number of arguments for 'HGET' command"),
 			},
 		},
+		{
+			name:     "Get Hash Field Value for Non-existent Field",
+			commands: []string{"HSET k1 f 1", "HGET k1 non_existent_field"},
+			expected: []interface{}{1, nil},
+		},
+		{
+			name:     "Get Hash Field Value for Non-existent Key",
+			commands: []string{"HGET non_existent_key f"},
+			expected: []interface{}{nil},
+		},
+		{
+			name:     "Get Hash Field Value for multiple Fields stored at Hash Key",
+			commands: []string{"HSET k f1 v1 f2 v2", "HGET k f1", "HGET k f2"},
+			expected: []interface{}{2, "v1", "v2"},
+		},
 	}
 	runTestcases(t, client, testCases)
 }
