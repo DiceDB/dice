@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// Helper functions for large hash test
+// Function that generates HSET with a count of field-value pairs followed by HGETALL
 func generateLargeHashCommands(count int) []string {
 	commands := []string{"HSET large_k"}
 	for i := 0; i < count; i++ {
@@ -21,6 +21,7 @@ func generateLargeHashCommands(count int) []string {
 	return commands
 }
 
+// Function that generates expected result with a count of field-value pairs
 func generateLargeHashExpectedResult(count int) []interface{} {
 	result := []interface{}{count}
 	values := []*structpb.Value{}
@@ -97,8 +98,8 @@ func TestHGETALL(t *testing.T) {
 		},
 		{
 			name:     "HGETALL with very large hash",
-			commands: generateLargeHashCommands(10),       // Function that generates HSET with 100 field-value pairs followed by HGETALL
-			expected: generateLargeHashExpectedResult(10), // Function that generates expected result with 100 field-value pairs
+			commands: generateLargeHashCommands(1000),
+			expected: generateLargeHashExpectedResult(1000),
 		},
 	}
 	runTestcases(t, client, testCases)
