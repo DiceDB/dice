@@ -11,6 +11,7 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/types"
 	"github.com/dicedb/dicedb-go/wire"
 )
 
@@ -64,33 +65,33 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	var key = c.C.Args[0]
-	params := map[string]string{}
+	params := map[types.Param]string{}
 	for i := 1; i < len(c.C.Args); i++ {
-		arg := strings.ToUpper(c.C.Args[i])
+		arg := types.Param(strings.ToUpper(c.C.Args[i]))
 		switch arg {
-		case EX, PX, EXAT, PXAT:
+		case types.EX, types.PX, types.EXAT, types.PXAT:
 			params[arg] = c.C.Args[i+1]
 			i++
-		case PERSIST:
+		case types.PERSIST:
 			params[arg] = "true"
 		}
 	}
 
 	// Raise errors if incompatible parameters are provided
 	// in one command
-	if params[EX] != "" && params[PX] != "" {
+	if params[types.EX] != "" && params[types.PX] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[EX] != "" && params[EXAT] != "" {
+	} else if params[types.EX] != "" && params[types.EXAT] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[EX] != "" && params[PXAT] != "" {
+	} else if params[types.EX] != "" && params[types.PXAT] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[PX] != "" && params[EXAT] != "" {
+	} else if params[types.PX] != "" && params[types.EXAT] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[PX] != "" && params[PXAT] != "" {
+	} else if params[types.PX] != "" && params[types.PXAT] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[EXAT] != "" && params[PXAT] != "" {
+	} else if params[types.EXAT] != "" && params[types.PXAT] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[PERSIST] != "" && (params[EX] != "" || params[PX] != "" || params[EXAT] != "" || params[PXAT] != "") {
+	} else if params[types.PERSIST] != "" && (params[types.EX] != "" || params[types.PX] != "" || params[types.EXAT] != "" || params[types.PXAT] != "") {
 		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
 	}
 	var err error
@@ -100,8 +101,8 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// and the key will not expire
 	exDurationMs = -1
 
-	if params[EX] != "" {
-		exDurationSec, err = strconv.ParseInt(params[EX], 10, 64)
+	if params[types.EX] != "" {
+		exDurationSec, err = strconv.ParseInt(params[types.EX], 10, 64)
 		if err != nil {
 			return cmdResNil, errors.ErrInvalidValue("GETEX", "EX")
 		}
@@ -111,8 +112,8 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		exDurationMs = exDurationSec * 1000
 	}
 
-	if params[PX] != "" {
-		exDurationMs, err = strconv.ParseInt(params[PX], 10, 64)
+	if params[types.PX] != "" {
+		exDurationMs, err = strconv.ParseInt(params[types.PX], 10, 64)
 		if err != nil {
 			return cmdResNil, errors.ErrInvalidValue("GETEX", "PX")
 		}
@@ -121,8 +122,8 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		}
 	}
 
-	if params[EXAT] != "" {
-		tv, err := strconv.ParseInt(params[EXAT], 10, 64)
+	if params[types.EXAT] != "" {
+		tv, err := strconv.ParseInt(params[types.EXAT], 10, 64)
 		if err != nil {
 			return cmdResNil, errors.ErrInvalidValue("GETEX", "EXAT")
 		}
@@ -133,8 +134,8 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		exDurationMs = exDurationSec * 1000
 	}
 
-	if params[PXAT] != "" {
-		tv, err := strconv.ParseInt(params[PXAT], 10, 64)
+	if params[types.PXAT] != "" {
+		tv, err := strconv.ParseInt(params[types.PXAT], 10, 64)
 		if err != nil {
 			return cmdResNil, errors.ErrInvalidValue("GETEX", "PXAT")
 		}
@@ -158,7 +159,7 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return resp, err
 	}
 
-	if params[PERSIST] != "" {
+	if params[types.PERSIST] != "" {
 		dstore.DelExpiry(existingObj, s)
 	} else if exDurationMs != -1 {
 		s.SetExpiry(existingObj, exDurationMs)

@@ -70,12 +70,12 @@ func TestZADD(t *testing.T) {
 		{
 			name: "Call ZADD with INCR flag",
 			commands: []string{
-				"ZADD key INCR 1 memberINCR", // Add new member with INCR
-				"ZADD key INCR 2 memberINCR", // Increment score of existing member
+				"ZADD key1 INCR 1 memberINCR", // Add new member with INCR
+				"ZADD key1 INCR 2 memberINCR", // Increment score of existing member
 			},
 			expected: []interface{}{
-				float64(1.0), // Incremented score returned
-				float64(3.0), // Incremented score returned
+				int64(1), // Incremented score returned
+				int64(3), // Incremented score returned
 			},
 		},
 		{

@@ -12,23 +12,16 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/types"
 )
 
 const (
-	EX               = "EX"
-	PX               = "PX"
-	EXAT             = "EXAT"
-	PXAT             = "PXAT"
-	XX               = "XX"
-	NX               = "NX"
-	KEEPTTL          = "KEEPTTL"
-	GET              = "GET"
 	MaxEXDurationSec = 365 * 24 * 60 * 60 // 1 year in seconds
 )
 
 var cSET = &CommandMeta{
 	Name:      "SET",
-	Syntax:    "SET key value [EX seconds] [PX milliseconds] [EXAT timestamp] [PXAT timestamp] [XX] [NX] [KEEPTTL]",
+	Syntax:    "SET key value [EX seconds] [PX milliseconds] [EXAT timestamp] [PXAT timestamp] [XX] [NX] [KEEPTTL] [GET]",
 	HelpShort: "SET puts or updates an existing <key, value> pair",
 	HelpLong: `
 SET puts or updates an existing <key, value> pair.
@@ -76,6 +69,26 @@ func init() {
 	CommandRegistry.AddCommand(cSET)
 }
 
+// parseParams parses the parameters for the any command
+// and returns a map of the parameters and the remainder of the arguments
+// as non-params.
+func parseParams(args []string) (params map[types.Param]string, nonParams []string) {
+	params = map[types.Param]string{}
+	for i := 0; i < len(args); i++ {
+		arg := types.Param(strings.ToUpper(args[i]))
+		switch arg {
+		case types.EX, types.PX, types.EXAT, types.PXAT:
+			params[arg] = args[i+1]
+			i++
+		case types.XX, types.NX, types.KEEPTTL, types.GET, types.LT, types.GT, types.CH, types.INCR:
+			params[arg] = "true"
+		default:
+			nonParams = append(nonParams, args[i])
+		}
+	}
+	return params, nonParams
+}
+
 //nolint:gocyclo
 func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
@@ -83,36 +96,29 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	var key, value = c.C.Args[0], c.C.Args[1]
-	params := map[string]string{}
 
-	for i := 2; i < len(c.C.Args); i++ {
-		arg := strings.ToUpper(c.C.Args[i])
-		switch arg {
-		case EX, PX, EXAT, PXAT:
-			params[arg] = c.C.Args[i+1]
-			i++
-		case XX, NX, KEEPTTL, "GET":
-			params[arg] = "true"
-		}
+	params, nonParams := parseParams(c.C.Args[2:])
+	if len(nonParams) > 0 {
+		return cmdResNil, errors.ErrInvalidSyntax("SET")
 	}
 
 	// Raise errors if incompatible parameters are provided
 	// in one command
-	if params[EX] != "" && params[PX] != "" {
+	if params[types.EX] != "" && params[types.PX] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[EX] != "" && params[EXAT] != "" {
+	} else if params[types.EX] != "" && params[types.EXAT] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[EX] != "" && params[PXAT] != "" {
+	} else if params[types.EX] != "" && params[types.PXAT] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[PX] != "" && params[EXAT] != "" {
+	} else if params[types.PX] != "" && params[types.EXAT] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[PX] != "" && params[PXAT] != "" {
+	} else if params[types.PX] != "" && params[types.PXAT] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[EXAT] != "" && params[PXAT] != "" {
+	} else if params[types.EXAT] != "" && params[types.PXAT] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[XX] != "" && params[NX] != "" {
+	} else if params[types.XX] != "" && params[types.NX] != "" {
 		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[KEEPTTL] != "" && (params[EX] != "" || params[PX] != "" || params[EXAT] != "" || params[PXAT] != "") {
+	} else if params[types.KEEPTTL] != "" && (params[types.EX] != "" || params[types.PX] != "" || params[types.EXAT] != "" || params[types.PXAT] != "") {
 		return cmdResNil, errors.ErrInvalidSyntax("SET")
 	}
 
@@ -123,8 +129,8 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// and the key will not expire
 	exDurationMs = -1
 
-	if params[EX] != "" {
-		exDurationSec, err = strconv.ParseInt(params[EX], 10, 64)
+	if params[types.EX] != "" {
+		exDurationSec, err = strconv.ParseInt(params[types.EX], 10, 64)
 		if err != nil {
 			return cmdResNil, errors.ErrInvalidValue("SET", "EX")
 		}
@@ -134,8 +140,8 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		exDurationMs = exDurationSec * 1000
 	}
 
-	if params[PX] != "" {
-		exDurationMs, err = strconv.ParseInt(params[PX], 10, 64)
+	if params[types.PX] != "" {
+		exDurationMs, err = strconv.ParseInt(params[types.PX], 10, 64)
 		if err != nil {
 			return cmdResNil, errors.ErrInvalidValue("SET", "PX")
 		}
@@ -144,8 +150,8 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		}
 	}
 
-	if params[EXAT] != "" {
-		tv, err := strconv.ParseInt(params[EXAT], 10, 64)
+	if params[types.EXAT] != "" {
+		tv, err := strconv.ParseInt(params[types.EXAT], 10, 64)
 		if err != nil {
 			return cmdResNil, errors.ErrInvalidValue("SET", "EXAT")
 		}
@@ -156,8 +162,8 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		exDurationMs = exDurationSec * 1000
 	}
 
-	if params[PXAT] != "" {
-		tv, err := strconv.ParseInt(params[PXAT], 10, 64)
+	if params[types.PXAT] != "" {
+		tv, err := strconv.ParseInt(params[types.PXAT], 10, 64)
 		if err != nil {
 			return cmdResNil, errors.ErrInvalidValue("SET", "PXAT")
 		}
@@ -183,21 +189,21 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// If XX is provided and the key does not exist, return nil
 	// XX: only set the key if it already exists
 	// So, if it does not exist, we return nil and move on
-	if params[XX] != "" && existingObj == nil {
+	if params[types.XX] != "" && existingObj == nil {
 		return cmdResNil, nil
 	}
 
 	// If NX is provided and the key already exists, return nil
 	// NX: only set the key if it does not already exist
 	// So, if it does exist, we return nil and move on
-	if params[NX] != "" && existingObj != nil {
+	if params[types.NX] != "" && existingObj != nil {
 		return cmdResNil, nil
 	}
 
 	newObj := CreateObjectFromValue(s, value, exDurationMs)
-	s.Put(key, newObj, dstore.WithKeepTTL(params[KEEPTTL] != ""))
+	s.Put(key, newObj, dstore.WithKeepTTL(params[types.KEEPTTL] != ""))
 
-	if params[GET] != "" {
+	if params[types.GET] != "" {
 		// TODO: Optimize this because we have alread fetched the
 		// object in the existingObj variable. We can avoid executing
 		// the GET command again.
