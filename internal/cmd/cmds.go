@@ -188,9 +188,3 @@ func cmdResInt(i int64) *CmdRes {
 		Value: &wire.Response_VInt{VInt: i},
 	}}
 }
-
-func cmdResFloat(f float64) *CmdRes {
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VFloat{VFloat: f},
-	}}
-}
