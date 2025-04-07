@@ -27,12 +27,22 @@ localhost:7379> SET k1 v1
 OK OK
 localhost:7379> SET k2 v2
 OK OK
+localhost:7379> SET k33 v33
+OK OK
 localhost:7379> KEYS k?
-OK k1 k2
+OK
+1) "k1"
+2) "k2"
 localhost:7379> KEYS k*
-OK k1 k2
+OK
+1) "k1"
+2) "k2"
+3) "k33"
 localhost:7379> KEYS *
-OK k1 k2
+OK
+1) "k1"
+2) "k2"
+3) "k33"
 	`,
 	Eval:    evalKEYS,
 	Execute: executeKEYS,
