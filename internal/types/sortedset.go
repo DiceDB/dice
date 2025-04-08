@@ -82,3 +82,7 @@ func (s *SortedSet) ZADD(scores []int64, members []string, params map[Param]stri
 	}
 	return int64(addedCount), nil
 }
+
+func (s *SortedSet) ZCOUNT(minScore, maxScore int64) int64 {
+	return int64(len(s.SortedSet.GetByScoreRange(sortedset.SCORE(minScore), sortedset.SCORE(maxScore), nil)))
+}
