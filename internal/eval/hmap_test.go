@@ -45,7 +45,7 @@ func TestHashMapBuilder(t *testing.T) {
 	assert.Equal(t, "value2", *val2, "Expected value2 for key2")
 
 	keyValuePairs = []string{"key1", "value1", "key2"}
-	hmap, numSet, err = hashMapBuilder(keyValuePairs, nil)
+	_, numSet, err = hashMapBuilder(keyValuePairs, nil)
 	assert.NotNil(t, err, "Expected error for odd number of key-value pairs")
 	assert.Equal(t, int64(-1), numSet, "Expected -1 for number of keys set when error occurs")
 }
@@ -62,18 +62,18 @@ func TestHashMapIncrementValue(t *testing.T) {
 	assert.Equal(t, int64(15), val, "Expected value to be incremented to 15")
 
 	hmap.Set("field2", "notAnInt")
-	val, err = hmap.incrementValue("field2", 1)
+	_, err = hmap.incrementValue("field2", 1)
 	assert.NotNil(t, err, "Expected error when incrementing a non-integer value")
 	assert.Equal(t, errors.HashValueNotIntegerErr, err.Error(), "Expected hash value not integer error")
 
 	hmap.Set("field3", strconv.FormatInt(math.MaxInt64, 10))
-	val, err = hmap.incrementValue("field3", 1)
+	_, err = hmap.incrementValue("field3", 1)
 	assert.NotNil(t, err, "Expected error when integer overflow occurs")
 	assert.Equal(t, errors.IncrDecrOverflowErr, err.Error(), "Expected increment overflow error")
 }
 
 func TestGetValueFromHashMap(t *testing.T) {
-	store := store.NewStore(nil, nil)
+	store := store.NewStore(nil, nil, 0)
 	key := "key1"
 	field := "field1"
 	value := "value1"
@@ -117,17 +117,17 @@ func TestHashMapIncrementFloatValue(t *testing.T) {
 	assert.Equal(t, "10", val, "Expected value to be incremented to 10")
 
 	hmap.Set("field2", "notAFloat")
-	val, err = hmap.incrementFloatValue("field2", 1.0)
+	_, err = hmap.incrementFloatValue("field2", 1.0)
 	assert.NotNil(t, err, "Expected error when incrementing a non-float value")
 	assert.Equal(t, errors.IntOrFloatErr, err.Error(), "Expected int or float error")
 
 	inf := math.MaxFloat64
 
-	val, err = hmap.incrementFloatValue("field1", inf+float64(1e308))
+	_, err = hmap.incrementFloatValue("field1", inf+float64(1e308))
 	assert.NotNil(t, err, "Expected error when incrementing a overflowing value")
 	assert.Equal(t, errors.IncrDecrOverflowErr, err.Error(), "Expected overflow to be detected")
 
-	val, err = hmap.incrementFloatValue("field1", -inf-float64(1e308))
+	_, err = hmap.incrementFloatValue("field1", -inf-float64(1e308))
 	assert.NotNil(t, err, "Expected error when incrementing a overflowing value")
 	assert.Equal(t, errors.IncrDecrOverflowErr, err.Error(), "Expected overflow to be detected")
 }

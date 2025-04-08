@@ -142,3 +142,78 @@ func evalSLEEP(args []string, store *dstore.Store) []byte {
 	time.Sleep(time.Duration(durationSec) * time.Second)
 	return RespOK
 }
+
+func evalPING(args []string, store *dstore.Store) []byte {
+	// PING command returns PONG if no argument is provided, otherwise it returns the argument
+	if len(args) == 0 {
+		return Encode("PONG", false)
+	}
+	return Encode(args[0], false)
+}
+
+func evalECHO(args []string, store *dstore.Store) []byte {
+	if len(args) == 1 {
+		return diceerrors.NewErrArity("ECHO")
+	}
+	return Encode(args[0], false)
+}
+
+func evalSET(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalGETEX(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalGETDEL(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalGET(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalEXPIRE(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalEXPIRETIME(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalEXPIREAT(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalTTL(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalDEL(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalTYPE(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalSETEX(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalINCR(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalINCRBY(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalDECR(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}
+
+func evalDECRBY(args []string, store *dstore.Store) *EvalResponse {
+	return nil
+}

@@ -15,7 +15,7 @@ import (
 )
 
 func TestBloomFilter(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, 0)
 	// This test only contains some basic checks for all the bloom filter
 	// operations like BFRESERVE, BFADD, BFEXISTS. It assumes that the
 	// functions called in the main function are working correctly and
@@ -26,7 +26,7 @@ func TestBloomFilter(t *testing.T) {
 	var args []string // empty args
 	resp := evalBFRESERVE(args, store)
 	assert.Nil(t, resp.Result)
-	assert.Error(t, resp.Error, "ERR wrong number of arguments for 'bf.reserve' command")
+	assert.Error(t, resp.Error, "wrong number of arguments for 'bf.reserve' command")
 
 	// BF.RESERVE bf 0.01 10000
 	args = append(args, "bf", "0.01", "10000") // Add key, error rate and capacity
@@ -37,13 +37,13 @@ func TestBloomFilter(t *testing.T) {
 	// BF.RESERVE bf1
 	args = []string{"bf1"}
 	resp = evalBFRESERVE(args, store)
-	assert.Error(t, resp.Error, "ERR wrong number of arguments for 'bf.reserve' command")
+	assert.Error(t, resp.Error, "wrong number of arguments for 'bf.reserve' command")
 	assert.Nil(t, resp.Result)
 
 	// BF.ADD with wrong arguments, must return non-nil error and nil result
 	args = []string{"bf"}
 	resp = evalBFADD(args, store)
-	assert.EqualError(t, resp.Error, "ERR wrong number of arguments for 'bf.add' command")
+	assert.EqualError(t, resp.Error, "wrong number of arguments for 'BF.ADD' command")
 	assert.Nil(t, resp.Result)
 
 	// BF.ADD bf hello, must return 1 and nil error
@@ -70,7 +70,7 @@ func TestBloomFilter(t *testing.T) {
 	// BF.EXISTS arity test
 	args = []string{"bf"}
 	resp = evalBFEXISTS(args, store)
-	assert.EqualError(t, resp.Error, "ERR wrong number of arguments for 'bf.exists' command")
+	assert.EqualError(t, resp.Error, "wrong number of arguments for 'BF.EXISTS' command")
 	assert.Nil(t, resp.Result)
 
 	args = []string{"bf", "hello"} // BF.EXISTS bf hello
@@ -96,7 +96,7 @@ func TestBloomFilter(t *testing.T) {
 }
 
 func TestGetOrCreateBloomFilter(t *testing.T) {
-	store := dstore.NewStore(nil, nil)
+	store := dstore.NewStore(nil, nil, 0)
 	// Create a key and default opts
 	key := "bf"
 	opts := defaultBloomOpts()
