@@ -14,6 +14,20 @@ func TestHSET(t *testing.T) {
 
 	testCases := []TestCase{
 		{
+			name:     "HSET with no arguments",
+			commands: []string{"HSET"},
+			expected: []interface{}{
+				errors.New("wrong number of arguments for 'HSET' command"),
+			},
+		},
+		{
+			name:     "HSET with odd number of arguments",
+			commands: []string{"HSET k f1 v1 f2"},
+			expected: []interface{}{
+				errors.New("wrong number of arguments for 'HSET' command"),
+			},
+		},
+		{
 			name:     "Set Field Value at Key stored in Hash",
 			commands: []string{"HSET k f v"},
 			expected: []interface{}{1},
@@ -31,6 +45,16 @@ func TestHSET(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'HSET' command"),
 			},
+		},
+		{
+			name:     "Set multiple Field-Value pairs at once",
+			commands: []string{"HSET k f1 v1 f2 v2 f3 v3"},
+			expected: []interface{}{3},
+		},
+		{
+			name:     "Update existing field value",
+			commands: []string{"HSET k1 f v1", "HSET k1 f v2"},
+			expected: []interface{}{1, 0},
 		},
 	}
 	runTestcases(t, client, testCases)
