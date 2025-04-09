@@ -38,27 +38,66 @@ func init() {
 	CommandRegistry.AddCommand(cGET)
 }
 
+var (
+	GETResNilRes = &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_GETRes{
+				GETRes: &wire.GETRes{
+					Value: getWireValueFromObj(nil),
+				},
+			},
+		},
+	}
+)
+
 func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("GET")
+		return GETResNilRes, errors.ErrWrongArgumentCount("GET")
 	}
+
 	key := c.C.Args[0]
 	obj := s.Get(key)
 
-	return cmdResFromObject(obj)
+	return createGETResFromObj(obj), nil
 }
 
 func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("GET")
+		return GETResNilRes, errors.ErrWrongArgumentCount("GET")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalGET(c, shard.Thread.Store())
 }
 
+func createGETResFromObj(obj *object.Obj) *CmdRes {
+	return &CmdRes{Rs: &wire.Result{
+		Response: &wire.Result_GETRes{
+			GETRes: &wire.GETRes{Value: getWireValueFromObj(obj)},
+		},
+	}}
+}
+
+func getWireValueFromObj(obj *object.Obj) *wire.Value {
+	if obj == nil {
+		return &wire.Value{Value: &wire.Value_Nil{Nil: true}}
+	}
+
+	switch obj.Type {
+	case object.ObjTypeInt:
+		return &wire.Value{Value: &wire.Value_I64{I64: obj.Value.(int64)}}
+	case object.ObjTypeString:
+		return &wire.Value{Value: &wire.Value_Str{Str: obj.Value.(string)}}
+	case object.ObjTypeByteArray, object.ObjTypeHLL:
+		return &wire.Value{Value: &wire.Value_Bytes{Bytes: obj.Value.([]byte)}}
+	default:
+		// This should never happen
+		panic("unknown object type " + obj.Type.String())
+	}
+}
+
 func cmdResFromObject(obj *object.Obj) (*CmdRes, error) {
 	if obj == nil {
-		return GetNilRes(), nil
+		return GETResNilRes, nil
 	}
 
 	switch obj.Type {
@@ -76,6 +115,6 @@ func cmdResFromObject(obj *object.Obj) (*CmdRes, error) {
 		}}, nil
 	default:
 		slog.Error("unknown object type", "type", obj.Type)
-		return cmdResNil, errors.ErrUnknownObjectType
+		return GETResNilRes, errors.ErrUnknownObjectType
 	}
 }

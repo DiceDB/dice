@@ -6,6 +6,7 @@ package types
 import (
 	"errors"
 
+	"github.com/dicedb/dicedb-go/wire"
 	"github.com/wangjia184/sortedset"
 )
 
@@ -85,4 +86,20 @@ func (s *SortedSet) ZADD(scores []int64, members []string, params map[Param]stri
 
 func (s *SortedSet) ZCOUNT(minScore, maxScore int64) int64 {
 	return int64(len(s.SortedSet.GetByScoreRange(sortedset.SCORE(minScore), sortedset.SCORE(maxScore), nil)))
+}
+
+func (s *SortedSet) ZRANGE(start, stop int) []*wire.ZElement {
+	nodes := s.SortedSet.GetByScoreRange(
+		sortedset.SCORE(start),
+		sortedset.SCORE(stop),
+		&sortedset.GetByScoreRangeOptions{})
+
+	result := make([]*wire.ZElement, len(nodes))
+	for i, node := range nodes {
+		result[i] = &wire.ZElement{
+			Member: node.Key(),
+			Score:  int64(node.Score()),
+		}
+	}
+	return result
 }

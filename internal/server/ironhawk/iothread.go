@@ -73,7 +73,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 
 		watchManager.RegisterThread(t)
 
-		if err := t.IoHandler.WriteSync(ctx, res.R); err != nil {
+		if err := t.IoHandler.WriteSync(ctx, res.Rs); err != nil {
 			return err
 		}
 

@@ -8,7 +8,6 @@ import (
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var cKEYS = &CommandMeta{
@@ -52,16 +51,34 @@ func init() {
 	CommandRegistry.AddCommand(cKEYS)
 }
 
+var (
+	KEYSResNilRes = &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_KEYSRes{
+				KEYSRes: &wire.KEYSRes{},
+			},
+		},
+	}
+)
+
 func evalKEYS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("KEYS")
+		return KEYSResNilRes, errors.ErrWrongArgumentCount("KEYS")
 	}
 	pattern := c.C.Args[0]
 	keys, err := s.Keys(pattern)
 	if err != nil {
 		return nil, err
 	}
-	return createResponseFromArray(keys), nil
+	return &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_KEYSRes{
+				KEYSRes: &wire.KEYSRes{
+					Keys: keys,
+				},
+			},
+		},
+	}, nil
 }
 
 func executeKEYS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
@@ -74,23 +91,13 @@ func executeKEYS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, v := range res.R.GetVList() {
-			keys = append(keys, v.GetStringValue())
-		}
+		keys = append(keys, res.Rs.GetKEYSRes().Keys...)
 	}
-	finalRes := createResponseFromArray(keys)
-	return finalRes, nil
-}
-
-func createResponseFromArray(arr []string) *CmdRes {
-	if len(arr) == 0 {
-		return cmdResNil
-	}
-	var res []*structpb.Value
-	for _, v := range arr {
-		val := structpb.NewStringValue(v)
-		res = append(res, val)
-	}
-	return &CmdRes{R: &wire.Response{
-		VList: res}}
+	return &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_KEYSRes{
+				KEYSRes: &wire.KEYSRes{Keys: keys},
+			},
+		},
+	}, nil
 }
