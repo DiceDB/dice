@@ -34,6 +34,10 @@ export default defineConfig({
           autogenerate: { directory: "get-started" },
         },
         {
+          label: "Server Configurations",
+          autogenerate: { directory: "server-configs" },
+        },
+        {
           label: "SDK",
           autogenerate: { directory: "sdk" },
         },
