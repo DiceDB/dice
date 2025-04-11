@@ -15,6 +15,7 @@ import (
 	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // nolint: stylecheck
@@ -158,6 +159,23 @@ func GetNilRes() *CmdRes {
 	}}
 }
 
+func cmdResStringArray(strings []string) (*CmdRes, error) {
+	var values []*structpb.Value
+
+	// Convert each string to structpb.Value
+	for _, str := range strings {
+		val, err := structpb.NewValue(str)
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, val)
+	}
+
+	return &CmdRes{R: &wire.Response{
+		VList: values,
+	}}, nil
+}
+
 var cmdResNil = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VNil{VNil: true},
 }}
@@ -186,11 +204,5 @@ var cmdResIntNegTwo = &CmdRes{R: &wire.Response{
 func cmdResInt(i int64) *CmdRes {
 	return &CmdRes{R: &wire.Response{
 		Value: &wire.Response_VInt{VInt: i},
-	}}
-}
-
-func cmdResFloat(f float64) *CmdRes {
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VFloat{VFloat: f},
 	}}
 }

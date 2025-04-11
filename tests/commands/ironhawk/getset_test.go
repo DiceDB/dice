@@ -22,7 +22,7 @@ func TestGETSET(t *testing.T) {
 		},
 		{
 			name:     "GETSET without expiration",
-			commands: []string{"SET k v", "GET k", "GETSET k v2", "GET k"},
+			commands: []string{"SET k1 v", "GET k1", "GETSET k1 v2", "GET k1"},
 			expected: []interface{}{"OK", "v", "v", "v2"},
 		},
 		{
