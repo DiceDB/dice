@@ -48,7 +48,18 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 
 		res, err := _c.Execute(shardManager)
 		if err != nil {
-			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
+			res = &cmd.CmdRes{
+				R: &wire.Response{Err: err.Error()},
+				Rs: &wire.Result{
+					Status:  wire.Status_ERR,
+					Message: err.Error(),
+				},
+			}
+		} else {
+			res.Rs.Status = wire.Status_OK
+			if res.Rs.Message == "" {
+				res.Rs.Message = "OK"
+			}
 		}
 
 		// TODO: Optimize this. We are doing this for all command execution
