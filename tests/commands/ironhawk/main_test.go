@@ -88,6 +88,8 @@ func assertEqualResult(t *testing.T, expected interface{}, result *wire.Result, 
 		assert.Equal(t, v, actual)
 	case int:
 		assert.Equal(t, int64(v), actual)
+	case bool:
+		assert.Equal(t, v, actual)
 	case nil:
 		assert.Equal(t, v, actual)
 	case error:
