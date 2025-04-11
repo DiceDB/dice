@@ -18,7 +18,6 @@ const (
 	XX      Param = "XX"
 	NX      Param = "NX"
 	KEEPTTL Param = "KEEPTTL"
-	GET     Param = "GET"
 
 	PERSIST Param = "PERSIST"
 )

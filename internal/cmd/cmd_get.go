@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/dicedb/dice/internal/errors"
@@ -16,19 +17,19 @@ import (
 var cGET = &CommandMeta{
 	Name:      "GET",
 	Syntax:    "GET key",
-	HelpShort: "GET returns the value for the key",
+	HelpShort: "GET returns the value as a string for the key in args",
 	HelpLong: `
-GET returns the value for the key in args.
+GET returns the value as a string for the key in args.
 
-The command returns (nil) if the key does not exist.
+The command returns an empty string if the key does not exist.
 	`,
 	Examples: `
 localhost:7379> SET k1 v1
-OK OK
+OK
 localhost:7379> GET k1
-OK v1
+OK "v1"
 localhost:7379> GET k2
-(nil)
+OK ""
 	`,
 	Eval:    evalGET,
 	Execute: executeGET,
@@ -38,16 +39,20 @@ func init() {
 	CommandRegistry.AddCommand(cGET)
 }
 
-var (
-	GETResNilRes = &CmdRes{
+func newGETRes(obj *object.Obj) *CmdRes {
+	return &CmdRes{
 		Rs: &wire.Result{
 			Response: &wire.Result_GETRes{
 				GETRes: &wire.GETRes{
-					Value: getWireValueFromObj(nil),
+					Value: getWireValueFromObj(obj),
 				},
 			},
 		},
 	}
+}
+
+var (
+	GETResNilRes = newGETRes(nil)
 )
 
 func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
@@ -58,7 +63,7 @@ func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	obj := s.Get(key)
 
-	return createGETResFromObj(obj), nil
+	return newGETRes(obj), nil
 }
 
 func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
@@ -69,28 +74,19 @@ func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	return evalGET(c, shard.Thread.Store())
 }
 
-func createGETResFromObj(obj *object.Obj) *CmdRes {
-	return &CmdRes{Rs: &wire.Result{
-		Response: &wire.Result_GETRes{
-			GETRes: &wire.GETRes{Value: getWireValueFromObj(obj)},
-		},
-	}}
-}
-
-func getWireValueFromObj(obj *object.Obj) *wire.Value {
+func getWireValueFromObj(obj *object.Obj) string {
 	if obj == nil {
-		return &wire.Value{Value: &wire.Value_Nil{Nil: true}}
+		return ""
 	}
 
 	switch obj.Type {
 	case object.ObjTypeInt:
-		return &wire.Value{Value: &wire.Value_I64{I64: obj.Value.(int64)}}
+		return fmt.Sprintf("%d", obj.Value.(int64))
 	case object.ObjTypeString:
-		return &wire.Value{Value: &wire.Value_Str{Str: obj.Value.(string)}}
+		return obj.Value.(string)
 	case object.ObjTypeByteArray, object.ObjTypeHLL:
-		return &wire.Value{Value: &wire.Value_Bytes{Bytes: obj.Value.([]byte)}}
+		return string(obj.Value.([]byte))
 	default:
-		// This should never happen
 		panic("unknown object type " + obj.Type.String())
 	}
 }

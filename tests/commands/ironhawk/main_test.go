@@ -22,10 +22,11 @@ func TestMain(m *testing.M) {
 }
 
 type TestCase struct {
-	name     string
-	commands []string
-	expected []interface{}
-	delay    []time.Duration
+	name           string
+	commands       []string
+	expected       []interface{}
+	delay          []time.Duration
+	valueExtractor []ValueExtractorFn
 }
 
 func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) {
@@ -73,6 +74,29 @@ func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) {
 	}
 }
 
+func assertEqualResult(t *testing.T, expected interface{}, result *wire.Result, valueExtractor ValueExtractorFn) {
+	var actual interface{}
+	if valueExtractor != nil {
+		actual = valueExtractor(result)
+	}
+	switch v := expected.(type) {
+	case string:
+		assert.Equal(t, v, actual)
+	case int64:
+		assert.Equal(t, v, actual)
+	case float64:
+		assert.Equal(t, v, actual)
+	case int:
+		assert.Equal(t, int64(v), actual)
+	case nil:
+		assert.Equal(t, v, actual)
+	case error:
+		assert.Equal(t, v.Error(), result.Message)
+	default:
+		assert.Equal(t, v, actual)
+	}
+}
+
 func runTestcases(t *testing.T, client *dicedb.Client, testCases []TestCase) {
 	client.Fire(&wire.Command{
 		Cmd: "FLUSHDB",
@@ -87,7 +111,8 @@ func runTestcases(t *testing.T, client *dicedb.Client, testCases []TestCase) {
 					Cmd:  strings.Split(cmd, " ")[0],
 					Args: strings.Split(cmd, " ")[1:],
 				})
-				assertEqual(t, tc.expected[i], result)
+
+				assertEqualResult(t, tc.expected[i], result, tc.valueExtractor[i])
 			}
 		})
 	}

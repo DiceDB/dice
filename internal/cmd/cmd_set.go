@@ -20,47 +20,44 @@ const (
 	MaxEXDurationSec = 365 * 24 * 60 * 60 // 1 year in seconds
 )
 
+// TODO: Make the SET command return 1 if the SET operation was successful and 0 if the key was not set or updated.
+// This should involve checking of the old value and the new value.
 var cSET = &CommandMeta{
 	Name:      "SET",
-	Syntax:    "SET key value [EX seconds] [PX milliseconds] [EXAT timestamp] [PXAT timestamp] [XX] [NX] [KEEPTTL] [GET]",
-	HelpShort: "SET puts or updates an existing <key, value> pair",
+	Syntax:    "SET key value [EX seconds] [PX milliseconds] [EXAT timestamp] [PXAT timestamp] [XX] [NX] [KEEPTTL]",
+	HelpShort: "SET puts or updates an existing value for a key",
 	HelpLong: `
-SET puts or updates an existing <key, value> pair.
+SET puts or updates an existing value for a key.
 
-SET identifies the type of the value based on the value itself. If the value is an integer,
-it will be stored as an integer. Otherwise, it will be stored as a string.
+SET stores the value as its native type - be it int or string. SET supports the following options:
 
-- EX seconds: Set the expiration time in seconds
-- PX milliseconds: Set the expiration time in milliseconds
-- EXAT timestamp: Set the expiration time in seconds since epoch
-- PXAT timestamp: Set the expiration time in milliseconds since epoch
-- XX: Only set the key if it already exists
-- NX: Only set the key if it does not already exist
-- KEEPTTL: Keep the existing TTL of the key
-- GET: Return the value of the key after setting it
+- EX seconds: set the expiration time in seconds
+- PX milliseconds: set the expiration time in milliseconds
+- EXAT timestamp: set the expiration time in seconds since epoch
+- PXAT timestamp: set the expiration time in milliseconds since epoch
+- XX: only set the key if it already exists
+- NX: only set the key if it does not already exist
+- KEEPTTL: keep the existing TTL of the key even if some expiration param like EX, etc is provided
 
-Returns "OK" if the key was set or updated. Returns (nil) if the key was not set or updated.
-Returns the value of the key if the GET option is provided.
+Returns "OK" if the SET operation was successful.
 	`,
 	Examples: `
 localhost:7379> SET k 43
-OK OK
+OK
 localhost:7379> SET k 43 EX 10
-OK OK
+OK
 localhost:7379> SET k 43 PX 10000
-OK OK
+OK
 localhost:7379> SET k 43 EXAT 1772377267
-OK OK
+OK
 localhost:7379> SET k 43 PXAT 1772377267000
-OK OK
+OK
 localhost:7379> SET k 43 XX
-OK OK
+OK
 localhost:7379> SET k 43 NX
-OK (nil)
+OK
 localhost:7379> SET k 43 KEEPTTL
-OK OK
-localhost:7379> SET k 43 GET
-OK 43
+OK
 	`,
 	Eval:    evalSET,
 	Execute: executeSET,
@@ -70,22 +67,17 @@ func init() {
 	CommandRegistry.AddCommand(cSET)
 }
 
-var (
-	SETResNilRes = &CmdRes{
+func newSETRes() *CmdRes {
+	return &CmdRes{
 		Rs: &wire.Result{
-			Response: &wire.Result_SETRes{
-				SETRes: &wire.SETRes{},
-			},
+			Response: &wire.Result_SETRes{SETRes: &wire.SETRes{}},
 		},
 	}
+}
 
-	SETResOKRes = &CmdRes{
-		Rs: &wire.Result{
-			Response: &wire.Result_SETRes{
-				SETRes: &wire.SETRes{},
-			},
-		},
-	}
+var (
+	SETResNilRes = newSETRes()
+	SETResOKRes  = newSETRes()
 )
 
 // parseParams parses the parameters for the any command
@@ -99,7 +91,7 @@ func parseParams(args []string) (params map[types.Param]string, nonParams []stri
 		case types.EX, types.PX, types.EXAT, types.PXAT:
 			params[arg] = args[i+1]
 			i++
-		case types.XX, types.NX, types.KEEPTTL, types.GET, types.LT, types.GT, types.CH, types.INCR:
+		case types.XX, types.NX, types.KEEPTTL, types.LT, types.GT, types.CH, types.INCR:
 			params[arg] = "true"
 		default:
 			nonParams = append(nonParams, args[i])
@@ -209,39 +201,25 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// XX: only set the key if it already exists
 	// So, if it does not exist, we return nil and move on
 	if params[types.XX] != "" && existingObj == nil {
-		return SETResNilRes, nil
+		return SETResOKRes, nil
 	}
 
 	// If NX is provided and the key already exists, return nil
 	// NX: only set the key if it does not already exist
 	// So, if it does exist, we return nil and move on
 	if params[types.NX] != "" && existingObj != nil {
-		return SETResNilRes, nil
+		return SETResOKRes, nil
 	}
 
 	newObj := CreateObjectFromValue(s, value, exDurationMs)
 	s.Put(key, newObj, dstore.WithKeepTTL(params[types.KEEPTTL] != ""))
-
-	if params[types.GET] != "" {
-		// TODO: Optimize this because we have alread fetched the
-		// object in the existingObj variable. We can avoid executing
-		// the GET command again.
-
-		// If existingObj is nil then the key does not exist
-		// and we return nil
-		if existingObj == nil {
-			return SETResNilRes, nil
-		}
-
-		return createGETResFromObj(existingObj), nil
-	}
 
 	return SETResOKRes, nil
 }
 
 func executeSET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("SET")
+		return SETResNilRes, errors.ErrWrongArgumentCount("SET")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalSET(c, shard.Thread.Store())
