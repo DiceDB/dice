@@ -27,8 +27,12 @@ func init() {
 }
 
 func newECHORes(message string) *CmdRes {
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VStr{VStr: message},
+	return &CmdRes{Rs: &wire.Result{
+		Response: &wire.Result_ECHORes{
+			ECHORes: &wire.ECHORes{
+				Message: message,
+			},
+		},
 	}}
 }
 
