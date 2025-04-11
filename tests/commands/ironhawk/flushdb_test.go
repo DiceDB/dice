@@ -5,7 +5,13 @@ package ironhawk
 
 import (
 	"testing"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueFLUSHDB(result *wire.Result) interface{} {
+	return result.GetMessage()
+}
 
 func TestFLUSHDB(t *testing.T) {
 	client := getLocalConnection()
@@ -23,7 +29,8 @@ func TestFLUSHDB(t *testing.T) {
 				"GET k2",
 				"GET k3",
 			},
-			expected: []interface{}{"OK", "OK", "OK", "OK", nil, nil, nil},
+			expected:       []interface{}{"OK", "OK", "OK", "OK", "", "", ""},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueSET, extractValueSET, extractValueFLUSHDB, extractValueGET, extractValueGET, extractValueGET},
 		},
 	}
 

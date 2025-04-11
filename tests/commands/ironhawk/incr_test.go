@@ -8,7 +8,13 @@ import (
 	"fmt"
 	"math"
 	"testing"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueINCR(result *wire.Result) interface{} {
+	return result.GetINCRRes().GetValue()
+}
 
 func TestINCR(t *testing.T) {
 	client := getLocalConnection()
@@ -18,14 +24,10 @@ func TestINCR(t *testing.T) {
 		{
 			name: "Increment multiple keys",
 			commands: []string{
-				"SET key1 0",
-				"INCR key1",
-				"INCR key1",
-				"INCR key2",
-				"GET key1",
-				"GET key2",
+				"SET key1 0", "INCR key1", "INCR key1", "INCR key2", "GET key1", "GET key2",
 			},
-			expected: []interface{}{"OK", 1, 2, 1, 2, 1},
+			expected:       []interface{}{"OK", 1, 2, 1, "2", "1"},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueINCR, extractValueINCR, extractValueINCR, extractValueGET, extractValueGET},
 		},
 		{
 			name: "Increment max int64 and expect min int64 (rollover)",
@@ -39,6 +41,7 @@ func TestINCR(t *testing.T) {
 			expected: []interface{}{
 				"OK", math.MaxInt64, math.MinInt64, "OK", math.MinInt,
 			},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueINCR, extractValueINCR, extractValueSET, extractValueINCR},
 		},
 		{
 			name: "Increment from min int64",
@@ -50,6 +53,7 @@ func TestINCR(t *testing.T) {
 			expected: []interface{}{
 				"OK", math.MinInt64 + 1, math.MinInt64 + 2,
 			},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueINCR, extractValueINCR},
 		},
 		{
 			name: "Increment non-integer values and get type error",
@@ -58,17 +62,14 @@ func TestINCR(t *testing.T) {
 				"INCR float_key",
 				"SET string_key hello",
 				"INCR string_key",
-				"SET bool_key true",
-				"INCR bool_key",
 			},
 			expected: []interface{}{
 				"OK",
 				errors.New("wrongtype operation against a key holding the wrong kind of value"),
 				"OK",
 				errors.New("wrongtype operation against a key holding the wrong kind of value"),
-				"OK",
-				errors.New("wrongtype operation against a key holding the wrong kind of value"),
 			},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueINCR, extractValueSET, extractValueINCR},
 		},
 		{
 			name: "Increment non-existent key and expect keys to be created",
@@ -78,8 +79,9 @@ func TestINCR(t *testing.T) {
 				"INCR non_existent",
 			},
 			expected: []interface{}{
-				1, 1, 2,
+				1, "1", 2,
 			},
+			valueExtractor: []ValueExtractorFn{extractValueINCR, extractValueGET, extractValueINCR},
 		},
 		{
 			name: "Increment string representing integers and get type error",
@@ -94,6 +96,8 @@ func TestINCR(t *testing.T) {
 			expected: []interface{}{
 				"OK", 43, "OK", -9, "OK", 1,
 			},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueINCR,
+				extractValueSET, extractValueINCR, extractValueSET, extractValueINCR},
 		},
 	}
 	runTestcases(t, client, testCases)

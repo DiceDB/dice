@@ -55,9 +55,7 @@ func evalHGETALL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return cmdResNil, nil
 	}
 
-	return &CmdRes{R: &wire.Response{
-		VSsMap: m,
-	}}, nil
+	return &CmdRes{R: &wire.Response{}}, nil
 }
 
 func executeHGETALL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

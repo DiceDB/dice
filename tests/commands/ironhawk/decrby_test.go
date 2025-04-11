@@ -5,12 +5,22 @@ package ironhawk
 
 import (
 	"testing"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueDECRBY(result *wire.Result) interface{} {
+	return result.GetDECRBYRes().GetValue()
+}
 
 func TestDECRBY(t *testing.T) {
 	client := getLocalConnection()
 	defer client.Close()
 
+	// TODO: Add test cases for DECRBY with non-integer values
+	// TODO: Add test cases for non existent key
+	// TODO: Add test cases for DECR with negative values
+	// TODO: Add test cases for DECR with min and max int64 values
 	testCases := []TestCase{
 		{
 			name: "DECRBY",
@@ -21,13 +31,8 @@ func TestDECRBY(t *testing.T) {
 				"DECRBY key1 1",
 				"DECRBY key1 1",
 			},
-			expected: []interface{}{
-				"OK",
-				3,
-				1,
-				0,
-				-1,
-			},
+			expected:       []interface{}{"OK", 3, 1, 0, -1},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueDECRBY, extractValueDECRBY, extractValueDECRBY, extractValueDECRBY},
 		},
 	}
 	runTestcases(t, client, testCases)

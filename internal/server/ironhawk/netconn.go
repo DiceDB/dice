@@ -124,7 +124,7 @@ func (h *IOHandler) Write(ctx context.Context, r interface{}) error {
 	return nil
 }
 
-func (h *IOHandler) WriteSync(ctx context.Context, r *wire.Response) error {
+func (h *IOHandler) WriteSync(ctx context.Context, r *wire.Result) error {
 	var b []byte
 	var err error
 

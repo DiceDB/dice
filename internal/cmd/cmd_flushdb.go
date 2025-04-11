@@ -7,6 +7,7 @@ import (
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cFLUSHDB = &CommandMeta{
@@ -17,16 +18,16 @@ var cFLUSHDB = &CommandMeta{
 FLUSHDB deletes all keys present in the database.
 	`,
 	Examples: `
-locahost:7379> SET k1 v1
-OK OK
-locahost:7379> SET k2 v2
-OK OK
-locahost:7379> FLUSHDB
-OK OK
+localhost:7379> SET k1 v1
+OK
+localhost:7379> SET k2 v2
+OK
+localhost:7379> FLUSHDB
+OK
 localhost:7379> GET k1
-OK (nil)
+OK ""
 localhost:7379> GET k2
-OK (nil)
+OK ""
 	`,
 	Eval:    evalFLUSHDB,
 	Execute: executeFLUSHDB,
@@ -35,6 +36,23 @@ OK (nil)
 func init() {
 	CommandRegistry.AddCommand(cFLUSHDB)
 }
+
+func newFLUSHDBRes() *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Status:  wire.Status_OK,
+			Message: "OK",
+			Response: &wire.Result_FLUSHDBRes{
+				FLUSHDBRes: &wire.FLUSHDBRes{},
+			},
+		},
+	}
+}
+
+var (
+	FLUSHDBResOKRes  = newFLUSHDBRes()
+	FLUSHDBResNilRes = newFLUSHDBRes()
+)
 
 // FLUSHDB deletes all keys.
 // The function expects no arguments
@@ -48,11 +66,11 @@ func init() {
 //   - error: Error if wrong number of arguments
 func evalFLUSHDB(c *Cmd, s *store.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 0 {
-		return cmdResNil, errors.ErrWrongArgumentCount("FLUSHDB")
+		return FLUSHDBResNilRes, errors.ErrWrongArgumentCount("FLUSHDB")
 	}
 
 	store.Reset(s)
-	return cmdResOK, nil
+	return FLUSHDBResOKRes, nil
 }
 
 func executeFLUSHDB(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
@@ -62,5 +80,5 @@ func executeFLUSHDB(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 			return nil, err
 		}
 	}
-	return cmdResOK, nil
+	return FLUSHDBResOKRes, nil
 }
