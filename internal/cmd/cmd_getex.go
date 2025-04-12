@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -59,9 +60,25 @@ func init() {
 	CommandRegistry.AddCommand(cGETEX)
 }
 
+func newGETEXRes(obj *object.Obj) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_GETEXRes{
+				GETEXRes: &wire.GETEXRes{
+					Value: getWireValueFromObj(obj),
+				},
+			},
+		},
+	}
+}
+
+var (
+	GETEXResNilRes = newGETEXRes(nil)
+)
+
 func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("GETEX")
+		return GETEXResNilRes, errors.ErrWrongArgumentCount("GETEX")
 	}
 
 	var key = c.C.Args[0]
@@ -80,19 +97,19 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// Raise errors if incompatible parameters are provided
 	// in one command
 	if params[types.EX] != "" && params[types.PX] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
 	} else if params[types.EX] != "" && params[types.EXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
 	} else if params[types.EX] != "" && params[types.PXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
 	} else if params[types.PX] != "" && params[types.EXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
 	} else if params[types.PX] != "" && params[types.PXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
 	} else if params[types.EXAT] != "" && params[types.PXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
 	} else if params[types.PERSIST] != "" && (params[types.EX] != "" || params[types.PX] != "" || params[types.EXAT] != "" || params[types.PXAT] != "") {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
 	}
 	var err error
 	var exDurationSec, exDurationMs int64
@@ -104,10 +121,10 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[types.EX] != "" {
 		exDurationSec, err = strconv.ParseInt(params[types.EX], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "EX")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "EX")
 		}
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "EX")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "EX")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
@@ -115,21 +132,21 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[types.PX] != "" {
 		exDurationMs, err = strconv.ParseInt(params[types.PX], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "PX")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "PX")
 		}
 		if exDurationMs <= 0 || exDurationMs >= MaxEXDurationSec {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "PX")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "PX")
 		}
 	}
 
 	if params[types.EXAT] != "" {
 		tv, err := strconv.ParseInt(params[types.EXAT], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "EXAT")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "EXAT")
 		}
 		exDurationSec = tv - utils.GetCurrentTime().Unix()
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "EXAT")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "EXAT")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
@@ -137,26 +154,17 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[types.PXAT] != "" {
 		tv, err := strconv.ParseInt(params[types.PXAT], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "PXAT")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "PXAT")
 		}
 		exDurationMs = tv - utils.GetCurrentTime().UnixMilli()
 		if exDurationMs <= 0 || exDurationMs >= (MaxEXDurationSec*1000) {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "PXAT")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "PXAT")
 		}
 	}
 
 	existingObj := s.Get(key)
 	if existingObj == nil {
-		return cmdResNil, nil
-	}
-
-	resp, err := evalGET(&Cmd{
-		C: &wire.Command{
-			Cmd:  "GET",
-			Args: []string{key},
-		}}, s)
-	if err != nil {
-		return resp, err
+		return GETEXResNilRes, nil
 	}
 
 	if params[types.PERSIST] != "" {
@@ -165,12 +173,12 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		s.SetExpiry(existingObj, exDurationMs)
 	}
 
-	return resp, nil
+	return newGETEXRes(existingObj), nil
 }
 
 func executeGETEX(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) == 0 {
-		return cmdResNil, errors.ErrWrongArgumentCount("GETEX")
+		return GETEXResNilRes, errors.ErrWrongArgumentCount("GETEX")
 	}
 
 	shard := sm.GetShardForKey(c.C.Args[0])
