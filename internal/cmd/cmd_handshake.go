@@ -31,7 +31,7 @@ or when you establish a subscription.
 	`,
 	Examples: `
 localhost:7379> HANDSHAKE 4c9d0411-6b28-4ee5-b78a-e7e258afa52f command
-OK OK
+OK
 	`,
 	Eval:    evalHANDSHAKE,
 	Execute: executeHANDSHAKE,
