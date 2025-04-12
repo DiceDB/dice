@@ -8,6 +8,7 @@ import (
 	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cTTL = &CommandMeta{
@@ -22,13 +23,13 @@ TTL returns the remaining time to live (in seconds) of a key that has an expirat
 	`,
 	Examples: `
 localhost:7379> SET k 43
-OK OK
+OK
 localhost:7379> TTL k
 OK -1
 localhost:7379> SET k 43 EX 10
-OK OK
+OK
 localhost:7379> TTL k
-OK 9
+OK 8
 localhost:7379> TTL kn
 OK -2
 	`,
@@ -40,32 +41,50 @@ func init() {
 	CommandRegistry.AddCommand(cTTL)
 }
 
+func newTTLRes(seconds int64) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_TTLRes{
+				TTLRes: &wire.TTLRes{
+					Seconds: seconds,
+				},
+			},
+		},
+	}
+}
+
+var (
+	TTLResNilRes      = newTTLRes(0)
+	TTLResNoExpiryRes = newTTLRes(-1)
+	TTLResNotFoundRes = newTTLRes(-2)
+)
+
 func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("TTL")
+		return TTLResNilRes, errors.ErrWrongArgumentCount("TTL")
 	}
 
 	var key = c.C.Args[0]
 
 	obj := s.Get(key)
 	if obj == nil {
-		return cmdResInt(-2), nil
+		return TTLResNotFoundRes, nil
 	}
 
 	exp, isExpirySet := dstore.GetExpiry(obj, s)
 
 	if !isExpirySet {
-		return cmdResInt(-1), nil
+		return TTLResNoExpiryRes, nil
 	}
 
 	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
 
-	return cmdResInt(int64(durationMs / 1000)), nil
+	return newTTLRes(int64(durationMs / 1000)), nil
 }
 
 func executeTTL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("TTL")
+		return TTLResNilRes, errors.ErrWrongArgumentCount("TTL")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalTTL(c, shard.Thread.Store())
