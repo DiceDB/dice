@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
@@ -88,29 +87,5 @@ func getWireValueFromObj(obj *object.Obj) string {
 		return string(obj.Value.([]byte))
 	default:
 		panic("unknown object type " + obj.Type.String())
-	}
-}
-
-func cmdResFromObject(obj *object.Obj) (*CmdRes, error) {
-	if obj == nil {
-		return GETResNilRes, nil
-	}
-
-	switch obj.Type {
-	case object.ObjTypeInt:
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VInt{VInt: obj.Value.(int64)},
-		}}, nil
-	case object.ObjTypeString:
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VStr{VStr: obj.Value.(string)},
-		}}, nil
-	case object.ObjTypeByteArray, object.ObjTypeHLL:
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VBytes{VBytes: obj.Value.([]byte)},
-		}}, nil
-	default:
-		slog.Error("unknown object type", "type", obj.Type)
-		return GETResNilRes, errors.ErrUnknownObjectType
 	}
 }
