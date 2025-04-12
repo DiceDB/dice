@@ -54,11 +54,6 @@ var (
 	EXPIRETIMEResNegTwo = newEXPIRETIMERes(-2)
 )
 
-// evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
-// args should contain only 1 value, the key
-// Returns expiration Unix timestamp in seconds.
-// Returns -1 if the key exists but has no associated expiration time.
-// Returns -2 if the key does not exist.
 func evalEXPIRETIME(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	obj := dst.Get(key)

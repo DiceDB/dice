@@ -50,18 +50,6 @@ var (
 	DELResNilRes = newDELRes(0)
 )
 
-// TODO: DEL command is actually a multi-key command so this needs
-// to be scattered and gathered one step before this.
-
-// evalDEL deletes all the specified keys in args list.
-//
-// Parameters:
-//   - c *Cmd: The command context containing the arguments
-//   - s *dstore.Store: The data store instance
-//
-// Returns:
-//   - *CmdRes: Response containing the count of total deleted keys
-//   - error: Error if wrong number of arguments or wrong value type
 func evalDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
 		return DELResNilRes, errors.ErrWrongArgumentCount("DEL")

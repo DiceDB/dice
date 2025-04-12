@@ -57,8 +57,6 @@ func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			count++
 		}
 	}
-
-	// Return the count as a response
 	return newEXISTSRes(count), nil
 }
 
