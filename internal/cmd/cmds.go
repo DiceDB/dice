@@ -171,14 +171,6 @@ var cmdResInt0 = &CmdRes{R: &wire.Response{
 	Value: &wire.Response_VInt{VInt: 0},
 }}
 
-var cmdResIntNegOne = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: -1},
-}}
-
-var cmdResIntNegTwo = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: -2},
-}}
-
 // Utility functions to create int CmdRes object. This function will get inlined so should cause no overhead.
 func cmdResInt(i int64) *CmdRes {
 	return &CmdRes{R: &wire.Response{

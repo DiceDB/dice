@@ -7,6 +7,7 @@ import (
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cExpireTime *CommandMeta = &CommandMeta{
@@ -14,18 +15,18 @@ var cExpireTime *CommandMeta = &CommandMeta{
 	Syntax:    "EXPIRETIME key",
 	HelpShort: `EXPIRETIME returns the absolute Unix timestamp in seconds at which the given key will expire`,
 	HelpLong: `
-EXPIRETIME returns the absolute Unix timestamp in seconds at which the given key will expire.
+EXPIRETIME returns the absolute timestamp in Unix seconds at which the given key will expire.
 
 The command returns -1 if the key exists but has no associated expiration time.
 The command returns -2 if the key does not exist.
 	`,
 	Examples: `
-locahost:7379> SET k1 v1
-OK OK
-locahost:7379> EXPIRE k1 10
-OK 1
-locahost:7379> EXPIRETIME k1
-OK 1740829178
+localhost:7379> SET k1 v1
+OK
+localhost:7379> EXPIRE k1 10
+OK true
+localhost:7379> EXPIRETIME k1
+OK 1744451192
 	`,
 	Eval:    evalEXPIRETIME,
 	Execute: executeEXPIRETIME,
@@ -34,6 +35,24 @@ OK 1740829178
 func init() {
 	CommandRegistry.AddCommand(cExpireTime)
 }
+
+func newEXPIRETIMERes(expiryAt int64) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_EXPIRETIMERes{
+				EXPIRETIMERes: &wire.EXPIRETIMERes{
+					UnixSec: expiryAt,
+				},
+			},
+		},
+	}
+}
+
+var (
+	EXPIRETIMEResNilRes = newEXPIRETIMERes(0)
+	EXPIRETIMEResNegOne = newEXPIRETIMERes(-1)
+	EXPIRETIMEResNegTwo = newEXPIRETIMERes(-2)
+)
 
 // evalEXPIRETIME returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
 // args should contain only 1 value, the key
@@ -46,22 +65,22 @@ func evalEXPIRETIME(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
 
 	// returns -2 as the object is unavailable
 	if obj == nil {
-		return cmdResIntNegTwo, nil
+		return EXPIRETIMEResNegTwo, nil
 	}
 
 	expiry, ok := dstore.GetExpiry(obj, dst)
 	if !ok {
 		// returns -1 as the key doesn't have an expiration time set
-		return cmdResIntNegOne, nil
+		return EXPIRETIMEResNegOne, nil
 	}
 
 	// returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
-	return cmdResInt(int64(expiry / 1000)), nil
+	return newEXPIRETIMERes(int64(expiry / 1000)), nil
 }
 
 func executeEXPIRETIME(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("EXPIRETIME")
+		return EXPIRETIMEResNilRes, errors.ErrWrongArgumentCount("EXPIRETIME")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalEXPIRETIME(c, shard.Thread.Store())
