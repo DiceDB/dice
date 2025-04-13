@@ -46,9 +46,9 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 			Mode:     t.Mode,
 		}
 
-		res, err := _c.Execute(shardManager)
-		if err != nil {
-			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
+		res, cmdExeErr := _c.Execute(shardManager)
+		if cmdExeErr != nil {
+			res = &cmd.CmdRes{R: &wire.Response{Err: cmdExeErr.Error()}}
 		}
 
 		// TODO: Optimize this. We are doing this for all command execution
@@ -79,7 +79,12 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		watchManager.NotifyWatchers(_c, shardManager, t)
+
+		//// Skip notification for read-only commands; notify only for DM actions
+		//No need to notify is cmd failed with error
+		if !strings.HasPrefix(c.Cmd, "GET") && cmdExeErr == nil {
+			watchManager.NotifyWatchers(_c, shardManager, t)
+		}
 	}
 }
 
