@@ -23,25 +23,25 @@ Supports glob-style patterns:
 - ?: matches any single character`,
 	Examples: `
 localhost:7379> SET k1 v1
-OK OK
+OK
 localhost:7379> SET k2 v2
-OK OK
+OK
 localhost:7379> SET k33 v33
-OK OK
+OK
 localhost:7379> KEYS k?
 OK
-1) "k1"
-2) "k2"
+0) k1
+1) k2
 localhost:7379> KEYS k*
 OK
-1) "k1"
-2) "k2"
-3) "k33"
+0) k1
+1) k2
+2) k33
 localhost:7379> KEYS *
 OK
-1) "k1"
-2) "k2"
-3) "k33"
+0) k1
+1) k2
+2) k33
 	`,
 	Eval:    evalKEYS,
 	Execute: executeKEYS,
@@ -51,14 +51,20 @@ func init() {
 	CommandRegistry.AddCommand(cKEYS)
 }
 
-var (
-	KEYSResNilRes = &CmdRes{
+func newKEYSRes(keys []string) *CmdRes {
+	return &CmdRes{
 		Rs: &wire.Result{
 			Response: &wire.Result_KEYSRes{
-				KEYSRes: &wire.KEYSRes{},
+				KEYSRes: &wire.KEYSRes{
+					Keys: keys,
+				},
 			},
 		},
 	}
+}
+
+var (
+	KEYSResNilRes = newKEYSRes([]string{})
 )
 
 func evalKEYS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
@@ -68,36 +74,22 @@ func evalKEYS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	pattern := c.C.Args[0]
 	keys, err := s.Keys(pattern)
 	if err != nil {
-		return nil, err
+		return KEYSResNilRes, err
 	}
-	return &CmdRes{
-		Rs: &wire.Result{
-			Response: &wire.Result_KEYSRes{
-				KEYSRes: &wire.KEYSRes{
-					Keys: keys,
-				},
-			},
-		},
-	}, nil
+	return newKEYSRes(keys), nil
 }
 
 func executeKEYS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("KEYS")
+		return KEYSResNilRes, errors.ErrWrongArgumentCount("KEYS")
 	}
 	var keys []string
 	for _, shard := range sm.Shards() {
 		res, err := evalKEYS(c, shard.Thread.Store())
 		if err != nil {
-			return nil, err
+			return KEYSResNilRes, err
 		}
 		keys = append(keys, res.Rs.GetKEYSRes().Keys...)
 	}
-	return &CmdRes{
-		Rs: &wire.Result{
-			Response: &wire.Result_KEYSRes{
-				KEYSRes: &wire.KEYSRes{Keys: keys},
-			},
-		},
-	}, nil
+	return newKEYSRes(keys), nil
 }

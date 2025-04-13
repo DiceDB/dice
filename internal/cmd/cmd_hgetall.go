@@ -25,9 +25,9 @@ localhost:7379> HSET k1 f1 v1 f2 v2 f3 v3
 OK 3
 localhost:7379> HGETALL k1
 OK
-f2=v2
-f3=v3
-f1=v1
+0) f1="v1"
+1) f2="v2"
+2) f3="v3"
 localhost:7379> HGETALL k2
 OK
 	`,

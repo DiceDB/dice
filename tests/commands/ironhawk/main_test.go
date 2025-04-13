@@ -94,6 +94,8 @@ func assertEqualResult(t *testing.T, expected interface{}, result *wire.Result, 
 		assert.Equal(t, v, actual)
 	case error:
 		assert.Equal(t, v.Error(), result.Message)
+	case []string:
+		assert.ElementsMatch(t, v, actual)
 	default:
 		assert.Equal(t, v, actual)
 	}

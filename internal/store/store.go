@@ -207,7 +207,6 @@ func (store *Store) Keys(p string) ([]string, error) {
 	var err error
 
 	keys = make([]string, 0, store.store.Len())
-
 	store.store.All(func(k string, _ *object.Obj) bool {
 		if found, e := path.Match(p, k); e != nil {
 			err = e
