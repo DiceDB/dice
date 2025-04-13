@@ -7,8 +7,12 @@ import (
 	"errors"
 	"testing"
 
-	"google.golang.org/protobuf/types/known/structpb"
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueHGETALL(res *wire.Result) interface{} {
+	return res.GetHGETALLRes().Elements
+}
 
 func TestHGETALL(t *testing.T) {
 	client := getLocalConnection()
@@ -19,13 +23,12 @@ func TestHGETALL(t *testing.T) {
 			name:     "Get Value for Field stored at Hash Key",
 			commands: []string{"HSET k f1 v1 f2 v2", "HGETALL k"},
 			expected: []interface{}{2,
-				[]*structpb.Value{
-					structpb.NewStringValue("f1"),
-					structpb.NewStringValue("v1"),
-					structpb.NewStringValue("f2"),
-					structpb.NewStringValue("v2"),
+				[]*wire.HElement{
+					{Key: "f1", Value: "v1"},
+					{Key: "f2", Value: "v2"},
 				},
 			},
+			valueExtractor: []ValueExtractorFn{extractValueHSET, extractValueHGETALL},
 		},
 		{
 			name:     "HGETALL with no key argument",
@@ -33,6 +36,7 @@ func TestHGETALL(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'HGETALL' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil},
 		},
 		{
 			name:     "HGETALL with non hash key",
@@ -40,6 +44,7 @@ func TestHGETALL(t *testing.T) {
 			expected: []interface{}{"OK",
 				errors.New("wrongtype operation against a key holding the wrong kind of value"),
 			},
+			valueExtractor: []ValueExtractorFn{extractValueSET, nil},
 		},
 	}
 	runTestcases(t, client, testCases)

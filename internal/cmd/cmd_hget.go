@@ -21,7 +21,7 @@ The command returns empty string "" if the key or field does not exist.
 	`,
 	Examples: `
 localhost:7379> HSET k1 f1 v1
-OK "1"
+OK 1
 localhost:7379> HGET k1 f1
 OK "v1"
 localhost:7379> HGET k2 f1
