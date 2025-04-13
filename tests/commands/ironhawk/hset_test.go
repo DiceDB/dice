@@ -6,7 +6,13 @@ package ironhawk
 import (
 	"errors"
 	"testing"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueHSET(res *wire.Result) interface{} {
+	return res.GetHSETRes().Count
+}
 
 func TestHSET(t *testing.T) {
 	client := getLocalConnection()
@@ -14,9 +20,10 @@ func TestHSET(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name:     "Set Field Value at Key stored in Hash",
-			commands: []string{"HSET k f v"},
-			expected: []interface{}{1},
+			name:           "Set Field Value at Key stored in Hash",
+			commands:       []string{"HSET k f v"},
+			expected:       []interface{}{1},
+			valueExtractor: []ValueExtractorFn{extractValueHSET},
 		},
 		{
 			name:     "Set Hash on non-hash Key",
@@ -24,6 +31,7 @@ func TestHSET(t *testing.T) {
 			expected: []interface{}{"OK",
 				errors.New("wrongtype operation against a key holding the wrong kind of value"),
 			},
+			valueExtractor: []ValueExtractorFn{extractValueSET, nil},
 		},
 		{
 			name:     "Set Hash with no Field and Value",
@@ -31,6 +39,7 @@ func TestHSET(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'HSET' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil, nil},
 		},
 	}
 	runTestcases(t, client, testCases)
