@@ -75,7 +75,7 @@ func evalINCRBY(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 func executeINCRBY(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 2 {
-		return cmdResNil, errors.ErrWrongArgumentCount("INCRBY")
+		return INCRBYResNilRes, errors.ErrWrongArgumentCount("INCRBY")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalINCRBY(c, shard.Thread.Store())

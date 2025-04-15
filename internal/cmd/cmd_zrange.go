@@ -25,6 +25,7 @@ The elements are considered to be ordered from the lowest to the highest score. 
 stop are 0-based indexes, where 0 is the first element, 1 is the next element and so on.`,
 	Examples: `
 localhost:7379> ZADD s 1 a 2 b 3 c 4 d 5 e
+OK 5
 localhost:7379> ZRANGE s 1 3
 OK
 0) a=1

@@ -9,6 +9,7 @@ import (
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -46,25 +47,38 @@ func init() {
 	CommandRegistry.AddCommand(cHGETWATCH)
 }
 
+func newHGETWATCHRes() *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_HGETWATCHRes{},
+		},
+	}
+}
+
+var (
+	HGETWATCHResNilRes = newHGETWATCHRes()
+	HGETWATCHResOKRes  = newHGETWATCHRes()
+)
+
 func evalHGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	r, err := evalHGET(c, s)
 	if err != nil {
 		return nil, err
 	}
 
-	if r.R.Attrs == nil {
-		r.R.Attrs = &structpb.Struct{
+	if r.Rs.Attrs == nil {
+		r.Rs.Attrs = &structpb.Struct{
 			Fields: make(map[string]*structpb.Value),
 		}
 	}
 
-	r.R.Attrs.Fields["fingerprint"] = structpb.NewStringValue(strconv.FormatUint(uint64(c.Fingerprint()), 10))
-	return r, nil
+	r.Rs.Attrs.Fields["fingerprint"] = structpb.NewStringValue(strconv.FormatUint(uint64(c.Fingerprint()), 10))
+	return HGETWATCHResOKRes, nil
 }
 
 func executeHGETWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 2 {
-		return cmdResNil, errors.ErrWrongArgumentCount("HGET.WATCH")
+		return HGETWATCHResNilRes, errors.ErrWrongArgumentCount("HGET.WATCH")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalHGETWATCH(c, shard.Thread.Store())

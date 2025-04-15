@@ -49,7 +49,6 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 		res, err := _c.Execute(shardManager)
 		if err != nil {
 			res = &cmd.CmdRes{
-				R: &wire.Response{Err: err.Error()},
 				Rs: &wire.Result{
 					Status:  wire.Status_ERR,
 					Message: err.Error(),

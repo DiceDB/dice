@@ -44,7 +44,9 @@ func (c *Cmd) Key() string {
 }
 
 func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
-	res := GetNilRes()
+	res := &CmdRes{
+		Rs: &wire.Result{},
+	}
 
 	err := errors.ErrUnknownCmd(c.C.Cmd)
 	start := time.Now()
@@ -65,7 +67,6 @@ func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 }
 
 type CmdRes struct {
-	R        *wire.Response
 	Rs       *wire.Result
 	ClientID string
 }
@@ -151,29 +152,4 @@ func (cmd *DiceDBCmd) Key() string {
 		c = cmd.Args[0]
 	}
 	return c
-}
-
-func GetNilRes() *CmdRes {
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VNil{VNil: true},
-	}}
-}
-
-var cmdResNil = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VNil{VNil: true},
-}, Rs: &wire.Result{}}
-
-var cmdResOK = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VStr{VStr: "OK"},
-}}
-
-var cmdResInt0 = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: 0},
-}}
-
-// Utility functions to create int CmdRes object. This function will get inlined so should cause no overhead.
-func cmdResInt(i int64) *CmdRes {
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: i},
-	}}
 }

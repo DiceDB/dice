@@ -42,11 +42,16 @@ func newEXISTSRes(count int64) *CmdRes {
 	}}
 }
 
+var (
+	EXISTSResNilRes = newEXISTSRes(0)
+	EXISTSResOKRes  = newEXISTSRes(1)
+)
+
 // TODO: EXISTS command is actually a multi-key command so this needs
 // to be scattered and gathered one step before this.
 func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("EXISTS")
+		return EXISTSResNilRes, errors.ErrWrongArgumentCount("EXISTS")
 	}
 
 	var count int64
@@ -62,7 +67,7 @@ func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("EXISTS")
+		return EXISTSResNilRes, errors.ErrWrongArgumentCount("EXISTS")
 	}
 	var count int64
 	var shardMap = make(map[*shard.Shard][]string)
