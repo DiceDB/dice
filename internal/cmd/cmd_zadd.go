@@ -11,6 +11,7 @@ import (
 	"github.com/dicedb/dice/internal/shardmanager"
 	dsstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/types"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cZADD = &CommandMeta{
@@ -51,9 +52,25 @@ func init() {
 	CommandRegistry.AddCommand(cZADD)
 }
 
+func newZADDRes(count int64) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_ZADDRes{
+				ZADDRes: &wire.ZADDRes{
+					Count: count,
+				},
+			},
+		},
+	}
+}
+
+var (
+	ZADDResNilRes = newZADDRes(0)
+)
+
 func evalZADD(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 3 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ZADD")
+		return ZADDResNilRes, errors.ErrWrongArgumentCount("ZADD")
 	}
 
 	key := c.C.Args[0]
@@ -61,13 +78,13 @@ func evalZADD(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	params, nonParams := parseParams(c.C.Args[1:])
 
 	if len(nonParams)%2 != 0 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ZADD")
+		return ZADDResNilRes, errors.ErrWrongArgumentCount("ZADD")
 	}
 
 	for i := 0; i < len(nonParams); i += 2 {
 		score, err := strconv.ParseInt(nonParams[i], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidNumberFormat
+			return ZADDResNilRes, errors.ErrInvalidNumberFormat
 		}
 		scores = append(scores, score)
 		members = append(members, nonParams[i+1])
@@ -80,7 +97,7 @@ func evalZADD(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 		s.Put(key, s.NewObj(ss, -1, object.ObjTypeSortedSet), dsstore.WithPutCmd(dsstore.ZAdd))
 	} else {
 		if obj.Type != object.ObjTypeSortedSet {
-			return cmdResNil, errors.ErrWrongTypeOperation
+			return ZADDResNilRes, errors.ErrWrongTypeOperation
 		}
 		ss = obj.Value.(*types.SortedSet)
 	}
@@ -88,14 +105,14 @@ func evalZADD(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	// Note: Validation of the params is done in the types.SortedSet.ZADD method
 	count, err := ss.ZADD(scores, members, params)
 	if err != nil {
-		return cmdResNil, err
+		return ZADDResNilRes, err
 	}
-	return cmdResInt(count), nil
+	return newZADDRes(count), nil
 }
 
 func executeZADD(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) < 3 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ZADD")
+		return ZADDResNilRes, errors.ErrWrongArgumentCount("ZADD")
 	}
 
 	shard := sm.GetShardForKey(c.C.Args[0])

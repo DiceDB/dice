@@ -26,6 +26,10 @@ stop are 0-based indexes, where 0 is the first element, 1 is the next element an
 	Examples: `
 localhost:7379> ZADD s 1 a 2 b 3 c 4 d 5 e
 localhost:7379> ZRANGE s 1 3
+OK
+0) a=1
+1) b=2
+2) c=3
 `,
 	Eval:    evalZRANGE,
 	Execute: executeZRANGE,
