@@ -3,7 +3,13 @@ package ironhawk
 import (
 	"errors"
 	"testing"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueZREM(res *wire.Result) interface{} {
+	return res.GetZREMRes().Count
+}
 
 func TestZREM(t *testing.T) {
 	client := getLocalConnection()
@@ -14,15 +20,16 @@ func TestZREM(t *testing.T) {
 			name:     "Call ZREM with bad arguments",
 			commands: []string{"ZREM", "ZREM key"},
 			expected: []interface{}{
-				errors.New("wrong number of arguments for 'ZREM' command"), errors.New("wrong number of arguments for 'ZREM' command"),
+				errors.New("wrong number of arguments for 'ZREM' command"),
+				errors.New("wrong number of arguments for 'ZREM' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil, nil},
 		},
 		{
-			name:     "Call ZREM with non-existing key",
-			commands: []string{"ZREM nonExistingKey member1"},
-			expected: []interface{}{
-				int64(0),
-			},
+			name:           "Call ZREM with non-existing key",
+			commands:       []string{"ZREM nonExistingKey member1"},
+			expected:       []interface{}{0},
+			valueExtractor: []ValueExtractorFn{extractValueZREM},
 		},
 		{
 			name: "Call ZREM on a key which is not a sorted set",
@@ -34,6 +41,7 @@ func TestZREM(t *testing.T) {
 				"OK",
 				errors.New("wrongtype operation against a key holding the wrong kind of value"),
 			},
+			valueExtractor: []ValueExtractorFn{extractValueSET, nil},
 		},
 		{
 			name: "Call ZREM with existing key and members",
@@ -42,9 +50,10 @@ func TestZREM(t *testing.T) {
 				"ZREM key1 member1 member2",
 			},
 			expected: []interface{}{
-				int64(3), // member1 added
-				int64(2), // member1,member2 removed
+				3, // member1 added
+				2, // member1,member2 removed
 			},
+			valueExtractor: []ValueExtractorFn{extractValueZADD, extractValueZREM},
 		},
 	}
 	runTestcases(t, client, testCases)

@@ -13,7 +13,6 @@ import (
 	"github.com/dicedb/dicedb-go"
 	"github.com/dicedb/dicedb-go/wire"
 	assert "github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestMain(m *testing.M) {
@@ -27,51 +26,6 @@ type TestCase struct {
 	expected       []interface{}
 	delay          []time.Duration
 	valueExtractor []ValueExtractorFn
-}
-
-func assertEqual(t *testing.T, expected interface{}, actual *wire.Response) {
-	switch v := expected.(type) {
-	case string:
-		assert.Equal(t, v, actual.GetVStr())
-	case int64:
-		assert.Equal(t, v, actual.GetVInt())
-	case float64:
-		assert.Equal(t, v, actual.GetVFloat())
-	case int:
-		assert.Equal(t, int64(v), actual.GetVInt())
-	case nil:
-		assert.Equal(t, true, actual.GetVNil())
-	case error:
-		assert.Equal(t, v.Error(), actual.Err)
-	case []*structpb.Value:
-		if actual.VList != nil {
-			assert.ElementsMatch(t, v, actual.GetVList())
-		}
-	case []interface{}:
-		expected := expected.([]interface{})
-
-		if !assert.Equal(t, len(expected), len(actual.GetVList())) {
-			return
-		}
-
-		var actualArray []interface{}
-		for i, v := range actual.GetVList() {
-			//TODO: handle structpb.Value_StructValue & structpb.Value_ListValue
-			switch expected[i].(type) {
-			case string:
-				actualArray = append(actualArray, v.GetStringValue())
-			case float64:
-				actualArray = append(actualArray, v.GetNumberValue())
-			case int64:
-				actualArray = append(actualArray, v.GetNumberValue())
-			case int:
-				actualArray = append(actualArray, int64(v.GetNumberValue()))
-			case nil:
-				actualArray = append(actualArray, nil)
-			}
-		}
-		assert.ElementsMatch(t, expected, actualArray)
-	}
 }
 
 func assertEqualResult(t *testing.T, expected interface{}, result *wire.Result, valueExtractor ValueExtractorFn) {
