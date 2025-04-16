@@ -72,7 +72,7 @@ func evalEXPIRETIME(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
 	}
 
 	// returns the absolute Unix timestamp (since January 1, 1970) in seconds at which the given key will expire
-	return newEXPIRETIMERes(int64(expiry / 1000)), nil
+	return newEXPIRETIMERes(expiry / 1000), nil
 }
 
 func executeEXPIRETIME(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

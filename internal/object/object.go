@@ -32,7 +32,7 @@ type Obj struct {
 
 	// LastAccessedAt stores the last access timestamp of the object.
 	// It helps track when the object was last accessed and may be used for cache eviction or freshness tracking.
-	LastAccessedAt uint32
+	LastAccessedAt int64
 
 	// Value holds the actual content or data of the object, which can be of any type.
 	// This allows flexibility in storing various kinds of objects (simple or complex).

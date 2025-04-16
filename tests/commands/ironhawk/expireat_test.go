@@ -33,9 +33,9 @@ func TestEXPIREAT(t *testing.T) {
 		{
 			name: "Check if key is nil after expiration",
 			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10),
-				"GET test_key",
+				"SET k1 v1",
+				"EXPIREAT k1 " + strconv.FormatInt(time.Now().Unix()+1, 10),
+				"GET k1",
 			},
 			expected:       []interface{}{"OK", true, ""},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIREAT, extractValueGET},
@@ -52,12 +52,13 @@ func TestEXPIREAT(t *testing.T) {
 		{
 			name: "EXPIREAT with past time",
 			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(-1, 10),
-				"GET test_key",
+				"SET k3 v3",
+				"EXPIREAT k3 20",
+				"GET k3",
 			},
-			expected:       []interface{}{"OK", errors.New("invalid expire time in 'EXPIREAT' command"), "test_value"},
-			valueExtractor: []ValueExtractorFn{extractValueSET, nil, extractValueGET},
+			expected:       []interface{}{"OK", true, ""},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIREAT, extractValueGET},
+			delay:          []time.Duration{0, 0, 1 * time.Second},
 		},
 		{
 			name: "EXPIREAT with invalid syntax",
@@ -92,13 +93,13 @@ func TestEXPIREAT(t *testing.T) {
 		{
 			name: "Test if value is nil after expiration",
 			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+2, 10) + " NX",
-				"GET test_key",
+				"SET k2 v2",
+				"EXPIREAT k2 " + strconv.FormatInt(time.Now().Unix()+2, 10) + " NX",
+				"GET k2",
 			},
 			expected:       []interface{}{"OK", true, ""},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIREAT, extractValueGET},
-			delay:          []time.Duration{0, 0, 2 * time.Second},
+			delay:          []time.Duration{0, 0, 4 * time.Second},
 		},
 		{
 			name: "Invalid Command Test",

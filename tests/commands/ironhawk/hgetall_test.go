@@ -6,14 +6,20 @@ package ironhawk
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/dicedb/dicedb-go/wire"
 )
 
 func extractValueHGETALL(res *wire.Result) interface{} {
+	elements := res.GetHGETALLRes().Elements
+	sort.Slice(elements, func(i, j int) bool {
+		return elements[i].Key < elements[j].Key
+	})
+
 	str := ""
-	for _, element := range res.GetHGETALLRes().Elements {
+	for _, element := range elements {
 		str += fmt.Sprintf("%s: %s\n", element.Key, element.Value)
 	}
 	return str

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
 )
 
 // EvictionStats tracks common statistics for all eviction strategies
@@ -43,7 +42,7 @@ const (
 // evictionItem stores essential data needed for eviction decision
 type evictionItem struct {
 	key          string
-	lastAccessed uint32
+	lastAccessed int64
 }
 
 // EvictionStrategy defines the interface for different eviction strategies
@@ -77,15 +76,6 @@ func (b *BaseEvictionStrategy) GetStats() EvictionStats {
 	return b.stats
 }
 
-func getCurrentClock() uint32 {
-	return uint32(utils.GetCurrentTime().Unix()) & 0x00FFFFFF
-}
-
-func GetIdleTime(lastAccessedAt uint32) uint32 {
-	c := getCurrentClock()
-	lastAccessedAt &= 0x00FFFFFF
-	if c >= lastAccessedAt {
-		return c - lastAccessedAt
-	}
-	return (0x00FFFFFF - lastAccessedAt) + c
+func GetIdleTime(lastAccessedAt int64) int64 {
+	return time.Now().UnixMilli() - lastAccessedAt
 }

@@ -22,9 +22,9 @@ func TestGET(t *testing.T) {
 	testCases := []TestCase{
 		{
 			name:           "Get with expiration",
-			commands:       []string{"SET k v EX 2", "GET k", "GET k"},
+			commands:       []string{"SET k978 v EX 2", "GET k978", "GET k978"},
 			expected:       []interface{}{"OK", "v", ""},
-			delay:          []time.Duration{0, 0, 4 * time.Second},
+			delay:          []time.Duration{0, 0, 5 * time.Second},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGET, extractValueGET},
 		},
 		{

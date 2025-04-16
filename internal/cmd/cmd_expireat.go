@@ -79,7 +79,7 @@ func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return EXPIREATResNilRes, errors.ErrInvalidExpireTime("EXPIREAT")
 	}
 
-	isExpirySet, err := dstore.EvaluateAndSetExpiry(c.C.Args[2:], exUnixTimeSec, key, s)
+	isExpirySet, err := dstore.EvaluateAndSetExpiry(c.C.Args[2:], exUnixTimeSec*1000, key, s)
 	if err != nil {
 		return EXPIREATResNilRes, err
 	}

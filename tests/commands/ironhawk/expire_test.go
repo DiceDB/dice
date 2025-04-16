@@ -33,9 +33,9 @@ func TestEXPIRE(t *testing.T) {
 		{
 			name: "Check if key is nil after expiration",
 			commands: []string{
-				"SET test_key test_value",
-				"EXPIRE test_key 1",
-				"GET test_key",
+				"SET k1 v1",
+				"EXPIRE k1 1",
+				"GET k1",
 			},
 			expected:       []interface{}{"OK", true, ""},
 			delay:          []time.Duration{0, 0, 3 * time.Second},

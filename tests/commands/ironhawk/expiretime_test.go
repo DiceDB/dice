@@ -44,9 +44,9 @@ func TestEXPIRETIME(t *testing.T) {
 		{
 			name: "EXPIRETIME with past time",
 			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key 1724167183",
-				"EXPIRETIME test_key",
+				"SET k1 v1",
+				"EXPIREAT k1 100",
+				"EXPIRETIME k1",
 			},
 			expected:       []interface{}{"OK", true, -2},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIREAT, extractValueEXPIRETIME},

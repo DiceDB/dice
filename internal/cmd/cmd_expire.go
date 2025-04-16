@@ -5,9 +5,9 @@ package cmd
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
@@ -86,7 +86,7 @@ func evalEXPIRE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return EXPIREResNotSetRes, nil
 	}
 
-	isExpirySet, err := dstore.EvaluateAndSetExpiry(c.C.Args[2:], utils.AddSecondsToUnixEpoch(exDurationSec), key, s)
+	isExpirySet, err := dstore.EvaluateAndSetExpiry(c.C.Args[2:], time.Now().UnixMilli()+exDurationSec*1000, key, s)
 	if err != nil {
 		return EXPIREResNilRes, err
 	}

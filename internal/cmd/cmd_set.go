@@ -6,10 +6,10 @@ package cmd
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dice/internal/types"
@@ -168,7 +168,7 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		if err != nil {
 			return SETResNilRes, errors.ErrInvalidValue("SET", "EXAT")
 		}
-		exDurationSec = tv - utils.GetCurrentTime().Unix()
+		exDurationSec = tv - time.Now().Unix()
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
 			return SETResNilRes, errors.ErrInvalidValue("SET", "EXAT")
 		}
@@ -180,7 +180,7 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		if err != nil {
 			return SETResNilRes, errors.ErrInvalidValue("SET", "PXAT")
 		}
-		exDurationMs = tv - utils.GetCurrentTime().UnixMilli()
+		exDurationMs = tv - time.Now().UnixMilli()
 		if exDurationMs <= 0 || exDurationMs >= (MaxEXDurationSec*1000) {
 			return SETResNilRes, errors.ErrInvalidValue("SET", "PXAT")
 		}

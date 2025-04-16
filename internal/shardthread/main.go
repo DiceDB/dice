@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
-	"github.com/dicedb/dice/internal/server/utils"
 	dstore "github.com/dicedb/dice/internal/store"
 )
 
@@ -26,7 +25,7 @@ func NewShardThread(id int, gec chan error, evictionStrategy dstore.EvictionStra
 		id:               id,
 		store:            dstore.NewStore(nil, evictionStrategy, id),
 		globalErrorChan:  gec,
-		lastCronExecTime: utils.GetCurrentTime(),
+		lastCronExecTime: time.Now(),
 		cronFrequency:    config.ShardCronFrequency,
 	}
 }
@@ -50,7 +49,7 @@ func (shard *ShardThread) Start(ctx context.Context) {
 // runCronTasks runs the cron tasks for the shard. This includes deleting expired keys.
 func (shard *ShardThread) runCronTasks() {
 	dstore.DeleteExpiredKeys(shard.store)
-	shard.lastCronExecTime = utils.GetCurrentTime()
+	shard.lastCronExecTime = time.Now()
 }
 
 // cleanup handles cleanup logic when the shard stops.

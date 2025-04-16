@@ -4,8 +4,9 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
@@ -79,9 +80,9 @@ func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return TTLResNoExpiryRes, nil
 	}
 
-	durationMs := exp - utils.GetCurrentTime().UnixMilli()
+	durationMs := exp - time.Now().UnixMilli()
 
-	return newTTLRes(int64(durationMs / 1000)), nil
+	return newTTLRes(durationMs / 1000), nil
 }
 
 func executeTTL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

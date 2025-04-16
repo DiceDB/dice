@@ -22,8 +22,8 @@ func TestTTL(t *testing.T) {
 	testCases := []TestCase{
 		{
 			name:           "TTL Simple Value",
-			commands:       []string{"SET foo bar", "GETEX foo EX 5", "TTL foo"},
-			expected:       []interface{}{"OK", "bar", 4},
+			commands:       []string{"SET k101 v1", "GETEX k101 EX 5", "TTL k101"},
+			expected:       []interface{}{"OK", "v1", 4},
 			delay:          []time.Duration{0, 0, 500 * time.Millisecond},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGETEX, extractValueTTL},
 		},

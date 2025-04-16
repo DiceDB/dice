@@ -46,16 +46,16 @@ func TestSET(t *testing.T) {
 		},
 		{
 			name:           "Set with EX option",
-			commands:       []string{"SET k v EX 2", "GET k", "GET k"},
-			expected:       []interface{}{"OK", "v", ""},
-			delay:          []time.Duration{0, 0, 4 * time.Second},
+			commands:       []string{"SET k100 v1 EX 2", "GET k100", "GET k100"},
+			expected:       []interface{}{"OK", "v1", ""},
+			delay:          []time.Duration{0, 0, 3 * time.Second},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGET, extractValueGET},
 		},
 		{
 			name:           "Set with PX option",
-			commands:       []string{"SET k v PX 2000", "GET k", "GET k"},
-			expected:       []interface{}{"OK", "v", ""},
-			delay:          []time.Duration{0, 0, 5 * time.Second},
+			commands:       []string{"SET k200 v2 PX 2000", "GET k200", "GET k200"},
+			expected:       []interface{}{"OK", "v2", ""},
+			delay:          []time.Duration{0, 0, 3 * time.Second},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGET, extractValueGET},
 		},
 		{
