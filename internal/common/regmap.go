@@ -3,44 +3,41 @@
 
 package common
 
-import "sync"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 type RegMap[K comparable, V any] struct {
-	M  map[K]V
-	mu sync.RWMutex
+	DefaultV V
+	M        sync.Map
+	count    atomic.Int64
 }
 
 func (t *RegMap[K, V]) Put(key K, value V) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.M[key] = value
+	t.M.Store(key, value)
+	t.count.Add(1)
 }
 
 func (t *RegMap[K, V]) Get(key K) (V, bool) {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	value, ok := t.M[key]
-	return value, ok
+	value, ok := t.M.Load(key)
+	if !ok {
+		return t.DefaultV, false
+	}
+	return value.(V), true
 }
 
 func (t *RegMap[K, V]) Delete(key K) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	delete(t.M, key)
+	t.M.Delete(key)
+	t.count.Add(-1)
 }
 
 func (t *RegMap[K, V]) Len() int {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return len(t.M)
+	return int(t.count.Load())
 }
 
 func (t *RegMap[K, V]) All(f func(k K, obj V) bool) {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	for k, v := range t.M {
-		if !f(k, v) {
-			break
-		}
-	}
+	t.M.Range(func(key, value any) bool {
+		return f(key.(K), value.(V))
+	})
 }

@@ -6,7 +6,13 @@ package ironhawk
 import (
 	"errors"
 	"testing"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueZADD(res *wire.Result) interface{} {
+	return res.GetZADDRes().Count
+}
 
 func TestZADD(t *testing.T) {
 	client := getLocalConnection()
@@ -19,6 +25,7 @@ func TestZADD(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'ZADD' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil},
 		},
 		{
 			name:     "Call ZADD with just the key",
@@ -26,6 +33,7 @@ func TestZADD(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'ZADD' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil},
 		},
 		{
 			name:     "Call ZADD with just key and score",
@@ -33,6 +41,7 @@ func TestZADD(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'ZADD' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil},
 		},
 		{
 			name: "Call ZADD with NX, XX, and CH flags",
@@ -44,12 +53,13 @@ func TestZADD(t *testing.T) {
 				"ZADD key CH 4 memberNX", // Update score with CH flag
 			},
 			expected: []interface{}{
-				int64(1), // Member added with NX
-				int64(0), // Member not updated with NX
-				int64(0), // Member updated with XX
-				int64(0), // Member not added with XX
-				int64(1), // 1 change (score updated with CH)
+				1, // Member added with NX
+				0, // Member not updated with NX
+				0, // Member updated with XX
+				0, // Member not added with XX
+				1, // 1 change (score updated with CH)
 			},
+			valueExtractor: []ValueExtractorFn{extractValueZADD, extractValueZADD, extractValueZADD, extractValueZADD, extractValueZADD},
 		},
 		{
 			name: "Call ZADD with GT and LT flags",
@@ -62,13 +72,14 @@ func TestZADD(t *testing.T) {
 				"ZADD key LT 2 memberLT", // Try to update with higher score using LT
 			},
 			expected: []interface{}{
-				int64(1), // Member added
-				int64(0), // Member updated with GT
-				int64(0), // Member not updated with GT
-				int64(1), // Member added
-				int64(0), // Member updated with LT
-				int64(0), // Member not updated with LT
+				1, // Member added
+				0, // Member updated with GT
+				0, // Member not updated with GT
+				1, // Member added
+				0, // Member updated with LT
+				0, // Member not updated with LT
 			},
+			valueExtractor: []ValueExtractorFn{extractValueZADD, extractValueZADD, extractValueZADD, extractValueZADD, extractValueZADD, extractValueZADD},
 		},
 		{
 			name: "Call ZADD with INCR flag",
@@ -77,9 +88,10 @@ func TestZADD(t *testing.T) {
 				"ZADD key1 INCR 2 memberINCR", // Increment score of existing member
 			},
 			expected: []interface{}{
-				int64(1), // Incremented score returned
-				int64(3), // Incremented score returned
+				1, // Incremented score returned
+				3, // Incremented score returned
 			},
+			valueExtractor: []ValueExtractorFn{extractValueZADD, extractValueZADD},
 		},
 		{
 			name: "Call ZADD with invalid flag combinations",
@@ -93,6 +105,7 @@ func TestZADD(t *testing.T) {
 				errors.New("GT, LT, and/or NX options at the same time are not compatible"),
 				errors.New("INCR option supports a single increment-element pair"),
 			},
+			valueExtractor: []ValueExtractorFn{nil, nil, nil},
 		},
 		{
 			name: "Call ZADD with CH flag and multiple changes",
@@ -102,10 +115,11 @@ func TestZADD(t *testing.T) {
 				"ZADD key CH 3 member2", // Add another new member
 			},
 			expected: []interface{}{
-				int64(1), // 1 change (new member added)
-				int64(1), // 1 change (score updated)
-				int64(1), // 1 change (new member added)
+				1, // 1 change (new member added)
+				1, // 1 change (score updated)
+				1, // 1 change (new member added)
 			},
+			valueExtractor: []ValueExtractorFn{extractValueZADD, extractValueZADD, extractValueZADD},
 		},
 	}
 	runTestcases(t, client, testCases)

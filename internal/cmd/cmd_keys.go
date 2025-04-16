@@ -8,7 +8,6 @@ import (
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var cKEYS = &CommandMeta{
@@ -24,25 +23,25 @@ Supports glob-style patterns:
 - ?: matches any single character`,
 	Examples: `
 localhost:7379> SET k1 v1
-OK OK
+OK
 localhost:7379> SET k2 v2
-OK OK
+OK
 localhost:7379> SET k33 v33
-OK OK
+OK
 localhost:7379> KEYS k?
 OK
-1) "k1"
-2) "k2"
+0) k1
+1) k2
 localhost:7379> KEYS k*
 OK
-1) "k1"
-2) "k2"
-3) "k33"
+0) k1
+1) k2
+2) k33
 localhost:7379> KEYS *
 OK
-1) "k1"
-2) "k2"
-3) "k33"
+0) k1
+1) k2
+2) k33
 	`,
 	Eval:    evalKEYS,
 	Execute: executeKEYS,
@@ -52,45 +51,47 @@ func init() {
 	CommandRegistry.AddCommand(cKEYS)
 }
 
+func newKEYSRes(keys []string) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_KEYSRes{
+				KEYSRes: &wire.KEYSRes{
+					Keys: keys,
+				},
+			},
+		},
+	}
+}
+
+var (
+	KEYSResNilRes = newKEYSRes([]string{})
+)
+
 func evalKEYS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("KEYS")
+		return KEYSResNilRes, errors.ErrWrongArgumentCount("KEYS")
 	}
 	pattern := c.C.Args[0]
 	keys, err := s.Keys(pattern)
 	if err != nil {
-		return nil, err
+		return KEYSResNilRes, err
 	}
-	return createResponseFromArray(keys), nil
+	return newKEYSRes(keys), nil
 }
 
 func executeKEYS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("KEYS")
+		return KEYSResNilRes, errors.ErrWrongArgumentCount("KEYS")
 	}
 	var keys []string
 	for _, shard := range sm.Shards() {
 		res, err := evalKEYS(c, shard.Thread.Store())
 		if err != nil {
-			return nil, err
+			return KEYSResNilRes, err
 		}
-		for _, v := range res.R.GetVList() {
-			keys = append(keys, v.GetStringValue())
-		}
+		keys = append(keys, res.Rs.GetKEYSRes().Keys...)
 	}
-	finalRes := createResponseFromArray(keys)
-	return finalRes, nil
-}
-
-func createResponseFromArray(arr []string) *CmdRes {
-	if len(arr) == 0 {
-		return cmdResNil
-	}
-	var res []*structpb.Value
-	for _, v := range arr {
-		val := structpb.NewStringValue(v)
-		res = append(res, val)
-	}
-	return &CmdRes{R: &wire.Response{
-		VList: res}}
+	return newKEYSRes(keys), nil
 }

@@ -5,10 +5,10 @@ package store
 
 import (
 	"strings"
+	"time"
 
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
 )
 
 const (
@@ -23,10 +23,10 @@ func hasExpired(obj *object.Obj, store *Store) bool {
 	if !ok {
 		return false
 	}
-	return exp <= uint64(utils.GetCurrentTime().UnixMilli())
+	return exp <= time.Now().UnixMilli()
 }
 
-func GetExpiry(obj *object.Obj, store *Store) (uint64, bool) {
+func GetExpiry(obj *object.Obj, store *Store) (int64, bool) {
 	exp, ok := store.expires.Get(obj)
 	return exp, ok
 }
@@ -36,43 +36,18 @@ func DelExpiry(obj *object.Obj, store *Store) {
 }
 
 // TODO: Optimize
-//   - Sampling
-//   - Unnecessary iteration
-func expireSample(store *Store) float32 {
-	var limit = 20
-	var expiredCount = 0
-	var keysToDelete []string
-
-	// Collect keys to be deleted
+func deleteAllExpiredKeys(store *Store) {
 	store.store.All(func(keyPtr string, obj *object.Obj) bool {
-		limit--
 		if hasExpired(obj, store) {
-			keysToDelete = append(keysToDelete, keyPtr)
-			expiredCount++
+			store.DelByPtr(keyPtr, WithDelCmd(Del))
 		}
-		// once we iterated to 20 keys that have some expiration set
-		// we break the loop
-		return limit >= 0
+		return true
 	})
-
-	// Delete the keys outside the read lock
-	for _, keyPtr := range keysToDelete {
-		store.DelByPtr(keyPtr, WithDelCmd(Del))
-	}
-
-	return float32(expiredCount) / float32(20.0)
 }
 
 // DeleteExpiredKeys deletes all the expired keys - the active way
 func DeleteExpiredKeys(store *Store) {
-	for {
-		frac := expireSample(store)
-		// if the sample had less than 25% keys expired
-		// we break the loop.
-		if frac < 0.25 {
-			break
-		}
-	}
+	deleteAllExpiredKeys(store)
 }
 
 // NX: Set the expiration only if the key does not already have an expiration time.
@@ -82,10 +57,10 @@ func DeleteExpiredKeys(store *Store) {
 // Returns Boolean True and error nil if expiry was set on the key successfully.
 // Returns Boolean False and error nil if conditions didn't met.
 // Returns Boolean False and error not-nil if invalid combination of subCommands or if subCommand is invalid
-func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
+func EvaluateAndSetExpiry(subCommands []string, newExpiryAbsMillis int64, key string,
 	store *Store) (shouldSetExpiry bool, err error) {
-	var newExpInMilli = newExpiry * 1000
-	var prevExpiry *uint64 = nil
+	var newExpInMilli = newExpiryAbsMillis
+	var prevExpiry *int64 = nil
 	var nxCmd, xxCmd, gtCmd, ltCmd bool
 
 	obj := store.Get(key)
@@ -97,7 +72,7 @@ func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 
 	// If no sub-command is provided, set the expiry
 	if len(subCommands) == 0 {
-		store.SetUnixTimeExpiry(obj, newExpiry)
+		store.SetUnixTimeExpiry(obj, newExpiryAbsMillis)
 		return true, nil
 	}
 
@@ -129,14 +104,14 @@ func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 			gtCmd = true
 
 			// Set the expiration only if the new expiration time is greater than the current one.
-			if prevExpiry != nil && uint64(newExpInMilli) > *prevExpiry {
+			if prevExpiry != nil && newExpInMilli > *prevExpiry {
 				shouldSetExpiry = true
 			}
 		case LT:
 			ltCmd = true
 
 			// Set the expiration only if the new expiration time is less than the current one.
-			if prevExpiry != nil && uint64(newExpInMilli) < *prevExpiry {
+			if prevExpiry != nil && newExpInMilli < *prevExpiry {
 				shouldSetExpiry = true
 			}
 		default:
@@ -154,7 +129,7 @@ func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 	}
 
 	if shouldSetExpiry {
-		store.SetUnixTimeExpiry(obj, newExpiry)
+		store.SetUnixTimeExpiry(obj, newExpiryAbsMillis)
 	}
 	return shouldSetExpiry, nil
 }

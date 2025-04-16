@@ -33,8 +33,8 @@ type (
 		ID   uint64
 		User *User
 
-		CreatedAt      time.Time
-		LastAccessedAt time.Time
+		CreatedAt      int64
+		LastAccessedAt int64
 
 		Status SessionStatusT
 	}
@@ -97,12 +97,10 @@ func (user *User) SetPassword(password string) (err error) {
 
 func NewSession() (session *Session) {
 	session = &Session{
-		ID: uint64(utils.GetCurrentTime().UTC().Unix()),
-
-		CreatedAt:      utils.GetCurrentTime(),
-		LastAccessedAt: utils.GetCurrentTime(),
-
-		Status: SessionStatusPending,
+		ID:             uint64(time.Now().UTC().Unix()),
+		CreatedAt:      time.Now().UnixMilli(),
+		LastAccessedAt: time.Now().UnixMilli(),
+		Status:         SessionStatusPending,
 	}
 	return
 }
@@ -113,7 +111,7 @@ func (session *Session) IsActive() (isActive bool) {
 	}
 	isActive = session.Status == SessionStatusActive
 	if isActive {
-		session.LastAccessedAt = utils.GetCurrentTime().UTC()
+		session.LastAccessedAt = time.Now().UnixMilli()
 	}
 	return
 }
@@ -121,8 +119,8 @@ func (session *Session) IsActive() (isActive bool) {
 func (session *Session) Activate(user *User) {
 	session.User = user
 	session.Status = SessionStatusActive
-	session.CreatedAt = utils.GetCurrentTime().UTC()
-	session.LastAccessedAt = utils.GetCurrentTime().UTC()
+	session.CreatedAt = time.Now().UnixMilli()
+	session.LastAccessedAt = time.Now().UnixMilli()
 }
 
 func (session *Session) Validate(username, password string) error {

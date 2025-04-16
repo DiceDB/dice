@@ -6,22 +6,30 @@ package ironhawk
 import (
 	"errors"
 	"testing"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
 
-func TestPing(t *testing.T) {
+func extractValuePING(res *wire.Result) interface{} {
+	return res.GetPINGRes().Message
+}
+
+func TestPING(t *testing.T) {
 	client := getLocalConnection()
 	defer client.Close()
 
 	testCases := []TestCase{
 		{
-			name:     "PING no arguments",
-			commands: []string{"PING"},
-			expected: []interface{}{"PONG"},
+			name:           "PING no arguments",
+			commands:       []string{"PING"},
+			expected:       []interface{}{"PONG"},
+			valueExtractor: []ValueExtractorFn{extractValuePING},
 		},
 		{
-			name:     "PING with one argument",
-			commands: []string{"PING hello"},
-			expected: []interface{}{"PONG hello"},
+			name:           "PING with one argument",
+			commands:       []string{"PING hello"},
+			expected:       []interface{}{"PONG hello"},
+			valueExtractor: []ValueExtractorFn{extractValuePING},
 		},
 		{
 			name:     "PING with two arguments",
@@ -29,6 +37,7 @@ func TestPing(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'PING' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil},
 		},
 	}
 	runTestcases(t, client, testCases)

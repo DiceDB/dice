@@ -15,7 +15,6 @@ import (
 	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // nolint: stylecheck
@@ -45,7 +44,9 @@ func (c *Cmd) Key() string {
 }
 
 func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
-	res := GetNilRes()
+	res := &CmdRes{
+		Rs: &wire.Result{},
+	}
 
 	err := errors.ErrUnknownCmd(c.C.Cmd)
 	start := time.Now()
@@ -66,7 +67,7 @@ func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 }
 
 type CmdRes struct {
-	R        *wire.Response
+	Rs       *wire.Result
 	ClientID string
 }
 
@@ -151,58 +152,4 @@ func (cmd *DiceDBCmd) Key() string {
 		c = cmd.Args[0]
 	}
 	return c
-}
-
-func GetNilRes() *CmdRes {
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VNil{VNil: true},
-	}}
-}
-
-func cmdResStringArray(strings []string) (*CmdRes, error) {
-	var values []*structpb.Value
-
-	// Convert each string to structpb.Value
-	for _, str := range strings {
-		val, err := structpb.NewValue(str)
-		if err != nil {
-			return nil, err
-		}
-		values = append(values, val)
-	}
-
-	return &CmdRes{R: &wire.Response{
-		VList: values,
-	}}, nil
-}
-
-var cmdResNil = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VNil{VNil: true},
-}}
-
-var cmdResOK = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VStr{VStr: "OK"},
-}}
-
-var cmdResInt1 = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: 1},
-}}
-
-var cmdResInt0 = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: 0},
-}}
-
-var cmdResIntNegOne = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: -1},
-}}
-
-var cmdResIntNegTwo = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: -2},
-}}
-
-// Utility functions to create int CmdRes object. This function will get inlined so should cause no overhead.
-func cmdResInt(i int64) *CmdRes {
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: i},
-	}}
 }

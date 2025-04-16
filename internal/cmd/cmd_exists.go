@@ -8,6 +8,7 @@ import (
 	"github.com/dicedb/dice/internal/shard"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cEXISTS = &CommandMeta{
@@ -31,12 +32,28 @@ func init() {
 	CommandRegistry.AddCommand(cEXISTS)
 }
 
+func newEXISTSRes(count int64) *CmdRes {
+	return &CmdRes{Rs: &wire.Result{
+		Message: "OK",
+		Status:  wire.Status_OK,
+		Response: &wire.Result_EXISTSRes{
+			EXISTSRes: &wire.EXISTSRes{
+				Count: count,
+			},
+		},
+	}}
+}
+
+var (
+	EXISTSResNilRes = newEXISTSRes(0)
+	EXISTSResOKRes  = newEXISTSRes(1)
+)
+
 // TODO: EXISTS command is actually a multi-key command so this needs
 // to be scattered and gathered one step before this.
-
 func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("EXISTS")
+		return EXISTSResNilRes, errors.ErrWrongArgumentCount("EXISTS")
 	}
 
 	var count int64
@@ -47,14 +64,12 @@ func evalEXISTS(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 			count++
 		}
 	}
-
-	// Return the count as a response
-	return cmdResInt(count), nil
+	return newEXISTSRes(count), nil
 }
 
 func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("EXISTS")
+		return EXISTSResNilRes, errors.ErrWrongArgumentCount("EXISTS")
 	}
 	var count int64
 	var shardMap = make(map[*shard.Shard][]string)
@@ -69,7 +84,7 @@ func executeEXISTS(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 		if err != nil {
 			return nil, err
 		}
-		count += r.R.GetVInt()
+		count += r.Rs.GetEXISTSRes().GetCount()
 	}
-	return cmdResInt(count), nil
+	return newEXISTSRes(count), nil
 }

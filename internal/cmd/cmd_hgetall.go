@@ -14,22 +14,22 @@ import (
 var cHGETALL = &CommandMeta{
 	Name:      "HGETALL",
 	Syntax:    "HGETALL key",
-	HelpShort: "HGETALL returns all the field-value pairs for the key from the string-string map",
+	HelpShort: "HGETALL returns all the field-value pairs from the string-string map stored at key",
 	HelpLong: `
-HGETALL returns all the field-value pairs for the key from the string-string map.
+HGETALL returns all the field-value pairs (we call it HElements) from the string-string map stored at key.
 
-The command returns (nil) if the key does not exist or the map is empty.
+The command returns empty list if the key does not exist or the map is empty. Note that the order of the elements is not guaranteed.
 	`,
 	Examples: `
 localhost:7379> HSET k1 f1 v1 f2 v2 f3 v3
 OK 3
 localhost:7379> HGETALL k1
-OK 
-f1=v1
-f2=v2
-f3=v3
+OK
+0) f1="v1"
+1) f2="v2"
+2) f3="v3"
 localhost:7379> HGETALL k2
-OK (nil)
+OK
 	`,
 	Eval:    evalHGETALL,
 	Execute: executeHGETALL,
@@ -39,6 +39,22 @@ func init() {
 	CommandRegistry.AddCommand(cHGETALL)
 }
 
+func newHGETALLRes(elements []*wire.HElement) *CmdRes {
+	return &CmdRes{Rs: &wire.Result{
+		Message: "OK",
+		Status:  wire.Status_OK,
+		Response: &wire.Result_HGETALLRes{
+			HGETALLRes: &wire.HGETALLRes{
+				Elements: elements,
+			},
+		},
+	}}
+}
+
+var (
+	HGETALLResNilRes = newHGETALLRes([]*wire.HElement{})
+)
+
 func evalHGETALL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	var m SSMap
@@ -46,23 +62,26 @@ func evalHGETALL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	obj := s.Get(key)
 	if obj != nil {
 		if err := object.AssertType(obj.Type, object.ObjTypeSSMap); err != nil {
-			return cmdResNil, errors.ErrWrongTypeOperation
+			return HGETALLResNilRes, errors.ErrWrongTypeOperation
 		}
 		m = obj.Value.(SSMap)
 	}
 
 	if len(m) == 0 {
-		return cmdResNil, nil
+		return HGETALLResNilRes, nil
 	}
 
-	return &CmdRes{R: &wire.Response{
-		VSsMap: m,
-	}}, nil
+	elements := make([]*wire.HElement, 0, len(m))
+	for k, v := range m {
+		elements = append(elements, &wire.HElement{Key: k, Value: v})
+	}
+
+	return newHGETALLRes(elements), nil
 }
 
 func executeHGETALL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("HGETALL")
+		return HGETALLResNilRes, errors.ErrWrongArgumentCount("HGETALL")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalHGETALL(c, shard.Thread.Store())

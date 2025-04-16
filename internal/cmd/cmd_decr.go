@@ -7,6 +7,7 @@ import (
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cDECR = &CommandMeta{
@@ -15,15 +16,21 @@ var cDECR = &CommandMeta{
 	HelpShort: "DECR decrements the value of the specified key in args by 1",
 	HelpLong: `
 DECR command decrements the integer at 'key' by one. Creates 'key' as -1 if absent.
-Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
+The command raises an error if the value is a non-integer.
 
 Returns the new value of 'key' on success.
 	`,
 	Examples: `
 localhost:7379> SET k 43
-OK OK
+OK
 localhost:7379> DECR k
 OK 42
+localhost:7379> DECR k1
+OK -1
+localhost:7379> SET k2 v
+OK
+localhost:7379> DECR k2
+ERR wrongtype operation against a key holding the wrong kind of value
 	`,
 	Eval:    evalDECR,
 	Execute: executeDECR,
@@ -33,30 +40,38 @@ func init() {
 	CommandRegistry.AddCommand(cDECR)
 }
 
-// evalDECR decrements an integer value stored at the specified key by 1.
-//
-// The function expects exactly one argument: the key to decrement.
-// If the key does not exist, it is initialized with value -1.
-// If the key exists but does not contain an integer, an error is returned.
-//
-// Parameters:
-//   - c *Cmd: The command context containing the arguments
-//   - s *dstore.Store: The data store instance
-//
-// Returns:
-//   - *CmdRes: Response containing the new integer value after decrement
-//   - error: Error if wrong number of arguments or wrong value type
+func newDECRRes(newValue int64) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_DECRRes{
+				DECRRes: &wire.DECRRes{Value: newValue},
+			},
+		},
+	}
+}
+
+var (
+	DECRResNilRes = newDECRRes(0)
+)
+
 func evalDECR(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("DECR")
+		return DECRResNilRes, errors.ErrWrongArgumentCount("DECR")
 	}
 
-	return doIncr(c, s, -1)
+	_, newValue, err := doIncr(c, s, -1)
+	if err != nil {
+		return DECRResNilRes, err
+	}
+
+	return newDECRRes(newValue), nil
 }
 
 func executeDECR(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("DECR")
+		return DECRResNilRes, errors.ErrWrongArgumentCount("DECR")
 	}
 
 	shard := sm.GetShardForKey(c.C.Args[0])

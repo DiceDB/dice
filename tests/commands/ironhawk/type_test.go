@@ -6,9 +6,15 @@ package ironhawk
 import (
 	"errors"
 	"testing"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
 
-func TestType(t *testing.T) {
+func extractValueTYPE(res *wire.Result) interface{} {
+	return res.GetTYPERes().Type
+}
+
+func TestTYPE(t *testing.T) {
 	client := getLocalConnection()
 	defer client.Close()
 
@@ -19,16 +25,19 @@ func TestType(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'TYPE' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil},
 		},
 		{
-			name:     "TYPE for non-existent key",
-			commands: []string{"TYPE k1"},
-			expected: []interface{}{"none"},
+			name:           "TYPE for non-existent key",
+			commands:       []string{"TYPE k1"},
+			expected:       []interface{}{"none"},
+			valueExtractor: []ValueExtractorFn{extractValueTYPE},
 		},
 		{
-			name:     "TYPE for key with String value",
-			commands: []string{"SET k1 v1", "TYPE k1"},
-			expected: []interface{}{"OK", "string"},
+			name:           "TYPE for key with String value",
+			commands:       []string{"SET k1 v1", "TYPE k1"},
+			expected:       []interface{}{"OK", "string"},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueTYPE},
 		},
 	}
 

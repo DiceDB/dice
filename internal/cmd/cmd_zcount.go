@@ -53,12 +53,31 @@ func init() {
 	CommandRegistry.AddCommand(cZCOUNT)
 }
 
+func newZCOUNTRes(count int64) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_ZCOUNTRes{
+				ZCOUNTRes: &wire.ZCOUNTRes{
+					Count: count,
+				},
+			},
+		},
+	}
+}
+
+var (
+	ZCOUNTResNilRes = newZCOUNTRes(0)
+	ZCOUNTRes0      = newZCOUNTRes(0)
+)
+
 func evalZCOUNT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	var err error
 	var minVal, maxVal int64
 
 	if len(c.C.Args) != 3 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ZCOUNT")
+		return ZCOUNTResNilRes, errors.ErrWrongArgumentCount("ZCOUNT")
 	}
 
 	key, minArg, maxArg := c.C.Args[0], c.C.Args[1], c.C.Args[2]
@@ -70,7 +89,7 @@ func evalZCOUNT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	} else {
 		minVal, err = strconv.ParseInt(minArg, 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidNumberFormat
+			return ZCOUNTResNilRes, errors.ErrInvalidNumberFormat
 		}
 	}
 
@@ -81,36 +100,34 @@ func evalZCOUNT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	} else {
 		maxVal, err = strconv.ParseInt(maxArg, 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidNumberFormat
+			return ZCOUNTResNilRes, errors.ErrInvalidNumberFormat
 		}
 	}
 
 	if minVal > maxVal {
-		return cmdResInt0, nil
+		return ZCOUNTRes0, nil
 	}
 
 	var ss *types.SortedSet
 
 	obj := s.Get(key)
 	if obj == nil {
-		return cmdResInt0, nil
+		return ZCOUNTRes0, nil
 	}
 
 	if obj.Type != object.ObjTypeSortedSet {
-		return cmdResNil, errors.ErrWrongTypeOperation
+		return ZCOUNTResNilRes, errors.ErrWrongTypeOperation
 	}
 
 	ss = obj.Value.(*types.SortedSet)
 
 	count := ss.ZCOUNT(minVal, maxVal)
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: count},
-	}}, nil
+	return newZCOUNTRes(count), nil
 }
 
 func executeZCOUNT(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 3 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ZCOUNT")
+		return ZCOUNTResNilRes, errors.ErrWrongArgumentCount("ZCOUNT")
 	}
 
 	shard := sm.GetShardForKey(c.C.Args[0])

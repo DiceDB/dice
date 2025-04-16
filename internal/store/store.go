@@ -5,21 +5,22 @@ package store
 
 import (
 	"path"
+	"sync"
+	"time"
 
 	"github.com/dicedb/dice/internal/common"
 	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
 )
 
 func NewStoreRegMap() common.ITable[string, *object.Obj] {
 	return &common.RegMap[string, *object.Obj]{
-		M: make(map[string]*object.Obj),
+		M: sync.Map{},
 	}
 }
 
-func NewExpireRegMap() common.ITable[*object.Obj, uint64] {
-	return &common.RegMap[*object.Obj, uint64]{
-		M: make(map[*object.Obj]uint64),
+func NewExpireRegMap() common.ITable[*object.Obj, int64] {
+	return &common.RegMap[*object.Obj, int64]{
+		M: sync.Map{},
 	}
 }
 
@@ -27,7 +28,7 @@ func NewStoreMap() common.ITable[string, *object.Obj] {
 	return NewStoreRegMap()
 }
 
-func NewExpireMap() common.ITable[*object.Obj, uint64] {
+func NewExpireMap() common.ITable[*object.Obj, int64] {
 	return NewExpireRegMap()
 }
 
@@ -49,7 +50,7 @@ type CmdWatchEvent struct {
 
 type Store struct {
 	store            common.ITable[string, *object.Obj]
-	expires          common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	expires          common.ITable[*object.Obj, int64] // Does not need to be thread-safe as it is only accessed by a single thread.
 	numKeys          int
 	cmdWatchChan     chan CmdWatchEvent
 	evictionStrategy EvictionStrategy
@@ -83,7 +84,7 @@ func (store *Store) NewObj(value interface{}, expDurationMs int64, oType object.
 	obj := &object.Obj{
 		Value:          value,
 		Type:           oType,
-		LastAccessedAt: getCurrentClock(),
+		LastAccessedAt: time.Now().UnixMilli(),
 	}
 	if expDurationMs >= 0 {
 		store.SetExpiry(obj, expDurationMs)
@@ -126,7 +127,7 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 		optApplier(options)
 	}
 
-	obj.LastAccessedAt = getCurrentClock()
+	obj.LastAccessedAt = time.Now().UnixMilli()
 	currentObject, ok := store.store.Get(k)
 	if ok {
 		v, ok1 := store.expires.Get(currentObject)
@@ -157,14 +158,15 @@ func (store *Store) putHelper(k string, obj *object.Obj, opts ...PutOption) {
 
 // getHelper is a helper function to get the object from the store. It also updates the last accessed time if touch is true.
 func (store *Store) getHelper(k string, touch bool) *object.Obj {
+	var ok bool
 	var obj *object.Obj
-	obj, _ = store.store.Get(k)
-	if obj != nil {
+	obj, ok = store.store.Get(k)
+	if ok {
 		if hasExpired(obj, store) {
 			store.deleteKey(k, obj)
 			obj = nil
 		} else if touch {
-			obj.LastAccessedAt = getCurrentClock()
+			obj.LastAccessedAt = time.Now().UnixMilli()
 			store.evictionStrategy.OnAccess(k, obj, AccessGet)
 		}
 	}
@@ -174,13 +176,13 @@ func (store *Store) getHelper(k string, touch bool) *object.Obj {
 func (store *Store) GetAll(keys []string) []*object.Obj {
 	response := make([]*object.Obj, 0, len(keys))
 	for _, k := range keys {
-		v, _ := store.store.Get(k)
-		if v != nil {
+		v, ok := store.store.Get(k)
+		if ok {
 			if hasExpired(v, store) {
 				store.deleteKey(k, v)
 				response = append(response, nil)
 			} else {
-				v.LastAccessedAt = getCurrentClock()
+				v.LastAccessedAt = time.Now().UnixMilli()
 				response = append(response, v)
 			}
 		} else {
@@ -207,7 +209,6 @@ func (store *Store) Keys(p string) ([]string, error) {
 	var err error
 
 	keys = make([]string, 0, store.store.Len())
-
 	store.store.All(func(k string, _ *object.Obj) bool {
 		if found, e := path.Match(p, k); e != nil {
 			err = e
@@ -235,9 +236,9 @@ func (store *Store) Rename(sourceKey, destKey string) bool {
 		return true
 	}
 
-	sourceObj, _ := store.store.Get(sourceKey)
-	if sourceObj == nil || hasExpired(sourceObj, store) {
-		if sourceObj != nil {
+	sourceObj, ok := store.store.Get(sourceKey)
+	if !ok || hasExpired(sourceObj, store) {
+		if ok {
 			store.deleteKey(sourceKey, sourceObj, WithDelCmd(Rename))
 		}
 		return false
@@ -263,8 +264,8 @@ func (store *Store) Get(k string) *object.Obj {
 
 func (store *Store) GetDel(k string, opts ...DelOption) *object.Obj {
 	var v *object.Obj
-	v, _ = store.store.Get(k)
-	if v != nil {
+	v, ok := store.store.Get(k)
+	if ok {
 		expired := hasExpired(v, store)
 		store.deleteKey(k, v, opts...)
 		if expired {
@@ -277,14 +278,13 @@ func (store *Store) GetDel(k string, opts ...DelOption) *object.Obj {
 // SetExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
 func (store *Store) SetExpiry(obj *object.Obj, expDurationMs int64) {
-	store.expires.Put(obj, uint64(utils.GetCurrentTime().UnixMilli())+uint64(expDurationMs))
+	store.expires.Put(obj, time.Now().UnixMilli()+expDurationMs)
 }
 
 // SetUnixTimeExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
-func (store *Store) SetUnixTimeExpiry(obj *object.Obj, exUnixTimeSec int64) {
-	// convert unix-time-seconds to unix-time-milliseconds
-	store.expires.Put(obj, uint64(exUnixTimeSec*1000))
+func (store *Store) SetUnixTimeExpiry(obj *object.Obj, exUnixTimeMillis int64) {
+	store.expires.Put(obj, exUnixTimeMillis)
 }
 
 func (store *Store) deleteKey(k string, obj *object.Obj, opts ...DelOption) bool {
@@ -298,16 +298,12 @@ func (store *Store) deleteKey(k string, obj *object.Obj, opts ...DelOption) bool
 		store.store.Delete(k)
 		store.expires.Delete(obj)
 		store.numKeys--
-
 		store.evictionStrategy.OnAccess(k, obj, AccessDel)
-
 		if store.cmdWatchChan != nil {
 			store.notifyWatchManager(options.DelCmd, k)
 		}
-
 		return true
 	}
-
 	return false
 }
 
