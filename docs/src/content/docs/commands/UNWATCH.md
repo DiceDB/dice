@@ -27,5 +27,6 @@ you exit the watch mode.
 ```
 
 localhost:7379> UNWATCH 2356444921
+OK
 	
 ```

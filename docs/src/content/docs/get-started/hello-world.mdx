@@ -17,19 +17,19 @@ You can follow the steps mentioned in the [installation](/get-started/installati
 Once the DiceDB server starts, you will see output similar to this
 
 ```
-        ██████╗ ██╗ ██████╗███████╗██████╗ ██████╗
+        ██████╗ ██╗ ██████╗███████╗██████╗ ██████╗ 
         ██╔══██╗██║██╔════╝██╔════╝██╔══██╗██╔══██╗
         ██║  ██║██║██║     █████╗  ██║  ██║██████╔╝
         ██║  ██║██║██║     ██╔══╝  ██║  ██║██╔══██╗
         ██████╔╝██║╚██████╗███████╗██████╔╝██████╔╝
         ╚═════╝ ╚═╝ ╚═════╝╚══════╝╚═════╝ ╚═════╝
 
-2025-02-17T07:15:33Z INF starting DiceDB version=0.1.0
-2025-02-17T07:15:33Z INF running with total_commands=21
-2025-02-17T07:15:33Z INF running with engine=ironhawk
-2025-02-17T07:15:33Z INF running with port=7379
-2025-02-17T07:15:33Z INF running on cores=16
-2025-02-17T07:15:33Z INF running with shards=16
+2025-04-16T16:47:29Z INF starting DiceDB version=v1.0.5
+2025-04-16T16:47:29Z INF running with total_commands=31
+2025-04-16T16:47:29Z INF running with engine=ironhawk
+2025-04-16T16:47:29Z INF running with port=7379
+2025-04-16T16:47:29Z INF running on cores=16
+2025-04-16T16:47:29Z INF running with shards=16
 ```
 
 ## Starting the DiceDB CLI
@@ -54,9 +54,9 @@ then retrieve it using the [`GET`](/commands/get) command.
 
 ```bash
 localhost:7379> SET k1 v1
-OK OK
+OK 
 localhost:7379> GET k1
-OK v1
+OK "v1"
 ```
 
 Here's a breakdown of what happened,

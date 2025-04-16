@@ -26,18 +26,18 @@ You can update the key in any other client. The GET.WATCH client will receive th
 	`,
 	Examples: `
 client1:7379> SET k1 v1
-OK OK
+OK
 client1:7379> GET.WATCH k1
 entered the watch mode for GET.WATCH k1
 
 
 client2:7379> SET k1 v2
-OK OK
+OK
 
 
 client1:7379> ...
 entered the watch mode for GET.WATCH k1
-OK [fingerprint=2356444921] v2
+OK [fingerprint=2356444921 ] "v2"
 	`,
 	Eval:    evalGETWATCH,
 	Execute: executeGETWATCH,
