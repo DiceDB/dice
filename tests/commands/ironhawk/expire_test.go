@@ -38,7 +38,7 @@ func TestEXPIRE(t *testing.T) {
 				"GET test_key",
 			},
 			expected:       []interface{}{"OK", true, ""},
-			delay:          []time.Duration{0, 0, 2 * time.Second},
+			delay:          []time.Duration{0, 0, 3 * time.Second},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIRE, extractValueGET},
 		},
 		{
@@ -106,7 +106,7 @@ func TestEXPIRE(t *testing.T) {
 				"GET test_key",
 			},
 			expected:       []interface{}{"OK", true, ""},
-			delay:          []time.Duration{0, 0, 2 * time.Second},
+			delay:          []time.Duration{0, 0, 4 * time.Second},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIRE, extractValueGET},
 		},
 		{

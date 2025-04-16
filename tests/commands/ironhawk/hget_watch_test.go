@@ -6,7 +6,13 @@ package ironhawk
 import (
 	"errors"
 	"testing"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueHGETWATCH(res *wire.Result) interface{} {
+	return res.Message
+}
 
 func TestHGETWATCH(t *testing.T) {
 	client := getLocalConnection()
@@ -19,6 +25,7 @@ func TestHGETWATCH(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'HGET.WATCH' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil},
 		},
 		{
 			name:     "HGet watch subscription without field arg",
@@ -26,6 +33,13 @@ func TestHGETWATCH(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'HGET.WATCH' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil},
+		},
+		{
+			name:           "HGet watch subscription with key and field arg",
+			commands:       []string{"HGET.WATCH k1 f1"},
+			expected:       []interface{}{"OK"},
+			valueExtractor: []ValueExtractorFn{extractValueHGETWATCH},
 		},
 	}
 

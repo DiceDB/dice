@@ -79,7 +79,7 @@ func evalTTL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return TTLResNoExpiryRes, nil
 	}
 
-	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
+	durationMs := exp - utils.GetCurrentTime().UnixMilli()
 
 	return newTTLRes(int64(durationMs / 1000)), nil
 }

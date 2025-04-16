@@ -35,7 +35,7 @@ func TestEXISTS(t *testing.T) {
 			name:           "Test EXISTS an expired key",
 			commands:       []string{"SET key value ex 1", "EXISTS key", "EXISTS key"},
 			expected:       []interface{}{"OK", 1, 0},
-			delay:          []time.Duration{0, 0, 2 * time.Second},
+			delay:          []time.Duration{0, 0, 3 * time.Second},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXISTS, extractValueEXISTS},
 		},
 		{

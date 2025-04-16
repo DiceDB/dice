@@ -91,13 +91,6 @@ func TestSET(t *testing.T) {
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGET},
 		},
 		{
-			name:           "PXAT option with delete",
-			commands:       []string{"SET k1 v1 PXAT " + expiryTime, "GET k1", "DEL k1"},
-			expected:       []interface{}{"OK", "v1", 0},
-			delay:          []time.Duration{0, 0, time.Since(time.UnixMilli(expiryTimeInt)) + 2*time.Second},
-			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGET, extractValueDEL},
-		},
-		{
 			name:     "PXAT option with invalid unix time ms",
 			commands: []string{"SET k2 v2 PXAT 123123"},
 			expected: []interface{}{

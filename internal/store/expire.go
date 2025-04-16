@@ -23,10 +23,10 @@ func hasExpired(obj *object.Obj, store *Store) bool {
 	if !ok {
 		return false
 	}
-	return exp <= uint64(utils.GetCurrentTime().UnixMilli())
+	return exp <= utils.GetCurrentTime().UnixMilli()
 }
 
-func GetExpiry(obj *object.Obj, store *Store) (uint64, bool) {
+func GetExpiry(obj *object.Obj, store *Store) (int64, bool) {
 	exp, ok := store.expires.Get(obj)
 	return exp, ok
 }
@@ -85,7 +85,7 @@ func DeleteExpiredKeys(store *Store) {
 func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 	store *Store) (shouldSetExpiry bool, err error) {
 	var newExpInMilli = newExpiry * 1000
-	var prevExpiry *uint64 = nil
+	var prevExpiry *int64 = nil
 	var nxCmd, xxCmd, gtCmd, ltCmd bool
 
 	obj := store.Get(key)
@@ -129,14 +129,14 @@ func EvaluateAndSetExpiry(subCommands []string, newExpiry int64, key string,
 			gtCmd = true
 
 			// Set the expiration only if the new expiration time is greater than the current one.
-			if prevExpiry != nil && uint64(newExpInMilli) > *prevExpiry {
+			if prevExpiry != nil && newExpInMilli > *prevExpiry {
 				shouldSetExpiry = true
 			}
 		case LT:
 			ltCmd = true
 
 			// Set the expiration only if the new expiration time is less than the current one.
-			if prevExpiry != nil && uint64(newExpInMilli) < *prevExpiry {
+			if prevExpiry != nil && newExpInMilli < *prevExpiry {
 				shouldSetExpiry = true
 			}
 		default:

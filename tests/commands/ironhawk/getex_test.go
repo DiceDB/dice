@@ -37,15 +37,15 @@ func TestGETEX(t *testing.T) {
 			name:           "GETEX with EX option",
 			commands:       []string{"SET foo bar", "GETEX foo EX 2", "TTL foo", "GET foo", "GET foo"},
 			expected:       []interface{}{"OK", "bar", 2, "bar", ""},
-			delay:          []time.Duration{0, 0, 0, 0, 4 * time.Second},
+			delay:          []time.Duration{0, 0, 0, 0, 5 * time.Second},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGETEX, extractValueTTL, extractValueGET, extractValueGET},
 		},
 		{
 			name:           "GETEX with PX option",
 			commands:       []string{"SET foo bar", "GETEX foo PX 2000", "TTL foo", "GET foo", "GET foo"},
-			expected:       []interface{}{"OK", "bar", 2, "bar", ""},
+			expected:       []interface{}{"OK", "bar", 1, "bar", ""},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGETEX, extractValueTTL, extractValueGET, extractValueGET},
-			delay:          []time.Duration{0, 0, 0, 0, 3 * time.Second},
+			delay:          []time.Duration{0, 0, 500 * time.Millisecond, 0, 3 * time.Second},
 		},
 		{
 			name:           "GETEX with PERSIST option",

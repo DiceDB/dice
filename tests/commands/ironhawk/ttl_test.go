@@ -23,8 +23,8 @@ func TestTTL(t *testing.T) {
 		{
 			name:           "TTL Simple Value",
 			commands:       []string{"SET foo bar", "GETEX foo EX 5", "TTL foo"},
-			expected:       []interface{}{"OK", "bar", 5},
-			delay:          []time.Duration{0, 0, 0},
+			expected:       []interface{}{"OK", "bar", 4},
+			delay:          []time.Duration{0, 0, 500 * time.Millisecond},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGETEX, extractValueTTL},
 		},
 		{
@@ -56,8 +56,8 @@ func TestTTL(t *testing.T) {
 		{
 			name:           "Multiple TTL updates",
 			commands:       []string{"SET foo bar", "GETEX foo EX 10", "GETEX foo EX 5", "TTL foo"},
-			expected:       []interface{}{"OK", "bar", "bar", 5},
-			delay:          []time.Duration{0, 0, 0, 0},
+			expected:       []interface{}{"OK", "bar", "bar", 4},
+			delay:          []time.Duration{0, 0, 0, 500 * time.Millisecond},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGETEX, extractValueGETEX, extractValueTTL},
 		},
 		{
@@ -68,9 +68,9 @@ func TestTTL(t *testing.T) {
 		},
 		{
 			name:           "TTL with Expire and Expired Key",
-			commands:       []string{"SET foo bar", "GETEX foo ex 3", "TTL foo", "GET foo"},
-			expected:       []interface{}{"OK", "bar", 3, ""},
-			delay:          []time.Duration{0, 0, 0, 5 * time.Second},
+			commands:       []string{"SET foo bar", "GETEX foo ex 2", "TTL foo", "GET foo"},
+			expected:       []interface{}{"OK", "bar", 1, ""},
+			delay:          []time.Duration{0, 0, 500 * time.Millisecond, 5 * time.Second},
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGETEX, extractValueTTL, extractValueGET},
 		},
 	}

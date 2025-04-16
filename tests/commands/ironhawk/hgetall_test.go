@@ -5,13 +5,18 @@ package ironhawk
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/dicedb/dicedb-go/wire"
 )
 
 func extractValueHGETALL(res *wire.Result) interface{} {
-	return res.GetHGETALLRes().Elements
+	str := ""
+	for _, element := range res.GetHGETALLRes().Elements {
+		str += fmt.Sprintf("%s: %s\n", element.Key, element.Value)
+	}
+	return str
 }
 
 func TestHGETALL(t *testing.T) {
@@ -20,14 +25,9 @@ func TestHGETALL(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name:     "Get Value for Field stored at Hash Key",
-			commands: []string{"HSET k f1 v1 f2 v2", "HGETALL k"},
-			expected: []interface{}{2,
-				[]*wire.HElement{
-					{Key: "f1", Value: "v1"},
-					{Key: "f2", Value: "v2"},
-				},
-			},
+			name:           "Get Value for Field stored at Hash Key",
+			commands:       []string{"HSET k f1 v1 f2 v2", "HGETALL k"},
+			expected:       []interface{}{2, "f1: v1\nf2: v2\n"},
 			valueExtractor: []ValueExtractorFn{extractValueHSET, extractValueHGETALL},
 		},
 		{

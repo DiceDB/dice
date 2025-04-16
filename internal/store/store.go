@@ -17,9 +17,9 @@ func NewStoreRegMap() common.ITable[string, *object.Obj] {
 	}
 }
 
-func NewExpireRegMap() common.ITable[*object.Obj, uint64] {
-	return &common.RegMap[*object.Obj, uint64]{
-		M: make(map[*object.Obj]uint64),
+func NewExpireRegMap() common.ITable[*object.Obj, int64] {
+	return &common.RegMap[*object.Obj, int64]{
+		M: make(map[*object.Obj]int64),
 	}
 }
 
@@ -27,7 +27,7 @@ func NewStoreMap() common.ITable[string, *object.Obj] {
 	return NewStoreRegMap()
 }
 
-func NewExpireMap() common.ITable[*object.Obj, uint64] {
+func NewExpireMap() common.ITable[*object.Obj, int64] {
 	return NewExpireRegMap()
 }
 
@@ -49,7 +49,7 @@ type CmdWatchEvent struct {
 
 type Store struct {
 	store            common.ITable[string, *object.Obj]
-	expires          common.ITable[*object.Obj, uint64] // Does not need to be thread-safe as it is only accessed by a single thread.
+	expires          common.ITable[*object.Obj, int64] // Does not need to be thread-safe as it is only accessed by a single thread.
 	numKeys          int
 	cmdWatchChan     chan CmdWatchEvent
 	evictionStrategy EvictionStrategy
@@ -276,14 +276,14 @@ func (store *Store) GetDel(k string, opts ...DelOption) *object.Obj {
 // SetExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
 func (store *Store) SetExpiry(obj *object.Obj, expDurationMs int64) {
-	store.expires.Put(obj, uint64(utils.GetCurrentTime().UnixMilli())+uint64(expDurationMs))
+	store.expires.Put(obj, utils.GetCurrentTime().UnixMilli()+expDurationMs)
 }
 
 // SetUnixTimeExpiry sets the expiry time for an object.
 // This method is not thread-safe. It should be called within a lock.
 func (store *Store) SetUnixTimeExpiry(obj *object.Obj, exUnixTimeSec int64) {
 	// convert unix-time-seconds to unix-time-milliseconds
-	store.expires.Put(obj, uint64(exUnixTimeSec*1000))
+	store.expires.Put(obj, exUnixTimeSec*1000)
 }
 
 func (store *Store) deleteKey(k string, obj *object.Obj, opts ...DelOption) bool {
