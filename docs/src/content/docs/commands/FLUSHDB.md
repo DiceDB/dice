@@ -22,15 +22,15 @@ FLUSHDB deletes all keys present in the database.
 
 ```
 
-locahost:7379> SET k1 v1
-OK OK
-locahost:7379> SET k2 v2
-OK OK
-locahost:7379> FLUSHDB
-OK OK
+localhost:7379> SET k1 v1
+OK
+localhost:7379> SET k2 v2
+OK
+localhost:7379> FLUSHDB
+OK
 localhost:7379> GET k1
-OK (nil)
+OK ""
 localhost:7379> GET k2
-OK (nil)
+OK ""
 	
 ```

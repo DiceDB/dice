@@ -17,7 +17,7 @@ HGET key field
 
 HGET returns the value of field present in the string-string map held at key.
 
-The command returns (nil) if the key or field does not exist.
+The command returns empty string "" if the key or field does not exist.
 	
 
 #### Examples
@@ -27,10 +27,10 @@ The command returns (nil) if the key or field does not exist.
 localhost:7379> HSET k1 f1 v1
 OK 1
 localhost:7379> HGET k1 f1
-OK v1
+OK "v1"
 localhost:7379> HGET k2 f1
-OK (nil)
+OK ""
 localhost:7379> HGET k1 f2
-OK (nil)
+OK ""
 	
 ```

@@ -23,8 +23,8 @@ PING returns PONG if no argument is provided, otherwise it returns PONG with the
 ```
 
 localhost:7379> PING
-PONG
-localhost:7379> PING Hello
-PONG Hello
+OK "PONG"
+localhost:7379> PING dicedb
+OK "PONG dicedb"
 	
 ```
