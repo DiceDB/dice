@@ -1,5 +1,5 @@
-github.com/dicedb/dicedb-go v1.0.3 h1:EHbu1IHnahMd5V8YNQ85NtD67X3iKMvM7u5NLA78LXM=
-github.com/dicedb/dicedb-go v1.0.3/go.mod h1:MXfB3e/FP+92ahgrqWIQV0wjKWscu/CziyCV+Ysdzuc=
+github.com/dicedb/dicedb-go v1.0.5 h1:8UxvQ6Kz78Yi9DFHapuPIzj+UKWYwGy/SpkvDoAFfTI=
+github.com/dicedb/dicedb-go v1.0.5/go.mod h1:MXfB3e/FP+92ahgrqWIQV0wjKWscu/CziyCV+Ysdzuc=
 github.com/google/go-cmp v0.5.5 h1:Khx7svrCpmxxtHBq5j2mp/xVjsi8hQMfNLvJFAlrGgU=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=

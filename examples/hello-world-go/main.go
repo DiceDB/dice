@@ -27,8 +27,8 @@ func main() {
 		Cmd:  "SET",
 		Args: []string{key, value},
 	})
-	if resp.Err != "" {
-		fmt.Println("error setting key:", resp.Err)
+	if resp.Status == wire.Status_ERR {
+		fmt.Println("error setting key:", resp.Message)
 		return
 	}
 	fmt.Printf("successfully set key %s=%s\n", key, value)
@@ -38,10 +38,10 @@ func main() {
 		Cmd:  "GET",
 		Args: []string{key},
 	})
-	if resp.Err != "" {
-		fmt.Println("error getting key:", resp.Err)
+	if resp.Status == wire.Status_ERR {
+		fmt.Println("error getting key:", resp.Message)
 		return
 	}
 
-	fmt.Printf("successfully got key %s=%s\n", key, resp.GetVStr())
+	fmt.Printf("successfully got key %s=%s\n", key, resp.GetGETRes().Value)
 }

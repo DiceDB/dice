@@ -14,8 +14,8 @@ github.com/charmbracelet/x/ansi v0.4.5 h1:LqK4vwBNaXw2AyGIICa5/29Sbdq58GbGdFngSe
 github.com/charmbracelet/x/ansi v0.4.5/go.mod h1:dk73KoMTT5AX5BsX0KrqhsTqAnhZZoCBjs7dGWp4Ktw=
 github.com/charmbracelet/x/term v0.2.1 h1:AQeHeLZ1OqSXhrAWpYUtZyX1T3zVxfpZuEQMIQaGIAQ=
 github.com/charmbracelet/x/term v0.2.1/go.mod h1:oQ4enTYFV7QN4m0i9mzHrViD7TQKvNEEkHUMCmsxdUg=
-github.com/dicedb/dicedb-go v1.0.3 h1:EHbu1IHnahMd5V8YNQ85NtD67X3iKMvM7u5NLA78LXM=
-github.com/dicedb/dicedb-go v1.0.3/go.mod h1:MXfB3e/FP+92ahgrqWIQV0wjKWscu/CziyCV+Ysdzuc=
+github.com/dicedb/dicedb-go v1.0.5 h1:8UxvQ6Kz78Yi9DFHapuPIzj+UKWYwGy/SpkvDoAFfTI=
+github.com/dicedb/dicedb-go v1.0.5/go.mod h1:MXfB3e/FP+92ahgrqWIQV0wjKWscu/CziyCV+Ysdzuc=
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f h1:Y/CXytFA4m6baUTXGLOoWe4PQhGxaX0KpnayAqC48p4=
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f/go.mod h1:vw97MGsxSvLiUE2X8qFplwetxpGLQrlU1Q9AUEIzCaM=
 github.com/google/go-cmp v0.5.5 h1:Khx7svrCpmxxtHBq5j2mp/xVjsi8hQMfNLvJFAlrGgU=
