@@ -27,8 +27,8 @@ func SendMessage(username, message string) {
 		Cmd:  "SET",
 		Args: []string{"last_message", fmt.Sprintf("%s:%s", username, message)},
 	})
-	if resp.Err != "" {
-		fmt.Println("error sending message:", resp.Err)
+	if resp.Status == wire.Status_ERR {
+		fmt.Println("error sending message:", resp.Message)
 	}
 }
 
@@ -37,17 +37,21 @@ func Subscribe() {
 		Cmd:  "GET.WATCH",
 		Args: []string{"last_message"},
 	})
-	if resp.Err != "" {
-		fmt.Println("error subscribing:", resp.Err)
+	if resp.Status == wire.Status_ERR {
+		fmt.Println("error subscribing:", resp.Message)
 	}
 }
 
-func ListenForMessages(onMessage func(message string)) {
+func ListenForMessages(onMessage func(result *wire.Result)) {
 	ch, err := client.WatchCh()
 	if err != nil {
 		panic(err)
 	}
 	for resp := range ch {
-		onMessage(resp.GetVStr())
+		if resp.Status == wire.Status_ERR {
+			fmt.Println("error listening for messages:", resp.Message)
+		} else {
+			onMessage(resp)
+		}
 	}
 }
