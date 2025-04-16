@@ -55,6 +55,8 @@ func init() {
 func newZADDRes(count int64) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_ZADDRes{
 				ZADDRes: &wire.ZADDRes{
 					Count: count,

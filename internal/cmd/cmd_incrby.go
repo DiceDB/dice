@@ -44,6 +44,8 @@ func init() {
 func newINCRBYRes(newValue int64) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_INCRBYRes{
 				INCRBYRes: &wire.INCRBYRes{Value: newValue},
 			},

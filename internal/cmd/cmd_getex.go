@@ -63,6 +63,8 @@ func init() {
 func newGETEXRes(obj *object.Obj) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_GETEXRes{
 				GETEXRes: &wire.GETEXRes{
 					Value: getWireValueFromObj(obj),

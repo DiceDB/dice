@@ -39,6 +39,8 @@ func init() {
 func newGETDELRes(obj *object.Obj) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_GETDELRes{
 				GETDELRes: &wire.GETDELRes{
 					Value: getWireValueFromObj(obj),

@@ -43,6 +43,8 @@ func init() {
 func newDECRRes(newValue int64) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_DECRRes{
 				DECRRes: &wire.DECRRes{Value: newValue},
 			},

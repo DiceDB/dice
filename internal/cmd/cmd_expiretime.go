@@ -39,6 +39,8 @@ func init() {
 func newEXPIRETIMERes(expiryAt int64) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_EXPIRETIMERes{
 				EXPIRETIMERes: &wire.EXPIRETIMERes{
 					UnixSec: expiryAt,

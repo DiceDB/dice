@@ -44,6 +44,8 @@ func init() {
 func newTTLRes(seconds int64) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_TTLRes{
 				TTLRes: &wire.TTLRes{
 					Seconds: seconds,

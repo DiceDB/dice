@@ -40,6 +40,8 @@ func init() {
 
 func newTYPERes(t string) *CmdRes {
 	return &CmdRes{Rs: &wire.Result{
+		Message: "OK",
+		Status:  wire.Status_OK,
 		Response: &wire.Result_TYPERes{
 			TYPERes: &wire.TYPERes{
 				Type: t,

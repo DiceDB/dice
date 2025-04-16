@@ -35,6 +35,8 @@ func init() {
 func newUNWATCHRes() *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message:  "OK",
+			Status:   wire.Status_OK,
 			Response: &wire.Result_UNWATCHRes{},
 		},
 	}

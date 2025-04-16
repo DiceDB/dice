@@ -41,22 +41,21 @@ func init() {
 	CommandRegistry.AddCommand(cHANDSHAKE)
 }
 
-var (
-	HANDSHAKEResNilRes = &CmdRes{
+func newHANDSHAKERes() *CmdRes {
+	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_HANDSHAKERes{
 				HANDSHAKERes: &wire.HANDSHAKERes{},
 			},
 		},
 	}
+}
 
-	HANDSHAKEResOKRes = &CmdRes{
-		Rs: &wire.Result{
-			Response: &wire.Result_HANDSHAKERes{
-				HANDSHAKERes: &wire.HANDSHAKERes{},
-			},
-		},
-	}
+var (
+	HANDSHAKEResNilRes = newHANDSHAKERes()
+	HANDSHAKEResOKRes  = newHANDSHAKERes()
 )
 
 func evalHANDSHAKE(c *Cmd, s *dstore.Store) (*CmdRes, error) {

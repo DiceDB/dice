@@ -34,6 +34,8 @@ func init() {
 
 func newEXISTSRes(count int64) *CmdRes {
 	return &CmdRes{Rs: &wire.Result{
+		Message: "OK",
+		Status:  wire.Status_OK,
 		Response: &wire.Result_EXISTSRes{
 			EXISTSRes: &wire.EXISTSRes{
 				Count: count,

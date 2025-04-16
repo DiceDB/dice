@@ -33,6 +33,8 @@ func init() {
 
 func newPINGRes(v string) *CmdRes {
 	return &CmdRes{Rs: &wire.Result{
+		Message: "OK",
+		Status:  wire.Status_OK,
 		Response: &wire.Result_PINGRes{
 			PINGRes: &wire.PINGRes{
 				Message: v,

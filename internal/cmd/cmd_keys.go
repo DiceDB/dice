@@ -54,6 +54,8 @@ func init() {
 func newKEYSRes(keys []string) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_KEYSRes{
 				KEYSRes: &wire.KEYSRes{
 					Keys: keys,

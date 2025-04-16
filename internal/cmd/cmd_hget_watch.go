@@ -50,6 +50,8 @@ func init() {
 func newHGETWATCHRes() *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message:  "OK",
+			Status:   wire.Status_OK,
 			Response: &wire.Result_HGETWATCHRes{},
 		},
 	}
@@ -57,7 +59,6 @@ func newHGETWATCHRes() *CmdRes {
 
 var (
 	HGETWATCHResNilRes = newHGETWATCHRes()
-	HGETWATCHResOKRes  = newHGETWATCHRes()
 )
 
 func evalHGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
@@ -73,7 +74,7 @@ func evalHGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	r.Rs.Attrs.Fields["fingerprint"] = structpb.NewStringValue(strconv.FormatUint(uint64(c.Fingerprint()), 10))
-	return HGETWATCHResOKRes, nil
+	return r, nil
 }
 
 func executeHGETWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

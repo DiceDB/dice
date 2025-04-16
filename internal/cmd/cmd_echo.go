@@ -28,6 +28,8 @@ func init() {
 
 func newECHORes(message string) *CmdRes {
 	return &CmdRes{Rs: &wire.Result{
+		Message: "OK",
+		Status:  wire.Status_OK,
 		Response: &wire.Result_ECHORes{
 			ECHORes: &wire.ECHORes{
 				Message: message,

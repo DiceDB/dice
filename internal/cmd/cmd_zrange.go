@@ -40,14 +40,20 @@ func init() {
 	CommandRegistry.AddCommand(cZRANGE)
 }
 
-var (
-	ZRANGEResNilRes = &CmdRes{
+func newZRANGERes(elements []*wire.ZElement) *CmdRes {
+	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_ZRANGERes{
-				ZRANGERes: &wire.ZRANGERes{},
+				ZRANGERes: &wire.ZRANGERes{Elements: elements},
 			},
 		},
 	}
+}
+
+var (
+	ZRANGEResNilRes = newZRANGERes([]*wire.ZElement{})
 )
 
 func executeZRANGE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

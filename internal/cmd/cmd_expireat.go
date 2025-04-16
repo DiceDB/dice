@@ -50,6 +50,8 @@ func init() {
 func newEXPIREATRes(isChanged bool) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_EXPIREATRes{
 				EXPIREATRes: &wire.EXPIREATRes{
 					IsChanged: isChanged,

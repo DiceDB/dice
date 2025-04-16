@@ -35,8 +35,8 @@ func init() {
 func newDELRes(count int64) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
-			Status:  wire.Status_OK,
 			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_DELRes{
 				DELRes: &wire.DELRes{
 					Count: count,

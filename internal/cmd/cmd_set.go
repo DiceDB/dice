@@ -70,6 +70,8 @@ func init() {
 func newSETRes() *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message:  "OK",
+			Status:   wire.Status_OK,
 			Response: &wire.Result_SETRes{SETRes: &wire.SETRes{}},
 		},
 	}

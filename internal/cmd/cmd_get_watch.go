@@ -50,6 +50,8 @@ func init() {
 func newGETWATCHRes() *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_GETWATCHRes{
 				GETWATCHRes: &wire.GETWATCHRes{},
 			},
@@ -59,7 +61,6 @@ func newGETWATCHRes() *CmdRes {
 
 var (
 	GETWATCHResNilRes = newGETWATCHRes()
-	GETWATCHResOKRes  = newGETWATCHRes()
 )
 
 func evalGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
@@ -75,7 +76,7 @@ func evalGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	r.Rs.Attrs.Fields["fingerprint"] = structpb.NewStringValue(strconv.FormatUint(uint64(c.Fingerprint()), 10))
-	return GETWATCHResOKRes, nil
+	return r, nil
 }
 
 func executeGETWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
