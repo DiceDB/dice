@@ -4,11 +4,11 @@ import (
 	"strconv"
 
 	"github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/eval/sortedset"
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/types"
 	"github.com/dicedb/dicedb-go/wire"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var cZPOPMAX = &CommandMeta{
@@ -16,29 +16,25 @@ var cZPOPMAX = &CommandMeta{
 	Syntax:    "ZPOPMAX key [count]",
 	HelpShort: "ZPOPMAX removes and returns the member with the highest score from the sorted set at the specified key.",
 	HelpLong: `
-Removes and returns the member with the highest score from the sorted set stored at the specified key.
+ZPOPMAX removes and returns the member with the highest score from the sorted set at the specified key.
 
-If the key does not exist, the command returns (nil). An optional "count" argument can be provided 
+If the key does not exist, the command returns empty list. An optional "count" argument can be provided
 to remove and return multiple members (up to the number specified).
-
-Usage Notes:
-- count: The number of members to remove and return.
 	`,
 	Examples: `
-localhost:7379> ZADD myzset 1 "one"
+localhost:7379> ZADD users 1 alice
+OK 1
+localhost:7379> ZADD users 2 bob
+OK 1
+localhost:7379> ZADD users 3 charlie
+OK 1
+localhost:7379> ZPOPMAX users
 OK
-localhost:7379> ZADD myzset 2 "two"
+0) 3, charlie
+localhost:7379> ZPOPMAX users 10
 OK
-localhost:7379> ZADD myzset 3 "three"
-OK
-localhost:7379> ZPOPMAX myzset
-1) "three"
-2) "3"
-localhost:7379> ZPOPMAX myzset 2
-1) "two"
-2) "2"
-3) "one"
-4) "1"
+0) 2, bob
+1) 1, alice
 	`,
 	Eval:    evalZPOPMAX,
 	Execute: executeZPOPMAX,
@@ -48,12 +44,28 @@ func init() {
 	CommandRegistry.AddCommand(cZPOPMAX)
 }
 
+func newZPOPMAXRes(elements []*wire.ZElement) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_ZPOPMAXRes{
+				ZPOPMAXRes: &wire.ZPOPMAXRes{
+					Elements: elements,
+				},
+			},
+		},
+	}
+}
+
+var (
+	ZPOPMAXResNilRes = newZPOPMAXRes([]*wire.ZElement{})
+)
+
 // evalZPOPMAX validates the arguments and executes the ZPOPMAX command logic.
 // It returns the highest scoring members removed from the sorted set.
 func evalZPOPMAX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// Validate that at least one argument (the key) is provided.
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ZPOPMAX")
+		return ZPOPMAXResNilRes, errors.ErrWrongArgumentCount("ZPOPMAX")
 	}
 	key := c.C.Args[0]
 	count := 1
@@ -61,34 +73,37 @@ func evalZPOPMAX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// If count is provided, convert it to an integer.
 	if len(c.C.Args) > 1 {
 		ops, err := strconv.Atoi(c.C.Args[1])
-		if err != nil {
-			return cmdResNil, errors.ErrInvalidSyntax("ZPOPMAX: count must be an integer")
-		}
-		if ops <= 0 {
-			return cmdResNil, errors.ErrIntegerOutOfRange
+		if err != nil || ops <= 0 {
+			return ZPOPMAXResNilRes, errors.ErrIntegerOutOfRange
 		}
 		count = ops
 	}
 
-	// Retrieve the object from the data store.
+	var ss *types.SortedSet
+
 	obj := s.Get(key)
 	if obj == nil {
-		return cmdResNil, nil
+		return ZPOPMAXResNilRes, nil
 	}
 
-	// Attempt to cast the object to a sorted set.
-	sortedSet, errMsg := sortedset.FromObject(obj)
-	if errMsg != nil {
-		return cmdResNil, errors.ErrWrongTypeOperation
+	if obj.Type != object.ObjTypeSortedSet {
+		return ZPOPMAXResNilRes, errors.ErrWrongTypeOperation
 	}
 
-	// Remove and return the maximum elements from the sorted set.
-	res := sortedSet.PopMax(count)
-	response, err := createResponseWithList(res)
-	if err != nil {
-		return cmdResNil, err
+	ss = obj.Value.(*types.SortedSet)
+	elements := make([]*wire.ZElement, 0, count)
+
+	for i := 0; i < count; i++ {
+		n := ss.PopMax()
+		if n == nil {
+			break
+		}
+		elements = append(elements, &wire.ZElement{
+			Member: n.Key(),
+			Score:  int64(n.Score()),
+		})
 	}
-	return &CmdRes{R: response}, nil
+	return newZPOPMAXRes(elements), nil
 }
 
 // executeZPOPMAX retrieves the appropriate shard for the key and evaluates the ZPOPMAX command.
@@ -96,26 +111,9 @@ func evalZPOPMAX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 func executeZPOPMAX(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	// Validate the existence of at least one argument (the key).
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ZPOPMAX")
+		return ZPOPMAXResNilRes, errors.ErrWrongArgumentCount("ZPOPMAX")
 	}
 	// Determine the appropriate shard based on the key.
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalZPOPMAX(c, shard.Thread.Store())
-}
-
-func createResponseWithList(strings []string) (*wire.Response, error) {
-	var values []*structpb.Value
-
-	// Convert each string to structpb.Value
-	for _, str := range strings {
-		val, err := structpb.NewValue(str)
-		if err != nil {
-			return nil, err
-		}
-		values = append(values, val)
-	}
-
-	return &wire.Response{
-		VList: values,
-	}, nil
 }
