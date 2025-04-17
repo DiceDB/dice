@@ -25,13 +25,14 @@ In the first _two_ terminal sessions, run the following command to watch the key
 
 ```bash
 localhost:7379> GET.WATCH k1
+OK
 ```
 
 In the third terminal session, run the following command to set the value of `k1` to `v1`.
 
 ```bash
 localhost:7379> SET k1 v1
-OK OK
+OK
 ```
 
 In the first two terminal sessions, you will see the following output.
@@ -39,7 +40,7 @@ In the first two terminal sessions, you will see the following output.
 ```bash
 localhost:7379> GET.WATCH k1
 entered the watch mode for GET.WATCH k1
-OK [fingerprint=2356444921] v1
+OK [fingerprint=2356444921 ] "v1"
 ```
 
 Now, if you set the value of `k1` to `v2`, you will see the following output in the first two terminal sessions.
@@ -47,8 +48,8 @@ Now, if you set the value of `k1` to `v2`, you will see the following output in 
 ```bash
 localhost:7379> GET.WATCH k1
 entered the watch mode for GET.WATCH k1
-OK [fingerprint=2356444921] v1
-OK [fingerprint=2356444921] v2
+OK [fingerprint=2356444921 ] "v1"
+OK [fingerprint=2356444921 ] "v2"
 ```
 
 This is the reactivity in action. Here you are watching the key `k1` and getting notified

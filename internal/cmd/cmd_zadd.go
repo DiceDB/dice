@@ -19,7 +19,9 @@ var cZADD = &CommandMeta{
 	Syntax:    "ZADD key [NX | XX] [GT | LT] [CH] [INCR] score member [score member...]",
 	HelpShort: "ZADD adds all the specified members with the specified scores to the sorted set stored at key",
 	HelpLong: `
-ZADD adds all the specified members with the specified scores to the sorted set stored at key
+ZADD adds all the specified members with the specified scores to the sorted set stored at key.
+
+The score of the member should be an integer and two members can have the same score. Here are the options supported by the command:
 
 - NX: Only add new elements and do not update existing elements
 - XX: Only update existing elements and do not add new elements

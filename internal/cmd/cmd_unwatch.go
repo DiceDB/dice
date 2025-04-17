@@ -23,6 +23,7 @@ you exit the watch mode.
 	`,
 	Examples: `
 localhost:7379> UNWATCH 2356444921
+OK
 	`,
 	Eval:    evalUNWATCH,
 	Execute: executeUNWATCH,
