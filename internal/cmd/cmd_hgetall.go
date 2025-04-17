@@ -40,15 +40,17 @@ func init() {
 }
 
 func newHGETALLRes(elements []*wire.HElement) *CmdRes {
-	return &CmdRes{Rs: &wire.Result{
-		Message: "OK",
-		Status:  wire.Status_OK,
-		Response: &wire.Result_HGETALLRes{
-			HGETALLRes: &wire.HGETALLRes{
-				Elements: elements,
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_HGETALLRes{
+				HGETALLRes: &wire.HGETALLRes{
+					Elements: elements,
+				},
 			},
 		},
-	}}
+	}
 }
 
 var (

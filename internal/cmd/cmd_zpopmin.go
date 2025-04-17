@@ -48,13 +48,15 @@ func init() {
 }
 
 func newZPOPMINRes(elements []*wire.ZElement) *CmdRes {
-	return &CmdRes{Rs: &wire.Result{
-		Response: &wire.Result_ZPOPMINRes{
-			ZPOPMINRes: &wire.ZPOPMINRes{
-				Elements: elements,
+	return &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_ZPOPMINRes{
+				ZPOPMINRes: &wire.ZPOPMINRes{
+					Elements: elements,
+				},
 			},
 		},
-	}}
+	}
 }
 
 var (

@@ -32,8 +32,8 @@ func (c *Cmd) String() string {
 	return fmt.Sprintf("%s %s", c.C.Cmd, strings.Join(c.C.Args, " "))
 }
 
-func (c *Cmd) Fingerprint() uint32 {
-	return farm.Fingerprint32([]byte(c.String()))
+func (c *Cmd) Fingerprint() uint64 {
+	return farm.Fingerprint64([]byte(c.String()))
 }
 
 func (c *Cmd) Key() string {

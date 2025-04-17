@@ -38,15 +38,17 @@ func init() {
 }
 
 func newHGETRes(value string) *CmdRes {
-	return &CmdRes{Rs: &wire.Result{
-		Message: "OK",
-		Status:  wire.Status_OK,
-		Response: &wire.Result_HGETRes{
-			HGETRes: &wire.HGETRes{
-				Value: value,
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_HGETRes{
+				HGETRes: &wire.HGETRes{
+					Value: value,
+				},
 			},
 		},
-	}}
+	}
 }
 
 var (

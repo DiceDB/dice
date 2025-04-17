@@ -4,13 +4,10 @@
 package cmd
 
 import (
-	"strconv"
-
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var cHGETWATCH = &CommandMeta{
@@ -37,7 +34,7 @@ OK 0
 
 client1:7379> ...
 entered the watch mode for HGET.WATCH k1 f1
-OK [fingerprint=3432795955 ] "v2"
+OK [fingerprint=3432795955] "v2"
 	`,
 	Eval:    evalHGETWATCH,
 	Execute: executeHGETWATCH,
@@ -67,13 +64,7 @@ func evalHGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return nil, err
 	}
 
-	if r.Rs.Attrs == nil {
-		r.Rs.Attrs = &structpb.Struct{
-			Fields: make(map[string]*structpb.Value),
-		}
-	}
-
-	r.Rs.Attrs.Fields["fingerprint"] = structpb.NewStringValue(strconv.FormatUint(uint64(c.Fingerprint()), 10))
+	r.Rs.Fingerprint64 = c.Fingerprint()
 	return r, nil
 }
 
