@@ -15,6 +15,7 @@ import (
 	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dice/internal/store"
 	"github.com/dicedb/dicedb-go/wire"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // nolint: stylecheck
