@@ -68,7 +68,7 @@ We are incredibly grateful to our sponsors for their generous support, which mak
 DiceDB is a project with a very strong vision and [roadmap](https://dicedb.io/roadmap/). If you like what
 we do and find DiceDB useful, please consider supporting and [sponsoring us on GitHub](https://github.com/sponsors/arpitbbhayani).
 
-![GitHub Sponsor](https://img.shields.io/github/sponsors/arpitbbhayani?label=Sponsor&logo=GitHub)
+![GitHub Sponsor](https://img.shields.io/github/sponsors/arpitbbhayani?label=Sponsors&logo=GitHub)
 
 ## Contributors
 
