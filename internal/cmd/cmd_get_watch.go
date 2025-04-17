@@ -9,6 +9,7 @@ import (
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -25,18 +26,18 @@ You can update the key in any other client. The GET.WATCH client will receive th
 	`,
 	Examples: `
 client1:7379> SET k1 v1
-OK OK
+OK
 client1:7379> GET.WATCH k1
 entered the watch mode for GET.WATCH k1
 
 
 client2:7379> SET k1 v2
-OK OK
+OK
 
 
 client1:7379> ...
 entered the watch mode for GET.WATCH k1
-OK [fingerprint=2356444921] v2
+OK [fingerprint=2356444921 ] "v2"
 	`,
 	Eval:    evalGETWATCH,
 	Execute: executeGETWATCH,
@@ -46,25 +47,41 @@ func init() {
 	CommandRegistry.AddCommand(cGETWATCH)
 }
 
+func newGETWATCHRes() *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_GETWATCHRes{
+				GETWATCHRes: &wire.GETWATCHRes{},
+			},
+		},
+	}
+}
+
+var (
+	GETWATCHResNilRes = newGETWATCHRes()
+)
+
 func evalGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	r, err := evalGET(c, s)
 	if err != nil {
-		return nil, err
+		return GETWATCHResNilRes, err
 	}
 
-	if r.R.Attrs == nil {
-		r.R.Attrs = &structpb.Struct{
+	if r.Rs.Attrs == nil {
+		r.Rs.Attrs = &structpb.Struct{
 			Fields: make(map[string]*structpb.Value),
 		}
 	}
 
-	r.R.Attrs.Fields["fingerprint"] = structpb.NewStringValue(strconv.FormatUint(uint64(c.Fingerprint()), 10))
+	r.Rs.Attrs.Fields["fingerprint"] = structpb.NewStringValue(strconv.FormatUint(uint64(c.Fingerprint()), 10))
 	return r, nil
 }
 
 func executeGETWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("GET.WATCH")
+		return GETWATCHResNilRes, errors.ErrWrongArgumentCount("GET.WATCH")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalGETWATCH(c, shard.Thread.Store())

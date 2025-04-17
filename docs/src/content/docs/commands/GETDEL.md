@@ -25,10 +25,10 @@ The command returns (nil) if the key does not exist.
 ```
 
 localhost:7379> SET k v
-OK OK
+OK 
 localhost:7379> GETDEL k
-OK v
+OK "v"
 localhost:7379> GET k
-(nil)
+OK ""
 	
 ```

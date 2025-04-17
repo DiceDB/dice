@@ -32,20 +32,20 @@ The command returns (nil) if the key does not exist. The command supports the fo
 ```
 
 localhost:7379> SET k v
-OK OK
+OK 
 localhost:7379> GETEX k EX 1000
-OK v
+OK "v"
 localhost:7379> TTL k
 OK 996
 localhost:7379> GETEX k PX 200000
-OK v
+OK "v"
 localhost:7379> GETEX k EXAT 1772377267
-OK v
+OK "v"
 localhost:7379> GETEX k PXAT 1772377267000
-OK v
+OK "v"
 localhost:7379> GETEX k PERSIST
-OK v
-localhost:7379> GET k
-(nil)
+OK "v"
+localhost:7379> EXPIRETIME k
+OK -1
 	
 ```

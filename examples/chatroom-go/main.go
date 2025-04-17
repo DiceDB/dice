@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 const gap = "\n\n"
@@ -42,8 +43,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	go svc.ListenForMessages(func(message string) {
-		M.AddMessage(message)
+	go svc.ListenForMessages(func(result *wire.Result) {
+		M.AddMessage(result.GetGETRes().Value)
 		M.Refresh()
 	})
 

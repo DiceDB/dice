@@ -17,9 +17,11 @@ EXPIRE key seconds [NX | XX]
 
 EXPIRE sets an expiry (in seconds) on a specified key. After the expiry time has elapsed, the key will be automatically deleted.
 
-> If you want to delete the expirtation time on the key, you can use the PERSIST command.
+> If you want to delete the expiration time on the key, you can use the PERSIST command.
 
-The command returns 1 if the expiry was set, and 0 if the key already had an expiry set. The command supports the following options:
+The command returns true if the expiry was set (changed), and false if the expiry could not be set (changed) due to key
+not being present or due to the provided sub-command conditions not being met. The command
+supports the following options:
 
 - NX: Set the expiration only if the key does not already have an expiration time.
 - XX: Set the expiration only if the key already has an expiration time.
@@ -29,17 +31,17 @@ The command returns 1 if the expiry was set, and 0 if the key already had an exp
 
 ```
 
-locahost:7379> SET k1 v1
-OK OK
-locahost:7379> EXPIRE k1 10
-OK 1
-locahost:7379> SET k2 v2
-OK OK
-locahost:7379> EXPIRE k2 10 NX
-OK 1
-locahost:7379> EXPIRE k2 20 XX
-OK 1
-locahost:7379> EXPIRE k2 20 NX
-OK 0
+localhost:7379> SET k1 v1
+OK
+localhost:7379> EXPIRE k1 10
+OK true
+localhost:7379> SET k2 v2
+OK
+localhost:7379> EXPIRE k2 10 NX
+OK true
+localhost:7379> EXPIRE k2 20 XX
+OK true
+localhost:7379> EXPIRE k2 20 NX
+OK false
 	
 ```

@@ -16,7 +16,7 @@ DECR key
 
 
 DECR command decrements the integer at 'key' by one. Creates 'key' as -1 if absent.
-Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
+The command raises an error if the value is a non-integer.
 
 Returns the new value of 'key' on success.
 	
@@ -26,8 +26,14 @@ Returns the new value of 'key' on success.
 ```
 
 localhost:7379> SET k 43
-OK OK
+OK
 localhost:7379> DECR k
 OK 42
+localhost:7379> DECR k1
+OK -1
+localhost:7379> SET k2 v
+OK
+localhost:7379> DECR k2
+ERR wrongtype operation against a key holding the wrong kind of value
 	
 ```

@@ -6,11 +6,13 @@ package cmd
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/server/utils"
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/types"
 	"github.com/dicedb/dicedb-go/wire"
 )
 
@@ -34,21 +36,21 @@ The command returns (nil) if the key does not exist. The command supports the fo
 	`,
 	Examples: `
 localhost:7379> SET k v
-OK OK
+OK 
 localhost:7379> GETEX k EX 1000
-OK v
+OK "v"
 localhost:7379> TTL k
 OK 996
 localhost:7379> GETEX k PX 200000
-OK v
+OK "v"
 localhost:7379> GETEX k EXAT 1772377267
-OK v
+OK "v"
 localhost:7379> GETEX k PXAT 1772377267000
-OK v
+OK "v"
 localhost:7379> GETEX k PERSIST
-OK v
-localhost:7379> GET k
-(nil)
+OK "v"
+localhost:7379> EXPIRETIME k
+OK -1
 	`,
 	Eval:    evalGETEX,
 	Execute: executeGETEX,
@@ -58,40 +60,58 @@ func init() {
 	CommandRegistry.AddCommand(cGETEX)
 }
 
+func newGETEXRes(obj *object.Obj) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_GETEXRes{
+				GETEXRes: &wire.GETEXRes{
+					Value: getWireValueFromObj(obj),
+				},
+			},
+		},
+	}
+}
+
+var (
+	GETEXResNilRes = newGETEXRes(nil)
+)
+
 func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("GETEX")
+		return GETEXResNilRes, errors.ErrWrongArgumentCount("GETEX")
 	}
 
 	var key = c.C.Args[0]
-	params := map[string]string{}
+	params := map[types.Param]string{}
 	for i := 1; i < len(c.C.Args); i++ {
-		arg := strings.ToUpper(c.C.Args[i])
+		arg := types.Param(strings.ToUpper(c.C.Args[i]))
 		switch arg {
-		case EX, PX, EXAT, PXAT:
+		case types.EX, types.PX, types.EXAT, types.PXAT:
 			params[arg] = c.C.Args[i+1]
 			i++
-		case PERSIST:
+		case types.PERSIST:
 			params[arg] = "true"
 		}
 	}
 
 	// Raise errors if incompatible parameters are provided
 	// in one command
-	if params[EX] != "" && params[PX] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[EX] != "" && params[EXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[EX] != "" && params[PXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[PX] != "" && params[EXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[PX] != "" && params[PXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[EXAT] != "" && params[PXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
-	} else if params[PERSIST] != "" && (params[EX] != "" || params[PX] != "" || params[EXAT] != "" || params[PXAT] != "") {
-		return cmdResNil, errors.ErrInvalidSyntax("GETEX")
+	if params[types.EX] != "" && params[types.PX] != "" {
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
+	} else if params[types.EX] != "" && params[types.EXAT] != "" {
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
+	} else if params[types.EX] != "" && params[types.PXAT] != "" {
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
+	} else if params[types.PX] != "" && params[types.EXAT] != "" {
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
+	} else if params[types.PX] != "" && params[types.PXAT] != "" {
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
+	} else if params[types.EXAT] != "" && params[types.PXAT] != "" {
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
+	} else if params[types.PERSIST] != "" && (params[types.EX] != "" || params[types.PX] != "" || params[types.EXAT] != "" || params[types.PXAT] != "") {
+		return GETEXResNilRes, errors.ErrInvalidSyntax("GETEX")
 	}
 	var err error
 	var exDurationSec, exDurationMs int64
@@ -100,76 +120,67 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// and the key will not expire
 	exDurationMs = -1
 
-	if params[EX] != "" {
-		exDurationSec, err = strconv.ParseInt(params[EX], 10, 64)
+	if params[types.EX] != "" {
+		exDurationSec, err = strconv.ParseInt(params[types.EX], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "EX")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "EX")
 		}
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "EX")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "EX")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
 
-	if params[PX] != "" {
-		exDurationMs, err = strconv.ParseInt(params[PX], 10, 64)
+	if params[types.PX] != "" {
+		exDurationMs, err = strconv.ParseInt(params[types.PX], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "PX")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "PX")
 		}
 		if exDurationMs <= 0 || exDurationMs >= MaxEXDurationSec {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "PX")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "PX")
 		}
 	}
 
-	if params[EXAT] != "" {
-		tv, err := strconv.ParseInt(params[EXAT], 10, 64)
+	if params[types.EXAT] != "" {
+		tv, err := strconv.ParseInt(params[types.EXAT], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "EXAT")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "EXAT")
 		}
-		exDurationSec = tv - utils.GetCurrentTime().Unix()
+		exDurationSec = tv - time.Now().Unix()
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "EXAT")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "EXAT")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
 
-	if params[PXAT] != "" {
-		tv, err := strconv.ParseInt(params[PXAT], 10, 64)
+	if params[types.PXAT] != "" {
+		tv, err := strconv.ParseInt(params[types.PXAT], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "PXAT")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "PXAT")
 		}
-		exDurationMs = tv - utils.GetCurrentTime().UnixMilli()
+		exDurationMs = tv - time.Now().UnixMilli()
 		if exDurationMs <= 0 || exDurationMs >= (MaxEXDurationSec*1000) {
-			return cmdResNil, errors.ErrInvalidValue("GETEX", "PXAT")
+			return GETEXResNilRes, errors.ErrInvalidValue("GETEX", "PXAT")
 		}
 	}
 
 	existingObj := s.Get(key)
 	if existingObj == nil {
-		return cmdResNil, nil
+		return GETEXResNilRes, nil
 	}
 
-	resp, err := evalGET(&Cmd{
-		C: &wire.Command{
-			Cmd:  "GET",
-			Args: []string{key},
-		}}, s)
-	if err != nil {
-		return resp, err
-	}
-
-	if params[PERSIST] != "" {
+	if params[types.PERSIST] != "" {
 		dstore.DelExpiry(existingObj, s)
 	} else if exDurationMs != -1 {
 		s.SetExpiry(existingObj, exDurationMs)
 	}
 
-	return resp, nil
+	return newGETEXRes(existingObj), nil
 }
 
 func executeGETEX(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) == 0 {
-		return cmdResNil, errors.ErrWrongArgumentCount("GETEX")
+		return GETEXResNilRes, errors.ErrWrongArgumentCount("GETEX")
 	}
 
 	shard := sm.GetShardForKey(c.C.Args[0])

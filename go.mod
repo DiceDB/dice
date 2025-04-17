@@ -41,7 +41,7 @@ require (
 	github.com/bytedance/sonic v1.13.1
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
-	github.com/dicedb/dicedb-go v1.0.4
+	github.com/dicedb/dicedb-go v1.0.5
 	github.com/gobwas/glob v0.2.3
 	github.com/google/btree v1.1.3
 	github.com/google/go-cmp v0.6.0
@@ -55,6 +55,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/twmb/murmur3 v1.1.8
+	github.com/wangjia184/sortedset v0.0.0-20220209072355-af6d6d227aa7
 	golang.org/x/crypto v0.29.0
 	google.golang.org/protobuf v1.36.5
 )

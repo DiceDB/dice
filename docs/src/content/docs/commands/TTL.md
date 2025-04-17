@@ -26,13 +26,13 @@ TTL returns the remaining time to live (in seconds) of a key that has an expirat
 ```
 
 localhost:7379> SET k 43
-OK OK
+OK
 localhost:7379> TTL k
 OK -1
 localhost:7379> SET k 43 EX 10
-OK OK
+OK
 localhost:7379> TTL k
-OK 9
+OK 8
 localhost:7379> TTL kn
 OK -2
 	

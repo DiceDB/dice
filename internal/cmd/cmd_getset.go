@@ -5,8 +5,10 @@ package cmd
 
 import (
 	"github.com/dicedb/dice/internal/errors"
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cGETSET = &CommandMeta{
@@ -16,15 +18,15 @@ var cGETSET = &CommandMeta{
 	HelpLong: `
 GETSET sets the value for the key and returns the old value.
 
-The command returns (nil) if the key does not exist.
+The command returns "" if the key does not exist.
 	`,
 	Examples: `
 localhost:7379> SET k1 v1
-OK OK
+OK
 localhost:7379> GETSET k1 v2
-OK v1
+OK "v1"
 localhost:7379> GET k1
-OK v2
+OK "v2"
 	`,
 	Eval:    evalGETSET,
 	Execute: executeGETSET,
@@ -34,25 +36,46 @@ func init() {
 	CommandRegistry.AddCommand(cGETSET)
 }
 
+func newGETSETRes(obj *object.Obj) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_GETSETRes{
+				GETSETRes: &wire.GETSETRes{
+					Value: getWireValueFromObj(obj),
+				},
+			},
+		},
+	}
+}
+
+var (
+	GETSETResNilRes = newGETSETRes(nil)
+)
+
 func evalGETSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 2 {
-		return cmdResNil, errors.ErrWrongArgumentCount("GETSET")
+		return GETSETResNilRes, errors.ErrWrongArgumentCount("GETSET")
 	}
-	key := c.C.Args[0]
-	value := c.C.Args[1]
+	key, value := c.C.Args[0], c.C.Args[1]
 	obj := s.Get(key)
-	newObj := CreateObjectFromValue(s, value, -1)
-	s.Put(key, newObj)
 
+	// Put the new value in the store
+	s.Put(key, CreateObjectFromValue(s, value, -1))
+
+	// Return the old value, if the key does not exist, return nil
 	if obj == nil {
-		return cmdResNil, nil
+		return GETSETResNilRes, nil
 	}
-	return cmdResFromObject(obj)
+
+	// Return the old value
+	return newGETSETRes(obj), nil
 }
 
 func executeGETSET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 2 {
-		return cmdResNil, errors.ErrWrongArgumentCount("GETSET")
+		return GETSETResNilRes, errors.ErrWrongArgumentCount("GETSET")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalGETSET(c, shard.Thread.Store())

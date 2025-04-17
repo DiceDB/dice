@@ -6,67 +6,58 @@ package cmd
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
-	"github.com/dicedb/dice/internal/server/utils"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/types"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 const (
-	EX               = "EX"
-	PX               = "PX"
-	EXAT             = "EXAT"
-	PXAT             = "PXAT"
-	XX               = "XX"
-	NX               = "NX"
-	KEEPTTL          = "KEEPTTL"
-	GET              = "GET"
 	MaxEXDurationSec = 365 * 24 * 60 * 60 // 1 year in seconds
 )
 
+// TODO: Make the SET command return 1 if the SET operation was successful and 0 if the key was not set or updated.
+// This should involve checking of the old value and the new value.
 var cSET = &CommandMeta{
 	Name:      "SET",
 	Syntax:    "SET key value [EX seconds] [PX milliseconds] [EXAT timestamp] [PXAT timestamp] [XX] [NX] [KEEPTTL]",
-	HelpShort: "SET puts or updates an existing <key, value> pair",
+	HelpShort: "SET puts or updates an existing value for a key",
 	HelpLong: `
-SET puts or updates an existing <key, value> pair.
+SET puts or updates an existing value for a key.
 
-SET identifies the type of the value based on the value itself. If the value is an integer,
-it will be stored as an integer. Otherwise, it will be stored as a string.
+SET stores the value as its native type - be it int or string. SET supports the following options:
 
-- EX seconds: Set the expiration time in seconds
-- PX milliseconds: Set the expiration time in milliseconds
-- EXAT timestamp: Set the expiration time in seconds since epoch
-- PXAT timestamp: Set the expiration time in milliseconds since epoch
-- XX: Only set the key if it already exists
-- NX: Only set the key if it does not already exist
-- KEEPTTL: Keep the existing TTL of the key
-- GET: Return the value of the key after setting it
+- EX seconds: set the expiration time in seconds
+- PX milliseconds: set the expiration time in milliseconds
+- EXAT timestamp: set the expiration time in seconds since epoch
+- PXAT timestamp: set the expiration time in milliseconds since epoch
+- XX: only set the key if it already exists
+- NX: only set the key if it does not already exist
+- KEEPTTL: keep the existing TTL of the key even if some expiration param like EX, etc is provided
 
-Returns "OK" if the key was set or updated. Returns (nil) if the key was not set or updated.
-Returns the value of the key if the GET option is provided.
+Returns "OK" if the SET operation was successful.
 	`,
 	Examples: `
 localhost:7379> SET k 43
-OK OK
+OK
 localhost:7379> SET k 43 EX 10
-OK OK
+OK
 localhost:7379> SET k 43 PX 10000
-OK OK
+OK
 localhost:7379> SET k 43 EXAT 1772377267
-OK OK
+OK
 localhost:7379> SET k 43 PXAT 1772377267000
-OK OK
+OK
 localhost:7379> SET k 43 XX
-OK OK
+OK
 localhost:7379> SET k 43 NX
-OK (nil)
+OK
 localhost:7379> SET k 43 KEEPTTL
-OK OK
-localhost:7379> SET k 43 GET
-OK 43
+OK
 	`,
 	Eval:    evalSET,
 	Execute: executeSET,
@@ -76,44 +67,72 @@ func init() {
 	CommandRegistry.AddCommand(cSET)
 }
 
+func newSETRes() *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message:  "OK",
+			Status:   wire.Status_OK,
+			Response: &wire.Result_SETRes{SETRes: &wire.SETRes{}},
+		},
+	}
+}
+
+var (
+	SETResNilRes = newSETRes()
+	SETResOKRes  = newSETRes()
+)
+
+// parseParams parses the parameters for the any command
+// and returns a map of the parameters and the remainder of the arguments
+// as non-params.
+func parseParams(args []string) (params map[types.Param]string, nonParams []string) {
+	params = map[types.Param]string{}
+	for i := 0; i < len(args); i++ {
+		arg := types.Param(strings.ToUpper(args[i]))
+		switch arg {
+		case types.EX, types.PX, types.EXAT, types.PXAT:
+			params[arg] = args[i+1]
+			i++
+		case types.XX, types.NX, types.KEEPTTL, types.LT, types.GT, types.CH, types.INCR:
+			params[arg] = "true"
+		default:
+			nonParams = append(nonParams, args[i])
+		}
+	}
+	return params, nonParams
+}
+
 //nolint:gocyclo
 func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("SET")
+		return SETResNilRes, errors.ErrWrongArgumentCount("SET")
 	}
 
 	var key, value = c.C.Args[0], c.C.Args[1]
-	params := map[string]string{}
 
-	for i := 2; i < len(c.C.Args); i++ {
-		arg := strings.ToUpper(c.C.Args[i])
-		switch arg {
-		case EX, PX, EXAT, PXAT:
-			params[arg] = c.C.Args[i+1]
-			i++
-		case XX, NX, KEEPTTL, "GET":
-			params[arg] = "true"
-		}
+	params, nonParams := parseParams(c.C.Args[2:])
+	if len(nonParams) > 0 {
+		return SETResNilRes, errors.ErrInvalidSyntax("SET")
 	}
 
 	// Raise errors if incompatible parameters are provided
 	// in one command
-	if params[EX] != "" && params[PX] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[EX] != "" && params[EXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[EX] != "" && params[PXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[PX] != "" && params[EXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[PX] != "" && params[PXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[EXAT] != "" && params[PXAT] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[XX] != "" && params[NX] != "" {
-		return cmdResNil, errors.ErrInvalidSyntax("SET")
-	} else if params[KEEPTTL] != "" && (params[EX] != "" || params[PX] != "" || params[EXAT] != "" || params[PXAT] != "") {
-		return cmdResNil, errors.ErrInvalidSyntax("SET")
+	if params[types.EX] != "" && params[types.PX] != "" {
+		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+	} else if params[types.EX] != "" && params[types.EXAT] != "" {
+		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+	} else if params[types.EX] != "" && params[types.PXAT] != "" {
+		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+	} else if params[types.PX] != "" && params[types.EXAT] != "" {
+		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+	} else if params[types.PX] != "" && params[types.PXAT] != "" {
+		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+	} else if params[types.EXAT] != "" && params[types.PXAT] != "" {
+		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+	} else if params[types.XX] != "" && params[types.NX] != "" {
+		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+	} else if params[types.KEEPTTL] != "" && (params[types.EX] != "" || params[types.PX] != "" || params[types.EXAT] != "" || params[types.PXAT] != "") {
+		return SETResNilRes, errors.ErrInvalidSyntax("SET")
 	}
 
 	var err error
@@ -123,47 +142,47 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// and the key will not expire
 	exDurationMs = -1
 
-	if params[EX] != "" {
-		exDurationSec, err = strconv.ParseInt(params[EX], 10, 64)
+	if params[types.EX] != "" {
+		exDurationSec, err = strconv.ParseInt(params[types.EX], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("SET", "EX")
+			return SETResNilRes, errors.ErrInvalidValue("SET", "EX")
 		}
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return cmdResNil, errors.ErrInvalidValue("SET", "EX")
+			return SETResNilRes, errors.ErrInvalidValue("SET", "EX")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
 
-	if params[PX] != "" {
-		exDurationMs, err = strconv.ParseInt(params[PX], 10, 64)
+	if params[types.PX] != "" {
+		exDurationMs, err = strconv.ParseInt(params[types.PX], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("SET", "PX")
+			return SETResNilRes, errors.ErrInvalidValue("SET", "PX")
 		}
 		if exDurationMs <= 0 || exDurationMs >= MaxEXDurationSec {
-			return cmdResNil, errors.ErrInvalidValue("SET", "PX")
+			return SETResNilRes, errors.ErrInvalidValue("SET", "PX")
 		}
 	}
 
-	if params[EXAT] != "" {
-		tv, err := strconv.ParseInt(params[EXAT], 10, 64)
+	if params[types.EXAT] != "" {
+		tv, err := strconv.ParseInt(params[types.EXAT], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("SET", "EXAT")
+			return SETResNilRes, errors.ErrInvalidValue("SET", "EXAT")
 		}
-		exDurationSec = tv - utils.GetCurrentTime().Unix()
+		exDurationSec = tv - time.Now().Unix()
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return cmdResNil, errors.ErrInvalidValue("SET", "EXAT")
+			return SETResNilRes, errors.ErrInvalidValue("SET", "EXAT")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
 
-	if params[PXAT] != "" {
-		tv, err := strconv.ParseInt(params[PXAT], 10, 64)
+	if params[types.PXAT] != "" {
+		tv, err := strconv.ParseInt(params[types.PXAT], 10, 64)
 		if err != nil {
-			return cmdResNil, errors.ErrInvalidValue("SET", "PXAT")
+			return SETResNilRes, errors.ErrInvalidValue("SET", "PXAT")
 		}
-		exDurationMs = tv - utils.GetCurrentTime().UnixMilli()
+		exDurationMs = tv - time.Now().UnixMilli()
 		if exDurationMs <= 0 || exDurationMs >= (MaxEXDurationSec*1000) {
-			return cmdResNil, errors.ErrInvalidValue("SET", "PXAT")
+			return SETResNilRes, errors.ErrInvalidValue("SET", "PXAT")
 		}
 	}
 
@@ -183,40 +202,26 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// If XX is provided and the key does not exist, return nil
 	// XX: only set the key if it already exists
 	// So, if it does not exist, we return nil and move on
-	if params[XX] != "" && existingObj == nil {
-		return cmdResNil, nil
+	if params[types.XX] != "" && existingObj == nil {
+		return SETResOKRes, nil
 	}
 
 	// If NX is provided and the key already exists, return nil
 	// NX: only set the key if it does not already exist
 	// So, if it does exist, we return nil and move on
-	if params[NX] != "" && existingObj != nil {
-		return cmdResNil, nil
+	if params[types.NX] != "" && existingObj != nil {
+		return SETResOKRes, nil
 	}
 
 	newObj := CreateObjectFromValue(s, value, exDurationMs)
-	s.Put(key, newObj, dstore.WithKeepTTL(params[KEEPTTL] != ""))
+	s.Put(key, newObj, dstore.WithKeepTTL(params[types.KEEPTTL] != ""))
 
-	if params[GET] != "" {
-		// TODO: Optimize this because we have alread fetched the
-		// object in the existingObj variable. We can avoid executing
-		// the GET command again.
-
-		// If existingObj is nil then the key does not exist
-		// and we return nil
-		if existingObj == nil {
-			return cmdResNil, nil
-		}
-
-		return cmdResFromObject(existingObj)
-	}
-
-	return cmdResOK, nil
+	return SETResOKRes, nil
 }
 
 func executeSET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("SET")
+		return SETResNilRes, errors.ErrWrongArgumentCount("SET")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalSET(c, shard.Thread.Store())

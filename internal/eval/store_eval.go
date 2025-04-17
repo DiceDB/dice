@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 	"unsafe"
 
@@ -650,7 +651,7 @@ func evalAPPEND(args []string, store *dstore.Store) *EvalResponse {
 	// Set the new expiry time
 	if hasExpiry {
 		// get the new expiry time in milliseconds
-		exDurationMs = int64(expiryTStampMs) - utils.GetCurrentTime().UnixMilli()
+		exDurationMs = expiryTStampMs - time.Now().UnixMilli()
 		if exDurationMs < 0 {
 			// set expiry time to 0
 			exDurationMs = 0
@@ -1586,7 +1587,7 @@ func evalPTTL(args []string, store *dstore.Store) *EvalResponse {
 
 	// compute the time remaining for the key to expire and
 	// return the RESP encoded form of it
-	durationMs := exp - uint64(utils.GetCurrentTime().UnixMilli())
+	durationMs := exp - time.Now().UnixMilli()
 	return &EvalResponse{
 		Result: durationMs,
 		Error:  nil,
@@ -4178,7 +4179,7 @@ func evalSETBIT(args []string, store *dstore.Store) *EvalResponse {
 		exp, ok := dstore.GetExpiry(obj, store)
 		var exDurationMs int64 = -1
 		if ok {
-			exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+			exDurationMs = exp - time.Now().UnixMilli()
 		}
 		// newObj has bydefault expiry time -1 , we need to set it
 		if exDurationMs > 0 {
@@ -4564,7 +4565,7 @@ func evalGetObject(args []string, store *dstore.Store) *EvalResponse {
 	exp, ok := dstore.GetExpiry(obj, store)
 	var exDurationMs int64 = -1
 	if ok {
-		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+		exDurationMs = exp - time.Now().UnixMilli()
 	}
 
 	exObj := &object.InternalObj{
@@ -4932,7 +4933,7 @@ func evalJSONNUMMULTBY(args []string, store *dstore.Store) *EvalResponse {
 
 	var exDurationMs int64 = -1
 	if ok {
-		exDurationMs = int64(exp - uint64(utils.GetCurrentTime().UnixMilli()))
+		exDurationMs = exp - time.Now().UnixMilli()
 	}
 	// newObj has default expiry time of -1 , we need to set it
 	if exDurationMs > 0 {
@@ -5689,7 +5690,7 @@ func evalObjectIdleTime(key string, store *dstore.Store) *EvalResponse {
 		return makeEvalResult(NIL)
 	}
 
-	return makeEvalResult(int64(dstore.GetIdleTime(obj.LastAccessedAt)))
+	return makeEvalResult(dstore.GetIdleTime(obj.LastAccessedAt))
 }
 
 func evalOBJECT(args []string, store *dstore.Store) *EvalResponse {

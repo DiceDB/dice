@@ -15,7 +15,7 @@ EXPIRETIME key
 ```
 
 
-EXPIRETIME returns the absolute Unix timestamp in seconds at which the given key will expire.
+EXPIRETIME returns the absolute timestamp in Unix seconds at which the given key will expire.
 
 The command returns -1 if the key exists but has no associated expiration time.
 The command returns -2 if the key does not exist.
@@ -25,11 +25,11 @@ The command returns -2 if the key does not exist.
 
 ```
 
-locahost:7379> SET k1 v1
-OK OK
-locahost:7379> EXPIRE k1 10
-OK 1
-locahost:7379> EXPIRETIME k1
-OK 1740829178
+localhost:7379> SET k1 v1
+OK
+localhost:7379> EXPIRE k1 10
+OK true
+localhost:7379> EXPIRETIME k1
+OK 1744451192
 	
 ```

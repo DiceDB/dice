@@ -19,6 +19,7 @@ func TestGETWATCH(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'GET.WATCH' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil},
 		},
 	}
 
