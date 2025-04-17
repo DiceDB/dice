@@ -5,29 +5,28 @@ package cmd
 
 import (
 	"github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/eval/sortedset"
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dice/internal/types"
 	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cZCARD *CommandMeta = &CommandMeta{
 	Name:      "ZCARD",
 	Syntax:    "ZCARD key",
-	HelpShort: `ZCARD returns the cardinality (number of elements) of the sorted set stored at key.`,
+	HelpShort: `ZCARD returns the cardinality of the sorted set stored at key.`,
 	HelpLong: `
-		ZCARD returns the cardinality (number of elements) of the sorted set stored at key.
+ZCARD returns the cardinality of the sorted set stored at key.
 
-		Returns 0 if key is not found
+The command returns 0 if key does not exist.
 	`,
 	Examples: `
-locahost:7379> ZADD myzset 1 "one"
-OK 1
-locahost:7379> ZADD myset 2 "two" 3 "three"
-OK 2
-locahost:7379> ZCARD myset
+locahost:7379> ZADD users 1 alice 2 bob 3 charlie
 OK 3
-localhost:7379> ZCARD myzset
+locahost:7379> ZCARD users
+OK 3
+localhost:7379> ZCARD nonexistent_key
 OK 0
 	`,
 	Eval:    evalZCARD,
@@ -38,39 +37,45 @@ func init() {
 	CommandRegistry.AddCommand(cZCARD)
 }
 
-// evalZCARD returns the cardinality (number of elements) of the sorted set stored at key.
-// args should contain only 1 value, the key
-// Returns expiration Unix timestamp in seconds.
-// Returns -1 if the key exists but has no associated expiration time.
-// Returns -2 if the key does not exist.
-func evalZCARD(c *Cmd, dst *dstore.Store) (*CmdRes, error) {
+func newZCARDRes(count int64) *CmdRes {
+	return &CmdRes{Rs: &wire.Result{
+		Response: &wire.Result_ZCARDRes{
+			ZCARDRes: &wire.ZCARDRes{
+				Count: count,
+			},
+		},
+	},
+	}
+}
+
+var (
+	ZCARDResNilRes = newZCARDRes(0)
+)
+
+func evalZCARD(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ZCARD")
+		return ZCARDResNilRes, errors.ErrWrongArgumentCount("ZCARD")
 	}
 
 	key := c.C.Args[0]
-	obj := dst.Get(key)
+	var ss *types.SortedSet
+
+	obj := s.Get(key)
 	if obj == nil {
-		return cmdResInt0, nil
+		return ZCARDResNilRes, nil
 	}
 
-	sortedSet, err := sortedset.FromObject(obj)
-
-	if err != nil {
-		return cmdResNil, errors.ErrWrongTypeOperation
+	if obj.Type != object.ObjTypeSortedSet {
+		return ZCARDResNilRes, errors.ErrWrongTypeOperation
 	}
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{
-			VInt: int64(sortedSet.Len()),
-		},
-	}}, nil
-
+	ss = obj.Value.(*types.SortedSet)
+	return newZCARDRes(int64(ss.GetCount())), nil
 }
 
 func executeZCARD(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("EXPIRETIME")
+		return ZCARDResNilRes, errors.ErrWrongArgumentCount("ZCARD")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalZCARD(c, shard.Thread.Store())
