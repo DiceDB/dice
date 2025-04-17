@@ -48,6 +48,8 @@ func init() {
 func newZRANKRes(rank int64, element *wire.ZElement) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_ZRANKRes{
 				ZRANKRes: &wire.ZRANKRes{
 					Rank:    rank,
