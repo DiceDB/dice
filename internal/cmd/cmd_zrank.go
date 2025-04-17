@@ -1,41 +1,41 @@
 package cmd
 
 import (
-	"strings"
-
 	"github.com/dicedb/dice/internal/errors"
-	"github.com/dicedb/dice/internal/eval/sortedset"
+	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
-	"google.golang.org/protobuf/types/known/structpb"
+	"github.com/dicedb/dice/internal/types"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cZRANK = &CommandMeta{
 	Name:      "ZRANK",
-	Syntax:    "ZRANK key member [WITHSCORE]",
+	Syntax:    "ZRANK key member",
 	HelpShort: "ZRANK returns the rank of a member in a sorted set, ordered from low to high scores.",
 	HelpLong: `
-ZRANK returns the 0-based rank (position) of a member in a sorted set, 
-with scores ordered from low to high. If the optional WITHSCORE flag is provided, 
-the score will also be returned.
-- returns nil if the member does not exist in the sorted set
-- rank starts at 0 for the member with the lowest score
-- WITHSCORE returns both rank and score
+ZRANK returns the rank of a member in a sorted set, ordered from low to high scores.
+
+The rank is 1-based which means that the member with the lowest score has rank 1.
+The command returns the element (score with member) and the rank.
+
+The the member passed as the second argument is not a member of the sorted set, the command returns a
+valid response with a rank of 0 and score of 0. If the key does not exist, the command returns a
+valid response with a rank of 0, score of 0, and the member as "".
 	`,
 	Examples: `
-localhost:7379> ZADD myzset 1 "one"
-(integer) 1
-localhost:7379> ZADD myzset 2 "two"
-(integer) 1
-localhost:7379> ZADD myzset 3 "three"
-(integer) 1
-localhost:7379> ZRANK myzset "two"
-(integer) 1
-localhost:7379> ZRANK myzset "five"
-(nil)
-localhost:7379> ZRANK myzset "three" WITHSCORE
-1) (integer) 2
-2) "3"
+localhost:7379> ZADD users 20 bob
+OK 1
+localhost:7379> ZADD users 10 alice
+OK 1
+localhost:7379> ZADD users 30 charlie
+OK 1
+localhost:7379> ZRANK users bob
+OK 2, 20, bob
+localhost:7379> ZRANK users charlie
+OK 3, 30, charlie
+localhost:7379> ZRANK users daniel
+OK 0, 0, daniel
 	`,
 	Eval:    evalZRANK,
 	Execute: executeZRANK,
@@ -45,56 +45,60 @@ func init() {
 	CommandRegistry.AddCommand(cZRANK)
 }
 
+func newZRANKRes(rank int64, element *wire.ZElement) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Response: &wire.Result_ZRANKRes{
+				ZRANKRes: &wire.ZRANKRes{
+					Rank:    rank,
+					Element: element,
+				},
+			},
+		},
+	}
+}
+
+var (
+	ZRANKResNilRes = newZRANKRes(0, nil)
+)
+
 // evalZRANK returns the rank of the member in the sorted set stored at key.
 // The rank (or index) is 0-based, which means that the member with the lowest score has rank 0.
 // If the 'WITHSCORE' option is specified, it returns both the rank and the score of the member.
 // Returns nil if the key does not exist or the member is not a member of the sorted set.
 func evalZRANK(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	key, member, withScore, err := parseZRANKArgs(c)
-	if err != nil {
-		return cmdResNil, err
-	}
+	key := c.C.Args[0]
+	member := c.C.Args[1]
+
 	obj := s.Get(key)
 	if obj == nil {
-		return cmdResNil, errors.ErrWrongTypeOperation
+		return ZRANKResNilRes, nil
 	}
 
-	sortedSet, errInfo := sortedset.FromObject(obj)
-	if errInfo != nil {
-		return cmdResNil, errors.ErrWrongTypeOperation
-	}
-	rank, score := sortedSet.RankWithScore(member, false)
-	if rank == -1 {
-		return cmdResNil, errors.ErrWrongTypeOperation
+	if obj.Type != object.ObjTypeSortedSet {
+		return ZRANGEResNilRes, errors.ErrWrongTypeOperation
 	}
 
-	result := cmdResIntSlice([]int64{rank})
+	ss := obj.Value.(*types.SortedSet)
 
-	if withScore {
-		result.R.VList = append(result.R.VList, structpb.NewNumberValue(float64(score)))
+	node := ss.GetByKey(member)
+	rank := ss.FindRank(member)
+	if node == nil || rank == 0 {
+		return newZRANKRes(0, &wire.ZElement{
+			Score:  0,
+			Member: member,
+		}), nil
 	}
 
-	return result, nil
-}
-
-func parseZRANKArgs(c *Cmd) (key string, member string, withScore bool, err error) {
-	key = c.C.Args[0]
-	member = c.C.Args[1]
-	withScore = false
-	if len(c.C.Args) > 2 {
-		if strings.EqualFold(c.C.Args[2], "WITHSCORE") {
-			withScore = true
-		} else {
-			err = errors.ErrIntegerOutOfRange
-			return
-		}
-	}
-	return
+	return newZRANKRes(int64(rank), &wire.ZElement{
+		Score:  int64(node.Score()),
+		Member: node.Key(),
+	}), nil
 }
 
 func executeZRANK(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	if len(c.C.Args) < 2 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ZRANK")
+	if len(c.C.Args) != 2 {
+		return ZRANKResNilRes, errors.ErrWrongArgumentCount("ZRANK")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalZRANK(c, shard.Thread.Store())
