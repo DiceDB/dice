@@ -37,15 +37,17 @@ func init() {
 }
 
 func newHSETRes(count int64) *CmdRes {
-	return &CmdRes{Rs: &wire.Result{
-		Message: "OK",
-		Status:  wire.Status_OK,
-		Response: &wire.Result_HSETRes{
-			HSETRes: &wire.HSETRes{
-				Count: count,
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_HSETRes{
+				HSETRes: &wire.HSETRes{
+					Count: count,
+				},
 			},
 		},
-	}}
+	}
 }
 
 var (

@@ -50,6 +50,8 @@ func init() {
 func newZPOPMAXRes(elements []*wire.ZElement) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_ZPOPMAXRes{
 				ZPOPMAXRes: &wire.ZPOPMAXRes{
 					Elements: elements,

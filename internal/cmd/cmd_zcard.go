@@ -38,13 +38,16 @@ func init() {
 }
 
 func newZCARDRes(count int64) *CmdRes {
-	return &CmdRes{Rs: &wire.Result{
-		Response: &wire.Result_ZCARDRes{
-			ZCARDRes: &wire.ZCARDRes{
-				Count: count,
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_ZCARDRes{
+				ZCARDRes: &wire.ZCARDRes{
+					Count: count,
+				},
 			},
 		},
-	},
 	}
 }
 

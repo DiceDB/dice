@@ -56,17 +56,8 @@ var (
 	ZRANGEResNilRes = newZRANGERes([]*wire.ZElement{})
 )
 
-func executeZRANGE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	if len(c.C.Args) < 3 {
-		return ZRANGEResNilRes, errors.ErrWrongArgumentCount("ZRANGE")
-	}
-
-	shard := sm.GetShardForKey(c.C.Args[0])
-	return evalZRANGE(c, shard.Thread.Store())
-}
-
 func evalZRANGE(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) < 3 {
+	if len(c.C.Args) != 3 {
 		return ZRANGEResNilRes, errors.ErrWrongArgumentCount("ZRANGE")
 	}
 	key := c.C.Args[0]
@@ -95,11 +86,14 @@ func evalZRANGE(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	ss := obj.Value.(*types.SortedSet)
 	elements := ss.ZRANGE(start, stop)
 
-	return &CmdRes{
-		Rs: &wire.Result{
-			Response: &wire.Result_ZRANGERes{
-				ZRANGERes: &wire.ZRANGERes{Elements: elements},
-			},
-		},
-	}, nil
+	return newZRANGERes(elements), nil
+}
+
+func executeZRANGE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
+	if len(c.C.Args) != 3 {
+		return ZRANGEResNilRes, errors.ErrWrongArgumentCount("ZRANGE")
+	}
+
+	shard := sm.GetShardForKey(c.C.Args[0])
+	return evalZRANGE(c, shard.Thread.Store())
 }

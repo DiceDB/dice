@@ -38,6 +38,6 @@ OK
 
 client1:7379> ...
 entered the watch mode for GET.WATCH k1
-OK [fingerprint=2356444921 ] "v2"
+OK [fingerprint=2356444921] "v2"
 	
 ```

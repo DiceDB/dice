@@ -1,3 +1,6 @@
+// Copyright (c) 2022-present, DiceDB contributors
+// All rights reserved. Licensed under the BSD 3-Clause License. See LICENSE file in the project root for full license information.
+
 package cmd
 
 import (
@@ -48,6 +51,8 @@ func init() {
 func newZRANKRes(rank int64, element *wire.ZElement) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
 			Response: &wire.Result_ZRANKRes{
 				ZRANKRes: &wire.ZRANKRes{
 					Rank:    rank,

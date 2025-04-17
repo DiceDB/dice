@@ -38,6 +38,6 @@ OK 0
 
 client1:7379> ...
 entered the watch mode for HGET.WATCH k1 f1
-OK [fingerprint=3432795955 ] "v2"
+OK [fingerprint=3432795955] "v2"
 	
 ```

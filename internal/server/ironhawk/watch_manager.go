@@ -18,18 +18,18 @@ type WatchManager struct {
 	mu                   sync.RWMutex
 	clientWatchThreadMap map[string]*IOThread
 
-	keyFPMap    map[string]map[uint32]bool
-	fpClientMap map[uint32]map[string]bool
-	fpCmdMap    map[uint32]*cmd.Cmd
+	keyFPMap    map[string]map[uint64]bool
+	fpClientMap map[uint64]map[string]bool
+	fpCmdMap    map[uint64]*cmd.Cmd
 }
 
 func NewWatchManager() *WatchManager {
 	return &WatchManager{
 		clientWatchThreadMap: map[string]*IOThread{},
 
-		keyFPMap:    map[string]map[uint32]bool{},
-		fpClientMap: map[uint32]map[string]bool{},
-		fpCmdMap:    map[uint32]*cmd.Cmd{},
+		keyFPMap:    map[string]map[uint64]bool{},
+		fpClientMap: map[uint64]map[string]bool{},
+		fpCmdMap:    map[uint64]*cmd.Cmd{},
 	}
 }
 
@@ -55,7 +55,7 @@ func (w *WatchManager) HandleWatch(c *cmd.Cmd, t *IOThread) {
 	// For the key that will be watched through any .WATCH command
 	// Create an entry in the map that holds, key <--> [command fingerprint] as map
 	if _, ok := w.keyFPMap[key]; !ok {
-		w.keyFPMap[key] = make(map[uint32]bool)
+		w.keyFPMap[key] = make(map[uint64]bool)
 	}
 	w.keyFPMap[key][fp] = true
 
@@ -83,11 +83,10 @@ func (w *WatchManager) HandleUnwatch(c *cmd.Cmd, t *IOThread) {
 	}
 
 	// Parse the fingerprint from the command
-	_fp, err := strconv.ParseUint(c.C.Args[0], 10, 32)
+	fp, err := strconv.ParseUint(c.C.Args[0], 10, 64)
 	if err != nil {
 		return
 	}
-	fp := uint32(_fp)
 
 	// Multiple clients can unsubscribe from the same fingerprint
 	// So, we need to delete the one that is unsubscribing
