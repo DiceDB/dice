@@ -121,7 +121,7 @@ func Start() {
 	// improving concurrency performance across multiple goroutines.
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	shardManager := shardmanager.NewShardManager(numShards, serverErrCh)
+	shardManager := shardmanager.NewShardManager(numShards, serverErrCh, wl)
 	watchManager := ironhawk.NewWatchManager()
 
 	wg := sync.WaitGroup{}
