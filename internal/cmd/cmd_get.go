@@ -87,6 +87,8 @@ func getWireValueFromObj(obj *object.Obj) string {
 		return obj.Value.(string)
 	case object.ObjTypeByteArray, object.ObjTypeHLL:
 		return string(obj.Value.([]byte))
+	case object.ObjTypeFloat:
+		return fmt.Sprintf("%f", obj.Value.(float64))
 	default:
 		panic("unknown object type " + obj.Type.String())
 	}

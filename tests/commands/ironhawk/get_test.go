@@ -34,6 +34,12 @@ func TestGET(t *testing.T) {
 			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGET},
 		},
 		{
+			name:           "Set Floating Point Value",
+			commands:       []string{"SET fp 123.123", "GET fp"},
+			expected:       []interface{}{"OK", "123.123000"},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGET},
+		},
+		{
 			name:           "Get with non existent key",
 			commands:       []string{"GET nek"},
 			expected:       []interface{}{""},
