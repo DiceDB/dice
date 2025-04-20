@@ -162,7 +162,7 @@ func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *shardmanager.Sha
 				continue
 			}
 
-			err := thread.IoHandler.WriteSync(context.Background(), r.Rs)
+			err := thread.serverWire.Send(context.Background(), r.Rs)
 			if err != nil {
 				slog.Error("failed to write response to thread",
 					slog.Any("client_id", thread.ClientID),
