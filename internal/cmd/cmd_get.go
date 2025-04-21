@@ -38,22 +38,26 @@ func init() {
 	CommandRegistry.AddCommand(cGET)
 }
 
-func newGETRes(obj *object.Obj) *CmdRes {
+func newGETRes(obj *object.Obj) (*CmdRes, error) {
+	value, err := getWireValueFromObj(obj)
+	if err != nil {
+		return nil, err
+	}
 	return &CmdRes{
 		Rs: &wire.Result{
 			Message: "OK",
 			Status:  wire.Status_OK,
 			Response: &wire.Result_GETRes{
 				GETRes: &wire.GETRes{
-					Value: getWireValueFromObj(obj),
+					Value: value,
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 var (
-	GETResNilRes = newGETRes(nil)
+	GETResNilRes, _ = newGETRes(nil)
 )
 
 func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
@@ -64,7 +68,11 @@ func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	obj := s.Get(key)
 
-	return newGETRes(obj), nil
+	res, err := newGETRes(obj)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
@@ -75,21 +83,21 @@ func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	return evalGET(c, shard.Thread.Store())
 }
 
-func getWireValueFromObj(obj *object.Obj) string {
+func getWireValueFromObj(obj *object.Obj) (string, error) {
 	if obj == nil {
-		return ""
+		return "", nil
 	}
 
 	switch obj.Type {
 	case object.ObjTypeInt:
-		return fmt.Sprintf("%d", obj.Value.(int64))
+		return fmt.Sprintf("%d", obj.Value.(int64)), nil
 	case object.ObjTypeString:
-		return obj.Value.(string)
+		return obj.Value.(string), nil
 	case object.ObjTypeByteArray, object.ObjTypeHLL:
-		return string(obj.Value.([]byte))
+		return string(obj.Value.([]byte)), nil
 	case object.ObjTypeFloat:
-		return fmt.Sprintf("%f", obj.Value.(float64))
+		return fmt.Sprintf("%f", obj.Value.(float64)), nil
 	default:
-		panic("unknown object type " + obj.Type.String())
+		return "", errors.ErrUnknownObjectType
 	}
 }

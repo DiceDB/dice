@@ -36,22 +36,26 @@ func init() {
 	CommandRegistry.AddCommand(cGETDEL)
 }
 
-func newGETDELRes(obj *object.Obj) *CmdRes {
+func newGETDELRes(obj *object.Obj) (*CmdRes, error) {
+	value, err := getWireValueFromObj(obj)
+	if err != nil {
+		return nil, err
+	}
 	return &CmdRes{
 		Rs: &wire.Result{
 			Message: "OK",
 			Status:  wire.Status_OK,
 			Response: &wire.Result_GETDELRes{
 				GETDELRes: &wire.GETDELRes{
-					Value: getWireValueFromObj(obj),
+					Value: value,
 				},
 			},
 		},
-	}
+	}, err
 }
 
 var (
-	GETDELResNilRes = newGETDELRes(nil)
+	GETDELResNilRes, _ = newGETDELRes(nil)
 )
 
 func evalGETDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
@@ -72,7 +76,11 @@ func evalGETDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// implemented in the store. It might be better if we can
 	// keep the business logic untangled from the store.
 	objVal := s.GetDel(key)
-	return newGETDELRes(objVal), nil
+	res, err := newGETDELRes(objVal)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func executeGETDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

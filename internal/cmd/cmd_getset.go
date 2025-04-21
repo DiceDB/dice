@@ -36,22 +36,26 @@ func init() {
 	CommandRegistry.AddCommand(cGETSET)
 }
 
-func newGETSETRes(obj *object.Obj) *CmdRes {
+func newGETSETRes(obj *object.Obj) (*CmdRes, error) {
+	value, err := getWireValueFromObj(obj)
+	if err != nil {
+		return nil, err
+	}
 	return &CmdRes{
 		Rs: &wire.Result{
 			Message: "OK",
 			Status:  wire.Status_OK,
 			Response: &wire.Result_GETSETRes{
 				GETSETRes: &wire.GETSETRes{
-					Value: getWireValueFromObj(obj),
+					Value: value,
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 var (
-	GETSETResNilRes = newGETSETRes(nil)
+	GETSETResNilRes, _ = newGETSETRes(nil)
 )
 
 func evalGETSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
@@ -70,7 +74,11 @@ func evalGETSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	// Return the old value
-	return newGETSETRes(obj), nil
+	res, err := newGETSETRes(obj)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func executeGETSET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

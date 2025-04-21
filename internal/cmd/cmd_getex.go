@@ -60,22 +60,26 @@ func init() {
 	CommandRegistry.AddCommand(cGETEX)
 }
 
-func newGETEXRes(obj *object.Obj) *CmdRes {
+func newGETEXRes(obj *object.Obj) (*CmdRes, error) {
+	value, err := getWireValueFromObj(obj)
+	if err != nil {
+		return nil, err
+	}
 	return &CmdRes{
 		Rs: &wire.Result{
 			Message: "OK",
 			Status:  wire.Status_OK,
 			Response: &wire.Result_GETEXRes{
 				GETEXRes: &wire.GETEXRes{
-					Value: getWireValueFromObj(obj),
+					Value: value,
 				},
 			},
 		},
-	}
+	}, err
 }
 
 var (
-	GETEXResNilRes = newGETEXRes(nil)
+	GETEXResNilRes, _ = newGETEXRes(nil)
 )
 
 func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
@@ -175,7 +179,11 @@ func evalGETEX(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		s.SetExpiry(existingObj, exDurationMs)
 	}
 
-	return newGETEXRes(existingObj), nil
+	res, err := newGETEXRes(existingObj)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func executeGETEX(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
