@@ -38,10 +38,15 @@ func init() {
 	CommandRegistry.AddCommand(cGET)
 }
 
-func newGETRes(obj *object.Obj) (*CmdRes, error) {
+func newGETRes(obj *object.Obj) *CmdRes {
 	value, err := getWireValueFromObj(obj)
 	if err != nil {
-		return nil, err
+		return &CmdRes{
+			Rs: &wire.Result{
+				Message: err.Error(),
+				Status:  wire.Status_ERR,
+			},
+		}
 	}
 	return &CmdRes{
 		Rs: &wire.Result{
@@ -53,11 +58,11 @@ func newGETRes(obj *object.Obj) (*CmdRes, error) {
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 var (
-	GETResNilRes, _ = newGETRes(nil)
+	GETResNilRes = newGETRes(nil)
 )
 
 func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
@@ -68,11 +73,7 @@ func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	obj := s.Get(key)
 
-	res, err := newGETRes(obj)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
+	return newGETRes(obj), nil
 }
 
 func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
