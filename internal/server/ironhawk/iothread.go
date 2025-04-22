@@ -5,9 +5,11 @@ package ironhawk
 
 import (
 	"context"
+	"github.com/dicedb/dicedb-go"
 	"log/slog"
 	"strings"
 
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -15,29 +17,41 @@ import (
 )
 
 type IOThread struct {
-	ClientID  string
-	Mode      string
-	IoHandler *IOHandler
-	Session   *auth.Session
+	ClientID   string
+	Mode       string
+	Session    *auth.Session
+	serverWire *dicedb.ServerWire
 }
 
 func NewIOThread(clientFD int) (*IOThread, error) {
-	io, err := NewIOHandler(clientFD)
+	w, err := dicedb.NewServerWire(config.MaxRequestSize, config.KeepAlive, clientFD)
 	if err != nil {
-		slog.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
-		return nil, err
+		if err.Kind == wire.NotEstablished {
+			slog.Error("failed to establish connection to client", slog.Int("client-fd", clientFD), slog.Any("error", err))
+
+			return nil, err.Unwrap()
+		} else {
+			slog.Error("unexpected error during client connection establishment, this should be reported to DiceDB maintainers", slog.Int("client-fd", clientFD))
+			return nil, err.Unwrap()
+		}
 	}
+
 	return &IOThread{
-		IoHandler: io,
-		Session:   auth.NewSession(),
+		serverWire: w,
+		Session:    auth.NewSession(),
 	}, nil
 }
 
-func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.ShardManager, watchManager *WatchManager) error {
+func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardManager, watchManager *WatchManager) error {
 	for {
-		c, err := t.IoHandler.ReadSync()
-		if err != nil {
-			return err
+		var c *wire.Command
+		{
+			tmpC, err := t.serverWire.Receive()
+			if err != nil {
+				return err.Unwrap()
+			}
+
+			c = tmpC
 		}
 
 		_c := &cmd.Cmd{
@@ -83,8 +97,8 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 
 		watchManager.RegisterThread(t)
 
-		if err := t.IoHandler.WriteSync(ctx, res.Rs); err != nil {
-			return err
+		if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
+			return sendErr.Unwrap()
 		}
 
 		// TODO: Streamline this because we need ordering of updates
@@ -94,6 +108,7 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 }
 
 func (t *IOThread) Stop() error {
+	t.serverWire.Close()
 	t.Session.Expire()
 	return nil
 }
