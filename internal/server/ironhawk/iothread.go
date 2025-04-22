@@ -5,9 +5,10 @@ package ironhawk
 
 import (
 	"context"
-	"github.com/dicedb/dicedb-go"
 	"log/slog"
 	"strings"
+
+	"github.com/dicedb/dicedb-go"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
@@ -30,10 +31,9 @@ func NewIOThread(clientFD int) (*IOThread, error) {
 			slog.Error("failed to establish connection to client", slog.Int("client-fd", clientFD), slog.Any("error", err))
 
 			return nil, err.Unwrap()
-		} else {
-			slog.Error("unexpected error during client connection establishment, this should be reported to DiceDB maintainers", slog.Int("client-fd", clientFD))
-			return nil, err.Unwrap()
 		}
+		slog.Error("unexpected error during client connection establishment, this should be reported to DiceDB maintainers", slog.Int("client-fd", clientFD))
+		return nil, err.Unwrap()
 	}
 
 	return &IOThread{
