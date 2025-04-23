@@ -20,7 +20,7 @@ const PERSIST = "PERSIST"
 
 var cGETEX = &CommandMeta{
 	Name:      "GETEX",
-	Syntax:    "GETEX key [EX seconds] [PX milliseconds] [EXAT timestamp-seconds] [PXAT timestamp-milliseconds] [PERSIST]",
+	Syntax:    "GETEX key [EX seconds | PX milliseconds] [EXAT timestamp-seconds | PXAT timestamp-milliseconds] [PERSIST]",
 	HelpShort: "GETEX gets the value of key and optionally set its expiration.",
 	HelpLong: `
 GETEX gets the value of key and optionally set its expiration. The behavior of the command

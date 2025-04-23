@@ -11,7 +11,7 @@ description: GETEX gets the value of key and optionally set its expiration.
 #### Syntax
 
 ```
-GETEX key [EX seconds] [PX milliseconds] [EXAT timestamp-seconds] [PXAT timestamp-milliseconds] [PERSIST]
+GETEX key [EX seconds | PX milliseconds] [EXAT timestamp-seconds | PXAT timestamp-milliseconds] [PERSIST]
 ```
 
 
