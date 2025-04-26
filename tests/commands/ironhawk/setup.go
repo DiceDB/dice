@@ -15,6 +15,7 @@ import (
 
 	"github.com/dicedb/dice/internal/server/ironhawk"
 	"github.com/dicedb/dice/internal/shardmanager"
+	"github.com/dicedb/dice/internal/wal"
 
 	"github.com/dicedb/dice/config"
 	derrors "github.com/dicedb/dice/internal/errors"
@@ -111,8 +112,9 @@ func RunTestServer(wg *sync.WaitGroup) {
 	shardManager := shardmanager.NewShardManager(1, gec)
 	ioThreadManager := ironhawk.NewIOThreadManager()
 	watchManager := &ironhawk.WatchManager{}
+	wl, _ := wal.NewAOFWAL(config.Config.WALDir)
 
-	testServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager)
+	testServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager, wl)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fmt.Println("Starting the test server on port", config.Config.Port)

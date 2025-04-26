@@ -5,6 +5,7 @@ package ironhawk
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -22,9 +23,10 @@ type IOThread struct {
 	Mode       string
 	Session    *auth.Session
 	serverWire *dicedb.ServerWire
+	server     *Server
 }
 
-func NewIOThread(clientFD int) (*IOThread, error) {
+func NewIOThread(clientFD int, server *Server) (*IOThread, error) {
 	w, err := dicedb.NewServerWire(config.MaxRequestSize, config.KeepAlive, clientFD)
 	if err != nil {
 		if err.Kind == wire.NotEstablished {
@@ -39,6 +41,7 @@ func NewIOThread(clientFD int) (*IOThread, error) {
 	return &IOThread{
 		serverWire: w,
 		Session:    auth.NewSession(),
+		server:     server,
 	}, nil
 }
 
@@ -72,6 +75,14 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 			res.Rs.Status = wire.Status_OK
 			if res.Rs.Message == "" {
 				res.Rs.Message = "OK"
+			}
+		}
+
+		// Log command to WAL if enabled and not a replay
+		if err == nil && t.server.WAL != nil && !_c.IsReplay {
+			// Create WAL entry using protobuf message
+			if err := t.server.WAL.LogCommand([]byte(fmt.Sprintf("%s %s", _c.C.Cmd, strings.Join(_c.C.Args, " ")))); err != nil {
+				slog.Error("failed to log command to WAL", slog.Any("error", err))
 			}
 		}
 
