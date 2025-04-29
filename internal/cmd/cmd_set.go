@@ -24,7 +24,7 @@ const (
 // This should involve checking of the old value and the new value.
 var cSET = &CommandMeta{
 	Name:      "SET",
-	Syntax:    "SET key value [EX seconds] [PX milliseconds] [EXAT timestamp] [PXAT timestamp] [XX] [NX] [KEEPTTL]",
+	Syntax:    "SET key value [EX seconds | PX milliseconds] [EXAT timestamp | PXAT timestamp] [XX | NX] [KEEPTTL]",
 	HelpShort: "SET puts or updates an existing value for a key",
 	HelpLong: `
 SET puts or updates an existing value for a key.
