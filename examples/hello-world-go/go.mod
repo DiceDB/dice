@@ -2,7 +2,7 @@ module hello-world-go
 
 go 1.24.0
 
-require github.com/dicedb/dicedb-go v1.0.7
+require github.com/dicedb/dicedb-go v1.0.8
 
 require (
 	github.com/google/uuid v1.6.0 // indirect

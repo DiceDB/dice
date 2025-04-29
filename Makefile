@@ -23,6 +23,9 @@ test: ## run the integration tests
 	go clean -testcache
 	CGO_ENABLED=1 go test -race -count=1 -p=1 ./tests/...
 
+test-docs:
+	go run ./scripts/test-docs/main.go
+
 test-one: ## run a single integration test function by name (e.g. make test-one TEST_FUNC=TestSetGet)
 	go clean -testcache
 	CGO_ENABLED=1 go test -v -race -count=1 --run $(TEST_FUNC) ./tests/...
