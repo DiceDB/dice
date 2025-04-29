@@ -11,7 +11,7 @@ description: ZRANGE.WATCH creates a query subscription over the ZRANGE command
 #### Syntax
 
 ```
-ZRANGE.WATCH key start stop
+ZRANGE.WATCH key start stop [BYSCORE | BYRANK]
 ```
 
 
@@ -26,22 +26,22 @@ You can update the key in any other client. The ZRANGE.WATCH client will receive
 
 ```
 
-client1:7379> ZADD users 1 alice 2 bob 3 charlie
+client1:7379> ZADD users 10 alice 20 bob 30 charlie
 OK 3
 client1:7379> ZRANGE.WATCH users 1 5
 entered the watch mode for ZRANGE.WATCH users
 
 
-client2:7379> ZADD users 4 daniel
+client2:7379> ZADD users 40 daniel
 OK 1
 
 
 client1:7379> ...
 entered the watch mode for ZRANGE.WATCH users
 OK [fingerprint=1007898011883907067]
-0) 1, alice
-1) 2, bob
-2) 3, charlie
-3) 4, daniel
+1) 10, alice
+2) 20, bob
+3) 30, charlie
+4) 40, daniel
 	
 ```

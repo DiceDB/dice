@@ -19,24 +19,24 @@ ZPOPMAX removes and returns the member with the highest score from the sorted se
 
 If the key does not exist, the command returns empty list. An optional "count" argument can be provided
 to remove and return multiple members (up to the number specified).
+
+When popped, the elements are returned in descending order of score and you get the rank of the element in the sorted set.
+The rank is 1-based, which means that the first element is at rank 1 and not rank 0.
+The 1), 2), 3), ... is the rank of the element in the sorted set.
 	
 
 #### Examples
 
 ```
 
-localhost:7379> ZADD users 1 alice
-OK 1
-localhost:7379> ZADD users 2 bob
-OK 1
-localhost:7379> ZADD users 3 charlie
-OK 1
+localhost:7379> ZADD users 10 alice 20 bob 30 charlie
+OK 3
 localhost:7379> ZPOPMAX users
 OK
-0) 3, charlie
+3) 30, charlie
 localhost:7379> ZPOPMAX users 10
 OK
-0) 2, bob
-1) 1, alice
+2) 20, bob
+1) 10, alice
 	
 ```

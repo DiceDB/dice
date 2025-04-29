@@ -22,7 +22,7 @@ the key is updated.
 You can update the key in any other client. The ZRANK.WATCH client will receive the updated value.
 	`,
 	Examples: `
-client1:7379> ZADD users 1 alice 2 bob 3 charlie
+client1:7379> ZADD users 10 alice 20 bob 30 charlie
 OK 3
 client1:7379> ZRANK.WATCH users bob
 entered the watch mode for ZRANK.WATCH users
@@ -30,11 +30,14 @@ entered the watch mode for ZRANK.WATCH users
 
 client2:7379> ZADD users 10 bob
 OK 0
+client2:7379> ZADD users 100 alice
+OK 0
 
 
 client1:7379> ...
 entered the watch mode for ZRANK.WATCH users
-OK [fingerprint=3262833422269415227] 3, 10, bob
+OK [fingerprint=3262833422269415227] 2) 10, bob
+OK [fingerprint=3262833422269415227] 1) 10, bob
 	`,
 	Eval:    evalZRANKWATCH,
 	Execute: executeZRANKWATCH,

@@ -19,26 +19,24 @@ var cZRANK = &CommandMeta{
 	HelpLong: `
 ZRANK returns the rank of a member in a sorted set, ordered from low to high scores.
 
-The rank is 1-based which means that the member with the lowest score has rank 1.
-The command returns the element (score with member) and the rank.
+The rank is 1-based which means that the member with the lowest score has rank 1, the next highest has rank 2, and so on.
+The command returns the element - rank, score, and memeber.
+
+Thus, 1), 2), 3) are the rank of the element in the sorted set, followed by the score and the member.
 
 The the member passed as the second argument is not a member of the sorted set, the command returns a
 valid response with a rank of 0 and score of 0. If the key does not exist, the command returns a
 valid response with a rank of 0, score of 0, and the member as "".
 	`,
 	Examples: `
-localhost:7379> ZADD users 20 bob
-OK 1
-localhost:7379> ZADD users 10 alice
-OK 1
-localhost:7379> ZADD users 30 charlie
-OK 1
+localhost:7379> ZADD users 10 alice 20 bob 30 charlie
+OK 3
 localhost:7379> ZRANK users bob
-OK 2, 20, bob
+OK 2) 20, bob
 localhost:7379> ZRANK users charlie
-OK 3, 30, charlie
+OK 3) 30, charlie
 localhost:7379> ZRANK users daniel
-OK 0, 0, daniel
+OK 0) 0, daniel
 	`,
 	Eval:    evalZRANK,
 	Execute: executeZRANK,
@@ -48,14 +46,13 @@ func init() {
 	CommandRegistry.AddCommand(cZRANK)
 }
 
-func newZRANKRes(rank int64, element *wire.ZElement) *CmdRes {
+func newZRANKRes(element *wire.ZElement) *CmdRes {
 	return &CmdRes{
 		Rs: &wire.Result{
 			Message: "OK",
 			Status:  wire.Status_OK,
 			Response: &wire.Result_ZRANKRes{
 				ZRANKRes: &wire.ZRANKRes{
-					Rank:    rank,
 					Element: element,
 				},
 			},
@@ -64,7 +61,7 @@ func newZRANKRes(rank int64, element *wire.ZElement) *CmdRes {
 }
 
 var (
-	ZRANKResNilRes = newZRANKRes(0, nil)
+	ZRANKResNilRes = newZRANKRes(nil)
 )
 
 // evalZRANK returns the rank of the member in the sorted set stored at key.
@@ -89,13 +86,15 @@ func evalZRANK(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	node := ss.GetByKey(member)
 	rank := ss.FindRank(member)
 	if node == nil || rank == 0 {
-		return newZRANKRes(0, &wire.ZElement{
+		return newZRANKRes(&wire.ZElement{
+			Rank:   0,
 			Score:  0,
 			Member: member,
 		}), nil
 	}
 
-	return newZRANKRes(int64(rank), &wire.ZElement{
+	return newZRANKRes(&wire.ZElement{
+		Rank:   int64(rank),
 		Score:  int64(node.Score()),
 		Member: node.Key(),
 	}), nil
