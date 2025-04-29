@@ -28,9 +28,9 @@ localhost:7379> ZADD s 1 a 2 b 3 c 4 d 5 e
 OK 5
 localhost:7379> ZRANGE s 1 3
 OK
-0) a=1
-1) b=2
-2) c=3
+0) 1, a
+1) 2, b
+2) 3, c
 `,
 	Eval:    evalZRANGE,
 	Execute: executeZRANGE,
