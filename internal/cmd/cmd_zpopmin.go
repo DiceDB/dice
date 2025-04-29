@@ -23,21 +23,21 @@ ZPOPMIN removes and returns the member with the lowest score from the sorted set
 
 If the key does not exist, the command returns empty list. An optional "count" argument can be provided
 to remove and return multiple members (up to the number specified).
+
+When popped, the elements are returned in ascending order of score and you get the rank of the element in the sorted set.
+The rank is 1-based, which means that the first element is at rank 1 and not rank 0.
+The 1), 2), 3), ... is the rank of the element in the sorted set.
 	`,
 	Examples: `
-localhost:7379> ZADD users 1 alice
-OK 1
-localhost:7379> ZADD users 2 bob
-OK 1
-localhost:7379> ZADD users 3 charlie
-OK 1
+localhost:7379> ZADD users 10 alice 20 bob 30 charlie
+OK 3
 localhost:7379> ZPOPMIN users
 OK
-0) 1, alice
+1) 10, alice
 localhost:7379> ZPOPMIN users 10
 OK
-0) 2, bob
-1) 3, charlie
+1) 20, bob
+2) 30, charlie
 	`,
 	Eval:    evalZPOPMIN,
 	Execute: executeZPOPMIN,
@@ -96,6 +96,7 @@ func evalZPOPMIN(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	ss = obj.Value.(*types.SortedSet)
 	elements := make([]*wire.ZElement, 0, count)
+
 	for i := 0; i < count; i++ {
 		n := ss.PopMin()
 		if n == nil {
@@ -104,6 +105,7 @@ func evalZPOPMIN(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		elements = append(elements, &wire.ZElement{
 			Member: n.Key(),
 			Score:  int64(n.Score()),
+			Rank:   int64(i + 1),
 		})
 	}
 	return newZPOPMINRes(elements), nil
