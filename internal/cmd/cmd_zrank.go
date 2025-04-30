@@ -20,7 +20,7 @@ var cZRANK = &CommandMeta{
 ZRANK returns the rank of a member in a sorted set, ordered from low to high scores.
 
 The rank is 1-based which means that the member with the lowest score has rank 1, the next highest has rank 2, and so on.
-The command returns the element - rank, score, and memeber.
+The command returns the element - rank, score, and member.
 
 Thus, 1), 2), 3) are the rank of the element in the sorted set, followed by the score and the member.
 
