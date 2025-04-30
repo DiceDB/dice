@@ -62,10 +62,6 @@ var (
 )
 
 func evalZRANKWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) != 2 {
-		return ZRANKWATCHResNilRes, errors.ErrWrongArgumentCount("ZRANK.WATCH")
-	}
-
 	r, err := evalZRANK(c, s)
 	if err != nil {
 		return nil, err
@@ -76,7 +72,7 @@ func evalZRANKWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeZRANKWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	if len(c.C.Args) != 2 {
+	if len(c.C.Args) == 0 {
 		return ZRANKWATCHResNilRes, errors.ErrWrongArgumentCount("ZRANK.WATCH")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
