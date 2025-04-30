@@ -61,10 +61,6 @@ var (
 )
 
 func evalHGETALLWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) != 1 {
-		return HGETALLWATCHResNilRes, errors.ErrWrongArgumentCount("HGETALL.WATCH")
-	}
-
 	r, err := evalHGETALL(c, s)
 	if err != nil {
 		return nil, err
@@ -75,7 +71,7 @@ func evalHGETALLWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeHGETALLWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	if len(c.C.Args) != 1 {
+	if len(c.C.Args) == 0 {
 		return HGETALLWATCHResNilRes, errors.ErrWrongArgumentCount("HGETALL.WATCH")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])

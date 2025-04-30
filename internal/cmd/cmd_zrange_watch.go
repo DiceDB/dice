@@ -63,10 +63,6 @@ var (
 )
 
 func evalZRANGEWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) != 3 {
-		return ZRANGEWATCHResNilRes, errors.ErrWrongArgumentCount("ZRANGE.WATCH")
-	}
-
 	r, err := evalZRANGE(c, s)
 	if err != nil {
 		return nil, err
@@ -77,7 +73,7 @@ func evalZRANGEWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeZRANGEWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	if len(c.C.Args) != 3 {
+	if len(c.C.Args) == 0 {
 		return ZRANGEWATCHResNilRes, errors.ErrWrongArgumentCount("ZRANGE.WATCH")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])

@@ -41,6 +41,10 @@ export default defineConfig({
           label: "Examples and Tutorials",
           items: [
             {
+              label: "Leaderboard",
+              link: "https://github.com/DiceDB/dice/tree/master/examples/leaderboard-go",
+            },
+            {
               label: "CLI Chatroom",
               link: "https://github.com/DiceDB/dice/tree/master/examples/chatroom-go",
             },
