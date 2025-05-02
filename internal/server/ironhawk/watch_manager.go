@@ -158,7 +158,7 @@ func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *shardmanager.Sha
 
 			// If this is first time a client is connecting it'd be sending a .WATCH command
 			// in that case we don't need to notify all other clients subscribed to the key
-			if strings.HasSuffix(c.C.Cmd, ".WATCH") && t.ClientID != clientID {
+			if strings.HasSuffix(c.C.Cmd, ".WATCH") {
 				continue
 			}
 
