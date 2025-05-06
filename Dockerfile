@@ -1,5 +1,5 @@
 # Start from a slim alpine image
-FROM golang:1.24.1-alpine AS builder
+FROM golang:1.24.2-alpine AS builder
 WORKDIR /src
 COPY . .
 
