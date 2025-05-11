@@ -154,7 +154,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 }
 
 func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *IOThread) {
-	wg.Done()
+	defer wg.Done()
 	err := thread.Start(ctx, s.shardManager, s.watchManager)
 	if err != nil {
 		if err == io.EOF {
