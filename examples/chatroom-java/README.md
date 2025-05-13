@@ -30,6 +30,22 @@ java -jar target/chatroom.jar <username1>
 java -jar target/chatroom.jar <username2>
 ```
 
+### Using Docker
+
+To build and run the Container:
+
+```bash
+# Step 1: Build the jar
+./mvnw clean install
+
+# Step 2: Run DiceDB docker container first
+docker-compose up -d dicedb
+
+# Step 3: Run Container for each chatroom session
+docker-compose run chatroom username1
+docker-compose run chatroom username2
+```
+
 ### Using IntelliJ (Not in windows)
 
 ```text

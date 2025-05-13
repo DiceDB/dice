@@ -13,7 +13,9 @@ class DiceDbChatBackend {
   String username;
 
   DiceDbChatBackend(String username) throws DiceDbException, InterruptedException {
-    this.diceDbManager = new DiceDbManager("localhost", 7379, 2, 2);
+    String host = System.getenv("DICEDB_HOST") == null ? "localhost" : System.getenv("DICEDB_HOST");
+    int port = System.getenv("DICEDB_PORT") == null ? 7379 : Integer.parseInt(System.getenv("DICEDB_PORT"));
+    this.diceDbManager = new DiceDbManager(host, port, 2, 2);
     this.username = username;
   }
 
