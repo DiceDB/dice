@@ -59,10 +59,6 @@ var (
 )
 
 func evalZCARDWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) != 1 {
-		return ZCARDWATCHResNilRes, errors.ErrWrongArgumentCount("ZCARD.WATCH")
-	}
-
 	r, err := evalZCARD(c, s)
 	if err != nil {
 		return nil, err
@@ -73,7 +69,7 @@ func evalZCARDWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeZCARDWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	if len(c.C.Args) != 1 {
+	if len(c.C.Args) == 0 {
 		return ZCARDWATCHResNilRes, errors.ErrWrongArgumentCount("ZCARD.WATCH")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])

@@ -24,21 +24,17 @@ Returns the number of members removed from the sorted set.
 
 ```
 
-localhost:7379> ZADD ss 1 k1
-OK 1
-localhost:7379> ZADD ss 2 k2
-OK 1
-localhost:7379> ZADD ss 3 k3
-OK 1
-localhost:7379> ZRANGE ss 0 6
+localhost:7379> ZADD users 10 alice 20 bob 30 charlie
+OK 3
+localhost:7379> ZRANGE users 0 60 BYSCORE
 OK
-0) 1, k1
-1) 2, k2
-2) 3, k3
-localhost:7379> ZREM ss k1 k2 k4
+1) 10, alice
+2) 20, bob
+3) 30, charlie
+localhost:7379> ZREM users alice bob
 OK 2
-localhost:7379> ZRANGE ss 0 6
+localhost:7379> ZRANGE users 0 60 BYSCORE
 OK
-0) 3, k3
+1) 30, charlie
 
 ```

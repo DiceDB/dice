@@ -11,25 +11,43 @@ description: ZRANGE returns the range of elements from the sorted set stored at 
 #### Syntax
 
 ```
-ZRANGE key start stop
+ZRANGE key start stop [BYSCORE | BYRANK]
 ```
 
 
 ZRANGE returns the range of elements from the sorted set stored at key.
 
-The elements are considered to be ordered from the lowest to the highest score. Both start and
-stop are 0-based indexes, where 0 is the first element, 1 is the next element and so on.
+The default range is by rank "BYRANK" and this can be changed to "BYSCORE" if you want to range by score spanning the start and stop values.
+The rank is 1-based, which means that the first element is at rank 1 and not rank 0.
+The 1), 2), 3), ... is the rank of the element in the sorted set.
+
+Both the start and stop values are inclusive and hence the elements having either of the values will be included. The
+elements are considered to be ordered from the lowest to the highest. If you want reverse order, consider
+storing score with flipped sign.
 
 #### Examples
 
 ```
 
-localhost:7379> ZADD s 1 a 2 b 3 c 4 d 5 e
+localhost:7379> ZADD s 10 a 20 b 30 c 40 d 50 e
 OK 5
 localhost:7379> ZRANGE s 1 3
 OK
-0) a=1
-1) b=2
-2) c=3
+1) 10, a
+2) 20, b
+3) 30, c
+localhost:7379> ZRANGE s 1 4 BYRANK
+OK
+1) 10, a
+2) 20, b
+3) 30, c
+4) 40, d
+localhost:7379> ZRANGE s 1 3 BYSCORE
+OK
+localhost:7379> ZRANGE s 30 100 BYSCORE
+OK
+3) 30, c
+4) 40, d
+5) 50, e
 
 ```

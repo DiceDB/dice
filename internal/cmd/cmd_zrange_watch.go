@@ -12,7 +12,7 @@ import (
 
 var cZRANGEWATCH = &CommandMeta{
 	Name:      "ZRANGE.WATCH",
-	Syntax:    "ZRANGE.WATCH key start stop",
+	Syntax:    "ZRANGE.WATCH key start stop [BYSCORE | BYRANK]",
 	HelpShort: "ZRANGE.WATCH creates a query subscription over the ZRANGE command",
 	HelpLong: `
 ZRANGE.WATCH creates a query subscription over the ZRANGE command. The client invoking the command
@@ -22,23 +22,23 @@ the key is updated.
 You can update the key in any other client. The ZRANGE.WATCH client will receive the updated value.
 	`,
 	Examples: `
-client1:7379> ZADD users 1 alice 2 bob 3 charlie
+client1:7379> ZADD users 10 alice 20 bob 30 charlie
 OK 3
 client1:7379> ZRANGE.WATCH users 1 5
 entered the watch mode for ZRANGE.WATCH users
 
 
-client2:7379> ZADD users 4 daniel
+client2:7379> ZADD users 40 daniel
 OK 1
 
 
 client1:7379> ...
 entered the watch mode for ZRANGE.WATCH users
 OK [fingerprint=1007898011883907067]
-0) 1, alice
-1) 2, bob
-2) 3, charlie
-3) 4, daniel
+1) 10, alice
+2) 20, bob
+3) 30, charlie
+4) 40, daniel
 	`,
 	Eval:    evalZRANGEWATCH,
 	Execute: executeZRANGEWATCH,
@@ -63,10 +63,6 @@ var (
 )
 
 func evalZRANGEWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) != 3 {
-		return ZRANGEWATCHResNilRes, errors.ErrWrongArgumentCount("ZRANGE.WATCH")
-	}
-
 	r, err := evalZRANGE(c, s)
 	if err != nil {
 		return nil, err
@@ -77,7 +73,7 @@ func evalZRANGEWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeZRANGEWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	if len(c.C.Args) != 3 {
+	if len(c.C.Args) == 0 {
 		return ZRANGEWATCHResNilRes, errors.ErrWrongArgumentCount("ZRANGE.WATCH")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])

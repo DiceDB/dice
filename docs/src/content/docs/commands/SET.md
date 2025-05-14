@@ -11,7 +11,7 @@ description: SET puts or updates an existing value for a key
 #### Syntax
 
 ```
-SET key value [EX seconds] [PX milliseconds] [EXAT timestamp] [PXAT timestamp] [XX] [NX] [KEEPTTL]
+SET key value [EX seconds | PX milliseconds] [EXAT timestamp | PXAT timestamp] [XX | NX] [KEEPTTL]
 ```
 
 

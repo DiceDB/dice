@@ -20,7 +20,7 @@ const PERSIST = "PERSIST"
 
 var cGETEX = &CommandMeta{
 	Name:      "GETEX",
-	Syntax:    "GETEX key [EX seconds] [PX milliseconds] [EXAT timestamp-seconds] [PXAT timestamp-milliseconds] [PERSIST]",
+	Syntax:    "GETEX key [EX seconds | PX milliseconds] [EXAT timestamp-seconds | PXAT timestamp-milliseconds] [PERSIST]",
 	HelpShort: "GETEX gets the value of key and optionally set its expiration.",
 	HelpLong: `
 GETEX gets the value of key and optionally set its expiration. The behavior of the command
@@ -61,13 +61,22 @@ func init() {
 }
 
 func newGETEXRes(obj *object.Obj) *CmdRes {
+	value, err := getWireValueFromObj(obj)
+	if err != nil {
+		return &CmdRes{
+			Rs: &wire.Result{
+				Message: err.Error(),
+				Status:  wire.Status_ERR,
+			},
+		}
+	}
 	return &CmdRes{
 		Rs: &wire.Result{
 			Message: "OK",
 			Status:  wire.Status_OK,
 			Response: &wire.Result_GETEXRes{
 				GETEXRes: &wire.GETEXRes{
-					Value: getWireValueFromObj(obj),
+					Value: value,
 				},
 			},
 		},

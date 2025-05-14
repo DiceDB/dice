@@ -71,7 +71,7 @@ func evalGETWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 }
 
 func executeGETWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	if len(c.C.Args) != 1 {
+	if len(c.C.Args) == 0 {
 		return GETWATCHResNilRes, errors.ErrWrongArgumentCount("GET.WATCH")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])

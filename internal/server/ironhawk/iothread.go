@@ -98,7 +98,9 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 			t.Mode = _c.C.Args[1]
 		}
 
-		if strings.HasSuffix(c.Cmd, ".WATCH") {
+		isWatchCmd := strings.HasSuffix(c.Cmd, "WATCH")
+
+		if isWatchCmd{
 			watchManager.HandleWatch(_c, t)
 		}
 
@@ -108,8 +110,12 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		watchManager.RegisterThread(t)
 
-		if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
-			return sendErr.Unwrap()
+		// Only send the response directly if this is not a watch command
+		// For watch commands, the response will be sent by NotifyWatchers
+		if !isWatchCmd{
+			if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
+				return sendErr.Unwrap()
+			}
 		}
 
 		// TODO: Streamline this because we need ordering of updates
