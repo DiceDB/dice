@@ -68,11 +68,16 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 					Message: err.Error(),
 				},
 			}
-		} else {
-			res.Rs.Status = wire.Status_OK
-			if res.Rs.Message == "" {
-				res.Rs.Message = "OK"
+			if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
+				return sendErr.Unwrap()
 			}
+			// Continue in case of error
+			continue
+		}
+
+		res.Rs.Status = wire.Status_OK
+		if res.Rs.Message == "" {
+			res.Rs.Message = "OK"
 		}
 
 		// TODO: Optimize this. We are doing this for all command execution
