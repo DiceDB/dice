@@ -18,6 +18,8 @@ import (
 
 const (
 	MaxEXDurationSec = 365 * 24 * 60 * 60 // 1 year in seconds
+	Status_OK        = "1"                // 1 If set operation is successful
+	Status_ERR       = "0"                // 0 if key or was set or updated
 )
 
 // TODO: Make the SET command return 1 if the SET operation was successful and 0 if the key was not set or updated.
@@ -43,21 +45,21 @@ Returns "OK" if the SET operation was successful.
 	`,
 	Examples: `
 localhost:7379> SET k 43
-OK
+1
 localhost:7379> SET k 43 EX 10
-OK
+1
 localhost:7379> SET k 43 PX 10000
-OK
+1
 localhost:7379> SET k 43 EXAT 1772377267
-OK
+1
 localhost:7379> SET k 43 PXAT 1772377267000
-OK
+1
 localhost:7379> SET k 43 XX
-OK
+1
 localhost:7379> SET k 43 NX
-OK
+1
 localhost:7379> SET k 43 KEEPTTL
-OK
+1
 	`,
 	Eval:    evalSET,
 	Execute: executeSET,
@@ -67,10 +69,14 @@ func init() {
 	CommandRegistry.AddCommand(cSET)
 }
 
-func newSETRes() *CmdRes {
+func newSETRes(IsStatusOk bool) *CmdRes {
+	value := Status_ERR
+	if IsStatusOk {
+		value = Status_OK
+	}
 	return &CmdRes{
 		Rs: &wire.Result{
-			Message:  "OK",
+			Message:  value,
 			Status:   wire.Status_OK,
 			Response: &wire.Result_SETRes{SETRes: &wire.SETRes{}},
 		},
@@ -78,8 +84,8 @@ func newSETRes() *CmdRes {
 }
 
 var (
-	SETResNilRes = newSETRes()
-	SETResOKRes  = newSETRes()
+	SETResNilRes = newSETRes(false)
+	SETResOKRes  = newSETRes(true)
 )
 
 // parseParams parses the parameters for the any command
@@ -105,34 +111,34 @@ func parseParams(args []string) (params map[types.Param]string, nonParams []stri
 //nolint:gocyclo
 func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
-		return SETResNilRes, errors.ErrWrongArgumentCount("SET")
+		return newSETRes(false), errors.ErrWrongArgumentCount("SET")
 	}
 
 	var key, value = c.C.Args[0], c.C.Args[1]
 
 	params, nonParams := parseParams(c.C.Args[2:])
 	if len(nonParams) > 0 {
-		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+		return newSETRes(false), errors.ErrInvalidSyntax("SET")
 	}
 
 	// Raise errors if incompatible parameters are provided
 	// in one command
 	if params[types.EX] != "" && params[types.PX] != "" {
-		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+		return newSETRes(false), errors.ErrInvalidSyntax("SET")
 	} else if params[types.EX] != "" && params[types.EXAT] != "" {
-		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+		return newSETRes(false), errors.ErrInvalidSyntax("SET")
 	} else if params[types.EX] != "" && params[types.PXAT] != "" {
-		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+		return newSETRes(false), errors.ErrInvalidSyntax("SET")
 	} else if params[types.PX] != "" && params[types.EXAT] != "" {
-		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+		return newSETRes(false), errors.ErrInvalidSyntax("SET")
 	} else if params[types.PX] != "" && params[types.PXAT] != "" {
-		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+		return newSETRes(false), errors.ErrInvalidSyntax("SET")
 	} else if params[types.EXAT] != "" && params[types.PXAT] != "" {
-		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+		return newSETRes(false), errors.ErrInvalidSyntax("SET")
 	} else if params[types.XX] != "" && params[types.NX] != "" {
-		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+		return newSETRes(false), errors.ErrInvalidSyntax("SET")
 	} else if params[types.KEEPTTL] != "" && (params[types.EX] != "" || params[types.PX] != "" || params[types.EXAT] != "" || params[types.PXAT] != "") {
-		return SETResNilRes, errors.ErrInvalidSyntax("SET")
+		return newSETRes(false), errors.ErrInvalidSyntax("SET")
 	}
 
 	var err error
@@ -145,10 +151,10 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[types.EX] != "" {
 		exDurationSec, err = strconv.ParseInt(params[types.EX], 10, 64)
 		if err != nil {
-			return SETResNilRes, errors.ErrInvalidValue("SET", "EX")
+			return newSETRes(false), errors.ErrInvalidValue("SET", "EX")
 		}
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return SETResNilRes, errors.ErrInvalidValue("SET", "EX")
+			return newSETRes(false), errors.ErrInvalidValue("SET", "EX")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
@@ -156,21 +162,21 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[types.PX] != "" {
 		exDurationMs, err = strconv.ParseInt(params[types.PX], 10, 64)
 		if err != nil {
-			return SETResNilRes, errors.ErrInvalidValue("SET", "PX")
+			return newSETRes(false), errors.ErrInvalidValue("SET", "PX")
 		}
 		if exDurationMs <= 0 || exDurationMs >= MaxEXDurationSec {
-			return SETResNilRes, errors.ErrInvalidValue("SET", "PX")
+			return newSETRes(false), errors.ErrInvalidValue("SET", "PX")
 		}
 	}
 
 	if params[types.EXAT] != "" {
 		tv, err := strconv.ParseInt(params[types.EXAT], 10, 64)
 		if err != nil {
-			return SETResNilRes, errors.ErrInvalidValue("SET", "EXAT")
+			return newSETRes(false), errors.ErrInvalidValue("SET", "EXAT")
 		}
 		exDurationSec = tv - time.Now().Unix()
 		if exDurationSec <= 0 || exDurationSec >= MaxEXDurationSec {
-			return SETResNilRes, errors.ErrInvalidValue("SET", "EXAT")
+			return newSETRes(false), errors.ErrInvalidValue("SET", "EXAT")
 		}
 		exDurationMs = exDurationSec * 1000
 	}
@@ -178,11 +184,11 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if params[types.PXAT] != "" {
 		tv, err := strconv.ParseInt(params[types.PXAT], 10, 64)
 		if err != nil {
-			return SETResNilRes, errors.ErrInvalidValue("SET", "PXAT")
+			return newSETRes(false), errors.ErrInvalidValue("SET", "PXAT")
 		}
 		exDurationMs = tv - time.Now().UnixMilli()
 		if exDurationMs <= 0 || exDurationMs >= (MaxEXDurationSec*1000) {
-			return SETResNilRes, errors.ErrInvalidValue("SET", "PXAT")
+			return newSETRes(false), errors.ErrInvalidValue("SET", "PXAT")
 		}
 	}
 
@@ -203,14 +209,14 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	// XX: only set the key if it already exists
 	// So, if it does not exist, we return nil and move on
 	if params[types.XX] != "" && existingObj == nil {
-		return SETResOKRes, nil
+		return newSETRes(true), nil
 	}
 
 	// If NX is provided and the key already exists, return nil
 	// NX: only set the key if it does not already exist
 	// So, if it does exist, we return nil and move on
 	if params[types.NX] != "" && existingObj != nil {
-		return SETResOKRes, nil
+		return newSETRes(true), nil
 	}
 
 	newObj := CreateObjectFromValue(s, value, exDurationMs)
@@ -221,7 +227,7 @@ func evalSET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 func executeSET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) <= 1 {
-		return SETResNilRes, errors.ErrWrongArgumentCount("SET")
+		return newSETRes(false), errors.ErrWrongArgumentCount("SET")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalSET(c, shard.Thread.Store())
