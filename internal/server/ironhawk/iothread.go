@@ -98,9 +98,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		if isWatchCmd{
 			watchManager.HandleWatch(_c, t)
-		}
-
-		if strings.HasSuffix(c.Cmd, "UNWATCH") {
+		} else if strings.HasSuffix(c.Cmd, "UNWATCH") {
 			watchManager.HandleUnwatch(_c, t)
 		}
 
