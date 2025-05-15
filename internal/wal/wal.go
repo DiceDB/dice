@@ -17,6 +17,12 @@ type AbstractWAL interface {
 	ForEachCommand(e *WALEntry, c func(*WALEntry) error) error
 }
 
+type WALCmdEntry struct {
+	Command  string   // The command being executed
+	Args     []string // Additional command arguments
+	ClientID string
+}
+
 var (
 	ticker *time.Ticker
 	stopCh chan struct{}
@@ -24,7 +30,7 @@ var (
 )
 
 func init() {
-	ticker = time.NewTicker(1 * time.Minute)
+	ticker = time.NewTicker(10 * time.Second)
 	stopCh = make(chan struct{})
 }
 
