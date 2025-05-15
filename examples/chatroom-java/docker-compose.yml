@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  dicedb:
+    image: dicedb/dicedb:latest
+    container_name: dicedb
+    ports:
+      - "7379:7379"
+
+  chatroom:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chatroom-app
+    depends_on:
+      - dicedb
+    environment:
+      - DICEDB_HOST=dicedb
+      - DICEDB_PORT=7379
+    stdin_open: true
+    tty: true
