@@ -1,9 +1,0 @@
-services:
-  dicedb:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: dicedb  
-    ports:
-      - "7379:7379"
-    restart: unless-stopped
