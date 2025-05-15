@@ -68,8 +68,9 @@ var (
 	EXPIREATResUnchangedRes = newEXPIREATRes(false)
 )
 
-// maxAllowedTimestamp represents the maximum allowed timestamp (10 years from now)
-var maxAllowedTimestamp = time.Now().AddDate(10, 0, 0).Unix()
+// EXPIREATMaxAbsTimestamp is the maximum allowed timestamp
+// 10 years from the time server started
+var EXPIREATMaxAbsTimestamp = time.Now().AddDate(10, 0, 0).Unix()
 
 func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 2 {
@@ -78,7 +79,7 @@ func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	var key = c.C.Args[0]
 	exUnixTimeSec, err := strconv.ParseInt(c.C.Args[1], 10, 64)
-	if err != nil || exUnixTimeSec < 0 || exUnixTimeSec > maxAllowedTimestamp {
+	if err != nil || exUnixTimeSec < 0 || exUnixTimeSec > EXPIREATMaxAbsTimestamp {
 		return EXPIREATResNilRes, errors.ErrInvalidExpireTime("EXPIREAT")
 	}
 
