@@ -51,7 +51,7 @@ func TestZRANGE(t *testing.T) {
 			},
 			expected: []interface{}{
 				2,
-				[]*wire.ZElement{{Member: "mem1", Score: 1}},
+				[]*wire.ZElement{{Member: "mem1", Score: 1, Rank: 1}},
 			},
 			valueExtractor: []ValueExtractorFn{extractValueZADD, extractValueZRANGE},
 		},

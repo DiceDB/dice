@@ -20,6 +20,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+type ValueExtractorFn func(result *wire.Result) interface{}
+
 type TestCase struct {
 	name           string
 	commands       []string
