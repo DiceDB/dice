@@ -84,7 +84,7 @@ func TestEXPIREAT(t *testing.T) {
 			commands: []string{
 				"SET test_key test_value",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
 			},
 			expected:       []interface{}{"OK", false, true, true},
@@ -121,6 +121,18 @@ func TestEXPIREAT(t *testing.T) {
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
 				errors.New("NX and XX, GT or LT options at the same time are not compatible")},
 			valueExtractor: []ValueExtractorFn{extractValueSET, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil},
+		},
+		{
+			name: "Test upper bound check for EXPIREAT",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().AddDate(11, 0, 0).Unix(), 10),
+			},
+			expected: []interface{}{
+				"OK",
+				errors.New("invalid expire time in 'EXPIREAT' command"),
+			},
+			valueExtractor: []ValueExtractorFn{extractValueSET, nil},
 		},
 	}
 	runTestcases(t, client, testCases)
