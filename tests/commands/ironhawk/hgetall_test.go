@@ -5,10 +5,25 @@ package ironhawk
 
 import (
 	"errors"
+	"fmt"
+	"sort"
 	"testing"
 
-	"google.golang.org/protobuf/types/known/structpb"
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueHGETALL(res *wire.Result) interface{} {
+	elements := res.GetHGETALLRes().Elements
+	sort.Slice(elements, func(i, j int) bool {
+		return elements[i].Key < elements[j].Key
+	})
+
+	str := ""
+	for _, element := range elements {
+		str += fmt.Sprintf("%s: %s\n", element.Key, element.Value)
+	}
+	return str
+}
 
 func TestHGETALL(t *testing.T) {
 	client := getLocalConnection()
@@ -16,16 +31,10 @@ func TestHGETALL(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name:     "Get Value for Field stored at Hash Key",
-			commands: []string{"HSET k f1 v1 f2 v2", "HGETALL k"},
-			expected: []interface{}{2,
-				[]*structpb.Value{
-					structpb.NewStringValue("f1"),
-					structpb.NewStringValue("v1"),
-					structpb.NewStringValue("f2"),
-					structpb.NewStringValue("v2"),
-				},
-			},
+			name:           "Get Value for Field stored at Hash Key",
+			commands:       []string{"HSET k f1 v1 f2 v2", "HGETALL k"},
+			expected:       []interface{}{2, "f1: v1\nf2: v2\n"},
+			valueExtractor: []ValueExtractorFn{extractValueHSET, extractValueHGETALL},
 		},
 		{
 			name:     "HGETALL with no key argument",
@@ -33,6 +42,7 @@ func TestHGETALL(t *testing.T) {
 			expected: []interface{}{
 				errors.New("wrong number of arguments for 'HGETALL' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil},
 		},
 		{
 			name:     "HGETALL with non hash key",
@@ -40,6 +50,7 @@ func TestHGETALL(t *testing.T) {
 			expected: []interface{}{"OK",
 				errors.New("wrongtype operation against a key holding the wrong kind of value"),
 			},
+			valueExtractor: []ValueExtractorFn{extractValueSET, nil},
 		},
 	}
 	runTestcases(t, client, testCases)

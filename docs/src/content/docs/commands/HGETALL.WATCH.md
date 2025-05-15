@@ -39,7 +39,7 @@ OK 1
 client1:7379> ...
 entered the watch mode for HGETALL.WATCH k
 OK [fingerprint=4237011426]
-f1=v1
-f2=v2
+0) f1="v1"
+1) f2="v2"
 	
 ```

@@ -7,6 +7,7 @@ import (
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cHANDSHAKE = &CommandMeta{
@@ -30,7 +31,7 @@ or when you establish a subscription.
 	`,
 	Examples: `
 localhost:7379> HANDSHAKE 4c9d0411-6b28-4ee5-b78a-e7e258afa52f command
-OK OK
+OK
 	`,
 	Eval:    evalHANDSHAKE,
 	Execute: executeHANDSHAKE,
@@ -40,13 +41,30 @@ func init() {
 	CommandRegistry.AddCommand(cHANDSHAKE)
 }
 
+func newHANDSHAKERes() *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_HANDSHAKERes{
+				HANDSHAKERes: &wire.HANDSHAKERes{},
+			},
+		},
+	}
+}
+
+var (
+	HANDSHAKEResNilRes = newHANDSHAKERes()
+	HANDSHAKEResOKRes  = newHANDSHAKERes()
+)
+
 func evalHANDSHAKE(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 2 {
-		return cmdResNil, errors.ErrWrongArgumentCount("HANDSHAKE")
+		return HANDSHAKEResNilRes, errors.ErrWrongArgumentCount("HANDSHAKE")
 	}
 	c.ClientID = c.C.Args[0]
 	c.Mode = c.C.Args[1]
-	return cmdResOK, nil
+	return HANDSHAKEResOKRes, nil
 }
 
 func executeHANDSHAKE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

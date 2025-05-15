@@ -17,17 +17,17 @@ var cHGET = &CommandMeta{
 	HelpLong: `
 HGET returns the value of field present in the string-string map held at key.
 
-The command returns (nil) if the key or field does not exist.
+The command returns empty string "" if the key or field does not exist.
 	`,
 	Examples: `
 localhost:7379> HSET k1 f1 v1
 OK 1
 localhost:7379> HGET k1 f1
-OK v1
+OK "v1"
 localhost:7379> HGET k2 f1
-OK (nil)
+OK ""
 localhost:7379> HGET k1 f2
-OK (nil)
+OK ""
 	`,
 	Eval:    evalHGET,
 	Execute: executeHGET,
@@ -37,32 +37,48 @@ func init() {
 	CommandRegistry.AddCommand(cHGET)
 }
 
+func newHGETRes(value string) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_HGETRes{
+				HGETRes: &wire.HGETRes{
+					Value: value,
+				},
+			},
+		},
+	}
+}
+
+var (
+	HGETResNilRes = newHGETRes("")
+)
+
 func evalHGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key, field := c.C.Args[0], c.C.Args[1]
 
 	obj := s.Get(key)
 	if obj == nil {
-		return cmdResNil, nil
+		return HGETResNilRes, nil
 	}
 
 	m, ok := obj.Value.(SSMap)
 	if !ok {
-		return cmdResNil, errors.ErrWrongTypeOperation
+		return HGETResNilRes, errors.ErrWrongTypeOperation
 	}
 
 	val, ok := m.Get(field)
 	if !ok {
-		return cmdResNil, nil
+		return HGETResNilRes, nil
 	}
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VStr{VStr: val},
-	}}, nil
+	return newHGETRes(val), nil
 }
 
 func executeHGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 2 {
-		return cmdResNil, errors.ErrWrongArgumentCount("HGET")
+		return HGETResNilRes, errors.ErrWrongArgumentCount("HGET")
 	}
 	shard := sm.GetShardForKey(c.C.Args[0])
 	return evalHGET(c, shard.Thread.Store())

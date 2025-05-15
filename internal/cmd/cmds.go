@@ -32,8 +32,8 @@ func (c *Cmd) String() string {
 	return fmt.Sprintf("%s %s", c.C.Cmd, strings.Join(c.C.Args, " "))
 }
 
-func (c *Cmd) Fingerprint() uint32 {
-	return farm.Fingerprint32([]byte(c.String()))
+func (c *Cmd) Fingerprint() uint64 {
+	return farm.Fingerprint64([]byte(c.String()))
 }
 
 func (c *Cmd) Key() string {
@@ -44,7 +44,9 @@ func (c *Cmd) Key() string {
 }
 
 func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
-	res := GetNilRes()
+	res := &CmdRes{
+		Rs: &wire.Result{},
+	}
 
 	err := errors.ErrUnknownCmd(c.C.Cmd)
 	start := time.Now()
@@ -65,7 +67,7 @@ func (c *Cmd) Execute(sm *shardmanager.ShardManager) (*CmdRes, error) {
 }
 
 type CmdRes struct {
-	R        *wire.Response
+	Rs       *wire.Result
 	ClientID string
 }
 
@@ -151,33 +153,3 @@ func (cmd *DiceDBCmd) Key() string {
 	}
 	return c
 }
-
-func GetNilRes() *CmdRes {
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VNil{VNil: true},
-	}}
-}
-
-var cmdResNil = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VNil{VNil: true},
-}}
-
-var cmdResOK = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VStr{VStr: "OK"},
-}}
-
-var cmdResInt1 = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: 1},
-}}
-
-var cmdResInt0 = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: 0},
-}}
-
-var cmdResIntNegOne = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: -1},
-}}
-
-var cmdResIntNegTwo = &CmdRes{R: &wire.Response{
-	Value: &wire.Response_VInt{VInt: -2},
-}}

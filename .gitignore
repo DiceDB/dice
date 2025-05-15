@@ -12,6 +12,7 @@ __pycache__
 dice
 main
 tmp/
+vendor/
 
 # build output
 dist/

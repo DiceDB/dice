@@ -7,7 +7,13 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueGETDEL(res *wire.Result) interface{} {
+	return res.GetGETDELRes().Value
+}
 
 func TestGETDEL(t *testing.T) {
 	client := getLocalConnection()
@@ -15,22 +21,25 @@ func TestGETDEL(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			name:     "GETDEL",
-			commands: []string{"SET k v", "GETDEL k", "GETDEL k", "GET k"},
-			expected: []interface{}{"OK", "v", nil, nil},
+			name:           "GETDEL",
+			commands:       []string{"SET k v", "GETDEL k", "GETDEL k", "GET k"},
+			expected:       []interface{}{"OK", "v", "", ""},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGETDEL, extractValueGETDEL, extractValueGET},
 		},
 		{
-			name:     "GETDEL with expiration, checking if key exist and is already expired, then it should return null",
-			commands: []string{"GETDEL k", "SET k v EX 2", "GETDEL k"},
-			expected: []interface{}{nil, "OK", nil},
-			delay:    []time.Duration{0, 0, 3 * time.Second},
+			name:           "GETDEL with expiration, checking if key exist and is already expired, then it should return null",
+			commands:       []string{"GETDEL k", "SET k v EX 2", "GETDEL k"},
+			expected:       []interface{}{"", "OK", ""},
+			delay:          []time.Duration{0, 0, 3 * time.Second},
+			valueExtractor: []ValueExtractorFn{extractValueGETDEL, extractValueSET, extractValueGETDEL},
 		},
 		{
 			name: "GETDEL with expiration, checking if key exist and is not yet expired, then it should return its " +
 				"value",
-			commands: []string{"SET k v EX 40", "GETDEL k"},
-			expected: []interface{}{"OK", "v"},
-			delay:    []time.Duration{0, 2 * time.Second},
+			commands:       []string{"SET k v EX 40", "GETDEL k"},
+			expected:       []interface{}{"OK", "v"},
+			delay:          []time.Duration{0, 2 * time.Second},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueGETDEL},
 		},
 		{
 			name:     "GETDEL with invalid command",
@@ -39,8 +48,8 @@ func TestGETDEL(t *testing.T) {
 				errors.New("wrong number of arguments for 'GETDEL' command"),
 				errors.New("wrong number of arguments for 'GETDEL' command"),
 			},
+			valueExtractor: []ValueExtractorFn{nil, nil},
 		},
 	}
-
 	runTestcases(t, client, testCases)
 }

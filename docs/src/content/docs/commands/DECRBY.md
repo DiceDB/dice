@@ -16,7 +16,7 @@ DECRBY key delta
 
 
 DECRBY command decrements the integer at 'key' by the delta specified. Creates 'key' with value (-delta) if absent.
-Errors on wrong type or non-integer string. Limited to 64-bit signed integers.
+The command raises an error if the value is a non-integer.
 
 Returns the new value of 'key' on success.
 	
@@ -26,8 +26,12 @@ Returns the new value of 'key' on success.
 ```
 
 localhost:7379> SET k 43
-OK OK
+OK
 localhost:7379> DECRBY k 10
 OK 33
+localhost:7379> DECRBY k2 50
+OK -50
+localhost:7379> GET k2
+OK "-50"
 	
 ```

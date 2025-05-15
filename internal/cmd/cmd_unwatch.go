@@ -7,6 +7,7 @@ import (
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cUNWATCH = &CommandMeta{
@@ -22,6 +23,7 @@ you exit the watch mode.
 	`,
 	Examples: `
 localhost:7379> UNWATCH 2356444921
+OK
 	`,
 	Eval:    evalUNWATCH,
 	Execute: executeUNWATCH,
@@ -31,19 +33,34 @@ func init() {
 	CommandRegistry.AddCommand(cUNWATCH)
 }
 
+func newUNWATCHRes() *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message:  "OK",
+			Status:   wire.Status_OK,
+			Response: &wire.Result_UNWATCHRes{},
+		},
+	}
+}
+
+var (
+	UNWATCHResNilRes = newUNWATCHRes()
+	UNWATCHResOKRes  = newUNWATCHRes()
+)
+
 // Note: We do not do anything here, because the UNWATCH command
 // is handled by the iothread.
 func evalUNWATCH(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("UNWATCH")
+		return UNWATCHResNilRes, errors.ErrWrongArgumentCount("UNWATCH")
 	}
 
-	return cmdResOK, nil
+	return UNWATCHResOKRes, nil
 }
 
 func executeUNWATCH(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("UNWATCH")
+		return UNWATCHResNilRes, errors.ErrWrongArgumentCount("UNWATCH")
 	}
 	shard := sm.GetShardForKey("-")
 	return evalUNWATCH(c, shard.Thread.Store())

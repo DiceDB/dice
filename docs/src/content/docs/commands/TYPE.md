@@ -28,10 +28,10 @@ TYPE returns the type of the value stored at a specified key. The type can be on
 ```
 
 localhost:7379> SET k 43
-OK OK
+OK
 localhost:7379> TYPE k
-int
+OK int
 localhost:7379> TYPE kn
-none
+OK none
 	
 ```

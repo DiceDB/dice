@@ -8,7 +8,13 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/dicedb/dicedb-go/wire"
 )
+
+func extractValueEXPIREAT(res *wire.Result) interface{} {
+	return res.GetEXPIREATRes().IsChanged
+}
 
 func TestEXPIREAT(t *testing.T) {
 	client := getLocalConnection()
@@ -21,40 +27,46 @@ func TestEXPIREAT(t *testing.T) {
 				"SET test_key test_value",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10),
 			},
-			expected: []interface{}{"OK", 1},
+			expected:       []interface{}{"OK", true},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIREAT},
 		},
 		{
 			name: "Check if key is nil after expiration",
 			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10),
-				"GET test_key",
+				"SET k1 v1",
+				"EXPIREAT k1 " + strconv.FormatInt(time.Now().Unix()+1, 10),
+				"GET k1",
 			},
-			expected: []interface{}{"OK", 1, nil},
-			delay:    []time.Duration{0, 0, 3 * time.Second},
+			expected:       []interface{}{"OK", true, ""},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIREAT, extractValueGET},
+			delay:          []time.Duration{0, 0, 3 * time.Second},
 		},
 		{
 			name: "EXPIREAT non-existent key",
 			commands: []string{
 				"EXPIREAT non_existent_key " + strconv.FormatInt(time.Now().Unix()+1, 10),
 			},
-			expected: []interface{}{int64(0)},
+			expected:       []interface{}{false},
+			valueExtractor: []ValueExtractorFn{extractValueEXPIREAT},
 		},
 		{
 			name: "EXPIREAT with past time",
 			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(-1, 10),
-				"GET test_key",
+				"SET k3 v3",
+				"EXPIREAT k3 20",
+				"GET k3",
 			},
-			expected: []interface{}{"OK", errors.New("invalid expire time in 'EXPIREAT' command"), "test_value"},
+			expected:       []interface{}{"OK", true, ""},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIREAT, extractValueGET},
+			delay:          []time.Duration{0, 0, 1 * time.Second},
 		},
 		{
 			name: "EXPIREAT with invalid syntax",
 			commands: []string{
 				"EXPIREAT test_key",
 			},
-			expected: []interface{}{errors.New("wrong number of arguments for 'EXPIREAT' command")},
+			expected:       []interface{}{errors.New("wrong number of arguments for 'EXPIREAT' command")},
+			valueExtractor: []ValueExtractorFn{nil},
 		},
 		{
 			name: "Test(NX): Set the expiration only if the key has no expiration time",
@@ -63,7 +75,8 @@ func TestEXPIREAT(t *testing.T) {
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " NX",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+1, 10) + " NX",
 			},
-			expected: []interface{}{"OK", 1, int64(0)},
+			expected:       []interface{}{"OK", true, false},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIREAT, extractValueEXPIREAT},
 		},
 
 		{
@@ -71,91 +84,22 @@ func TestEXPIREAT(t *testing.T) {
 			commands: []string{
 				"SET test_key test_value",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
-				"TTL test_key",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
 				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX",
 			},
-			expected: []interface{}{"OK", int64(0), int64(-1), 1, 1},
-		},
-
-		{
-			name: "TEST(GT): Set the expiration only if the new expiration time is greater than the current one",
-			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " GT",
-				"TTL test_key",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " GT",
-			},
-			expected: []interface{}{"OK", int64(0), int64(-1), 1, 1},
-		},
-
-		{
-			name: "TEST(LT): Set the expiration only if the new expiration time is less than the current one",
-			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10),
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " LT",
-			},
-			expected: []interface{}{"OK", 1, int64(0)},
-		},
-
-		{
-			name: "TEST(LT): Set the expiration only if the new expiration time is less than the current one",
-			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10),
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " LT",
-			},
-			expected: []interface{}{"OK", 1, 1},
-		},
-
-		{
-			name: "TEST(NX + LT/GT)",
-			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " NX",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " NX" + " LT",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " NX" + " GT",
-				"GET test_key",
-			},
-			expected: []interface{}{"OK", 1,
-				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
-				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
-				"test_value"},
-		},
-		{
-			name: "TEST(XX + LT/GT)",
-			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10),
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+5, 10) + " XX" + " LT",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+10, 10) + " XX" + " GT",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10) + " XX" + " GT",
-				"GET test_key",
-			},
-			expected: []interface{}{"OK", 1, 1, 1, 1, "test_value"},
+			expected:       []interface{}{"OK", false, true, true},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIREAT, extractValueEXPIREAT, extractValueEXPIREAT},
 		},
 		{
 			name: "Test if value is nil after expiration",
 			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+20, 10),
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+2, 10) + " XX" + " LT",
-				"GET test_key",
+				"SET k2 v2",
+				"EXPIREAT k2 " + strconv.FormatInt(time.Now().Unix()+2, 10) + " NX",
+				"GET k2",
 			},
-			expected: []interface{}{"OK", 1, 1, nil},
-			delay:    []time.Duration{0, 0, 0, 2 * time.Second},
-		},
-		{
-			name: "Test if value is nil after expiration",
-			commands: []string{
-				"SET test_key test_value",
-				"EXPIREAT test_key " + strconv.FormatInt(time.Now().Unix()+2, 10) + " NX",
-				"GET test_key",
-			},
-			expected: []interface{}{"OK", 1, nil},
-			delay:    []time.Duration{0, 0, 2 * time.Second},
+			expected:       []interface{}{"OK", true, ""},
+			valueExtractor: []ValueExtractorFn{extractValueSET, extractValueEXPIREAT, extractValueGET},
+			delay:          []time.Duration{0, 0, 4 * time.Second},
 		},
 		{
 			name: "Invalid Command Test",
@@ -176,6 +120,19 @@ func TestEXPIREAT(t *testing.T) {
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
 				errors.New("NX and XX, GT or LT options at the same time are not compatible"),
 				errors.New("NX and XX, GT or LT options at the same time are not compatible")},
+			valueExtractor: []ValueExtractorFn{extractValueSET, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil},
+		},
+		{
+			name: "Test upper bound check for EXPIREAT",
+			commands: []string{
+				"SET test_key test_value",
+				"EXPIREAT test_key " + strconv.FormatInt(time.Now().AddDate(11, 0, 0).Unix(), 10),
+			},
+			expected: []interface{}{
+				"OK",
+				errors.New("invalid expire time in 'EXPIREAT' command"),
+			},
+			valueExtractor: []ValueExtractorFn{extractValueSET, nil},
 		},
 	}
 	runTestcases(t, client, testCases)

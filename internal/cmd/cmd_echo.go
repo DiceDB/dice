@@ -14,10 +14,10 @@ var cECHO = &CommandMeta{
 	Name:      "ECHO",
 	Syntax:    "ECHO message",
 	HelpShort: "ECHO returns the message passed to it",
-	HelpLong:  `ECHO command returns the message passed to it.`,
+	HelpLong:  `ECHO returns the message passed to it.`,
 	Examples: `
-	localhost:7379> ECHO hello!
-OK hello!`,
+localhost:7379> ECHO dicedb
+OK dicedb`,
 	Eval:    evalECHO,
 	Execute: executeECHO,
 }
@@ -26,14 +26,26 @@ func init() {
 	CommandRegistry.AddCommand(cECHO)
 }
 
+func newECHORes(message string) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_ECHORes{
+				ECHORes: &wire.ECHORes{
+					Message: message,
+				},
+			},
+		},
+	}
+}
+
 func evalECHO(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) != 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("ECHO")
+		return newECHORes(""), errors.ErrWrongArgumentCount("ECHO")
 	}
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VStr{VStr: c.C.Args[0]},
-	}}, nil
+	return newECHORes(c.C.Args[0]), nil
 }
 
 func executeECHO(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

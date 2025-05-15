@@ -19,9 +19,9 @@ PING returns PONG if no argument is provided, otherwise it returns PONG with the
 	`,
 	Examples: `
 localhost:7379> PING
-PONG
-localhost:7379> PING Hello
-PONG Hello
+OK "PONG"
+localhost:7379> PING dicedb
+OK "PONG dicedb"
 	`,
 	Eval:    evalPING,
 	Execute: executePING,
@@ -31,18 +31,30 @@ func init() {
 	CommandRegistry.AddCommand(cPING)
 }
 
+func newPINGRes(v string) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_PINGRes{
+				PINGRes: &wire.PINGRes{
+					Message: v,
+				},
+			},
+		},
+	}
+}
+
+var PINGResNilRes = newPINGRes("")
+
 func evalPING(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) >= 2 {
-		return cmdResNil, errors.ErrWrongArgumentCount("PING")
+		return PINGResNilRes, errors.ErrWrongArgumentCount("PING")
 	}
 	if len(c.C.Args) == 0 {
-		return &CmdRes{R: &wire.Response{
-			Value: &wire.Response_VStr{VStr: "PONG"},
-		}}, nil
+		return newPINGRes("PONG"), nil
 	}
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VStr{VStr: "PONG " + c.C.Args[0]},
-	}}, nil
+	return newPINGRes("PONG " + c.C.Args[0]), nil
 }
 
 func executePING(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

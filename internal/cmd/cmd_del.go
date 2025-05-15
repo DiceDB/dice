@@ -13,13 +13,15 @@ import (
 var cDEL = &CommandMeta{
 	Name:      "DEL",
 	Syntax:    "DEL key [key ...]",
-	HelpShort: "DEL deletes all the specified keys",
-	HelpLong:  `DEL command deletes all the specified keys and returns the number of keys deleted on success.`,
+	HelpShort: "DEL deletes all the specified keys and returns the number of keys deleted on success.",
+	HelpLong: `DEL deletes all the specified keys and returns the number of keys deleted on success.
+
+If the key does not exist, it is ignored. The command returns the number of keys successfully deleted.`,
 	Examples: `
-	localhost:7379> SET k1 v1
-OK OK
+localhost:7379> SET k1 v1
+OK
 localhost:7379> SET k2 v2
-OK OK
+OK
 localhost:7379> DEL k1 k2 k3
 OK 2`,
 	Eval:    evalDEL,
@@ -30,38 +32,42 @@ func init() {
 	CommandRegistry.AddCommand(cDEL)
 }
 
-// TODO: DEL command is actually a multi-key command so this needs
-// to be scattered and gathered one step before this.
+func newDELRes(count int64) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_DELRes{
+				DELRes: &wire.DELRes{
+					Count: count,
+				},
+			},
+		},
+	}
+}
 
-// evalDEL deletes all the specified keys in args list.
-//
-// Parameters:
-//   - c *Cmd: The command context containing the arguments
-//   - s *dstore.Store: The data store instance
-//
-// Returns:
-//   - *CmdRes: Response containing the count of total deleted keys
-//   - error: Error if wrong number of arguments or wrong value type
+var (
+	DELResNilRes = newDELRes(0)
+)
+
 func evalDEL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("DEL")
+		return DELResNilRes, errors.ErrWrongArgumentCount("DEL")
 	}
 
-	var count int
+	var count int64
 	for _, key := range c.C.Args {
 		if ok := s.Del(key); ok {
 			count++
 		}
 	}
 
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: int64(count)},
-	}}, nil
+	return newDELRes(count), nil
 }
 
 func executeDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) < 1 {
-		return cmdResNil, errors.ErrWrongArgumentCount("DEL")
+		return DELResNilRes, errors.ErrWrongArgumentCount("DEL")
 	}
 
 	var count int64
@@ -71,9 +77,7 @@ func executeDEL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 		if err != nil {
 			return nil, err
 		}
-		count += r.R.GetVInt()
+		count += r.Rs.GetDELRes().Count
 	}
-	return &CmdRes{R: &wire.Response{
-		Value: &wire.Response_VInt{VInt: count},
-	}}, nil
+	return newDELRes(count), nil
 }

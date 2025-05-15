@@ -11,8 +11,8 @@
     "lint": "prettier . --write && eslint \"src/**/*.{js,astro}\""
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.2.1",
-    "@astrojs/starlight": "^0.31.1",
+    "@astrojs/sitemap": "^3.3.0",
+    "@astrojs/starlight": "^0.34.0",
     "astro-analytics": "^2.7.0",
     "astro-embed": "^0.9.0",
     "bulma": "^0.9.4",
@@ -21,7 +21,7 @@
     "sharp": "^0.32.5"
   },
   "devDependencies": {
-    "astro": "^5.3.0",
+    "astro": "^5.7.2",
     "eslint": "^9.11.0",
     "eslint-plugin-astro": "^1.2.4",
     "prettier": "^3.3.3",

@@ -5,10 +5,12 @@ package cmd
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 var cEXPIREAT = &CommandMeta{
@@ -19,26 +21,24 @@ var cEXPIREAT = &CommandMeta{
 EXPIREAT sets the expiration time of a key as an absolute Unix timestamp (in seconds).
 After the expiry time has elapsed, the key will be automatically deleted.
 
-The command returns 1 if the expiry was set or updated, and 0 if the expiration time was not changed. The command supports the following options:
+> If you want to delete the expiration time on the key, you can use the PERSIST command.
+
+The command returns true if the expiry was set (changed), and false if the expiry could not be set (changed) due to key
+not being present or due to the provided sub-command conditions not being met. The command
+supports the following options:
 
 - NX: Set the expiration only if the key does not already have an expiration time.
 - XX: Set the expiration only if the key already has an expiration time.
-- GT: Set the expiration only if the key already has an expiration time and the new expiration time is greater than the current expiration time.
-- LT: Set the expiration only if the key already has an expiration time and the new expiration time is less than the current expiration time.
 	`,
 	Examples: `
-locahost:7379> SET k1 v1
-OK OK
-locahost:7379> EXPIREAT k1 1740829942
-OK 1
-locahost:7379> EXPIREAT k1 1740829942 NX
-OK 0
-locahost:7379> EXPIREAT k1 1740829942 XX
-OK 0
-locahost:7379> EXPIREAT k1 1740829943 GT
-OK 0
-locahost:7379> EXPIREAT k1 1740829942 LT
-OK 1
+localhost:7379> SET k1 v1
+OK
+localhost:7379> EXPIREAT k1 1740829942
+OK true
+localhost:7379> EXPIREAT k1 1740829942 NX
+OK false
+localhost:7379> EXPIREAT k1 1740829942 XX
+OK false
 	`,
 	Eval:    evalEXPIREAT,
 	Execute: executeEXPIREAT,
@@ -48,34 +48,55 @@ func init() {
 	CommandRegistry.AddCommand(cEXPIREAT)
 }
 
+func newEXPIREATRes(isChanged bool) *CmdRes {
+	return &CmdRes{
+		Rs: &wire.Result{
+			Message: "OK",
+			Status:  wire.Status_OK,
+			Response: &wire.Result_EXPIREATRes{
+				EXPIREATRes: &wire.EXPIREATRes{
+					IsChanged: isChanged,
+				},
+			},
+		},
+	}
+}
+
+var (
+	EXPIREATResNilRes       = newEXPIREATRes(false)
+	EXPIREATResChangedRes   = newEXPIREATRes(true)
+	EXPIREATResUnchangedRes = newEXPIREATRes(false)
+)
+
+// maxAllowedTimestamp represents the maximum allowed timestamp (10 years from now)
+var maxAllowedTimestamp = time.Now().AddDate(10, 0, 0).Unix()
+
 func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
-	// We need at least 2 arguments.
 	if len(c.C.Args) < 2 {
-		return cmdResNil, errors.ErrWrongArgumentCount("EXPIREAT")
+		return EXPIREATResNilRes, errors.ErrWrongArgumentCount("EXPIREAT")
 	}
 
 	var key = c.C.Args[0]
 	exUnixTimeSec, err := strconv.ParseInt(c.C.Args[1], 10, 64)
-	if err != nil || exUnixTimeSec < 0 {
-		// TODO: Check for the upper bound of the input.
-		return cmdResNil, errors.ErrInvalidExpireTime("EXPIREAT")
+	if err != nil || exUnixTimeSec < 0 || exUnixTimeSec > maxAllowedTimestamp {
+		return EXPIREATResNilRes, errors.ErrInvalidExpireTime("EXPIREAT")
 	}
 
-	isExpirySet, err := dstore.EvaluateAndSetExpiry(c.C.Args[2:], exUnixTimeSec, key, s)
+	isExpirySet, err := dstore.EvaluateAndSetExpiry(c.C.Args[2:], exUnixTimeSec*1000, key, s)
 	if err != nil {
-		return cmdResNil, err
+		return EXPIREATResNilRes, err
 	}
 
 	if isExpirySet {
-		return cmdResInt1, nil
+		return EXPIREATResChangedRes, nil
 	}
 
-	return cmdResInt0, nil
+	return EXPIREATResUnchangedRes, nil
 }
 
 func executeEXPIREAT(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
 	if len(c.C.Args) < 2 {
-		return cmdResNil, errors.ErrWrongArgumentCount("EXPIREAT")
+		return EXPIREATResNilRes, errors.ErrWrongArgumentCount("EXPIREAT")
 	}
 
 	shard := sm.GetShardForKey(c.C.Args[0])

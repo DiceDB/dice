@@ -8,6 +8,9 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/dicedb/dicedb-go"
+
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -15,29 +18,40 @@ import (
 )
 
 type IOThread struct {
-	ClientID  string
-	Mode      string
-	IoHandler *IOHandler
-	Session   *auth.Session
+	ClientID   string
+	Mode       string
+	Session    *auth.Session
+	serverWire *dicedb.ServerWire
 }
 
 func NewIOThread(clientFD int) (*IOThread, error) {
-	io, err := NewIOHandler(clientFD)
+	w, err := dicedb.NewServerWire(config.MaxRequestSize, config.KeepAlive, clientFD)
 	if err != nil {
-		slog.Error("Failed to create new IOHandler for clientFD", slog.Int("client-fd", clientFD), slog.Any("error", err))
-		return nil, err
+		if err.Kind == wire.NotEstablished {
+			slog.Error("failed to establish connection to client", slog.Int("client-fd", clientFD), slog.Any("error", err))
+
+			return nil, err.Unwrap()
+		}
+		slog.Error("unexpected error during client connection establishment, this should be reported to DiceDB maintainers", slog.Int("client-fd", clientFD))
+		return nil, err.Unwrap()
 	}
+
 	return &IOThread{
-		IoHandler: io,
-		Session:   auth.NewSession(),
+		serverWire: w,
+		Session:    auth.NewSession(),
 	}, nil
 }
 
-func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.ShardManager, watchManager *WatchManager) error {
+func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardManager, watchManager *WatchManager) error {
 	for {
-		c, err := t.IoHandler.ReadSync()
-		if err != nil {
-			return err
+		var c *wire.Command
+		{
+			tmpC, err := t.serverWire.Receive()
+			if err != nil {
+				return err.Unwrap()
+			}
+
+			c = tmpC
 		}
 
 		_c := &cmd.Cmd{
@@ -48,7 +62,22 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 
 		res, err := _c.Execute(shardManager)
 		if err != nil {
-			res = &cmd.CmdRes{R: &wire.Response{Err: err.Error()}}
+			res = &cmd.CmdRes{
+				Rs: &wire.Result{
+					Status:  wire.Status_ERR,
+					Message: err.Error(),
+				},
+			}
+			if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
+				return sendErr.Unwrap()
+			}
+			// Continue in case of error
+			continue
+		}
+
+		res.Rs.Status = wire.Status_OK
+		if res.Rs.Message == "" {
+			res.Rs.Message = "OK"
 		}
 
 		// TODO: Optimize this. We are doing this for all command execution
@@ -56,13 +85,18 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 		// Also, CLientID is duplicated in command and io-thread.
 		// Also, we shouldn't allow execution/registration incase of invalid commands
 		// like for B.WATCH cmd since it'll err out we shall return and not create subscription
-		t.ClientID = _c.ClientID
+		if err == nil {
+			t.ClientID = _c.ClientID
+		}
 
-		// If command is HANDSHAKE, then it can't have a suffix of WATCH or UNWATCH thus use if..else if.. else if.
-		if c.Cmd == "HANDSHAKE" {
+		if c.Cmd == "HANDSHAKE" && err == nil {
 			t.ClientID = _c.C.Args[0]
 			t.Mode = _c.C.Args[1]
-		} else if strings.HasSuffix(c.Cmd, ".WATCH") {
+		}
+
+		isWatchCmd := strings.HasSuffix(c.Cmd, "WATCH")
+
+		if isWatchCmd{
 			watchManager.HandleWatch(_c, t)
 		} else if strings.HasSuffix(c.Cmd, "UNWATCH") {
 			watchManager.HandleUnwatch(_c, t)
@@ -70,17 +104,24 @@ func (t *IOThread) StartSync(ctx context.Context, shardManager *shardmanager.Sha
 
 		watchManager.RegisterThread(t)
 
-		if err := t.IoHandler.WriteSync(ctx, res.R); err != nil {
-			return err
+		// Only send the response directly if this is not a watch command
+		// For watch commands, the response will be sent by NotifyWatchers
+		if !isWatchCmd{
+			if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
+				return sendErr.Unwrap()
+			}
 		}
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		watchManager.NotifyWatchers(_c, shardManager, t)
+		if err == nil {
+			watchManager.NotifyWatchers(_c, shardManager, t)
+		}
 	}
 }
 
 func (t *IOThread) Stop() error {
+	t.serverWire.Close()
 	t.Session.Expire()
 	return nil
 }

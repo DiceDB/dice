@@ -18,29 +18,27 @@ EXPIREAT key timestamp [NX | XX | GT | LT]
 EXPIREAT sets the expiration time of a key as an absolute Unix timestamp (in seconds).
 After the expiry time has elapsed, the key will be automatically deleted.
 
-The command returns 1 if the expiry was set or updated, and 0 if the expiration time was not changed. The command supports the following options:
+> If you want to delete the expiration time on the key, you can use the PERSIST command.
+
+The command returns true if the expiry was set (changed), and false if the expiry could not be set (changed) due to key
+not being present or due to the provided sub-command conditions not being met. The command
+supports the following options:
 
 - NX: Set the expiration only if the key does not already have an expiration time.
 - XX: Set the expiration only if the key already has an expiration time.
-- GT: Set the expiration only if the key already has an expiration time and the new expiration time is greater than the current expiration time.
-- LT: Set the expiration only if the key already has an expiration time and the new expiration time is less than the current expiration time.
 	
 
 #### Examples
 
 ```
 
-locahost:7379> SET k1 v1
-OK OK
-locahost:7379> EXPIREAT k1 1740829942
-OK 1
-locahost:7379> EXPIREAT k1 1740829942 NX
-OK 0
-locahost:7379> EXPIREAT k1 1740829942 XX
-OK 0
-locahost:7379> EXPIREAT k1 1740829943 GT
-OK 0
-locahost:7379> EXPIREAT k1 1740829942 LT
-OK 1
+localhost:7379> SET k1 v1
+OK
+localhost:7379> EXPIREAT k1 1740829942
+OK true
+localhost:7379> EXPIREAT k1 1740829942 NX
+OK false
+localhost:7379> EXPIREAT k1 1740829942 XX
+OK false
 	
 ```
