@@ -19,7 +19,7 @@ import (
 const (
 	MaxEXDurationSec = 365 * 24 * 60 * 60 // 1 year in seconds
 	Status_OK        = "1"                // 1 If set operation is successful
-	Status_ERR       = "0"                // 0 if key or was set or updated
+	Status_ERR       = "0"                // 0 if key was not set or updated
 )
 
 // TODO: Make the SET command return 1 if the SET operation was successful and 0 if the key was not set or updated.
