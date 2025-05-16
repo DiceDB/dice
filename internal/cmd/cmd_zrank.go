@@ -38,8 +38,9 @@ OK 3) 30, charlie
 localhost:7379> ZRANK users daniel
 OK 0) 0, daniel
 	`,
-	Eval:    evalZRANK,
-	Execute: executeZRANK,
+	Eval:        evalZRANK,
+	Execute:     executeZRANK,
+	IsWatchable: true,
 }
 
 func init() {

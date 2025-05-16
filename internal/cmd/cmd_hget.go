@@ -29,8 +29,9 @@ OK ""
 localhost:7379> HGET k1 f2
 OK ""
 	`,
-	Eval:    evalHGET,
-	Execute: executeHGET,
+	Eval:        evalHGET,
+	Execute:     executeHGET,
+	IsWatchable: true,
 }
 
 func init() {

@@ -45,8 +45,9 @@ OK 3
 localhost:7379> ZCOUNT k 10 10
 OK 1
 	`,
-	Eval:    evalZCOUNT,
-	Execute: executeZCOUNT,
+	Eval:        evalZCOUNT,
+	Execute:     executeZCOUNT,
+	IsWatchable: true,
 }
 
 func init() {

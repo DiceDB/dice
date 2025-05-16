@@ -30,8 +30,9 @@ OK "v1"
 localhost:7379> GET k2
 OK ""
 	`,
-	Eval:    evalGET,
-	Execute: executeGET,
+	Eval:        evalGET,
+	Execute:     executeGET,
+	IsWatchable: true,
 }
 
 func init() {
