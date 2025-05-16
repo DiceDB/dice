@@ -51,8 +51,9 @@ OK
 4) 40, d
 5) 50, e
 `,
-	Eval:    evalZRANGE,
-	Execute: executeZRANGE,
+	Eval:        evalZRANGE,
+	Execute:     executeZRANGE,
+	IsWatchable: true,
 }
 
 func init() {
