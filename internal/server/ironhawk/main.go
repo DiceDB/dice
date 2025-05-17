@@ -170,7 +170,13 @@ func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *
 				slog.Any("error", err))
 		}
 	}
-	thread.Stop()
+	if err := thread.Stop(); err != nil {
+		slog.Debug("failed to stop io-thread",
+			slog.String("client_id", thread.ClientID),
+			slog.String("mode", thread.Mode),
+			slog.Any("error", err),
+		)
+	}
 }
 
 func (s *Server) Shutdown() {
