@@ -4,6 +4,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -73,7 +75,15 @@ func evalZCARD(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	}
 
 	ss = obj.Value.(*types.SortedSet)
-	return newZCARDRes(int64(ss.GetCount())), nil
+
+	rs := newZCARDRes(int64(ss.GetCount()))
+
+	if !strings.HasSuffix(c.C.Cmd, ".WATCH") {
+		c.C.Cmd += ".WATCH"
+	}
+
+	rs.Rs.Fingerprint64 = c.Fingerprint()
+	return rs, nil
 }
 
 func executeZCARD(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
