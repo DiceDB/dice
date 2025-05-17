@@ -170,6 +170,7 @@ func (s *Server) startIOThread(ctx context.Context, wg *sync.WaitGroup, thread *
 				slog.Any("error", err))
 		}
 	}
+	thread.Stop()
 }
 
 func (s *Server) Shutdown() {
