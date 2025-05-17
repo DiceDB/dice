@@ -85,18 +85,16 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 		// Also, CLientID is duplicated in command and io-thread.
 		// Also, we shouldn't allow execution/registration incase of invalid commands
 		// like for B.WATCH cmd since it'll err out we shall return and not create subscription
-		if err == nil {
-			t.ClientID = _c.ClientID
-		}
+		// No error handling after this as we have continued loop above if error found
+		t.ClientID = _c.ClientID
 
-		if c.Cmd == "HANDSHAKE" && err == nil {
+		if c.Cmd == "HANDSHAKE" {
 			t.ClientID = _c.C.Args[0]
 			t.Mode = _c.C.Args[1]
 		}
 
-		isWatchCmd := strings.HasSuffix(c.Cmd, "WATCH")
-
-		if isWatchCmd{
+		// NOTE: Do not remove . from here, as UNWATCH will be handled as WATCH
+		if strings.HasSuffix(c.Cmd, ".WATCH") {
 			watchManager.HandleWatch(_c, t)
 		} else if strings.HasSuffix(c.Cmd, "UNWATCH") {
 			watchManager.HandleUnwatch(_c, t)
@@ -104,19 +102,13 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		watchManager.RegisterThread(t)
 
-		// Only send the response directly if this is not a watch command
-		// For watch commands, the response will be sent by NotifyWatchers
-		if !isWatchCmd{
-			if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
-				return sendErr.Unwrap()
-			}
+		if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
+			return sendErr.Unwrap()
 		}
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		if err == nil {
-			watchManager.NotifyWatchers(_c, shardManager, t)
-		}
+		watchManager.NotifyWatchers(_c, shardManager)
 	}
 }
 

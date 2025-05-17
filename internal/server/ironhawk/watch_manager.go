@@ -125,11 +125,14 @@ func (w *WatchManager) CleanupThreadWatchSubscriptions(t *IOThread) {
 		delete(w.fpClientMap[fp], t.ClientID)
 		if len(w.fpClientMap[fp]) == 0 {
 			delete(w.fpClientMap, fp)
+
+			// If we have deleted the fingerprint, delete the command from the map
+			delete(w.fpCmdMap, fp)
 		}
 	}
 }
 
-func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *shardmanager.ShardManager, t *IOThread) {
+func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *shardmanager.ShardManager) {
 	// Use RLock instead as we are not really modifying any shared maps here.
 	w.mu.RLock()
 	defer w.mu.RUnlock()
