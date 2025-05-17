@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
@@ -73,7 +74,14 @@ func evalGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	obj := s.Get(key)
 
-	return newGETRes(obj), nil
+	rs := newGETRes(obj)
+
+	if !strings.HasSuffix(c.C.Cmd, ".WATCH") {
+		c.C.Cmd += ".WATCH"
+	}
+
+	rs.Rs.Fingerprint64 = c.Fingerprint()
+	return rs, nil
 }
 
 func executeGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

@@ -112,7 +112,14 @@ func evalZRANGE(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	ss := obj.Value.(*types.SortedSet)
 	elements := ss.ZRANGE(start, stop, byScore, byRank)
 
-	return newZRANGERes(elements), nil
+	rs := newZRANGERes(elements)
+
+	if !strings.HasSuffix(c.C.Cmd, ".WATCH") {
+		c.C.Cmd += ".WATCH"
+	}
+
+	rs.Rs.Fingerprint64 = c.Fingerprint()
+	return rs, nil
 }
 
 func executeZRANGE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

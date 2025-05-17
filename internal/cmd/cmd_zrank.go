@@ -4,6 +4,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -93,11 +95,18 @@ func evalZRANK(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		}), nil
 	}
 
-	return newZRANKRes(&wire.ZElement{
+	rs := newZRANKRes(&wire.ZElement{
 		Rank:   int64(rank),
 		Score:  int64(node.Score()),
 		Member: node.Key(),
-	}), nil
+	})
+
+	if !strings.HasSuffix(c.C.Cmd, ".WATCH") {
+		c.C.Cmd += ".WATCH"
+	}
+
+	rs.Rs.Fingerprint64 = c.Fingerprint()
+	return rs, nil
 }
 
 func executeZRANK(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

@@ -4,6 +4,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -73,7 +75,14 @@ func evalHGET(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		return HGETResNilRes, nil
 	}
 
-	return newHGETRes(val), nil
+	rs := newHGETRes(val)
+
+	if !strings.HasSuffix(c.C.Cmd, ".WATCH") {
+		c.C.Cmd += ".WATCH"
+	}
+
+	rs.Rs.Fingerprint64 = c.Fingerprint()
+	return rs, nil
 }
 
 func executeHGET(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {

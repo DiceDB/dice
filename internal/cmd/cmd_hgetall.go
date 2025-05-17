@@ -4,6 +4,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -78,7 +80,14 @@ func evalHGETALL(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 		elements = append(elements, &wire.HElement{Key: k, Value: v})
 	}
 
-	return newHGETALLRes(elements), nil
+	rs := newHGETALLRes(elements)
+
+	if !strings.HasSuffix(c.C.Cmd, ".WATCH") {
+		c.C.Cmd += ".WATCH"
+	}
+
+	rs.Rs.Fingerprint64 = c.Fingerprint()
+	return rs, nil
 }
 
 func executeHGETALL(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
