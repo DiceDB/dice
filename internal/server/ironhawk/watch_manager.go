@@ -131,7 +131,7 @@ func (w *WatchManager) CleanupThreadWatchSubscriptions(t *IOThread) {
 
 func (w *WatchManager) IsNotifiableCmd(c *cmd.Cmd) bool {
 	// This function returns true if the command should trigger a notification else false
-	// general rule is is command contains Get is it considered as DR operation , DR operation should not be notified
+	// general rule is if command contains Get is it considered as DR operation , DR operation should not be notified
 	// any exception is this rule are in exceptoinlist hashmap
 	exceptionlist := map[string]bool{
 		"GETSET": true,
