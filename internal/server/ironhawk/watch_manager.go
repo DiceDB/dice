@@ -129,6 +129,23 @@ func (w *WatchManager) CleanupThreadWatchSubscriptions(t *IOThread) {
 	}
 }
 
+func (w *WatchManager) IsNotifiableCmd(c *cmd.Cmd) bool {
+	// This function returns true if the command should trigger a notification else false
+	// general rule is is command contains Get is it considered as DR operation , DR operation should not be notified
+	// any exception is this rule are in exceptoinlist hashmap
+	exceptionlist := map[string]bool{
+		"GETSET": true,
+	}
+	value, exists := exceptionlist[c.C.Cmd]
+	if exists {
+		return (value)
+	} else {
+		isGetRltdCmd := strings.HasSuffix(c.C.Cmd, "GET")
+		// if it is data read method , return false and vice versa.
+		return (!isGetRltdCmd)
+	}
+}
+
 func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *shardmanager.ShardManager, t *IOThread) {
 	// Use RLock instead as we are not really modifying any shared maps here.
 	w.mu.RLock()

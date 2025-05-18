@@ -96,7 +96,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		isWatchCmd := strings.HasSuffix(c.Cmd, "WATCH")
 
-		if isWatchCmd{
+		if isWatchCmd {
 			watchManager.HandleWatch(_c, t)
 		} else if strings.HasSuffix(c.Cmd, "UNWATCH") {
 			watchManager.HandleUnwatch(_c, t)
@@ -106,7 +106,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		// Only send the response directly if this is not a watch command
 		// For watch commands, the response will be sent by NotifyWatchers
-		if !isWatchCmd{
+		if !isWatchCmd {
 			if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
 				return sendErr.Unwrap()
 			}
@@ -114,7 +114,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		if err == nil {
+		if err == nil && watchManager.IsNotifiableCmd(_c) {
 			watchManager.NotifyWatchers(_c, shardManager, t)
 		}
 	}
