@@ -20,4 +20,13 @@ const (
 	KEEPTTL Param = "KEEPTTL"
 
 	PERSIST Param = "PERSIST"
+
+	M  Param = "M"
+	KM Param = "KM"
+	MI Param = "MI"
+	FT Param = "FT"
+
+	WITHCOORD Param = "WITHCOORD"
+	WITHDIST  Param = "WITHDIST"
+	WITHHASH  Param = "WITHHASH"
 )

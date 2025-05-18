@@ -98,7 +98,6 @@ func evalZADD(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	obj := s.Get(key)
 	if obj == nil {
 		ss = types.NewSortedSet()
-		s.Put(key, s.NewObj(ss, -1, object.ObjTypeSortedSet), dsstore.WithPutCmd(dsstore.ZAdd))
 	} else {
 		if obj.Type != object.ObjTypeSortedSet {
 			return ZADDResNilRes, errors.ErrWrongTypeOperation
@@ -111,6 +110,9 @@ func evalZADD(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	if err != nil {
 		return ZADDResNilRes, err
 	}
+
+	// Add the key after the SortedSet is updated/created successfully
+	s.Put(key, s.NewObj(ss, -1, object.ObjTypeSortedSet), dsstore.WithPutCmd(dsstore.ZAdd))
 	return newZADDRes(count), nil
 }
 

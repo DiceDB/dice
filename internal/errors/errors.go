@@ -83,6 +83,12 @@ var (
 		return fmt.Errorf("number of elements to peek should be a positive number less than %d", max) // Signals an invalid count for elements to peek.
 	}
 
+	ErrInvalidUnit = func(unit string) error {
+		return fmt.Errorf("Unsupported unit '%s'. please use m, km, ft, mi", unit) // Signals an invalid unit
+	}
+	ErrInvalidLonLatPair = func(lon, lat float64) error {
+		return fmt.Errorf("Invalid Longitude, Latitude pair ('%f', '%f')! Check the range in Docs", lon, lat)
+	}
 	ErrGeneral = func(err string) error {
 		return fmt.Errorf("%s", err) // General error format for various commands.
 	}
