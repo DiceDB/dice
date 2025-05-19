@@ -89,6 +89,12 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 			t.ClientID = _c.ClientID
 		}
 
+		if _c.Meta.IsWatchable {
+			_cWatch := _c
+			_cWatch.C.Cmd += ".WATCH"
+			res.Rs.Fingerprint64 = _cWatch.Fingerprint()
+		}
+
 		if c.Cmd == "HANDSHAKE" && err == nil {
 			t.ClientID = _c.C.Args[0]
 			t.Mode = _c.C.Args[1]
