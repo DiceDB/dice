@@ -29,8 +29,9 @@ OK 3
 localhost:7379> ZCARD nonexistent_key
 OK 0
 	`,
-	Eval:    evalZCARD,
-	Execute: executeZCARD,
+	Eval:        evalZCARD,
+	Execute:     executeZCARD,
+	IsWatchable: true,
 }
 
 func init() {

@@ -72,13 +72,14 @@ type CmdRes struct {
 }
 
 type CommandMeta struct {
-	Name      string
-	HelpShort string
-	Syntax    string
-	Examples  string
-	HelpLong  string
-	Eval      func(c *Cmd, s *store.Store) (*CmdRes, error)
-	Execute   func(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error)
+	Name        string
+	HelpShort   string
+	Syntax      string
+	Examples    string
+	HelpLong    string
+	IsWatchable bool
+	Eval        func(c *Cmd, s *store.Store) (*CmdRes, error)
+	Execute     func(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error)
 }
 
 type CmdRegistry struct {
