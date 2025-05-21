@@ -26,7 +26,6 @@ type Server struct {
 	shardManager    *shardmanager.ShardManager
 	watchManager    *WatchManager
 	ioThreadManager *IOThreadManager
-	WAL             wal.AbstractWAL
 }
 
 func NewServer(shardManager *shardmanager.ShardManager, ioThreadManager *IOThreadManager, watchManager *WatchManager, wl wal.AbstractWAL) *Server {
@@ -37,7 +36,6 @@ func NewServer(shardManager *shardmanager.ShardManager, ioThreadManager *IOThrea
 		shardManager:    shardManager,
 		ioThreadManager: ioThreadManager,
 		watchManager:    watchManager,
-		WAL:             wl,
 	}
 }
 
@@ -144,7 +142,7 @@ func (s *Server) AcceptConnectionRequests(ctx context.Context, wg *sync.WaitGrou
 				return fmt.Errorf("error accepting connection: %w", err)
 			}
 
-			thread, err := NewIOThread(clientFD, s)
+			thread, err := NewIOThread(clientFD)
 			if err != nil {
 				slog.Error("failed to create io-thread", slog.String("id", "-xxx"), slog.Any("error", err))
 				continue

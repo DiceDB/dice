@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -123,24 +124,42 @@ func (wal *AOF) Init(t time.Time) error {
 	return nil
 }
 
-// WriteEntry writes an entry to the WAL.
-func (wal *AOF) LogCommand(data []byte) error {
-	return wal.writeEntry(data)
+// Log writes a command to the WAL
+func (wal *AOF) Log(data []byte) error {
+	wal.mu.Lock()
+	wal.lastSequenceNo++
+	lsn := wal.lastSequenceNo
+	wal.mu.Unlock()
+
+	// Create command payload with LSN and wire command bytes
+	payload := &CommandPayload{
+		Lsn:         lsn,
+		WireCommand: data, // data is already the wire command bytes
+	}
+
+	// Marshal the payload to bytes using protobuf
+	payloadBytes, err := proto.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal command payload: %w", err)
+	}
+
+	return wal.writeEntry(payloadBytes)
 }
 
 func (wal *AOF) writeEntry(data []byte) error {
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
 
-	wal.lastSequenceNo++
+	// Create WAL entry with the new proto structure
 	entry := &WALEntry{
-		LogSequenceNumber: wal.lastSequenceNo,
-		Crc32:             crc32.ChecksumIEEE(append(data, byte(wal.lastSequenceNo))),
-		Timestamp:         time.Now().UnixNano(),
-		EntryType:         EntryType_ENTRY_TYPE_COMMAND,
-		EntryData:         data,
+		Crc32:     crc32.ChecksumIEEE(data),
+		Size:      uint32(len(data)),
+		Payload:   data,
+		Timestamp: time.Now().UnixNano(),
+		EntryType: EntryType_ENTRY_TYPE_COMMAND,
 	}
 
+	// Calculate total entry size including proto overhead
 	entrySize := getEntrySize(data)
 	if err := wal.rotateLogIfNeeded(entrySize); err != nil {
 		return err
@@ -163,14 +182,28 @@ func (wal *AOF) writeEntry(data []byte) error {
 }
 
 func (wal *AOF) writeEntryToBuffer(entry *WALEntry) error {
-	marshaledEntry := MustMarshal(entry)
+	// Marshal the WAL entry to bytes
+	entryData, err := proto.Marshal(entry)
+	if err != nil {
+		return fmt.Errorf("failed to marshal WAL entry: %w", err)
+	}
 
-	size := int32(len(marshaledEntry))
-	if err := binary.Write(wal.bufWriter, binary.LittleEndian, size); err != nil {
+	// Write CRC32 (4 bytes)
+	crcBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(crcBytes, entry.Crc32)
+	if _, err := wal.bufWriter.Write(crcBytes); err != nil {
 		return err
 	}
-	_, err := wal.bufWriter.Write(marshaledEntry)
 
+	// Write size of WAL entry (4 bytes)
+	sizeBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sizeBytes, uint32(len(entryData)))
+	if _, err := wal.bufWriter.Write(sizeBytes); err != nil {
+		return err
+	}
+
+	// Write the actual WAL data
+	_, err = wal.bufWriter.Write(entryData)
 	return err
 }
 
@@ -324,7 +357,7 @@ func (wal *AOF) segmentFiles() ([]string, error) {
 	return files, nil
 }
 
-func (wal *AOF) Replay(callback func(*WALEntry) error) error {
+func (wal *AOF) Replay(callback func(any) error) error {
 	// Get list of segment files sorted by timestamp
 	segments, err := wal.segmentFiles()
 	if err != nil {
@@ -339,31 +372,57 @@ func (wal *AOF) Replay(callback func(*WALEntry) error) error {
 		}
 
 		reader := bufio.NewReader(file)
-		// wal_entry_len // 32 bytes crc // walentry
+		// Format: CRC32 (4 bytes) | Size of WAL entry (4 bytes) | WAL data
 		for {
-			// Read entry size
-			var entrySize int32
-			if err := binary.Read(reader, binary.LittleEndian, &entrySize); err != nil {
+			// Read CRC32 (4 bytes)
+			crcBytes := make([]byte, 4)
+			if _, err := io.ReadFull(reader, crcBytes); err != nil {
 				if err == io.EOF {
 					break
 				}
 				file.Close()
-				return fmt.Errorf("error reading wal entry size: %w", err)
+				return fmt.Errorf("error reading CRC32: %w", err)
 			}
+			crc := binary.LittleEndian.Uint32(crcBytes)
 
-			// Read entry data
+			// Read size of WAL entry (4 bytes)
+			sizeBytes := make([]byte, 4)
+			if _, err := io.ReadFull(reader, sizeBytes); err != nil {
+				file.Close()
+				return fmt.Errorf("error reading WAL entry size: %w", err)
+			}
+			entrySize := binary.LittleEndian.Uint32(sizeBytes)
+
+			// Read the actual WAL data
 			entryData := make([]byte, entrySize)
 			if _, err := io.ReadFull(reader, entryData); err != nil {
 				file.Close()
-				return fmt.Errorf("error reading wal entry data: %w", err)
+				return fmt.Errorf("error reading WAL data: %w", err)
 			}
 
-			// Unmarshal entry
+			// Unmarshal the WAL entry to get the payload
 			var entry WALEntry
-			MustUnmarshal(entryData, &entry)
+			if err := proto.Unmarshal(entryData, &entry); err != nil {
+				file.Close()
+				return fmt.Errorf("error unmarshaling WAL entry: %w", err)
+			}
+
+			// Calculate CRC32 only on the payload part
+			expectedCRC := crc32.ChecksumIEEE(entry.Payload)
+			if crc != expectedCRC {
+				file.Close()
+				return fmt.Errorf("CRC32 mismatch: expected %d, got %d", crc, expectedCRC)
+			}
+
+			// Unmarshal the payload into CommandPayload
+			var cmdPayload CommandPayload
+			if err := proto.Unmarshal(entry.Payload, &cmdPayload); err != nil {
+				file.Close()
+				return fmt.Errorf("error unmarshaling command payload: %w", err)
+			}
 
 			// Call provided replay function with parsed command
-			if err := wal.ForEachCommand(&entry, callback); err != nil {
+			if err := callback(&cmdPayload); err != nil {
 				file.Close()
 				return fmt.Errorf("error replaying command: %w", err)
 			}
@@ -374,15 +433,23 @@ func (wal *AOF) Replay(callback func(*WALEntry) error) error {
 	return nil
 }
 
-func (wal *AOF) ForEachCommand(entry *WALEntry, callback func(*WALEntry) error) error {
-	// Get the command data from the entry
-
-	// Calculate CRC32 on just the command data and sequence number
-	expectedCRC := crc32.ChecksumIEEE(append(entry.EntryData, byte(entry.LogSequenceNumber)))
+func (wal *AOF) Iterate(record any, callback func(any) error) error {
+	// Calculate CRC32 on just the command data
+	entry := record.(*WALEntry)
+	expectedCRC := crc32.ChecksumIEEE(entry.Payload)
 	if entry.Crc32 != expectedCRC {
-		return fmt.Errorf("checksum mismatch for log sequence %d: expected %d, got %d",
-			entry.LogSequenceNumber, expectedCRC, entry.Crc32)
+		return fmt.Errorf("checksum mismatch: expected %d, got %d",
+			expectedCRC, entry.Crc32)
 	}
+
+	// Unmarshal the command payload
+	var payload CommandPayload
+	if err := proto.Unmarshal(entry.Payload, &payload); err != nil {
+		return fmt.Errorf("failed to unmarshal command payload: %w", err)
+	}
+
+	// Update the entry's payload to contain just the wire command bytes
+	entry.Payload = payload.WireCommand
 
 	return callback(entry)
 }

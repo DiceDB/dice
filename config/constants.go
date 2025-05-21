@@ -16,6 +16,6 @@ const (
 
 	DefaultConnBacklogSize = 128
 
-	MaxRequestSize = 32 * 1024 * 1024 * 1024 // 32 MB
-	IoBufferSize   = 16 * 1024               // 16 KB
+	MaxRequestSize = 32 * 1024 * 1024 // 32 MB
+	IoBufferSize   = 16 * 1024        // 16 KB
 )

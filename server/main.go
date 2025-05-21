@@ -14,7 +14,6 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -24,6 +23,7 @@ import (
 	"github.com/dicedb/dice/internal/server/ironhawk"
 	"github.com/dicedb/dice/internal/shardmanager"
 	"github.com/dicedb/dicedb-go/wire"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/dicedb/dice/internal/wal"
 
@@ -95,6 +95,7 @@ func Start() {
 			return
 		}
 		wl = _wl
+		wal.SetWAL(wl) // Set the global WAL instance
 
 		if err := wl.Init(time.Now()); err != nil {
 			slog.Error("could not initialize WAL", slog.Any("error", err))
@@ -152,13 +153,15 @@ func Start() {
 	// Recovery from WAL logs
 	if config.Config.EnableWAL && walInitSuccessful {
 		slog.Info("restoring database from WAL")
-		callback := func(entry *wal.WALEntry) error {
-			data := strings.Split(string(entry.EntryData), " ")
+		callback := func(record any) error {
+			entry := record.(*wal.CommandPayload)
+
+			var cd wire.Command
+			if err := proto.Unmarshal(entry.WireCommand, &cd); err != nil {
+				return fmt.Errorf("failed to unmarshal command: %w", err)
+			}
 			cmdTemp := cmd.Cmd{
-				C: &wire.Command{
-					Cmd:  data[0],
-					Args: data[1:],
-				},
+				C:        &cd,
 				IsReplay: true,
 			}
 			_, err := cmdTemp.Execute(shardManager)

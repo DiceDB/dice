@@ -10,11 +10,11 @@ import (
 )
 
 type AbstractWAL interface {
-	LogCommand([]byte) error
+	Log([]byte) error
 	Close() error
 	Init(t time.Time) error
-	Replay(c func(*WALEntry) error) error
-	ForEachCommand(e *WALEntry, c func(*WALEntry) error) error
+	Replay(c func(any) error) error
+	Iterate(e any, c func(any) error) error
 }
 
 type WALCmdEntry struct {
@@ -24,10 +24,25 @@ type WALCmdEntry struct {
 }
 
 var (
-	ticker *time.Ticker
-	stopCh chan struct{}
-	mu     sync.Mutex
+	ticker   *time.Ticker
+	stopCh   chan struct{}
+	mu       sync.Mutex
+	instance AbstractWAL
 )
+
+// GetWAL returns the global WAL instance
+func GetWAL() AbstractWAL {
+	mu.Lock()
+	defer mu.Unlock()
+	return instance
+}
+
+// SetGlobalWAL sets the global WAL instance
+func SetWAL(wal AbstractWAL) {
+	mu.Lock()
+	defer mu.Unlock()
+	instance = wal
+}
 
 func init() {
 	ticker = time.NewTicker(10 * time.Second)

@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: wal.proto
+// source: internal/wal/wal.proto
 
 package wal
 
@@ -21,28 +21,32 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// EntryType defines the type of WAL entry
 type EntryType int32
 
 const (
-	EntryType_ENTRY_TYPE_COMMAND     EntryType = 0
-	EntryType_ENTRY_TYPE_CHECKPOINT  EntryType = 1
-	EntryType_ENTRY_TYPE_TRANSACTION EntryType = 2
-	EntryType_ENTRY_TYPE_REPLICATION EntryType = 3
+	EntryType_ENTRY_TYPE_UNKNOWN     EntryType = 0
+	EntryType_ENTRY_TYPE_COMMAND     EntryType = 1
+	EntryType_ENTRY_TYPE_CHECKPOINT  EntryType = 2
+	EntryType_ENTRY_TYPE_TRANSACTION EntryType = 3
+	EntryType_ENTRY_TYPE_REPLICATION EntryType = 4
 )
 
 // Enum value maps for EntryType.
 var (
 	EntryType_name = map[int32]string{
-		0: "ENTRY_TYPE_COMMAND",
-		1: "ENTRY_TYPE_CHECKPOINT",
-		2: "ENTRY_TYPE_TRANSACTION",
-		3: "ENTRY_TYPE_REPLICATION",
+		0: "ENTRY_TYPE_UNKNOWN",
+		1: "ENTRY_TYPE_COMMAND",
+		2: "ENTRY_TYPE_CHECKPOINT",
+		3: "ENTRY_TYPE_TRANSACTION",
+		4: "ENTRY_TYPE_REPLICATION",
 	}
 	EntryType_value = map[string]int32{
-		"ENTRY_TYPE_COMMAND":     0,
-		"ENTRY_TYPE_CHECKPOINT":  1,
-		"ENTRY_TYPE_TRANSACTION": 2,
-		"ENTRY_TYPE_REPLICATION": 3,
+		"ENTRY_TYPE_UNKNOWN":     0,
+		"ENTRY_TYPE_COMMAND":     1,
+		"ENTRY_TYPE_CHECKPOINT":  2,
+		"ENTRY_TYPE_TRANSACTION": 3,
+		"ENTRY_TYPE_REPLICATION": 4,
 	}
 )
 
@@ -57,11 +61,11 @@ func (x EntryType) String() string {
 }
 
 func (EntryType) Descriptor() protoreflect.EnumDescriptor {
-	return file_wal_proto_enumTypes[0].Descriptor()
+	return file_internal_wal_wal_proto_enumTypes[0].Descriptor()
 }
 
 func (EntryType) Type() protoreflect.EnumType {
-	return &file_wal_proto_enumTypes[0]
+	return &file_internal_wal_wal_proto_enumTypes[0]
 }
 
 func (x EntryType) Number() protoreflect.EnumNumber {
@@ -70,23 +74,84 @@ func (x EntryType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use EntryType.Descriptor instead.
 func (EntryType) EnumDescriptor() ([]byte, []int) {
-	return file_wal_proto_rawDescGZIP(), []int{0}
+	return file_internal_wal_wal_proto_rawDescGZIP(), []int{0}
 }
 
+// CommandPayload represents the payload for command entries in WAL
+type CommandPayload struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Log Sequence Number
+	Lsn uint64 `protobuf:"varint,1,opt,name=lsn,proto3" json:"lsn,omitempty"`
+	// The wire command bytes
+	WireCommand   []byte `protobuf:"bytes,2,opt,name=wire_command,json=wireCommand,proto3" json:"wire_command,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommandPayload) Reset() {
+	*x = CommandPayload{}
+	mi := &file_internal_wal_wal_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandPayload) ProtoMessage() {}
+
+func (x *CommandPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wal_wal_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandPayload.ProtoReflect.Descriptor instead.
+func (*CommandPayload) Descriptor() ([]byte, []int) {
+	return file_internal_wal_wal_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *CommandPayload) GetLsn() uint64 {
+	if x != nil {
+		return x.Lsn
+	}
+	return 0
+}
+
+func (x *CommandPayload) GetWireCommand() []byte {
+	if x != nil {
+		return x.WireCommand
+	}
+	return nil
+}
+
+// WALEntry represents a single entry in the Write-Ahead Log
 type WALEntry struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	LogSequenceNumber uint64                 `protobuf:"varint,1,opt,name=log_sequence_number,json=logSequenceNumber,proto3" json:"log_sequence_number,omitempty"`
-	Crc32             uint32                 `protobuf:"varint,2,opt,name=crc32,proto3" json:"crc32,omitempty"`
-	Timestamp         int64                  `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	EntryType         EntryType              `protobuf:"varint,4,opt,name=entry_type,json=entryType,proto3,enum=wal.EntryType" json:"entry_type,omitempty"`
-	EntryData         []byte                 `protobuf:"bytes,5,opt,name=entry_data,json=entryData,proto3" json:"entry_data,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// CRC32 checksum of the entry data
+	Crc32 uint32 `protobuf:"varint,1,opt,name=crc32,proto3" json:"crc32,omitempty"`
+	// Size of the WAL entry in bytes
+	Size uint32 `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
+	// The actual WAL payload
+	Payload []byte `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
+	// Timestamp when the entry was created
+	Timestamp int64 `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// Type of the entry
+	EntryType     EntryType `protobuf:"varint,5,opt,name=entry_type,json=entryType,proto3,enum=wal.EntryType" json:"entry_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WALEntry) Reset() {
 	*x = WALEntry{}
-	mi := &file_wal_proto_msgTypes[0]
+	mi := &file_internal_wal_wal_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -98,7 +163,7 @@ func (x *WALEntry) String() string {
 func (*WALEntry) ProtoMessage() {}
 
 func (x *WALEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_wal_proto_msgTypes[0]
+	mi := &file_internal_wal_wal_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -111,14 +176,7 @@ func (x *WALEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WALEntry.ProtoReflect.Descriptor instead.
 func (*WALEntry) Descriptor() ([]byte, []int) {
-	return file_wal_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *WALEntry) GetLogSequenceNumber() uint64 {
-	if x != nil {
-		return x.LogSequenceNumber
-	}
-	return 0
+	return file_internal_wal_wal_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *WALEntry) GetCrc32() uint32 {
@@ -126,6 +184,20 @@ func (x *WALEntry) GetCrc32() uint32 {
 		return x.Crc32
 	}
 	return 0
+}
+
+func (x *WALEntry) GetSize() uint32 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *WALEntry) GetPayload() []byte {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
 }
 
 func (x *WALEntry) GetTimestamp() int64 {
@@ -139,54 +211,51 @@ func (x *WALEntry) GetEntryType() EntryType {
 	if x != nil {
 		return x.EntryType
 	}
-	return EntryType_ENTRY_TYPE_COMMAND
+	return EntryType_ENTRY_TYPE_UNKNOWN
 }
 
-func (x *WALEntry) GetEntryData() []byte {
-	if x != nil {
-		return x.EntryData
-	}
-	return nil
-}
+var File_internal_wal_wal_proto protoreflect.FileDescriptor
 
-var File_wal_proto protoreflect.FileDescriptor
-
-const file_wal_proto_rawDesc = "" +
+const file_internal_wal_wal_proto_rawDesc = "" +
 	"\n" +
-	"\twal.proto\x12\x03wal\"\xbc\x01\n" +
-	"\bWALEntry\x12.\n" +
-	"\x13log_sequence_number\x18\x01 \x01(\x04R\x11logSequenceNumber\x12\x14\n" +
-	"\x05crc32\x18\x02 \x01(\rR\x05crc32\x12\x1c\n" +
-	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp\x12-\n" +
+	"\x16internal/wal/wal.proto\x12\x03wal\"E\n" +
+	"\x0eCommandPayload\x12\x10\n" +
+	"\x03lsn\x18\x01 \x01(\x04R\x03lsn\x12!\n" +
+	"\fwire_command\x18\x02 \x01(\fR\vwireCommand\"\x9b\x01\n" +
+	"\bWALEntry\x12\x14\n" +
+	"\x05crc32\x18\x01 \x01(\rR\x05crc32\x12\x12\n" +
+	"\x04size\x18\x02 \x01(\rR\x04size\x12\x18\n" +
+	"\apayload\x18\x03 \x01(\fR\apayload\x12\x1c\n" +
+	"\ttimestamp\x18\x04 \x01(\x03R\ttimestamp\x12-\n" +
 	"\n" +
-	"entry_type\x18\x04 \x01(\x0e2\x0e.wal.EntryTypeR\tentryType\x12\x1d\n" +
-	"\n" +
-	"entry_data\x18\x05 \x01(\fR\tentryData*v\n" +
+	"entry_type\x18\x05 \x01(\x0e2\x0e.wal.EntryTypeR\tentryType*\x8e\x01\n" +
 	"\tEntryType\x12\x16\n" +
-	"\x12ENTRY_TYPE_COMMAND\x10\x00\x12\x19\n" +
-	"\x15ENTRY_TYPE_CHECKPOINT\x10\x01\x12\x1a\n" +
-	"\x16ENTRY_TYPE_TRANSACTION\x10\x02\x12\x1a\n" +
-	"\x16ENTRY_TYPE_REPLICATION\x10\x03B\x0eZ\finternal/walb\x06proto3"
+	"\x12ENTRY_TYPE_UNKNOWN\x10\x00\x12\x16\n" +
+	"\x12ENTRY_TYPE_COMMAND\x10\x01\x12\x19\n" +
+	"\x15ENTRY_TYPE_CHECKPOINT\x10\x02\x12\x1a\n" +
+	"\x16ENTRY_TYPE_TRANSACTION\x10\x03\x12\x1a\n" +
+	"\x16ENTRY_TYPE_REPLICATION\x10\x04B%Z#github.com/dicedb/dice/internal/walb\x06proto3"
 
 var (
-	file_wal_proto_rawDescOnce sync.Once
-	file_wal_proto_rawDescData []byte
+	file_internal_wal_wal_proto_rawDescOnce sync.Once
+	file_internal_wal_wal_proto_rawDescData []byte
 )
 
-func file_wal_proto_rawDescGZIP() []byte {
-	file_wal_proto_rawDescOnce.Do(func() {
-		file_wal_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_wal_proto_rawDesc), len(file_wal_proto_rawDesc)))
+func file_internal_wal_wal_proto_rawDescGZIP() []byte {
+	file_internal_wal_wal_proto_rawDescOnce.Do(func() {
+		file_internal_wal_wal_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_internal_wal_wal_proto_rawDesc), len(file_internal_wal_wal_proto_rawDesc)))
 	})
-	return file_wal_proto_rawDescData
+	return file_internal_wal_wal_proto_rawDescData
 }
 
-var file_wal_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_wal_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_wal_proto_goTypes = []any{
-	(EntryType)(0),   // 0: wal.EntryType
-	(*WALEntry)(nil), // 1: wal.WALEntry
+var file_internal_wal_wal_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_internal_wal_wal_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_internal_wal_wal_proto_goTypes = []any{
+	(EntryType)(0),         // 0: wal.EntryType
+	(*CommandPayload)(nil), // 1: wal.CommandPayload
+	(*WALEntry)(nil),       // 2: wal.WALEntry
 }
-var file_wal_proto_depIdxs = []int32{
+var file_internal_wal_wal_proto_depIdxs = []int32{
 	0, // 0: wal.WALEntry.entry_type:type_name -> wal.EntryType
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
@@ -195,27 +264,27 @@ var file_wal_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_wal_proto_init() }
-func file_wal_proto_init() {
-	if File_wal_proto != nil {
+func init() { file_internal_wal_wal_proto_init() }
+func file_internal_wal_wal_proto_init() {
+	if File_internal_wal_wal_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wal_proto_rawDesc), len(file_wal_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_wal_wal_proto_rawDesc), len(file_internal_wal_wal_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_wal_proto_goTypes,
-		DependencyIndexes: file_wal_proto_depIdxs,
-		EnumInfos:         file_wal_proto_enumTypes,
-		MessageInfos:      file_wal_proto_msgTypes,
+		GoTypes:           file_internal_wal_wal_proto_goTypes,
+		DependencyIndexes: file_internal_wal_wal_proto_depIdxs,
+		EnumInfos:         file_internal_wal_wal_proto_enumTypes,
+		MessageInfos:      file_internal_wal_wal_proto_msgTypes,
 	}.Build()
-	File_wal_proto = out.File
-	file_wal_proto_goTypes = nil
-	file_wal_proto_depIdxs = nil
+	File_internal_wal_wal_proto = out.File
+	file_internal_wal_wal_proto_goTypes = nil
+	file_internal_wal_wal_proto_depIdxs = nil
 }

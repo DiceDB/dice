@@ -5,16 +5,17 @@ package ironhawk
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/dicedb/dicedb-go"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/shardmanager"
+	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dicedb-go/wire"
 )
 
@@ -23,10 +24,9 @@ type IOThread struct {
 	Mode       string
 	Session    *auth.Session
 	serverWire *dicedb.ServerWire
-	server     *Server
 }
 
-func NewIOThread(clientFD int, server *Server) (*IOThread, error) {
+func NewIOThread(clientFD int) (*IOThread, error) {
 	w, err := dicedb.NewServerWire(config.MaxRequestSize, config.KeepAlive, clientFD)
 	if err != nil {
 		if err.Kind == wire.NotEstablished {
@@ -41,7 +41,6 @@ func NewIOThread(clientFD int, server *Server) (*IOThread, error) {
 	return &IOThread{
 		serverWire: w,
 		Session:    auth.NewSession(),
-		server:     server,
 	}, nil
 }
 
@@ -84,9 +83,10 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 		}
 
 		// Log command to WAL if enabled and not a replay
-		if err == nil && t.server.WAL != nil && !_c.IsReplay {
+		if err == nil && wal.GetWAL() != nil && !_c.IsReplay {
 			// Create WAL entry using protobuf message
-			if err := t.server.WAL.LogCommand([]byte(fmt.Sprintf("%s %s", _c.C.Cmd, strings.Join(_c.C.Args, " ")))); err != nil {
+			cmdBytes, _ := proto.Marshal(_c.C)
+			if err := wal.GetWAL().Log(cmdBytes); err != nil {
 				slog.Error("failed to log command to WAL", slog.Any("error", err))
 			}
 		}
@@ -113,7 +113,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		isWatchCmd := strings.HasSuffix(c.Cmd, "WATCH")
 
-		if isWatchCmd{
+		if isWatchCmd {
 			watchManager.HandleWatch(_c, t)
 		} else if strings.HasSuffix(c.Cmd, "UNWATCH") {
 			watchManager.HandleUnwatch(_c, t)
@@ -123,7 +123,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		// Only send the response directly if this is not a watch command
 		// For watch commands, the response will be sent by NotifyWatchers
-		if !isWatchCmd{
+		if !isWatchCmd {
 			if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
 				return sendErr.Unwrap()
 			}
