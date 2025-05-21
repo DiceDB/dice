@@ -89,6 +89,23 @@ var (
 	ErrInvalidLonLatPair = func(lon, lat float64) error {
 		return fmt.Errorf("Invalid Longitude, Latitude pair ('%f', '%f')! Check the range in Docs", lon, lat)
 	}
+	ErrMemberNotFoundInSortedSet = func(member string) error {
+		return fmt.Errorf("Member not found: %s", member)
+	}
+	ErrInvalidSetOfOptions = func(options ...string) error {
+		errorString := "Invalid set of options:"
+		for i := range options {
+			errorString += " '" + options[i] + "'"
+		}
+		return fmt.Errorf(errorString)
+	}
+	ErrNeedOneOfTheOptions = func(options ...string) error {
+		errorString := "Need one of the options:"
+		for i := range options {
+			errorString += " '" + options[i] + "'"
+		}
+		return fmt.Errorf(errorString)
+	}
 	ErrGeneral = func(err string) error {
 		return fmt.Errorf("%s", err) // General error format for various commands.
 	}
@@ -118,6 +135,10 @@ var (
 
 	ErrUnknownCmd = func(cmd string) error {
 		return fmt.Errorf("ERROR unknown command '%v'", cmd) // Indicates that an unsupported encoding type was provided.
+	}
+
+	ErrUnknownOption = func(option string) error {
+		return fmt.Errorf("ERROR unknown option '%v'", option) // Indicates that an unsupported option.
 	}
 )
 
