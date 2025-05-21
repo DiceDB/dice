@@ -339,6 +339,7 @@ func (wal *AOF) Replay(callback func(*WALEntry) error) error {
 		}
 
 		reader := bufio.NewReader(file)
+		// wal_entry_len // 32 bytes crc // walentry
 		for {
 			// Read entry size
 			var entrySize int32
@@ -385,3 +386,8 @@ func (wal *AOF) ForEachCommand(entry *WALEntry, callback func(*WALEntry) error) 
 
 	return callback(entry)
 }
+
+// wal entry should be
+// crc32
+// size of wal entry
+// actual wal data
