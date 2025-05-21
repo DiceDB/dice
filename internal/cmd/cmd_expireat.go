@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -67,6 +68,9 @@ var (
 	EXPIREATResUnchangedRes = newEXPIREATRes(false)
 )
 
+// maxAllowedTimestamp represents the maximum allowed timestamp (10 years from now)
+var maxAllowedTimestamp = time.Now().AddDate(10, 0, 0).Unix()
+
 func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 	if len(c.C.Args) < 2 {
 		return EXPIREATResNilRes, errors.ErrWrongArgumentCount("EXPIREAT")
@@ -74,8 +78,7 @@ func evalEXPIREAT(c *Cmd, s *dstore.Store) (*CmdRes, error) {
 
 	var key = c.C.Args[0]
 	exUnixTimeSec, err := strconv.ParseInt(c.C.Args[1], 10, 64)
-	if err != nil || exUnixTimeSec < 0 {
-		// TODO: Check for the upper bound of the input.
+	if err != nil || exUnixTimeSec < 0 || exUnixTimeSec > maxAllowedTimestamp {
 		return EXPIREATResNilRes, errors.ErrInvalidExpireTime("EXPIREAT")
 	}
 

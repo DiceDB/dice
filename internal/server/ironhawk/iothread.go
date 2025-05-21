@@ -71,11 +71,16 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 					Message: err.Error(),
 				},
 			}
-		} else {
-			res.Rs.Status = wire.Status_OK
-			if res.Rs.Message == "" {
-				res.Rs.Message = "OK"
+			if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
+				return sendErr.Unwrap()
 			}
+			// Continue in case of error
+			continue
+		}
+
+		res.Rs.Status = wire.Status_OK
+		if res.Rs.Message == "" {
+			res.Rs.Message = "OK"
 		}
 
 		// Log command to WAL if enabled and not a replay
@@ -91,9 +96,17 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 		// Also, CLientID is duplicated in command and io-thread.
 		// Also, we shouldn't allow execution/registration incase of invalid commands
 		// like for B.WATCH cmd since it'll err out we shall return and not create subscription
-		t.ClientID = _c.ClientID
+		if err == nil {
+			t.ClientID = _c.ClientID
+		}
 
-		if c.Cmd == "HANDSHAKE" {
+		if _c.Meta.IsWatchable {
+			_cWatch := _c
+			_cWatch.C.Cmd += ".WATCH"
+			res.Rs.Fingerprint64 = _cWatch.Fingerprint()
+		}
+
+		if c.Cmd == "HANDSHAKE" && err == nil {
 			t.ClientID = _c.C.Args[0]
 			t.Mode = _c.C.Args[1]
 		}
@@ -102,9 +115,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		if isWatchCmd{
 			watchManager.HandleWatch(_c, t)
-		}
-
-		if strings.HasSuffix(c.Cmd, "UNWATCH") {
+		} else if strings.HasSuffix(c.Cmd, "UNWATCH") {
 			watchManager.HandleUnwatch(_c, t)
 		}
 
@@ -120,7 +131,9 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		watchManager.NotifyWatchers(_c, shardManager, t)
+		if err == nil {
+			watchManager.NotifyWatchers(_c, shardManager, t)
+		}
 	}
 }
 
