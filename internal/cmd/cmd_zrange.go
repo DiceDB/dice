@@ -77,7 +77,7 @@ var (
 )
 
 func evalZRANGE(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
-	if len(c.C.Args) > 4 || len(c.C.Args) < 2 {
+	if len(c.C.Args) < 3 || len(c.C.Args) > 4 {
 		return ZRANGEResNilRes, errors.ErrWrongArgumentCount("ZRANGE")
 	}
 
@@ -117,7 +117,7 @@ func evalZRANGE(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 }
 
 func executeZRANGE(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error) {
-	if len(c.C.Args) > 4 || len(c.C.Args) < 2 {
+	if len(c.C.Args) < 3 || len(c.C.Args) > 4 {
 		return ZRANGEResNilRes, errors.ErrWrongArgumentCount("ZRANGE")
 	}
 
