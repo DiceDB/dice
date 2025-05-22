@@ -83,9 +83,13 @@ func Load(flags *pflag.FlagSet) {
 	viper.AddConfigPath(MetadataDir)
 
 	err := viper.ReadInConfig()
-	if _, ok := err.(viper.ConfigFileNotFoundError); !ok && err != nil {
-		if err.Error() != "While parsing config: yaml: control characters are not allowed" {
-			panic(err)
+	if err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			// Removed the panic and added warning logs
+			// Log the error but don't panic - we'll use defaults instead
+			slog.Warn("error reading config file, using defaults",
+				slog.String("error", err.Error()),
+				slog.String("path", filepath.Join(MetadataDir, "dicedb.yaml")))
 		}
 	}
 
@@ -101,7 +105,11 @@ func Load(flags *pflag.FlagSet) {
 	})
 
 	if err := viper.Unmarshal(&Config); err != nil {
-		panic(err)
+		// If we can't unmarshal the config, initialize with defaults but don't panic
+		slog.Error("failed to parse config, using defaults",
+			slog.String("error", err.Error()))
+		Config = initDefaultConfig()
+		return
 	}
 }
 
