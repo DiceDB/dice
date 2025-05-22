@@ -37,3 +37,5 @@ pnpm-debug.log*
 .DS_Store
 dicedb.yaml
 dicedb.conf
+
+go.mod
