@@ -124,17 +124,20 @@ func (wal *AOF) Init(t time.Time) error {
 	return nil
 }
 
-// Log writes a command to the WAL
+// Log writes a command to the WAL with a monotonically increasing sequence number.
+// The sequence number is assigned atomically and the command is written to the WAL.
 func (wal *AOF) Log(data []byte) error {
+	// Lock once for the entire sequence number operation
 	wal.mu.Lock()
-	wal.lastSequenceNo++
-	lsn := wal.lastSequenceNo
-	wal.mu.Unlock()
+	defer wal.mu.Unlock()
 
-	// Create command payload with LSN and wire command bytes
+	// Get current LSN and increment for next use
+	lsn := wal.lastSequenceNo
+
+	// Create command payload with the assigned LSN
 	payload := &CommandPayload{
 		Lsn:         lsn,
-		WireCommand: data, // data is already the wire command bytes
+		WireCommand: data,
 	}
 
 	// Marshal the payload to bytes using protobuf
@@ -142,6 +145,7 @@ func (wal *AOF) Log(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal command payload: %w", err)
 	}
+	wal.lastSequenceNo++
 
 	return wal.writeEntry(payloadBytes)
 }
