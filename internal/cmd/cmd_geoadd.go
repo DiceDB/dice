@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/dicedb/dice/internal/errors"
-	geoUtil "github.com/dicedb/dice/internal/geo"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dsstore "github.com/dicedb/dice/internal/store"
@@ -73,46 +72,44 @@ func evalGEOADD(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	}
 
 	key := c.C.Args[0]
-	geoHashs, members := []int64{}, []string{}
 	params, nonParams := parseParams(c.C.Args[1:])
 
 	if len(nonParams)%3 != 0 {
 		return GEOADDResNilRes, errors.ErrWrongArgumentCount("GEOADD")
 	}
 
+	var gr *types.GeoRegistry
+	obj := s.Get(key)
+	if obj == nil {
+		gr = types.NewGeoRegistry()
+	} else {
+		if obj.Type != object.ObjTypeSortedSet {
+			return GEOADDResNilRes, errors.ErrWrongTypeOperation
+		}
+		gr = obj.Value.(*types.GeoRegistry)
+	}
+
+	GeoCoordinates, members := []*types.GeoCoordinate{}, []string{}
 	for i := 0; i < len(nonParams); i += 3 {
 		lon, errLon := strconv.ParseFloat(nonParams[i], 10)
 		lat, errLat := strconv.ParseFloat(nonParams[i+1], 10)
 		if errLon != nil || errLat != nil {
 			return GEOADDResNilRes, errors.ErrInvalidNumberFormat
 		}
-		if err := geoUtil.ValidateLonLat(lon, lat); err != nil {
+		coordinate, err := types.NewGeoCoordinateFromLonLat(lon, lat)
+		if err != nil {
 			return GEOADDResNilRes, err
 		}
-		geoHash := geoUtil.EncodeHash(lon, lat)
-
-		geoHashs = append(geoHashs, int64(geoHash))
+		GeoCoordinates = append(GeoCoordinates, coordinate)
 		members = append(members, nonParams[i+2])
 	}
 
-	var ss *types.SortedSet
-	obj := s.Get(key)
-	if obj == nil {
-		ss = types.NewSortedSet()
-	} else {
-		if obj.Type != object.ObjTypeSortedSet {
-			return GEOADDResNilRes, errors.ErrWrongTypeOperation
-		}
-		ss = obj.Value.(*types.SortedSet)
-	}
-
-	// Note: Validation of the params is done in the types.SortedSet.ZADD method
-	count, err := ss.ZADD(geoHashs, members, params)
+	count, err := gr.Add(GeoCoordinates, members, params)
 	if err != nil {
 		return GEOADDResNilRes, err
 	}
 
-	s.Put(key, s.NewObj(ss, -1, object.ObjTypeSortedSet), dsstore.WithPutCmd(dsstore.ZAdd))
+	s.Put(key, s.NewObj(gr, -1, object.ObjTypeSortedSet), dsstore.WithPutCmd(dsstore.ZAdd))
 	return newGEOADDRes(count), nil
 }
 

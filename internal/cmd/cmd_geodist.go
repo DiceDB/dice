@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"github.com/dicedb/dice/internal/errors"
-	geoUtil "github.com/dicedb/dice/internal/geo"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dsstore "github.com/dicedb/dice/internal/store"
@@ -68,39 +67,24 @@ func evalGEODIST(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	params, nonParams := parseParams(c.C.Args[1:])
 
-	unit := getUnitTypeFromParsedParams(params)
+	unit := types.GetUnitTypeFromParsedParams(params)
 	if len(c.C.Args) == 4 && len(unit) == 0 {
 		return GEODISTResNilRes, errors.ErrInvalidUnit(c.C.Args[3])
 	} else if len(unit) == 0 {
 		unit = types.M
 	}
 
-	var ss *types.SortedSet
+	var gr *types.GeoRegistry
 	obj := s.Get(key)
 	if obj == nil {
 		return GEODISTResNilRes, nil
 	}
-
 	if obj.Type != object.ObjTypeSortedSet {
 		return GEODISTResNilRes, errors.ErrWrongTypeOperation
 	}
-	ss = obj.Value.(*types.SortedSet)
+	gr = obj.Value.(*types.GeoRegistry)
 
-	node1 := ss.GetByKey(nonParams[0])
-	node2 := ss.GetByKey(nonParams[1])
-
-	// @doubt - Should return error here?
-	if node1 == nil || node2 == nil {
-		return GEODISTResNilRes, nil
-	}
-
-	hash1 := node1.Score()
-	hash2 := node2.Score()
-
-	lon1, lat1 := geoUtil.DecodeHash(uint64(hash1))
-	lon2, lat2 := geoUtil.DecodeHash(uint64(hash2))
-
-	dist, err := geoUtil.ConvertDistance(geoUtil.GetDistance(lon1, lat1, lon2, lat2), unit)
+	dist, err := gr.GetDistanceBetweenMembers(nonParams[0], nonParams[1], unit)
 
 	if err != nil {
 		return GEODISTResNilRes, err
