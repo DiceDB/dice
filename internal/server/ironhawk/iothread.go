@@ -120,7 +120,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		if err == nil {
+		if err == nil && watchManager.IsNotifiableCmd(_c) {
 			watchManager.NotifyWatchers(_c, shardManager, t)
 		}
 	}
