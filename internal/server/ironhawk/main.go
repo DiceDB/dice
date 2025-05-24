@@ -15,6 +15,7 @@ import (
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/shardmanager"
+	"github.com/dicedb/dice/internal/wal"
 )
 
 type Server struct {
@@ -27,7 +28,7 @@ type Server struct {
 	ioThreadManager *IOThreadManager
 }
 
-func NewServer(shardManager *shardmanager.ShardManager, ioThreadManager *IOThreadManager, watchManager *WatchManager) *Server {
+func NewServer(shardManager *shardmanager.ShardManager, ioThreadManager *IOThreadManager, watchManager *WatchManager, wl wal.AbstractWAL) *Server {
 	return &Server{
 		Host:            config.Config.Host,
 		Port:            config.Config.Port,

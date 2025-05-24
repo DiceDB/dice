@@ -9,11 +9,13 @@ import (
 	"strings"
 
 	"github.com/dicedb/dicedb-go"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/shardmanager"
+	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dicedb-go/wire"
 )
 
@@ -78,6 +80,15 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 		res.Rs.Status = wire.Status_OK
 		if res.Rs.Message == "" {
 			res.Rs.Message = "OK"
+		}
+
+		// Log command to WAL if enabled and not a replay
+		if err == nil && wal.GetWAL() != nil && !_c.IsReplay {
+			// Create WAL entry using protobuf message
+			cmdBytes, _ := proto.Marshal(_c.C)
+			if err := wal.GetWAL().Log(cmdBytes); err != nil {
+				slog.Error("failed to log command to WAL", slog.Any("error", err))
+			}
 		}
 
 		// TODO: Optimize this. We are doing this for all command execution

@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "main.go",
-            "args": ["--enable-watch", "--log-level", "debug", "--engine", "ironhawk"]
+            "args": ["--enable-watch", "--log-level", "debug", "--engine", "ironhawk", "--enable-wal"]
         }
     ]
 }
