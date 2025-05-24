@@ -171,11 +171,15 @@ func (wl *WALAOF) LogCommand(c *wire.Command) error {
 	}
 
 	bb = bb[:8+len(b)]
+	// Calculate CRC32 only on the payload
 	chk := crc32.ChecksumIEEE(b)
 
+	// Write header and payload
 	binary.LittleEndian.PutUint32(bb[0:4], chk)
-	binary.LittleEndian.PutUint32(bb[4:8], entrySize)
+	binary.LittleEndian.PutUint32(bb[4:8], uint32(len(b)))
 	copy(bb[8:], b)
+
+	wl.bufWriter.Write(bb)
 
 	wl.currentSegmentSize += entrySize
 
@@ -373,15 +377,15 @@ func (wl *WALAOF) Replay(callback func(*w.Element) error) error {
 				return fmt.Errorf("error reading WAL data: %w", err)
 			}
 
-			// Calculate CRC32 only on the payload part
-			expectedCRC := crc32.ChecksumIEEE(bb1ElementBytes)
+			// Calculate CRC32 only on the payload
+			expectedCRC := crc32.ChecksumIEEE(bb1ElementBytes[:entrySize])
 			if crc != expectedCRC {
 				file.Close()
 				return fmt.Errorf("CRC32 mismatch: expected %d, got %d", crc, expectedCRC)
 			}
 
 			// Unmarshal the WAL entry to get the payload
-			if err := proto.Unmarshal(bb1ElementBytes, &el); err != nil {
+			if err := proto.Unmarshal(bb1ElementBytes[:entrySize], &el); err != nil {
 				file.Close()
 				return fmt.Errorf("error unmarshaling WAL entry: %w", err)
 			}
