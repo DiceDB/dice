@@ -95,6 +95,13 @@ func parseParams(args []string) (params map[types.Param]string, nonParams []stri
 			i++
 		case types.XX, types.NX, types.KEEPTTL, types.LT, types.GT, types.CH, types.INCR:
 			params[arg] = "true"
+		case types.M, types.KM, types.MI, types.FT,
+			types.WITHCOORD, types.WITHDIST, types.WITHHASH,
+			types.FROMLONLAT, types.FROMMEMBER,
+			types.BYBOX, types.BYRADIUS,
+			types.ASC, types.DESC,
+			types.COUNT, types.ANY:
+			params[arg] = "true"
 		default:
 			nonParams = append(nonParams, args[i])
 		}
