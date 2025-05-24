@@ -99,7 +99,11 @@ func Start() {
 		wal.SetWAL(wl) // Set the global WAL instance
 
 		if err := wl.Init(time.Now()); err != nil {
-			slog.Error("could not initialize WAL", slog.Any("error", err))
+			slog.Warn("could not initialize WAL", slog.Any("error", err))
+			slog.Warn("disabling WAL and continuing")
+			// TODO: Make sure that the WAL is disabled
+			// We should not incurring any additional cost of making LogCommand
+			// invocations.
 		} else {
 			go wal.InitBG(wl)
 			slog.Debug("WAL initialization complete")

@@ -167,7 +167,7 @@ func (wl *WALAOF) LogCommand(c *wire.Command) error {
 		// TODO: In this case, we can do a one time creation
 		// of a new buffer and proceed rather than using the
 		// existing buffer.
-		panic(fmt.Errorf("buffer too small"))
+		panic(fmt.Errorf("buffer too small, %d > %d", entrySize, len(bb)))
 	}
 
 	bb = bb[:8+len(b)]
