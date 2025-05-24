@@ -31,8 +31,9 @@ OK
 localhost:7379> HGETALL k2
 OK
 	`,
-	Eval:    evalHGETALL,
-	Execute: executeHGETALL,
+	Eval:        evalHGETALL,
+	Execute:     executeHGETALL,
+	IsWatchable: true,
 }
 
 func init() {

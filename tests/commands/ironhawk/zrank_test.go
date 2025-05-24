@@ -11,7 +11,12 @@ import (
 )
 
 func extractValueZRANK(res *wire.Result) interface{} {
-	return res.GetZRANKRes().Rank
+	resp := res.GetZRANKRes()
+	if resp.Element == nil {
+		return int64(0)
+	} else {
+		return resp.Element.Rank
+	}
 }
 
 func TestZRANK(t *testing.T) {
