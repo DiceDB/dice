@@ -22,6 +22,7 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/server/ironhawk"
 	"github.com/dicedb/dice/internal/shardmanager"
+	w "github.com/dicedb/dicedb-go/wal"
 	"github.com/dicedb/dicedb-go/wire"
 	"google.golang.org/protobuf/proto"
 
@@ -82,7 +83,7 @@ func Start() {
 
 	var (
 		serverErrCh       = make(chan error, 2)
-		wl                wal.AbstractWAL
+		wl                wal.WAL
 		walInitSuccessful = false
 	)
 
@@ -98,7 +99,11 @@ func Start() {
 		wal.SetWAL(wl) // Set the global WAL instance
 
 		if err := wl.Init(time.Now()); err != nil {
-			slog.Error("could not initialize WAL", slog.Any("error", err))
+			slog.Warn("could not initialize WAL", slog.Any("error", err))
+			slog.Warn("disabling WAL and continuing")
+			// TODO: Make sure that the WAL is disabled
+			// We should not incurring any additional cost of making LogCommand
+			// invocations.
 		} else {
 			go wal.InitBG(wl)
 			slog.Debug("WAL initialization complete")
@@ -153,11 +158,9 @@ func Start() {
 	// Recovery from WAL logs
 	if config.Config.EnableWAL && walInitSuccessful {
 		slog.Info("restoring database from WAL")
-		callback := func(record any) error {
-			entry := record.(*wal.CommandPayload)
-
+		callback := func(el *w.Element) error {
 			var cd wire.Command
-			if err := proto.Unmarshal(entry.WireCommand, &cd); err != nil {
+			if err := proto.Unmarshal(el.Payload, &cd); err != nil {
 				return fmt.Errorf("failed to unmarshal command: %w", err)
 			}
 			cmdTemp := cmd.Cmd{

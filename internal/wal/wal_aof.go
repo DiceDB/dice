@@ -17,11 +17,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	sync "sync"
+	"sync"
 	"time"
 
 	"github.com/dicedb/dice/config"
 	"google.golang.org/protobuf/proto"
+
+	w "github.com/dicedb/dicedb-go/wal"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 const (
@@ -32,16 +35,30 @@ const (
 	WALModeUnbuffered = "unbuffered"
 )
 
-type AOF struct {
+var bb []byte
+
+func init() {
+	// TODO: Pre-allocate a buffer to avoid re-allocating it
+	// This will hold one WAL AOF Entry Before it is written to the buffer
+	bb = make([]byte, 10*1024)
+}
+
+type WALAOFEntry struct {
+	Len     uint32
+	Crc32   uint32
+	Payload []byte
+}
+
+type WALAOF struct {
 	logDir                 string
 	currentSegmentFile     *os.File
 	walMode                string
 	writeMode              string
-	maxSegmentSize         int
+	maxSegmentSize         uint32
 	maxSegmentCount        int
 	currentSegmentIndex    int
+	currentSegmentSize     uint32
 	oldestSegmentIndex     int
-	byteOffset             int
 	bufferSize             int
 	retentionMode          string
 	recoveryMode           string
@@ -56,17 +73,16 @@ type AOF struct {
 	cancel                 context.CancelFunc
 }
 
-func NewAOFWAL(directory string) (*AOF, error) {
+func NewAOFWAL(directory string) (*WALAOF, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-
-	return &AOF{
+	return &WALAOF{
 		logDir:                 directory,
 		walMode:                config.Config.WALMode,
 		bufferSyncTicker:       time.NewTicker(time.Duration(config.Config.WALBufferSyncIntervalMillis) * time.Millisecond),
 		segmentRotationTicker:  time.NewTicker(time.Duration(config.Config.WALMaxSegmentRotationTimeSec) * time.Second),
 		segmentRetentionTicker: time.NewTicker(time.Duration(config.Config.WALMaxSegmentRetentionDurationSec) * time.Second),
 		writeMode:              config.Config.WALWriteMode,
-		maxSegmentSize:         config.Config.WALMaxSegmentSizeMB * 1024 * 1024,
+		maxSegmentSize:         uint32(config.Config.WALMaxSegmentSizeMB) * 1024 * 1024,
 		maxSegmentCount:        config.Config.WALMaxSegmentCount,
 		bufferSize:             config.Config.WALBufferSizeMB * 1024 * 1024,
 		retentionMode:          config.Config.WALRetentionMode,
@@ -77,107 +93,95 @@ func NewAOFWAL(directory string) (*AOF, error) {
 	}, nil
 }
 
-func (wal *AOF) Init(t time.Time) error {
+func (wl *WALAOF) Init(t time.Time) error {
 	// TODO - Restore existing checkpoints to memory
 
 	// Create the directory if it doesn't exist
-	if err := os.MkdirAll(wal.logDir, 0755); err != nil {
+	if err := os.MkdirAll(wl.logDir, 0755); err != nil {
 		return err
 	}
 
 	// Get the list of log segment files in the directory
-	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"+segmentSuffix))
+	files, err := filepath.Glob(filepath.Join(wl.logDir, segmentPrefix+"*"+segmentSuffix))
 	if err != nil {
 		return err
 	}
 
 	if len(files) > 0 {
-		slog.Info("Found existing log segments", slog.Any("files", files))
+		slog.Debug("Found existing log segments", slog.Any("total_files", len(files)))
 		// TODO - Check if we have newer WAL entries after the last checkpoint and simultaneously replay and checkpoint them
 	}
 
-	wal.lastSequenceNo = 0
-	wal.currentSegmentIndex = 0
-	wal.oldestSegmentIndex = 0
-	wal.byteOffset = 0
-	newFile, err := os.OpenFile(filepath.Join(wal.logDir, segmentPrefix+"0"+segmentSuffix), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	sf, err := os.OpenFile(
+		filepath.Join(wl.logDir, segmentPrefix+"0"+segmentSuffix),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	wal.currentSegmentFile = newFile
 
-	if _, err := wal.currentSegmentFile.Seek(0, io.SeekEnd); err != nil {
-		return err
+	wl.currentSegmentFile = sf
+	wl.bufWriter = bufio.NewWriterSize(wl.currentSegmentFile, wl.bufferSize)
+
+	go wl.keepSyncingBuffer()
+	switch wl.rotationMode {
+	case RotationModeTime:
+		go wl.rotateSegmentPeriodically()
+		go wl.deleteSegmentPeriodically()
 	}
-	wal.bufWriter = bufio.NewWriterSize(wal.currentSegmentFile, wal.bufferSize)
-
-	go wal.keepSyncingBuffer()
-
-	if wal.rotationMode == RotationModeTime {
-		go wal.rotateSegmentPeriodically()
-	}
-
-	if wal.retentionMode == RetentionModeTime {
-		go wal.deleteSegmentPeriodically()
-	}
-
 	return nil
 }
 
 // Log writes a command to the WAL with a monotonically increasing sequence number.
-// The sequence number is assigned atomically and the command is written to the WAL.
-func (wal *AOF) Log(data []byte) error {
+// The sequence number is assigned atomically and the command is written to the wl.
+func (wl *WALAOF) LogCommand(c *wire.Command) error {
 	// Lock once for the entire sequence number operation
-	wal.mu.Lock()
-	defer wal.mu.Unlock()
+	wl.mu.Lock()
+	defer wl.mu.Unlock()
 
-	// Get current LSN and increment for next use
-	lsn := wal.lastSequenceNo
-
-	// Create command payload with the assigned LSN
-	payload := &CommandPayload{
-		Lsn:         lsn,
-		WireCommand: data,
-	}
-
-	// Marshal the payload to bytes using protobuf
-	payloadBytes, err := proto.Marshal(payload)
+	b, err := proto.Marshal(c)
 	if err != nil {
-		return fmt.Errorf("failed to marshal command payload: %w", err)
-	}
-	wal.lastSequenceNo++
-
-	return wal.writeEntry(payloadBytes)
-}
-
-func (wal *AOF) writeEntry(data []byte) error {
-	wal.mu.Lock()
-	defer wal.mu.Unlock()
-
-	// Create WAL entry with the new proto structure
-	entry := &WALEntry{
-		Crc32:     crc32.ChecksumIEEE(data),
-		Size:      uint32(len(data)),
-		Payload:   data,
-		Timestamp: time.Now().UnixNano(),
-		EntryType: EntryType_ENTRY_TYPE_COMMAND,
-	}
-
-	// Calculate total entry size including proto overhead
-	entrySize := getEntrySize(data)
-	if err := wal.rotateLogIfNeeded(entrySize); err != nil {
 		return err
 	}
 
-	wal.byteOffset += entrySize
+	wl.lastSequenceNo += 1
+	el := &w.Element{
+		Lsn:         wl.lastSequenceNo,
+		Timestamp:   time.Now().UnixNano(),
+		ElementType: w.ElementType_ELEMENT_TYPE_COMMAND,
+		Payload:     b,
+	}
 
-	if err := wal.writeEntryToBuffer(entry); err != nil {
+	b, err = proto.Marshal(el)
+	if err != nil {
 		return err
 	}
+
+	entrySize := uint32(4 + 4 + len(b))
+	if err := wl.rotateLogIfNeeded(entrySize); err != nil {
+		return err
+	}
+
+	// If the entry size is greater than the buffer size, we need to
+	// create a new buffer.
+	if entrySize > uint32(len(bb)) {
+		// TODO: In this case, we can do a one time creation
+		// of a new buffer and proceed rather than using the
+		// existing buffer.
+		panic(fmt.Errorf("buffer too small, %d > %d", entrySize, len(bb)))
+	}
+
+	bb = bb[:8+len(b)]
+	chk := crc32.ChecksumIEEE(b)
+
+	binary.LittleEndian.PutUint32(bb[0:4], chk)
+	binary.LittleEndian.PutUint32(bb[4:8], entrySize)
+	copy(bb[8:], b)
+
+	wl.currentSegmentSize += entrySize
 
 	// if wal-mode unbuffered immediately sync to disk
-	if wal.walMode == WALModeUnbuffered {
-		if err := wal.Sync(); err != nil {
+	if wl.walMode == WALModeUnbuffered {
+		if err := wl.Sync(); err != nil {
 			return err
 		}
 	}
@@ -185,36 +189,10 @@ func (wal *AOF) writeEntry(data []byte) error {
 	return nil
 }
 
-func (wal *AOF) writeEntryToBuffer(entry *WALEntry) error {
-	// Marshal the WAL entry to bytes
-	entryData, err := proto.Marshal(entry)
-	if err != nil {
-		return fmt.Errorf("failed to marshal WAL entry: %w", err)
-	}
-
-	// Write CRC32 (4 bytes)
-	crcBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(crcBytes, entry.Crc32)
-	if _, err := wal.bufWriter.Write(crcBytes); err != nil {
-		return err
-	}
-
-	// Write size of WAL entry (4 bytes)
-	sizeBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(sizeBytes, uint32(len(entryData)))
-	if _, err := wal.bufWriter.Write(sizeBytes); err != nil {
-		return err
-	}
-
-	// Write the actual WAL data
-	_, err = wal.bufWriter.Write(entryData)
-	return err
-}
-
 // rotateLogIfNeeded is not thread safe
-func (wal *AOF) rotateLogIfNeeded(entrySize int) error {
-	if wal.byteOffset+entrySize > wal.maxSegmentSize {
-		if err := wal.rotateLog(); err != nil {
+func (wl *WALAOF) rotateLogIfNeeded(entrySize uint32) error {
+	if wl.currentSegmentSize+entrySize > wl.maxSegmentSize {
+		if err := wl.rotateLog(); err != nil {
 			return err
 		}
 	}
@@ -222,128 +200,123 @@ func (wal *AOF) rotateLogIfNeeded(entrySize int) error {
 }
 
 // rotateLog is not thread safe
-func (wal *AOF) rotateLog() error {
-	if err := wal.Sync(); err != nil {
+func (wl *WALAOF) rotateLog() error {
+	if err := wl.Sync(); err != nil {
 		return err
 	}
 
-	if err := wal.currentSegmentFile.Close(); err != nil {
+	if err := wl.currentSegmentFile.Close(); err != nil {
 		return err
 	}
 
-	wal.currentSegmentIndex++
-
-	if wal.currentSegmentIndex-wal.oldestSegmentIndex+1 > wal.maxSegmentCount {
-		if err := wal.deleteOldestSegment(); err != nil {
+	wl.currentSegmentIndex++
+	if wl.currentSegmentIndex-wl.oldestSegmentIndex+1 > wl.maxSegmentCount {
+		if err := wl.deleteOldestSegment(); err != nil {
 			return err
 		}
-		wal.oldestSegmentIndex++
+		wl.oldestSegmentIndex++
 	}
 
-	newFile, err := os.OpenFile(filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("%d", wal.currentSegmentIndex)+segmentSuffix), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	sf, err := os.OpenFile(filepath.Join(wl.logDir, segmentPrefix+fmt.Sprintf("%d", wl.currentSegmentIndex)+segmentSuffix), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("failed opening file: %s", err)
 	}
 
-	wal.byteOffset = 0
-
-	wal.currentSegmentFile = newFile
-	wal.bufWriter = bufio.NewWriter(newFile)
+	wl.currentSegmentSize = 0
+	wl.currentSegmentFile = sf
+	wl.bufWriter = bufio.NewWriter(sf)
 
 	return nil
 }
 
-func (wal *AOF) deleteOldestSegment() error {
-	oldestSegmentFilePath := filepath.Join(wal.logDir, segmentPrefix+fmt.Sprintf("%d", wal.oldestSegmentIndex)+segmentSuffix)
+func (wl *WALAOF) deleteOldestSegment() error {
+	oldestSegmentFilePath := filepath.Join(wl.logDir, segmentPrefix+fmt.Sprintf("%d", wl.oldestSegmentIndex)+segmentSuffix)
 
 	// TODO: checkpoint before deleting the file
-
 	if err := os.Remove(oldestSegmentFilePath); err != nil {
 		return err
 	}
-	wal.oldestSegmentIndex++
-
+	wl.oldestSegmentIndex++
 	return nil
 }
 
-// Close the WAL file. It also calls Sync() on the WAL.
-func (wal *AOF) Close() error {
-	wal.cancel()
-	if err := wal.Sync(); err != nil {
+// Close the WAL file. It also calls Sync() on the wl.
+func (wl *WALAOF) Close() error {
+	wl.cancel()
+	if err := wl.Sync(); err != nil {
 		return err
 	}
-	return wal.currentSegmentFile.Close()
+	return wl.currentSegmentFile.Close()
 }
 
 // Writes out any data in the WAL's in-memory buffer to the segment file. If
 // fsync is enabled, it also calls fsync on the segment file.
-func (wal *AOF) Sync() error {
-	if err := wal.bufWriter.Flush(); err != nil {
+func (wl *WALAOF) Sync() error {
+	if err := wl.bufWriter.Flush(); err != nil {
 		return err
 	}
-	if wal.writeMode == "fsync" {
-		if err := wal.currentSegmentFile.Sync(); err != nil {
+	if wl.writeMode == "fsync" {
+		if err := wl.currentSegmentFile.Sync(); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-func (wal *AOF) keepSyncingBuffer() {
+func (wl *WALAOF) keepSyncingBuffer() {
 	for {
 		select {
-		case <-wal.bufferSyncTicker.C:
-			wal.mu.Lock()
-			err := wal.Sync()
-			wal.mu.Unlock()
+		case <-wl.bufferSyncTicker.C:
+			wl.mu.Lock()
+			err := wl.Sync()
+			wl.mu.Unlock()
 
 			if err != nil {
 				slog.Error("failed to sync buffer", slog.String("error", err.Error()))
 			}
 
-		case <-wal.ctx.Done():
+		case <-wl.ctx.Done():
 			return
 		}
 	}
 }
 
-func (wal *AOF) rotateSegmentPeriodically() {
+func (wl *WALAOF) rotateSegmentPeriodically() {
 	for {
 		select {
-		case <-wal.segmentRotationTicker.C:
-			wal.mu.Lock()
-			err := wal.rotateLog()
-			wal.mu.Unlock()
+		case <-wl.segmentRotationTicker.C:
+			wl.mu.Lock()
+			err := wl.rotateLog()
+			wl.mu.Unlock()
 			if err != nil {
 				slog.Error("failed to rotate segment", slog.String("error", err.Error()))
 			}
 
-		case <-wal.ctx.Done():
+		case <-wl.ctx.Done():
 			return
 		}
 	}
 }
 
-func (wal *AOF) deleteSegmentPeriodically() {
+func (wl *WALAOF) deleteSegmentPeriodically() {
 	for {
 		select {
-		case <-wal.segmentRetentionTicker.C:
-			wal.mu.Lock()
-			err := wal.deleteOldestSegment()
-			wal.mu.Unlock()
+		case <-wl.segmentRetentionTicker.C:
+			wl.mu.Lock()
+			err := wl.deleteOldestSegment()
+			wl.mu.Unlock()
 			if err != nil {
 				slog.Error("failed to delete segment", slog.String("error", err.Error()))
 			}
-		case <-wal.ctx.Done():
+		case <-wl.ctx.Done():
 			return
 		}
 	}
 }
 
-func (wal *AOF) segmentFiles() ([]string, error) {
+func (wl *WALAOF) segmentFiles() ([]string, error) {
 	// Get all segment files matching the pattern
-	files, err := filepath.Glob(filepath.Join(wal.logDir, segmentPrefix+"*"+segmentSuffix))
+	files, err := filepath.Glob(filepath.Join(wl.logDir, segmentPrefix+"*"+segmentSuffix))
 	if err != nil {
 		return nil, err
 	}
@@ -361,9 +334,15 @@ func (wal *AOF) segmentFiles() ([]string, error) {
 	return files, nil
 }
 
-func (wal *AOF) Replay(callback func(any) error) error {
+func (wl *WALAOF) Replay(callback func(*w.Element) error) error {
+	var crc uint32
+	var entrySize uint32
+	var el w.Element
+	bb1h := make([]byte, 8)
+	bb1ElementBytes := make([]byte, 10*1024)
+
 	// Get list of segment files sorted by timestamp
-	segments, err := wal.segmentFiles()
+	segments, err := wl.segmentFiles()
 	if err != nil {
 		return fmt.Errorf("error getting wal-segment files: %w", err)
 	}
@@ -378,55 +357,37 @@ func (wal *AOF) Replay(callback func(any) error) error {
 		reader := bufio.NewReader(file)
 		// Format: CRC32 (4 bytes) | Size of WAL entry (4 bytes) | WAL data
 		for {
-			// Read CRC32 (4 bytes)
-			crcBytes := make([]byte, 4)
-			if _, err := io.ReadFull(reader, crcBytes); err != nil {
+			// Read CRC32 (4 bytes) + entrySize (4 bytes)
+			if _, err := io.ReadFull(reader, bb1h); err != nil {
 				if err == io.EOF {
 					break
 				}
 				file.Close()
 				return fmt.Errorf("error reading CRC32: %w", err)
 			}
-			crc := binary.LittleEndian.Uint32(crcBytes)
+			crc = binary.LittleEndian.Uint32(bb1h[0:4])
+			entrySize = binary.LittleEndian.Uint32(bb1h[4:8])
 
-			// Read size of WAL entry (4 bytes)
-			sizeBytes := make([]byte, 4)
-			if _, err := io.ReadFull(reader, sizeBytes); err != nil {
-				file.Close()
-				return fmt.Errorf("error reading WAL entry size: %w", err)
-			}
-			entrySize := binary.LittleEndian.Uint32(sizeBytes)
-
-			// Read the actual WAL data
-			entryData := make([]byte, entrySize)
-			if _, err := io.ReadFull(reader, entryData); err != nil {
+			if _, err := io.ReadFull(reader, bb1ElementBytes[:entrySize]); err != nil {
 				file.Close()
 				return fmt.Errorf("error reading WAL data: %w", err)
 			}
 
-			// Unmarshal the WAL entry to get the payload
-			var entry WALEntry
-			if err := proto.Unmarshal(entryData, &entry); err != nil {
-				file.Close()
-				return fmt.Errorf("error unmarshaling WAL entry: %w", err)
-			}
-
 			// Calculate CRC32 only on the payload part
-			expectedCRC := crc32.ChecksumIEEE(entry.Payload)
+			expectedCRC := crc32.ChecksumIEEE(bb1ElementBytes)
 			if crc != expectedCRC {
 				file.Close()
 				return fmt.Errorf("CRC32 mismatch: expected %d, got %d", crc, expectedCRC)
 			}
 
-			// Unmarshal the payload into CommandPayload
-			var cmdPayload CommandPayload
-			if err := proto.Unmarshal(entry.Payload, &cmdPayload); err != nil {
+			// Unmarshal the WAL entry to get the payload
+			if err := proto.Unmarshal(bb1ElementBytes, &el); err != nil {
 				file.Close()
-				return fmt.Errorf("error unmarshaling command payload: %w", err)
+				return fmt.Errorf("error unmarshaling WAL entry: %w", err)
 			}
 
 			// Call provided replay function with parsed command
-			if err := callback(&cmdPayload); err != nil {
+			if err := callback(&el); err != nil {
 				file.Close()
 				return fmt.Errorf("error replaying command: %w", err)
 			}
@@ -437,28 +398,6 @@ func (wal *AOF) Replay(callback func(any) error) error {
 	return nil
 }
 
-func (wal *AOF) Iterate(record any, callback func(any) error) error {
-	// Calculate CRC32 on just the command data
-	entry := record.(*WALEntry)
-	expectedCRC := crc32.ChecksumIEEE(entry.Payload)
-	if entry.Crc32 != expectedCRC {
-		return fmt.Errorf("checksum mismatch: expected %d, got %d",
-			expectedCRC, entry.Crc32)
-	}
-
-	// Unmarshal the command payload
-	var payload CommandPayload
-	if err := proto.Unmarshal(entry.Payload, &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal command payload: %w", err)
-	}
-
-	// Update the entry's payload to contain just the wire command bytes
-	entry.Payload = payload.WireCommand
-
-	return callback(entry)
+func (wl *WALAOF) Iterate(e *w.Element, c func(*w.Element) error) error {
+	return c(e)
 }
-
-// wal entry should be
-// crc32
-// size of wal entry
-// actual wal data
