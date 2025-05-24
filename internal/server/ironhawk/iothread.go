@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/dicedb/dicedb-go"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dice/internal/auth"
@@ -85,8 +84,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 		// Log command to WAL if enabled and not a replay
 		if err == nil && wal.GetWAL() != nil && !_c.IsReplay {
 			// Create WAL entry using protobuf message
-			cmdBytes, _ := proto.Marshal(_c.C)
-			if err := wal.GetWAL().Log(cmdBytes); err != nil {
+			if err := wal.GetWAL().LogCommand(_c.C); err != nil {
 				slog.Error("failed to log command to WAL", slog.Any("error", err))
 			}
 		}

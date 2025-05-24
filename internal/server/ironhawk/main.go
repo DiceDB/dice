@@ -28,7 +28,7 @@ type Server struct {
 	ioThreadManager *IOThreadManager
 }
 
-func NewServer(shardManager *shardmanager.ShardManager, ioThreadManager *IOThreadManager, watchManager *WatchManager, wl wal.AbstractWAL) *Server {
+func NewServer(shardManager *shardmanager.ShardManager, ioThreadManager *IOThreadManager, watchManager *WatchManager, wl wal.WAL) *Server {
 	return &Server{
 		Host:            config.Config.Host,
 		Port:            config.Config.Port,

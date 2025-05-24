@@ -53,3 +53,5 @@ require (
 	golang.org/x/crypto v0.38.0
 	google.golang.org/protobuf v1.36.6
 )
+
+replace github.com/dicedb/dicedb-go => ../dicedb-go

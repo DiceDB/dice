@@ -38,7 +38,7 @@ unittest-one: ## run a single unit test function by name (e.g. make unittest-one
 
 ##@ Development
 run: ## run dicedb with the default configuration
-	go run main.go --engine ironhawk --log-level debug
+	go run main.go --engine ironhawk --log-level debug --enable-wal
 
 format: ## format the code using go fmt
 	go fmt ./...

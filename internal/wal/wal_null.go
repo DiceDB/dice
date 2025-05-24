@@ -5,6 +5,9 @@ package wal
 
 import (
 	"time"
+
+	w "github.com/dicedb/dicedb-go/wal"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
 type WALNull struct {
@@ -18,8 +21,7 @@ func (w *WALNull) Init(t time.Time) error {
 	return nil
 }
 
-// LogCommand serializes a WALLogEntry and writes it to the current WAL file.
-func (w *WALNull) LogCommand(b []byte) error {
+func (w *WALNull) LogCommand(c *wire.Command) error {
 	return nil
 }
 
@@ -27,10 +29,10 @@ func (w *WALNull) Close() error {
 	return nil
 }
 
-func (w *WALNull) ForEachCommand(entry *WALEntry, callback func(*WALEntry) error) error {
+func (w *WALNull) Replay(callback func(*w.Element) error) error {
 	return nil
 }
 
-func (w *WALNull) Replay(callback func(*WALEntry) error) error {
+func (w *WALNull) Iterate(entry *w.Element, callback func(*w.Element) error) error {
 	return nil
 }
