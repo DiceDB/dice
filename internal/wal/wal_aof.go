@@ -127,6 +127,8 @@ func (wl *WALAOF) Init(t time.Time) error {
 	case RotationModeTime:
 		go wl.rotateSegmentPeriodically()
 		go wl.deleteSegmentPeriodically()
+	default:
+		return nil
 	}
 	return nil
 }
@@ -163,7 +165,7 @@ func (wl *WALAOF) LogCommand(c *wire.Command) error {
 
 	// If the entry size is greater than the buffer size, we need to
 	// create a new buffer.
-	if entrySize > uint32(len(bb)) {
+	if entrySize > uint32(cap(bb)) {
 		// TODO: In this case, we can do a one time creation
 		// of a new buffer and proceed rather than using the
 		// existing buffer.
@@ -179,7 +181,7 @@ func (wl *WALAOF) LogCommand(c *wire.Command) error {
 	binary.LittleEndian.PutUint32(bb[4:8], uint32(len(b)))
 	copy(bb[8:], b)
 
-	wl.bufWriter.Write(bb)
+	_, _ = wl.bufWriter.Write(bb)
 
 	wl.currentSegmentSize += entrySize
 
