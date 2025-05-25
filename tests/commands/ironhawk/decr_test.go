@@ -9,8 +9,6 @@ import (
 	"github.com/dicedb/dicedb-go/wire"
 )
 
-type ValueExtractorFn func(result *wire.Result) interface{}
-
 func extractValueDECR(result *wire.Result) interface{} {
 	return result.GetDECRRes().GetValue()
 }

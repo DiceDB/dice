@@ -14,6 +14,7 @@ import (
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/shardmanager"
+	"github.com/dicedb/dice/internal/wal"
 	"github.com/dicedb/dicedb-go/wire"
 )
 
@@ -45,13 +46,26 @@ func NewIOThread(clientFD int) (*IOThread, error) {
 func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardManager, watchManager *WatchManager) error {
 	for {
 		var c *wire.Command
-		{
+		recvCh := make(chan *wire.Command, 1)
+		errCh := make(chan error, 1)
+
+		go func() {
 			tmpC, err := t.serverWire.Receive()
 			if err != nil {
-				return err.Unwrap()
+				errCh <- err.Unwrap()
+				return
 			}
+			recvCh <- tmpC
+		}()
 
-			c = tmpC
+		select {
+		case <-ctx.Done():
+			slog.Debug("io-thread context cancelled, shutting down receive loop")
+			return ctx.Err()
+		case err := <-errCh:
+			return err
+		case tmp := <-recvCh:
+			c = tmp
 		}
 
 		_c := &cmd.Cmd{
@@ -80,6 +94,14 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 			res.Rs.Message = "OK"
 		}
 
+		// Log command to WAL if enabled and not a replay
+		if err == nil && wal.GetWAL() != nil && !_c.IsReplay {
+			// Create WAL entry using protobuf message
+			if err := wal.GetWAL().LogCommand(_c.C); err != nil {
+				slog.Error("failed to log command to WAL", slog.Any("error", err))
+			}
+		}
+
 		// TODO: Optimize this. We are doing this for all command execution
 		// Also, we are allowing people to override the client ID.
 		// Also, CLientID is duplicated in command and io-thread.
@@ -88,13 +110,20 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 		// No error handling after this as we have continued loop above if error found
 		t.ClientID = _c.ClientID
 
-		if c.Cmd == "HANDSHAKE" {
+		if _c.Meta.IsWatchable {
+			_cWatch := _c
+			_cWatch.C.Cmd += ".WATCH"
+			res.Rs.Fingerprint64 = _cWatch.Fingerprint()
+		}
+
+		if c.Cmd == "HANDSHAKE" && err == nil {
 			t.ClientID = _c.C.Args[0]
 			t.Mode = _c.C.Args[1]
 		}
 
-		// NOTE: Do not remove . from here, as UNWATCH will be handled as WATCH
-		if strings.HasSuffix(c.Cmd, ".WATCH") {
+		isWatchCmd := strings.HasSuffix(c.Cmd, "WATCH")
+
+		if isWatchCmd {
 			watchManager.HandleWatch(_c, t)
 		} else if strings.HasSuffix(c.Cmd, "UNWATCH") {
 			watchManager.HandleUnwatch(_c, t)
@@ -102,8 +131,12 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		watchManager.RegisterThread(t)
 
-		if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
-			return sendErr.Unwrap()
+		// Only send the response directly if this is not a watch command
+		// For watch commands, the response will be sent by NotifyWatchers
+		if !isWatchCmd {
+			if sendErr := t.serverWire.Send(ctx, res.Rs); sendErr != nil {
+				return sendErr.Unwrap()
+			}
 		}
 
 		// TODO: Streamline this because we need ordering of updates

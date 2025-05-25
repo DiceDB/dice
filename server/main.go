@@ -14,7 +14,6 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -23,7 +22,9 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/server/ironhawk"
 	"github.com/dicedb/dice/internal/shardmanager"
+	w "github.com/dicedb/dicedb-go/wal"
 	"github.com/dicedb/dicedb-go/wire"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/dicedb/dice/internal/wal"
 
@@ -81,11 +82,11 @@ func Start() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		serverErrCh = make(chan error, 2)
-		wl          wal.AbstractWAL
+		serverErrCh       = make(chan error, 2)
+		wl                wal.WAL
+		walInitSuccessful = false
 	)
 
-	wl, _ = wal.NewNullWAL()
 	if config.Config.EnableWAL {
 		_wl, err := wal.NewAOFWAL(config.Config.WALDir)
 		if err != nil {
@@ -95,14 +96,19 @@ func Start() {
 			return
 		}
 		wl = _wl
+		wal.SetWAL(wl) // Set the global WAL instance
 
 		if err := wl.Init(time.Now()); err != nil {
-			slog.Error("could not initialize WAL", slog.Any("error", err))
+			slog.Warn("could not initialize WAL", slog.Any("error", err))
+			slog.Warn("disabling WAL and continuing")
+			// TODO: Make sure that the WAL is disabled
+			// We should not incurring any additional cost of making LogCommand
+			// invocations.
 		} else {
 			go wal.InitBG(wl)
+			slog.Debug("WAL initialization complete")
+			walInitSuccessful = true
 		}
-
-		slog.Debug("WAL initialization complete")
 	}
 
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().
@@ -144,21 +150,21 @@ func Start() {
 	}
 
 	ioThreadManager := ironhawk.NewIOThreadManager()
-	ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager)
+	ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager, wl)
 
 	serverWg.Add(1)
 	go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
 
 	// Recovery from WAL logs
-	if config.Config.EnableWAL {
+	if config.Config.EnableWAL && walInitSuccessful {
 		slog.Info("restoring database from WAL")
-		callback := func(entry *wal.WALEntry) error {
-			command := strings.Split(string(entry.Data), " ")
+		callback := func(el *w.Element) error {
+			var cd wire.Command
+			if err := proto.Unmarshal(el.Payload, &cd); err != nil {
+				return fmt.Errorf("failed to unmarshal command: %w", err)
+			}
 			cmdTemp := cmd.Cmd{
-				C: &wire.Command{
-					Cmd:  command[0],
-					Args: command[1:],
-				},
+				C:        &cd,
 				IsReplay: true,
 			}
 			_, err := cmdTemp.Execute(shardManager)

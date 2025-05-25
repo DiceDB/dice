@@ -5,30 +5,48 @@ package wal
 
 import (
 	"log/slog"
-	sync "sync"
+	"sync"
 	"time"
+
+	w "github.com/dicedb/dicedb-go/wal"
+	"github.com/dicedb/dicedb-go/wire"
 )
 
-type AbstractWAL interface {
-	LogCommand([]byte) error
-	Close() error
+type WAL interface {
 	Init(t time.Time) error
-	Replay(c func(*WALEntry) error) error
-	ForEachCommand(e *WALEntry, c func(*WALEntry) error) error
+	LogCommand(c *wire.Command) error
+	Close() error
+	Replay(c func(*w.Element) error) error
+	Iterate(e *w.Element, c func(*w.Element) error) error
 }
 
 var (
 	ticker *time.Ticker
 	stopCh chan struct{}
 	mu     sync.Mutex
+	wl     WAL
 )
 
+// GetWAL returns the global WAL instance
+func GetWAL() WAL {
+	mu.Lock()
+	defer mu.Unlock()
+	return wl
+}
+
+// SetGlobalWAL sets the global WAL instance
+func SetWAL(_wl WAL) {
+	mu.Lock()
+	defer mu.Unlock()
+	wl = _wl
+}
+
 func init() {
-	ticker = time.NewTicker(1 * time.Minute)
+	ticker = time.NewTicker(10 * time.Second)
 	stopCh = make(chan struct{})
 }
 
-func rotateWAL(wl AbstractWAL) {
+func rotateWAL(wl WAL) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -41,7 +59,7 @@ func rotateWAL(wl AbstractWAL) {
 	}
 }
 
-func periodicRotate(wl AbstractWAL) {
+func periodicRotate(wl WAL) {
 	for {
 		select {
 		case <-ticker.C:
@@ -52,7 +70,7 @@ func periodicRotate(wl AbstractWAL) {
 	}
 }
 
-func InitBG(wl AbstractWAL) {
+func InitBG(wl WAL) {
 	go periodicRotate(wl)
 }
 
