@@ -82,7 +82,7 @@ func newWalForge() *walForge {
 	}
 }
 
-func (wl *walForge) Init(t time.Time) error {
+func (wl *walForge) Init() error {
 	// TODO - Restore existing checkpoints to memory
 
 	// Create the directory if it doesn't exist

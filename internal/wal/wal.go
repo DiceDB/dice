@@ -14,23 +14,27 @@ import (
 )
 
 type WAL interface {
-	Init(t time.Time) error
-	LogCommand(c *wire.Command) error
+	// Init initializes the WAL.
+	Init() error
+	// Close closes the WAL.
 	Close() error
+	// LogCommand logs a command to the WAL.
+	LogCommand(c *wire.Command) error
+	// Replay replays the WAL.
 	Replay(c func(*w.Element) error) error
+	// Iterate iterates over the WAL.
 	Iterate(e *w.Element, c func(*w.Element) error) error
 }
 
 var (
-	ticker *time.Ticker
-	stopCh chan struct{}
-	mu     sync.Mutex
+	rotTicker *time.Ticker
+	stopCh    chan struct{}
+	mu        sync.Mutex
 )
 
 var DefaultWAL WAL
 
 func init() {
-	ticker = time.NewTicker(10 * time.Second)
 	stopCh = make(chan struct{})
 }
 
@@ -42,7 +46,7 @@ func rotateWAL() {
 		slog.Warn("error closing the WAL", slog.Any("error", err))
 	}
 
-	if err := DefaultWAL.Init(time.Now()); err != nil {
+	if err := DefaultWAL.Init(); err != nil {
 		slog.Warn("error creating a new WAL", slog.Any("error", err))
 	}
 }
@@ -50,7 +54,7 @@ func rotateWAL() {
 func periodicRotate() {
 	for {
 		select {
-		case <-ticker.C:
+		case <-rotTicker.C:
 			rotateWAL()
 		case <-stopCh:
 			return
@@ -62,11 +66,15 @@ func startAsyncJobs() {
 	go periodicRotate()
 }
 
+// TeardownWAL stops the WAL and closes the WAL instance.
 func TeardownWAL() {
 	close(stopCh)
-	ticker.Stop()
+	rotTicker.Stop()
 }
 
+// SetupWAL initializes the WAL based on the configuration.
+// It creates a new WAL instance based on the WAL variant and initializes it.
+// If the initialization fails, it panics.
 func SetupWAL() {
 	switch config.Config.WALVariant {
 	case "forge":
@@ -75,7 +83,8 @@ func SetupWAL() {
 		return
 	}
 
-	if err := DefaultWAL.Init(time.Now()); err != nil {
+	rotTicker = time.NewTicker(time.Duration(config.Config.WALRotationTimeSec) * time.Second)
+	if err := DefaultWAL.Init(); err != nil {
 		slog.Error("could not initialize WAL", slog.Any("error", err))
 		panic(err)
 	}
