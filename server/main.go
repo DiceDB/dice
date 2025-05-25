@@ -16,7 +16,6 @@ import (
 	"runtime/trace"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/dicedb/dice/internal/auth"
 	"github.com/dicedb/dice/internal/cmd"
@@ -82,31 +81,11 @@ func Start() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	var (
-		serverErrCh       = make(chan error, 2)
-		walInitSuccessful = false
+		serverErrCh = make(chan error, 2)
 	)
 
 	if config.Config.EnableWAL {
-		_wl, err := wal.NewAOFWAL(config.Config.WALDir)
-		if err != nil {
-			slog.Warn("could not create WAL at", slog.String("wal-dir", config.Config.WALDir), slog.Any("error", err))
-			sigs <- syscall.SIGKILL
-			cancel()
-			return
-		}
-		wal.DefaultWAL = _wl
-
-		if err := wal.DefaultWAL.Init(time.Now()); err != nil {
-			slog.Warn("could not initialize WAL", slog.Any("error", err))
-			slog.Warn("disabling WAL and continuing")
-			// TODO: Make sure that the WAL is disabled
-			// We should not incurring any additional cost of making LogCommand
-			// invocations.
-		} else {
-			go wal.RunAsyncJobs()
-			slog.Debug("WAL initialization complete")
-			walInitSuccessful = true
-		}
+		wal.SetupWAL()
 	}
 
 	// Get the number of available CPU cores on the machine using runtime.NumCPU().
@@ -150,11 +129,8 @@ func Start() {
 	ioThreadManager := ironhawk.NewIOThreadManager()
 	ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager)
 
-	serverWg.Add(1)
-	go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
-
-	// Recovery from WAL logs
-	if config.Config.EnableWAL && walInitSuccessful {
+	// Restore the database from WAL logs
+	if config.Config.EnableWAL {
 		slog.Info("restoring database from WAL")
 		callback := func(el *w.Element) error {
 			var cd wire.Command
@@ -176,6 +152,10 @@ func Start() {
 		}
 		slog.Info("database restored from WAL")
 	}
+
+	slog.Info("ready to accept connections")
+	serverWg.Add(1)
+	go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
 
 	wg.Add(1)
 	go func() {

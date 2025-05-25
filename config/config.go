@@ -62,6 +62,7 @@ type DiceDBConfig struct {
 	Engine string `mapstructure:"engine" default:"ironhawk" description:"the engine to use, values: ironhawk"`
 
 	EnableWAL                         bool   `mapstructure:"enable-wal" default:"false" description:"enable write-ahead logging"`
+	WALVariant                        string `mapstructure:"wal-variant" default:"forge" description:"wal variant to use, values: forge"`
 	WALDir                            string `mapstructure:"wal-dir" default:"logs" description:"the directory to store WAL segments"`
 	WALMode                           string `mapstructure:"wal-mode" default:"buffered" description:"wal mode to use, values: buffered, unbuffered"`
 	WALWriteMode                      string `mapstructure:"wal-write-mode" default:"default" description:"wal file write mode to use, values: default, fsync"`

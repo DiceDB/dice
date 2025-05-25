@@ -112,7 +112,7 @@ func RunTestServer(wg *sync.WaitGroup) {
 	shardManager := shardmanager.NewShardManager(1, gec)
 	ioThreadManager := ironhawk.NewIOThreadManager()
 	watchManager := &ironhawk.WatchManager{}
-	wal.DefaultWAL, _ = wal.NewAOFWAL(config.Config.WALDir)
+	wal.SetupWAL()
 
 	testServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager)
 

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dicedb/dice/config"
 	w "github.com/dicedb/dicedb-go/wal"
 	"github.com/dicedb/dicedb-go/wire"
 )
@@ -57,11 +58,25 @@ func periodicRotate() {
 	}
 }
 
-func RunAsyncJobs() {
+func StartAsyncJobs() {
 	go periodicRotate()
 }
 
 func ShutdownBG() {
 	close(stopCh)
 	ticker.Stop()
+}
+
+func SetupWAL() {
+	switch config.Config.WALVariant {
+	case "forge":
+		DefaultWAL = NewWALForge()
+	default:
+		return
+	}
+
+	if err := DefaultWAL.Init(time.Now()); err != nil {
+		slog.Error("could not initialize WAL", slog.Any("error", err))
+		panic(err)
+	}
 }
