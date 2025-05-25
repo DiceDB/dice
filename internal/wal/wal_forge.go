@@ -324,7 +324,7 @@ func (wl *walForge) segmentFiles() ([]string, error) {
 	return files, nil
 }
 
-func (wl *walForge) Replay(callback func(*w.Element) error) error {
+func (wl *walForge) ReplayCommand(cb func(*wire.Command) error) error {
 	var crc uint32
 	var entrySize uint32
 	var el w.Element
@@ -376,8 +376,14 @@ func (wl *walForge) Replay(callback func(*w.Element) error) error {
 				return fmt.Errorf("error unmarshaling WAL entry: %w", err)
 			}
 
+			var c wire.Command
+			if err := proto.Unmarshal(el.Payload, &c); err != nil {
+				file.Close()
+				return fmt.Errorf("error unmarshaling command: %w", err)
+			}
+
 			// Call provided replay function with parsed command
-			if err := callback(&el); err != nil {
+			if err := cb(&c); err != nil {
 				file.Close()
 				return fmt.Errorf("error replaying command: %w", err)
 			}
@@ -386,8 +392,4 @@ func (wl *walForge) Replay(callback func(*w.Element) error) error {
 	}
 
 	return nil
-}
-
-func (wl *walForge) Iterate(e *w.Element, c func(*w.Element) error) error {
-	return c(e)
 }

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/dicedb/dice/config"
-	w "github.com/dicedb/dicedb-go/wal"
 	"github.com/dicedb/dicedb-go/wire"
 )
 
@@ -21,9 +20,7 @@ type WAL interface {
 	// LogCommand logs a command to the WAL.
 	LogCommand(c *wire.Command) error
 	// Replay replays the WAL.
-	Replay(c func(*w.Element) error) error
-	// Iterate iterates over the WAL.
-	Iterate(e *w.Element, c func(*w.Element) error) error
+	ReplayCommand(cb func(c *wire.Command) error) error
 }
 
 var (

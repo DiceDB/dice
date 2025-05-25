@@ -21,9 +21,7 @@ import (
 	"github.com/dicedb/dice/internal/cmd"
 	"github.com/dicedb/dice/internal/server/ironhawk"
 	"github.com/dicedb/dice/internal/shardmanager"
-	w "github.com/dicedb/dicedb-go/wal"
 	"github.com/dicedb/dicedb-go/wire"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/dicedb/dice/internal/wal"
 
@@ -132,13 +130,9 @@ func Start() {
 	// Restore the database from WAL logs
 	if config.Config.EnableWAL {
 		slog.Info("restoring database from WAL")
-		callback := func(el *w.Element) error {
-			var cd wire.Command
-			if err := proto.Unmarshal(el.Payload, &cd); err != nil {
-				return fmt.Errorf("failed to unmarshal command: %w", err)
-			}
+		callback := func(cd *wire.Command) error {
 			cmdTemp := cmd.Cmd{
-				C:        &cd,
+				C:        cd,
 				IsReplay: true,
 			}
 			_, err := cmdTemp.Execute(shardManager)
@@ -147,7 +141,7 @@ func Start() {
 			}
 			return nil
 		}
-		if err := wal.DefaultWAL.Replay(callback); err != nil {
+		if err := wal.DefaultWAL.ReplayCommand(callback); err != nil {
 			slog.Error("error restoring from WAL", slog.Any("error", err))
 		}
 		slog.Info("database restored from WAL")
