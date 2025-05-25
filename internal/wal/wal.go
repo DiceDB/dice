@@ -24,54 +24,41 @@ var (
 	ticker *time.Ticker
 	stopCh chan struct{}
 	mu     sync.Mutex
-	wl     WAL
 )
 
-// GetWAL returns the global WAL instance
-func GetWAL() WAL {
-	mu.Lock()
-	defer mu.Unlock()
-	return wl
-}
-
-// SetGlobalWAL sets the global WAL instance
-func SetWAL(_wl WAL) {
-	mu.Lock()
-	defer mu.Unlock()
-	wl = _wl
-}
+var DefaultWAL WAL
 
 func init() {
 	ticker = time.NewTicker(10 * time.Second)
 	stopCh = make(chan struct{})
 }
 
-func rotateWAL(wl WAL) {
+func rotateWAL() {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if err := wl.Close(); err != nil {
+	if err := DefaultWAL.Close(); err != nil {
 		slog.Warn("error closing the WAL", slog.Any("error", err))
 	}
 
-	if err := wl.Init(time.Now()); err != nil {
+	if err := DefaultWAL.Init(time.Now()); err != nil {
 		slog.Warn("error creating a new WAL", slog.Any("error", err))
 	}
 }
 
-func periodicRotate(wl WAL) {
+func periodicRotate() {
 	for {
 		select {
 		case <-ticker.C:
-			rotateWAL(wl)
+			rotateWAL()
 		case <-stopCh:
 			return
 		}
 	}
 }
 
-func InitBG(wl WAL) {
-	go periodicRotate(wl)
+func RunAsyncJobs() {
+	go periodicRotate()
 }
 
 func ShutdownBG() {

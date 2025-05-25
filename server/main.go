@@ -83,7 +83,6 @@ func Start() {
 
 	var (
 		serverErrCh       = make(chan error, 2)
-		wl                wal.WAL
 		walInitSuccessful = false
 	)
 
@@ -95,17 +94,16 @@ func Start() {
 			cancel()
 			return
 		}
-		wl = _wl
-		wal.SetWAL(wl) // Set the global WAL instance
+		wal.DefaultWAL = _wl
 
-		if err := wl.Init(time.Now()); err != nil {
+		if err := wal.DefaultWAL.Init(time.Now()); err != nil {
 			slog.Warn("could not initialize WAL", slog.Any("error", err))
 			slog.Warn("disabling WAL and continuing")
 			// TODO: Make sure that the WAL is disabled
 			// We should not incurring any additional cost of making LogCommand
 			// invocations.
 		} else {
-			go wal.InitBG(wl)
+			go wal.RunAsyncJobs()
 			slog.Debug("WAL initialization complete")
 			walInitSuccessful = true
 		}
@@ -150,7 +148,7 @@ func Start() {
 	}
 
 	ioThreadManager := ironhawk.NewIOThreadManager()
-	ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager, wl)
+	ironhawkServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager)
 
 	serverWg.Add(1)
 	go runServer(ctx, &serverWg, ironhawkServer, serverErrCh)
@@ -173,7 +171,7 @@ func Start() {
 			}
 			return nil
 		}
-		if err := wl.Replay(callback); err != nil {
+		if err := wal.DefaultWAL.Replay(callback); err != nil {
 			slog.Error("error restoring from WAL", slog.Any("error", err))
 		}
 		slog.Info("database restored from WAL")
