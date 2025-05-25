@@ -132,7 +132,7 @@ func (w *WatchManager) CleanupThreadWatchSubscriptions(t *IOThread) {
 	}
 }
 
-func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *shardmanager.ShardManager) {
+func (w *WatchManager) NotifyWatchers(c *cmd.Cmd, shardManager *shardmanager.ShardManager, t *IOThread) {
 	// Use RLock instead as we are not really modifying any shared maps here.
 	w.mu.RLock()
 	defer w.mu.RUnlock()

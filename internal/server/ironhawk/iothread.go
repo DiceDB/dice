@@ -95,7 +95,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 		}
 
 		// Log command to WAL if enabled and not a replay
-		if err == nil && wal.GetWAL() != nil && !_c.IsReplay {
+		if wal.GetWAL() != nil && !_c.IsReplay {
 			// Create WAL entry using protobuf message
 			if err := wal.GetWAL().LogCommand(_c.C); err != nil {
 				slog.Error("failed to log command to WAL", slog.Any("error", err))
@@ -116,7 +116,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 			res.Rs.Fingerprint64 = _cWatch.Fingerprint()
 		}
 
-		if c.Cmd == "HANDSHAKE" && err == nil {
+		if c.Cmd == "HANDSHAKE" {
 			t.ClientID = _c.C.Args[0]
 			t.Mode = _c.C.Args[1]
 		}
@@ -141,7 +141,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		watchManager.NotifyWatchers(_c, shardManager)
+		watchManager.NotifyWatchers(_c, shardManager, t)
 	}
 }
 
