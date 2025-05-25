@@ -5,8 +5,6 @@ package wal
 
 import (
 	"log/slog"
-	"sync"
-	"time"
 
 	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dicedb-go/wire"
@@ -14,59 +12,29 @@ import (
 
 type WAL interface {
 	// Init initializes the WAL.
+	// The WAL implementation should start all the background jobs and initialize the WAL.
 	Init() error
-	// Close closes the WAL.
-	Close() error
+	// Stop stops the WAL.
+	// The WAL implementation should stop all the background jobs and close the WAL.
+	Stop()
 	// LogCommand logs a command to the WAL.
 	LogCommand(c *wire.Command) error
-	// Replay replays the WAL.
+	// Replay replays the command from the WAL.
 	ReplayCommand(cb func(c *wire.Command) error) error
 }
 
-var (
-	rotTicker *time.Ticker
-	stopCh    chan struct{}
-	mu        sync.Mutex
-)
-
 var DefaultWAL WAL
+var (
+	stopCh chan struct{}
+)
 
 func init() {
 	stopCh = make(chan struct{})
 }
 
-func rotateWAL() {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if err := DefaultWAL.Close(); err != nil {
-		slog.Warn("error closing the WAL", slog.Any("error", err))
-	}
-
-	if err := DefaultWAL.Init(); err != nil {
-		slog.Warn("error creating a new WAL", slog.Any("error", err))
-	}
-}
-
-func periodicRotate() {
-	for {
-		select {
-		case <-rotTicker.C:
-			rotateWAL()
-		case <-stopCh:
-			return
-		}
-	}
-}
-
-func startAsyncJobs() {
-	go periodicRotate()
-}
-
 // TeardownWAL stops the WAL and closes the WAL instance.
 func TeardownWAL() {
 	close(stopCh)
-	rotTicker.Stop()
 }
 
 // SetupWAL initializes the WAL based on the configuration.
@@ -80,7 +48,6 @@ func SetupWAL() {
 		return
 	}
 
-	rotTicker = time.NewTicker(time.Duration(config.Config.WALRotationTimeSec) * time.Second)
 	if err := DefaultWAL.Init(); err != nil {
 		slog.Error("could not initialize WAL", slog.Any("error", err))
 		panic(err)

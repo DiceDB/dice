@@ -40,6 +40,10 @@ func init() {
 	bb = make([]byte, 10*1024)
 }
 
+var (
+	rotTicker *time.Ticker
+)
+
 type walForge struct {
 	logDir                 string
 	currentSegmentFile     *os.File
@@ -83,6 +87,8 @@ func newWalForge() *walForge {
 }
 
 func (wl *walForge) Init() error {
+	rotTicker = time.NewTicker(time.Duration(config.Config.WALRotationTimeSec) * time.Second)
+
 	// TODO - Restore existing checkpoints to memory
 
 	// Create the directory if it doesn't exist
@@ -112,7 +118,7 @@ func (wl *walForge) Init() error {
 	wl.bufWriter = bufio.NewWriterSize(wl.currentSegmentFile, wl.bufferSize)
 
 	go wl.keepSyncingBuffer()
-	go startAsyncJobs()
+	go wl.startAsyncJobs()
 
 	switch wl.rotationMode {
 	case "time":
@@ -392,4 +398,36 @@ func (wl *walForge) ReplayCommand(cb func(*wire.Command) error) error {
 	}
 
 	return nil
+}
+
+func (wl *walForge) Stop() {
+	rotTicker.Stop()
+}
+
+func (wl *walForge) rotateWAL() {
+	wl.mu.Lock()
+	defer wl.mu.Unlock()
+
+	if err := wl.Close(); err != nil {
+		slog.Warn("error closing the WAL", slog.Any("error", err))
+	}
+
+	if err := wl.Init(); err != nil {
+		slog.Warn("error creating a new WAL", slog.Any("error", err))
+	}
+}
+
+func (wl *walForge) periodicRotate() {
+	for {
+		select {
+		case <-rotTicker.C:
+			wl.rotateWAL()
+		case <-stopCh:
+			return
+		}
+	}
+}
+
+func (wl *walForge) startAsyncJobs() {
+	go wl.periodicRotate()
 }
