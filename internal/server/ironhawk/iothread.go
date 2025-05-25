@@ -46,13 +46,26 @@ func NewIOThread(clientFD int) (*IOThread, error) {
 func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardManager, watchManager *WatchManager) error {
 	for {
 		var c *wire.Command
-		{
+		recvCh := make(chan *wire.Command, 1)
+		errCh := make(chan error, 1)
+
+		go func() {
 			tmpC, err := t.serverWire.Receive()
 			if err != nil {
-				return err.Unwrap()
+				errCh <- err.Unwrap()
+				return
 			}
+			recvCh <- tmpC
+		}()
 
-			c = tmpC
+		select {
+		case <-ctx.Done():
+			slog.Debug("io-thread context cancelled, shutting down receive loop")
+			return ctx.Err()
+		case err := <-errCh:
+			return err
+		case tmp := <-recvCh:
+			c = tmp
 		}
 
 		_c := &cmd.Cmd{
