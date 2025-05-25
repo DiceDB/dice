@@ -180,11 +180,10 @@ func Start() {
 	close(sigs)
 
 	if config.Config.EnableWAL {
-		wal.ShutdownBG()
+		wal.TeardownWAL()
 	}
 
 	cancel()
-
 	wg.Wait()
 }
 

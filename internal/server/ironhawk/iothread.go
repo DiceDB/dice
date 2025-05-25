@@ -5,7 +5,6 @@ package ironhawk
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strings"
 
@@ -96,7 +95,6 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 		}
 
 		// Log command to WAL if enabled and not a replay
-		fmt.Println("wal.DefaultWAL", wal.DefaultWAL)
 		if wal.DefaultWAL != nil && !_c.IsReplay {
 			if err := wal.DefaultWAL.LogCommand(_c.C); err != nil {
 				slog.Error("failed to log command to WAL", slog.Any("error", err))

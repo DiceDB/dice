@@ -28,11 +28,8 @@ import (
 )
 
 const (
-	segmentPrefix     = "seg-"
-	segmentSuffix     = ".wal"
-	RotationModeTime  = "time"
-	RetentionModeTime = "time"
-	WALModeUnbuffered = "unbuffered"
+	segmentPrefix = "seg-"
+	segmentSuffix = ".wal"
 )
 
 var bb []byte
@@ -43,16 +40,9 @@ func init() {
 	bb = make([]byte, 10*1024)
 }
 
-type WALForgeEntry struct {
-	Len     uint32
-	Crc32   uint32
-	Payload []byte
-}
-
-type WALForge struct {
+type walForge struct {
 	logDir                 string
 	currentSegmentFile     *os.File
-	walMode                string
 	writeMode              string
 	maxSegmentSize         uint32
 	maxSegmentCount        int
@@ -73,11 +63,10 @@ type WALForge struct {
 	cancel                 context.CancelFunc
 }
 
-func NewWALForge() *WALForge {
+func newWalForge() *walForge {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &WALForge{
+	return &walForge{
 		logDir:                 config.Config.WALDir,
-		walMode:                config.Config.WALMode,
 		bufferSyncTicker:       time.NewTicker(time.Duration(config.Config.WALBufferSyncIntervalMillis) * time.Millisecond),
 		segmentRotationTicker:  time.NewTicker(time.Duration(config.Config.WALMaxSegmentRotationTimeSec) * time.Second),
 		segmentRetentionTicker: time.NewTicker(time.Duration(config.Config.WALMaxSegmentRetentionDurationSec) * time.Second),
@@ -93,7 +82,7 @@ func NewWALForge() *WALForge {
 	}
 }
 
-func (wl *WALForge) Init(t time.Time) error {
+func (wl *walForge) Init(t time.Time) error {
 	// TODO - Restore existing checkpoints to memory
 
 	// Create the directory if it doesn't exist
@@ -123,10 +112,10 @@ func (wl *WALForge) Init(t time.Time) error {
 	wl.bufWriter = bufio.NewWriterSize(wl.currentSegmentFile, wl.bufferSize)
 
 	go wl.keepSyncingBuffer()
-	go StartAsyncJobs()
+	go startAsyncJobs()
 
 	switch wl.rotationMode {
-	case RotationModeTime:
+	case "time":
 		go wl.rotateSegmentPeriodically()
 		go wl.deleteSegmentPeriodically()
 	default:
@@ -137,7 +126,7 @@ func (wl *WALForge) Init(t time.Time) error {
 
 // Log writes a command to the WAL with a monotonically increasing sequence number.
 // The sequence number is assigned atomically and the command is written to the wl.
-func (wl *WALForge) LogCommand(c *wire.Command) error {
+func (wl *walForge) LogCommand(c *wire.Command) error {
 	// Lock once for the entire sequence number operation
 	wl.mu.Lock()
 	defer wl.mu.Unlock()
@@ -187,18 +176,11 @@ func (wl *WALForge) LogCommand(c *wire.Command) error {
 
 	wl.currentSegmentSize += entrySize
 
-	// if wal-mode unbuffered immediately sync to disk
-	if wl.walMode == WALModeUnbuffered {
-		if err := wl.Sync(); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
 // rotateLogIfNeeded is not thread safe
-func (wl *WALForge) rotateLogIfNeeded(entrySize uint32) error {
+func (wl *walForge) rotateLogIfNeeded(entrySize uint32) error {
 	if wl.currentSegmentSize+entrySize > wl.maxSegmentSize {
 		if err := wl.rotateLog(); err != nil {
 			return err
@@ -208,7 +190,7 @@ func (wl *WALForge) rotateLogIfNeeded(entrySize uint32) error {
 }
 
 // rotateLog is not thread safe
-func (wl *WALForge) rotateLog() error {
+func (wl *walForge) rotateLog() error {
 	if err := wl.Sync(); err != nil {
 		return err
 	}
@@ -237,7 +219,7 @@ func (wl *WALForge) rotateLog() error {
 	return nil
 }
 
-func (wl *WALForge) deleteOldestSegment() error {
+func (wl *walForge) deleteOldestSegment() error {
 	oldestSegmentFilePath := filepath.Join(wl.logDir, segmentPrefix+fmt.Sprintf("%d", wl.oldestSegmentIndex)+segmentSuffix)
 
 	// TODO: checkpoint before deleting the file
@@ -249,7 +231,7 @@ func (wl *WALForge) deleteOldestSegment() error {
 }
 
 // Close the WAL file. It also calls Sync() on the wl.
-func (wl *WALForge) Close() error {
+func (wl *walForge) Close() error {
 	wl.cancel()
 	if err := wl.Sync(); err != nil {
 		return err
@@ -259,7 +241,7 @@ func (wl *WALForge) Close() error {
 
 // Writes out any data in the WAL's in-memory buffer to the segment file. If
 // fsync is enabled, it also calls fsync on the segment file.
-func (wl *WALForge) Sync() error {
+func (wl *walForge) Sync() error {
 	if err := wl.bufWriter.Flush(); err != nil {
 		return err
 	}
@@ -271,7 +253,7 @@ func (wl *WALForge) Sync() error {
 	return nil
 }
 
-func (wl *WALForge) keepSyncingBuffer() {
+func (wl *walForge) keepSyncingBuffer() {
 	for {
 		select {
 		case <-wl.bufferSyncTicker.C:
@@ -289,7 +271,7 @@ func (wl *WALForge) keepSyncingBuffer() {
 	}
 }
 
-func (wl *WALForge) rotateSegmentPeriodically() {
+func (wl *walForge) rotateSegmentPeriodically() {
 	for {
 		select {
 		case <-wl.segmentRotationTicker.C:
@@ -306,7 +288,7 @@ func (wl *WALForge) rotateSegmentPeriodically() {
 	}
 }
 
-func (wl *WALForge) deleteSegmentPeriodically() {
+func (wl *walForge) deleteSegmentPeriodically() {
 	for {
 		select {
 		case <-wl.segmentRetentionTicker.C:
@@ -322,7 +304,7 @@ func (wl *WALForge) deleteSegmentPeriodically() {
 	}
 }
 
-func (wl *WALForge) segmentFiles() ([]string, error) {
+func (wl *walForge) segmentFiles() ([]string, error) {
 	// Get all segment files matching the pattern
 	files, err := filepath.Glob(filepath.Join(wl.logDir, segmentPrefix+"*"+segmentSuffix))
 	if err != nil {
@@ -342,7 +324,7 @@ func (wl *WALForge) segmentFiles() ([]string, error) {
 	return files, nil
 }
 
-func (wl *WALForge) Replay(callback func(*w.Element) error) error {
+func (wl *walForge) Replay(callback func(*w.Element) error) error {
 	var crc uint32
 	var entrySize uint32
 	var el w.Element
@@ -406,6 +388,6 @@ func (wl *WALForge) Replay(callback func(*w.Element) error) error {
 	return nil
 }
 
-func (wl *WALForge) Iterate(e *w.Element, c func(*w.Element) error) error {
+func (wl *walForge) Iterate(e *w.Element, c func(*w.Element) error) error {
 	return c(e)
 }

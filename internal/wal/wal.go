@@ -58,11 +58,11 @@ func periodicRotate() {
 	}
 }
 
-func StartAsyncJobs() {
+func startAsyncJobs() {
 	go periodicRotate()
 }
 
-func ShutdownBG() {
+func TeardownWAL() {
 	close(stopCh)
 	ticker.Stop()
 }
@@ -70,7 +70,7 @@ func ShutdownBG() {
 func SetupWAL() {
 	switch config.Config.WALVariant {
 	case "forge":
-		DefaultWAL = NewWALForge()
+		DefaultWAL = newWalForge()
 	default:
 		return
 	}
