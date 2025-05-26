@@ -154,6 +154,15 @@ code {
   padding: 0.5em !important;
 }
 
+/* Hiding the anchor links on Markdown headers */
+.sl-anchor-link {
+  display: none !important;
+}
+
+pre {
+  text-align: left !important;
+}
+
 // ... existing code ...
 
 @import "../../node_modules/bulma/bulma.sass";

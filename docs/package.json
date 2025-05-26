@@ -21,7 +21,7 @@
     "sharp": "^0.32.5"
   },
   "devDependencies": {
-    "astro": "^5.7.2",
+    "astro": "^5.8.0",
     "eslint": "^9.11.0",
     "eslint-plugin-astro": "^1.2.4",
     "prettier": "^3.3.3",
