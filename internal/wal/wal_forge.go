@@ -67,7 +67,7 @@ func newWalForge() *walForge {
 		cancel: cancel,
 
 		bufferSyncTicker:      time.NewTicker(time.Duration(config.Config.WALBufferSyncIntervalMillis) * time.Millisecond),
-		segmentRotationTicker: time.NewTicker(time.Duration(config.Config.WALMaxSegmentRotationTimeSec) * time.Second),
+		segmentRotationTicker: time.NewTicker(time.Duration(config.Config.WALSegmentRotationTimeSec) * time.Second),
 
 		maxSegmentSizeBytes: uint32(config.Config.WALMaxSegmentSizeMB) * 1024 * 1024,
 	}
@@ -194,6 +194,7 @@ func (wl *walForge) rotateLogIfNeeded(entrySize uint32) error {
 // incrementing the current segment index, and opening a new segment file.
 // This method is thread safe.
 func (wl *walForge) rotateLog() error {
+	fmt.Println("rotating log")
 	wl.mu.Lock()
 	defer wl.mu.Unlock()
 
@@ -275,6 +276,7 @@ func (wl *walForge) periodicSyncBuffer() {
 }
 
 func (wl *walForge) periodicRotateSegment() {
+	fmt.Println("rotating segment")
 	for {
 		select {
 		case <-wl.segmentRotationTicker.C:
