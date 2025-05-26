@@ -64,12 +64,36 @@ func Start() {
 	printBanner()
 	printConfiguration()
 
-	// TODO: Handle the addition of the default user
-	// and new users in a much better way. Doing this using
-	// and empty password check is not a good solution.
-	if config.Config.Password != "" {
-		user, _ := auth.UserStore.Add(config.Config.Username)
-		_ = user.SetPassword(config.Config.Password)
+	user, err := auth.UserStore.Add(config.Config.Username)
+	if err != nil {
+
+		//log errors like for example : if modified to prevent duplicates later
+
+		slog.Error("Failed to add default user to user store",
+			slog.String("username", config.Config.Username),
+			slog.Any("error", err))
+
+		// Consider exiting if the default user cannot be created:
+		// os.Exit(1)
+	} else {
+		//  set the password only if one is provided.
+		if config.Config.Password != "" {
+			if err := user.SetPassword(config.Config.Password); err != nil {
+				// Log an error if password hashing/setting fails.
+				slog.Error("Failed to set password for default user",
+					slog.String("username", config.Config.Username),
+					slog.Any("error", err))
+				// Consider exiting if password setting is critical and fails:
+				// os.Exit(1)
+			}
+		} else {
+			// log a warning if starting without a password for the default user.
+			// clear security implication clear.
+			slog.Warn("Starting server without a password configured for the default user.",
+				slog.String("username", config.Config.Username),
+				slog.String("security_implication", "Authentication may not be required for this user."),
+				slog.String("recommendation", "Consider setting a password using the --password flag or config file."))
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
