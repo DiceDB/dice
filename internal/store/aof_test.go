@@ -8,6 +8,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -281,4 +282,78 @@ func BenchmarkAOFWithExat(b *testing.B) {
 			b.Errorf("Failed to write operation: %v", err)
 		}
 	}
+}
+
+func TestAOFConcurrentReadWrite(t *testing.T) {
+	testFile := "test_concurrent.aof"
+	defer os.Remove(testFile)
+
+	aof, err := NewAOF(testFile)
+	if err != nil {
+		t.Fatalf("Failed to create AOF: %v", err)
+	}
+	defer aof.Close()
+
+	for i := 0; i < 5; i++ {
+		if err := aof.Write(fmt.Sprintf("INIT key%d value%d", i, i)); err != nil {
+			t.Fatalf("Failed to write initial data: %v", err)
+		}
+	}
+
+	var wg sync.WaitGroup
+	errors := make(chan error, 100)
+
+	// Concurrent writes
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 5; j++ {
+				if err := aof.Write(fmt.Sprintf("WRITE-%d-%d key%d value%d", id, j, id*10+j, id*10+j)); err != nil {
+					errors <- fmt.Errorf("write error: %v", err)
+					return
+				}
+				time.Sleep(time.Millisecond)
+			}
+		}(i)
+	}
+
+	// Concurrent reads
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				ops, err := aof.Load()
+				if err != nil {
+					errors <- fmt.Errorf("load error: %v", err)
+					return
+				}
+				if len(ops) < 5 {
+					errors <- fmt.Errorf("unexpected number of operations: got %d, want at least 5", len(ops))
+					return
+				}
+				time.Sleep(time.Millisecond * 2)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		t.Errorf("Race condition detected: %v", err)
+	}
+
+	finalOps, err := aof.Load()
+	if err != nil {
+		t.Fatalf("Failed final load: %v", err)
+	}
+
+	expectedCount := 5 + (10 * 5)
+	if len(finalOps) != expectedCount {
+		t.Errorf("Final operation count mismatch: got %d, want %d", len(finalOps), expectedCount)
+	}
+
+	t.Logf("Successfully completed concurrent read/write test with %d operations", len(finalOps))
 }
