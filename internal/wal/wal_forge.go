@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
-	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -29,132 +28,123 @@ import (
 
 const (
 	segmentPrefix = "seg-"
-	segmentSuffix = ".wal"
 )
 
 var bb []byte
 
 func init() {
-	// TODO: Pre-allocate a buffer to avoid re-allocating it
+	// Pre-allocate a buffer to avoid re-allocating it
 	// This will hold one WAL Forge Entry Before it is written to the buffer
 	bb = make([]byte, 10*1024)
 }
 
-var (
-	rotTicker *time.Ticker
-)
-
 type walForge struct {
-	logDir                 string
-	currentSegmentFile     *os.File
-	writeMode              string
-	maxSegmentSize         uint32
-	maxSegmentCount        int
-	currentSegmentIndex    int
-	currentSegmentSize     uint32
-	oldestSegmentIndex     int
-	bufferSize             int
-	retentionMode          string
-	recoveryMode           string
-	rotationMode           string
-	lastSequenceNo         uint64
-	bufWriter              *bufio.Writer
-	bufferSyncTicker       *time.Ticker
-	segmentRotationTicker  *time.Ticker
-	segmentRetentionTicker *time.Ticker
-	mu                     sync.Mutex
-	ctx                    context.Context
-	cancel                 context.CancelFunc
+	// Current Segment File and its writer
+	csf      *os.File
+	csWriter *bufio.Writer
+	csIdx    int
+	csSize   uint32
+
+	// TODO: Come up with a way to generate a LSN that is
+	// monotonically increasing and even after restart it
+	// resumes from the last LSN and not start from 0.
+	lsn uint64
+
+	maxSegmentSizeBytes uint32
+
+	bufferSyncTicker      *time.Ticker
+	segmentRotationTicker *time.Ticker
+
+	mu     sync.Mutex
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func newWalForge() *walForge {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &walForge{
-		logDir:                 config.Config.WALDir,
-		bufferSyncTicker:       time.NewTicker(time.Duration(config.Config.WALBufferSyncIntervalMillis) * time.Millisecond),
-		segmentRotationTicker:  time.NewTicker(time.Duration(config.Config.WALMaxSegmentRotationTimeSec) * time.Second),
-		segmentRetentionTicker: time.NewTicker(time.Duration(config.Config.WALMaxSegmentRetentionDurationSec) * time.Second),
-		writeMode:              config.Config.WALWriteMode,
-		maxSegmentSize:         uint32(config.Config.WALMaxSegmentSizeMB) * 1024 * 1024,
-		maxSegmentCount:        config.Config.WALMaxSegmentCount,
-		bufferSize:             config.Config.WALBufferSizeMB * 1024 * 1024,
-		retentionMode:          config.Config.WALRetentionMode,
-		recoveryMode:           config.Config.WALRecoveryMode,
-		rotationMode:           config.Config.WALRotationMode,
-		ctx:                    ctx,
-		cancel:                 cancel,
+		ctx:    ctx,
+		cancel: cancel,
+
+		bufferSyncTicker:      time.NewTicker(time.Duration(config.Config.WALBufferSyncIntervalMillis) * time.Millisecond),
+		segmentRotationTicker: time.NewTicker(time.Duration(config.Config.WALMaxSegmentRotationTimeSec) * time.Second),
+
+		maxSegmentSizeBytes: uint32(config.Config.WALMaxSegmentSizeMB) * 1024 * 1024,
 	}
 }
 
 func (wl *walForge) Init() error {
-	rotTicker = time.NewTicker(time.Duration(config.Config.WALRotationTimeSec) * time.Second)
+	// TODO: Once the checkpoint is implemented
+	// Load the initial state of the database from this checkpoint
+	// and then reply the WAL files that happened after this checkpoint.
 
-	// TODO - Restore existing checkpoints to memory
-
-	// Create the directory if it doesn't exist
-	if err := os.MkdirAll(wl.logDir, 0755); err != nil {
+	// Make sure the WAL directory exists
+	if err := os.MkdirAll(config.Config.WALDir, 0755); err != nil {
 		return err
 	}
 
-	// Get the list of log segment files in the directory
-	files, err := filepath.Glob(filepath.Join(wl.logDir, segmentPrefix+"*"+segmentSuffix))
+	// Get the list of log segment files in the WAL directory
+	sfs, err := wl.segments()
 	if err != nil {
 		return err
 	}
+	slog.Debug("Loading WAL segments", slog.Any("total_segments", len(sfs)))
 
-	if len(files) > 0 {
-		slog.Debug("Found existing log segments", slog.Any("total_files", len(files)))
-		// TODO - Check if we have newer WAL entries after the last checkpoint and simultaneously replay and checkpoint them
-	}
-
+	// TODO: Do not assume that the first segment is always 0
+	// Pick the one with the least value of the segment index
+	// Maintain a metadatafile that holds the latest segment index used
+	// and during rotation, it increments the segment index and uses it
 	sf, err := os.OpenFile(
-		filepath.Join(wl.logDir, segmentPrefix+"0"+segmentSuffix),
+		filepath.Join(config.Config.WALDir, segmentPrefix+"0"+".wal"),
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 
-	wl.currentSegmentFile = sf
-	wl.bufWriter = bufio.NewWriterSize(wl.currentSegmentFile, wl.bufferSize)
+	wl.csf = sf
+	wl.csWriter = bufio.NewWriterSize(wl.csf, config.Config.WALBufferSizeMB*1024*1024)
 
-	go wl.keepSyncingBuffer()
-	go wl.startAsyncJobs()
+	go wl.periodicSyncBuffer()
 
-	switch wl.rotationMode {
+	switch config.Config.WALRotationMode {
 	case "time":
-		go wl.rotateSegmentPeriodically()
-		go wl.deleteSegmentPeriodically()
+		go wl.periodicRotateSegment()
 	default:
 		return nil
 	}
 	return nil
 }
 
-// Log writes a command to the WAL with a monotonically increasing sequence number.
-// The sequence number is assigned atomically and the command is written to the wl.
+// LogCommand writes a command to the WAL with a monotonically increasing LSN.
 func (wl *walForge) LogCommand(c *wire.Command) error {
-	// Lock once for the entire sequence number operation
+	// Lock once for the entire LSN operation
 	wl.mu.Lock()
 	defer wl.mu.Unlock()
 
+	// marshal the command to bytes
 	b, err := proto.Marshal(c)
 	if err != nil {
 		return err
 	}
 
-	wl.lastSequenceNo += 1
+	// TODO: This logic changes as we change the LSN format
+	wl.lsn += 1
 	el := &w.Element{
-		Lsn:         wl.lastSequenceNo,
+		Lsn:         wl.lsn,
 		Timestamp:   time.Now().UnixNano(),
 		ElementType: w.ElementType_ELEMENT_TYPE_COMMAND,
 		Payload:     b,
 	}
 
+	// marshal the WAL Element to bytes
 	b, err = proto.Marshal(el)
 	if err != nil {
 		return err
 	}
 
+	// Wrap the element with Checksum and Size
+	// and keep it ready to be written to the segment file through the buffer
+	// We call this WAL Entry.
 	entrySize := uint32(4 + 4 + len(b))
 	if err := wl.rotateLogIfNeeded(entrySize); err != nil {
 		return err
@@ -163,14 +153,12 @@ func (wl *walForge) LogCommand(c *wire.Command) error {
 	// If the entry size is greater than the buffer size, we need to
 	// create a new buffer.
 	if entrySize > uint32(cap(bb)) {
-		// TODO: In this case, we can do a one time creation
-		// of a new buffer and proceed rather than using the
-		// existing buffer.
+		// TODO: In this case, we can do a one time creation of a new buffer
+		// and proceed rather than using the existing buffer.
 		panic(fmt.Errorf("buffer too small, %d > %d", entrySize, len(bb)))
 	}
 
 	bb = bb[:8+len(b)]
-	// Calculate CRC32 only on the payload
 	chk := crc32.ChecksumIEEE(b)
 
 	// Write header and payload
@@ -178,16 +166,23 @@ func (wl *walForge) LogCommand(c *wire.Command) error {
 	binary.LittleEndian.PutUint32(bb[4:8], uint32(len(b)))
 	copy(bb[8:], b)
 
-	_, _ = wl.bufWriter.Write(bb)
+	// TODO: Check if we need to handle the error here,
+	// from my initial understanding, we should not be
+	// handling the error here because it would never happen.
+	// Have not tested this yet.
+	_, _ = wl.csWriter.Write(bb)
 
-	wl.currentSegmentSize += entrySize
-
+	wl.csSize += entrySize
 	return nil
 }
 
-// rotateLogIfNeeded is not thread safe
+// rotateLogIfNeeded checks if the current segment size + the entry size is
+// greater than the max segment size, and if so, it rotates the log.
+// This method is not thread safe and hence should be called with the lock held.
 func (wl *walForge) rotateLogIfNeeded(entrySize uint32) error {
-	if wl.currentSegmentSize+entrySize > wl.maxSegmentSize {
+	// If the current segment size + the entry size is greater than the max segment size,
+	// we need to rotate the log.
+	if wl.csSize+entrySize > wl.maxSegmentSizeBytes {
 		if err := wl.rotateLog(); err != nil {
 			return err
 		}
@@ -195,150 +190,134 @@ func (wl *walForge) rotateLogIfNeeded(entrySize uint32) error {
 	return nil
 }
 
-// rotateLog is not thread safe
+// rotateLog rotates the log by closing the current segment file,
+// incrementing the current segment index, and opening a new segment file.
+// This method is thread safe.
 func (wl *walForge) rotateLog() error {
-	if err := wl.Sync(); err != nil {
+	wl.mu.Lock()
+	defer wl.mu.Unlock()
+
+	// TODO: Ideally this function should not return any error
+	// Check for the conditions where it can return an error
+	// and handle them gracefully.
+	// I fear that we will need to do some cleanup operations in case of errors.
+
+	// Sync the current segment file to disk
+	if err := wl.sync(); err != nil {
 		return err
 	}
 
-	if err := wl.currentSegmentFile.Close(); err != nil {
+	// Close the current segment file
+	if err := wl.csf.Close(); err != nil {
 		return err
 	}
 
-	wl.currentSegmentIndex++
-	if wl.currentSegmentIndex-wl.oldestSegmentIndex+1 > wl.maxSegmentCount {
-		if err := wl.deleteOldestSegment(); err != nil {
-			return err
-		}
-		wl.oldestSegmentIndex++
-	}
+	// Increment the current segment index
+	wl.csIdx++
 
-	sf, err := os.OpenFile(filepath.Join(wl.logDir, segmentPrefix+fmt.Sprintf("%d", wl.currentSegmentIndex)+segmentSuffix), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// Open a new segment file
+	sf, err := os.OpenFile(
+		filepath.Join(config.Config.WALDir, fmt.Sprintf("%s%d.wal", segmentPrefix, wl.csIdx)),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatalf("failed opening file: %s", err)
+		// TODO: We are panicking here because we are not handling the error
+		// and we want to make sure that the WAL is not corrupted.
+		// We need to handle this error gracefully.
+		panic(fmt.Errorf("failed opening file: %w", err))
 	}
 
-	wl.currentSegmentSize = 0
-	wl.currentSegmentFile = sf
-	wl.bufWriter = bufio.NewWriter(sf)
+	// Reset the trackers
+	wl.csf = sf
+	wl.csSize = 0
+	wl.csWriter = bufio.NewWriter(sf)
 
 	return nil
 }
 
-func (wl *walForge) deleteOldestSegment() error {
-	oldestSegmentFilePath := filepath.Join(wl.logDir, segmentPrefix+fmt.Sprintf("%d", wl.oldestSegmentIndex)+segmentSuffix)
+// Writes out any data in the WAL's in-memory buffer to the segment file.
+// and syncs the segment file to disk.
+// This method is thread safe.
+func (wl *walForge) sync() error {
+	wl.mu.Lock()
+	defer wl.mu.Unlock()
 
-	// TODO: checkpoint before deleting the file
-	if err := os.Remove(oldestSegmentFilePath); err != nil {
+	// Flush the buffer to the segment file
+	if err := wl.csWriter.Flush(); err != nil {
 		return err
 	}
-	wl.oldestSegmentIndex++
+
+	// Sync the segment file to disk to make sure
+	// it is written to disk.
+	if err := wl.csf.Sync(); err != nil {
+		return err
+	}
+
+	// TODO: Evaluate if DIRECT_IO is needed here.
+	// If we are using a file system that supports direct IO,
+	// we can use it to improve the performance.
+	// If we are using a file system that does not support direct IO,
+	// we can use the buffer to improve the performance.
 	return nil
 }
 
-// Close the WAL file. It also calls Sync() on the wl.
-func (wl *walForge) Close() error {
-	wl.cancel()
-	if err := wl.Sync(); err != nil {
-		return err
-	}
-	return wl.currentSegmentFile.Close()
-}
-
-// Writes out any data in the WAL's in-memory buffer to the segment file. If
-// fsync is enabled, it also calls fsync on the segment file.
-func (wl *walForge) Sync() error {
-	if err := wl.bufWriter.Flush(); err != nil {
-		return err
-	}
-	if wl.writeMode == "fsync" {
-		if err := wl.currentSegmentFile.Sync(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (wl *walForge) keepSyncingBuffer() {
+func (wl *walForge) periodicSyncBuffer() {
 	for {
 		select {
 		case <-wl.bufferSyncTicker.C:
-			wl.mu.Lock()
-			err := wl.Sync()
-			wl.mu.Unlock()
-
+			err := wl.sync()
 			if err != nil {
 				slog.Error("failed to sync buffer", slog.String("error", err.Error()))
 			}
-
 		case <-wl.ctx.Done():
 			return
 		}
 	}
 }
 
-func (wl *walForge) rotateSegmentPeriodically() {
+func (wl *walForge) periodicRotateSegment() {
 	for {
 		select {
 		case <-wl.segmentRotationTicker.C:
-			wl.mu.Lock()
-			err := wl.rotateLog()
-			wl.mu.Unlock()
-			if err != nil {
+			// TODO: Remove this error handling once we clean up the error handling in the rotateLog function.
+			if err := wl.rotateLog(); err != nil {
 				slog.Error("failed to rotate segment", slog.String("error", err.Error()))
 			}
-
 		case <-wl.ctx.Done():
 			return
 		}
 	}
 }
 
-func (wl *walForge) deleteSegmentPeriodically() {
-	for {
-		select {
-		case <-wl.segmentRetentionTicker.C:
-			wl.mu.Lock()
-			err := wl.deleteOldestSegment()
-			wl.mu.Unlock()
-			if err != nil {
-				slog.Error("failed to delete segment", slog.String("error", err.Error()))
-			}
-		case <-wl.ctx.Done():
-			return
-		}
-	}
-}
-
-func (wl *walForge) segmentFiles() ([]string, error) {
+func (wl *walForge) segments() ([]string, error) {
 	// Get all segment files matching the pattern
-	files, err := filepath.Glob(filepath.Join(wl.logDir, segmentPrefix+"*"+segmentSuffix))
+	files, err := filepath.Glob(filepath.Join(config.Config.WALDir, segmentPrefix+"*"+".wal"))
 	if err != nil {
 		return nil, err
 	}
 
-	// Sort files by numeric suffix
 	sort.Slice(files, func(i, j int) bool {
-		parseSuffix := func(name string) int64 {
-			num, _ := strconv.ParseInt(
-				strings.TrimPrefix(strings.TrimSuffix(filepath.Base(name), segmentSuffix), segmentPrefix), 10, 64)
-			return num
-		}
-		return parseSuffix(files[i]) < parseSuffix(files[j])
+		s1, _ := strconv.Atoi(strings.Split(strings.TrimPrefix(files[i], segmentPrefix), ".")[0])
+		s2, _ := strconv.Atoi(strings.Split(strings.TrimPrefix(files[i], segmentPrefix), ".")[0])
+		return s1 < s2
 	})
 
+	// TODO: Check that the segment files are returned in the correct order
+	// The order has to be in ascending order of the segment index.
 	return files, nil
 }
 
+// ReplayCommand replays the commands from the WAL files.
+// This method is thread safe.
 func (wl *walForge) ReplayCommand(cb func(*wire.Command) error) error {
-	var crc uint32
-	var entrySize uint32
+	var crc, entrySize uint32
 	var el w.Element
+
+	// Buffers to hold the header and the element bytes
 	bb1h := make([]byte, 8)
 	bb1ElementBytes := make([]byte, 10*1024)
 
-	// Get list of segment files sorted by timestamp
-	segments, err := wl.segmentFiles()
+	// Get list of segment files ordered by timestamp in ascending order
+	segments, err := wl.segments()
 	if err != nil {
 		return fmt.Errorf("error getting wal-segment files: %w", err)
 	}
@@ -352,14 +331,20 @@ func (wl *walForge) ReplayCommand(cb func(*wire.Command) error) error {
 
 		reader := bufio.NewReader(file)
 		// Format: CRC32 (4 bytes) | Size of WAL entry (4 bytes) | WAL data
+
+		// TODO: Replace this infinite loop with a more elegant solution
 		for {
 			// Read CRC32 (4 bytes) + entrySize (4 bytes)
 			if _, err := io.ReadFull(reader, bb1h); err != nil {
+				// TODO: this terminating connection should be handled in a better way
+				// and the loop should not be infinite.
+				// Edge case: this EOF error can happen even in the next step when
+				// we are reading the WAL element from the file.
 				if err == io.EOF {
 					break
 				}
 				file.Close()
-				return fmt.Errorf("error reading CRC32: %w", err)
+				return fmt.Errorf("error reading WAL: %w", err)
 			}
 			crc = binary.LittleEndian.Uint32(bb1h[0:4])
 			entrySize = binary.LittleEndian.Uint32(bb1h[4:8])
@@ -372,7 +357,18 @@ func (wl *walForge) ReplayCommand(cb func(*wire.Command) error) error {
 			// Calculate CRC32 only on the payload
 			expectedCRC := crc32.ChecksumIEEE(bb1ElementBytes[:entrySize])
 			if crc != expectedCRC {
+				// TODO: We are reprtitively closing the file here
+				// A better solution would be to move this logic to a function
+				// and use defer to close the file.
+				// The function. thus, in a way processes (replays) one segment at a time.
 				file.Close()
+
+				// TODO: THis is where we should trigger the WAL recovery
+				// Recovery process is all about truncating the segment file
+				// till this point and ignoring the rest.
+				// Log appropriate messages when this happens.
+				// Evaluate if this recovery mode should be a command line flag
+				// that would suggest if we should truncate, ignore, or stop the boot process.
 				return fmt.Errorf("CRC32 mismatch: expected %d, got %d", crc, expectedCRC)
 			}
 
@@ -394,40 +390,30 @@ func (wl *walForge) ReplayCommand(cb func(*wire.Command) error) error {
 				return fmt.Errorf("error replaying command: %w", err)
 			}
 		}
-		file.Close()
 	}
 
 	return nil
 }
 
+// Stop stops the WAL Forge.
+// This method is thread safe.
 func (wl *walForge) Stop() {
-	rotTicker.Stop()
-}
-
-func (wl *walForge) rotateWAL() {
 	wl.mu.Lock()
 	defer wl.mu.Unlock()
 
-	if err := wl.Close(); err != nil {
-		slog.Warn("error closing the WAL", slog.Any("error", err))
+	// Stop the tickers
+	wl.bufferSyncTicker.Stop()
+	wl.segmentRotationTicker.Stop()
+
+	// Cancel the context
+	wl.cancel()
+
+	// Sync the current segment file to disk
+	if err := wl.sync(); err != nil {
+		slog.Error("failed to sync current segment file", slog.String("error", err.Error()))
 	}
 
-	if err := wl.Init(); err != nil {
-		slog.Warn("error creating a new WAL", slog.Any("error", err))
-	}
-}
+	wl.csf.Close()
 
-func (wl *walForge) periodicRotate() {
-	for {
-		select {
-		case <-rotTicker.C:
-			wl.rotateWAL()
-		case <-stopCh:
-			return
-		}
-	}
-}
-
-func (wl *walForge) startAsyncJobs() {
-	go wl.periodicRotate()
+	// TODO: See if we are missing any other cleanup operations.
 }
