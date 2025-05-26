@@ -5,76 +5,51 @@ package wal
 
 import (
 	"log/slog"
-	"sync"
-	"time"
 
-	w "github.com/dicedb/dicedb-go/wal"
+	"github.com/dicedb/dice/config"
 	"github.com/dicedb/dicedb-go/wire"
 )
 
 type WAL interface {
-	Init(t time.Time) error
+	// Init initializes the WAL.
+	// The WAL implementation should start all the background jobs and initialize the WAL.
+	Init() error
+	// Stop stops the WAL.
+	// The WAL implementation should stop all the background jobs and close the WAL.
+	Stop()
+	// LogCommand logs a command to the WAL.
 	LogCommand(c *wire.Command) error
-	Close() error
-	Replay(c func(*w.Element) error) error
-	Iterate(e *w.Element, c func(*w.Element) error) error
+	// Replay replays the command from the WAL.
+	ReplayCommand(cb func(c *wire.Command) error) error
 }
 
+var DefaultWAL WAL
 var (
-	ticker *time.Ticker
 	stopCh chan struct{}
-	mu     sync.Mutex
-	wl     WAL
 )
 
-// GetWAL returns the global WAL instance
-func GetWAL() WAL {
-	mu.Lock()
-	defer mu.Unlock()
-	return wl
-}
-
-// SetGlobalWAL sets the global WAL instance
-func SetWAL(_wl WAL) {
-	mu.Lock()
-	defer mu.Unlock()
-	wl = _wl
-}
-
 func init() {
-	ticker = time.NewTicker(10 * time.Second)
 	stopCh = make(chan struct{})
 }
 
-func rotateWAL(wl WAL) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if err := wl.Close(); err != nil {
-		slog.Warn("error closing the WAL", slog.Any("error", err))
-	}
-
-	if err := wl.Init(time.Now()); err != nil {
-		slog.Warn("error creating a new WAL", slog.Any("error", err))
-	}
-}
-
-func periodicRotate(wl WAL) {
-	for {
-		select {
-		case <-ticker.C:
-			rotateWAL(wl)
-		case <-stopCh:
-			return
-		}
-	}
-}
-
-func InitBG(wl WAL) {
-	go periodicRotate(wl)
-}
-
-func ShutdownBG() {
+// TeardownWAL stops the WAL and closes the WAL instance.
+func TeardownWAL() {
 	close(stopCh)
-	ticker.Stop()
+}
+
+// SetupWAL initializes the WAL based on the configuration.
+// It creates a new WAL instance based on the WAL variant and initializes it.
+// If the initialization fails, it panics.
+func SetupWAL() {
+	switch config.Config.WALVariant {
+	case "forge":
+		DefaultWAL = newWalForge()
+	default:
+		return
+	}
+
+	if err := DefaultWAL.Init(); err != nil {
+		slog.Error("could not initialize WAL", slog.Any("error", err))
+		panic(err)
+	}
 }

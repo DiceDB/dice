@@ -60,7 +60,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		select {
 		case <-ctx.Done():
-			slog.Debug("io-thread context cancelled, shutting down receive loop")
+			slog.Debug("io-thread context canceled, shutting down receive loop")
 			return ctx.Err()
 		case err := <-errCh:
 			return err
@@ -95,9 +95,8 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 		}
 
 		// Log command to WAL if enabled and not a replay
-		if err == nil && wal.GetWAL() != nil && !_c.IsReplay {
-			// Create WAL entry using protobuf message
-			if err := wal.GetWAL().LogCommand(_c.C); err != nil {
+		if wal.DefaultWAL != nil && !_c.IsReplay {
+			if err := wal.DefaultWAL.LogCommand(_c.C); err != nil {
 				slog.Error("failed to log command to WAL", slog.Any("error", err))
 			}
 		}

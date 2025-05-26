@@ -112,9 +112,9 @@ func RunTestServer(wg *sync.WaitGroup) {
 	shardManager := shardmanager.NewShardManager(1, gec)
 	ioThreadManager := ironhawk.NewIOThreadManager()
 	watchManager := &ironhawk.WatchManager{}
-	wl, _ := wal.NewAOFWAL(config.Config.WALDir)
+	wal.SetupWAL()
 
-	testServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager, wl)
+	testServer := ironhawk.NewServer(shardManager, ioThreadManager, watchManager)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fmt.Println("Starting the test server on port", config.Config.Port)
