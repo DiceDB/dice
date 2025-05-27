@@ -221,11 +221,11 @@ func EstimatePrecisionForShapeCoverage(geoShape GeoShape) uint {
 func GetGeohashNeighborsWithinShape(geoShape GeoShape, boudingBox *geohash.Box) (neighbors *Neighbors) {
 	coord := geoShape.GetCoordinate()
 	lon, lat := coord.Longitude, coord.Latitude
-	steps := uint(2 * EstimatePrecisionForShapeCoverage(geoShape))
+	precision := EstimatePrecisionForShapeCoverage(geoShape)
 
-	centerHash := geohash.EncodeIntWithPrecision(lat, lon, steps)
-	centerBox := geohash.BoundingBoxIntWithPrecision(centerHash, steps)
-	neighborsArr := geohash.NeighborsIntWithPrecision(centerHash, steps)
+	centerHash := geohash.EncodeIntWithPrecision(lat, lon, precision)
+	centerBox := geohash.BoundingBoxIntWithPrecision(centerHash, precision)
+	neighborsArr := geohash.NeighborsIntWithPrecision(centerHash, precision)
 	neighborsArr = append(neighborsArr, centerHash)
 	neighbors = CreateNeighborsFromArray(neighborsArr)
 
@@ -233,16 +233,16 @@ func GetGeohashNeighborsWithinShape(geoShape GeoShape, boudingBox *geohash.Box) 
 	// Decode each of the 8 neighbours to get max and min (lon, lat)
 	// If North.maxLatitude < maxLatitude(from bouding box) then we have to reduce step to increase neighbour size
 	// Do this for N, S, E, W
-	northBox := geohash.BoundingBoxIntWithPrecision(neighbors.North, steps)
-	eastBox := geohash.BoundingBoxIntWithPrecision(neighbors.East, steps)
-	southBox := geohash.BoundingBoxIntWithPrecision(neighbors.South, steps)
-	westBox := geohash.BoundingBoxIntWithPrecision(neighbors.West, steps)
+	northBox := geohash.BoundingBoxIntWithPrecision(neighbors.North, precision)
+	eastBox := geohash.BoundingBoxIntWithPrecision(neighbors.East, precision)
+	southBox := geohash.BoundingBoxIntWithPrecision(neighbors.South, precision)
+	westBox := geohash.BoundingBoxIntWithPrecision(neighbors.West, precision)
 
 	if northBox.MaxLat < boudingBox.MaxLat || southBox.MinLat > boudingBox.MinLat || eastBox.MaxLng < boudingBox.MaxLng || westBox.MinLng > boudingBox.MinLng {
-		steps -= 2
-		centerHash = geohash.EncodeIntWithPrecision(lat, lon, steps)
-		centerBox = geohash.BoundingBoxIntWithPrecision(centerHash, steps)
-		neighborsArr := geohash.NeighborsIntWithPrecision(centerHash, steps)
+		precision -= 2
+		centerHash = geohash.EncodeIntWithPrecision(lat, lon, precision)
+		centerBox = geohash.BoundingBoxIntWithPrecision(centerHash, precision)
+		neighborsArr := geohash.NeighborsIntWithPrecision(centerHash, precision)
 		neighborsArr = append(neighborsArr, centerHash)
 		neighbors = CreateNeighborsFromArray(neighborsArr)
 	}
@@ -251,8 +251,8 @@ func GetGeohashNeighborsWithinShape(geoShape GeoShape, boudingBox *geohash.Box) 
 	neighbors.Center = centerHash
 
 	// Exclude search areas that are useless
-	// why not at step == 1? Because geohash cells are so large that excluding neighbors could miss valid points.
-	if steps >= 2 {
+	// why not at step < 4? Because geohash cells are so large that excluding neighbors could miss valid points.
+	if precision >= 4 {
 		if centerBox.MinLat < boudingBox.MinLat {
 			neighbors.South = 0
 			neighbors.SouthWest = 0
@@ -275,7 +275,7 @@ func GetGeohashNeighborsWithinShape(geoShape GeoShape, boudingBox *geohash.Box) 
 		}
 	}
 
-	// Set Steps in neighbors
-	neighbors.Steps = steps
+	// Set Precision in neighbors
+	neighbors.Precision = precision
 	return neighbors
 }

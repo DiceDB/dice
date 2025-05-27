@@ -40,7 +40,7 @@ type Neighbors struct {
 	West      uint64
 	NorthWest uint64
 	Center    uint64
-	Steps     uint
+	Precision uint
 }
 
 func CreateNeighborsFromArray(arr []uint64) *Neighbors {
@@ -395,7 +395,7 @@ func (geoReg *GeoRegistry) SearchElementsWithinShape(params map[Param]string, no
 			break
 		}
 
-		maxHash, minHash := GetMaxAndMinHashForBoxHash(neighbor, neighbors.Steps)
+		maxHash, minHash := GetMaxAndMinHashForBoxHash(neighbor, neighbors.Precision)
 
 		zElements := geoReg.ZRANGE(int(minHash), int(maxHash), true, false)
 
@@ -643,8 +643,8 @@ func ConvertToMeter(distance float64, unit Param) (float64, error) {
 
 // Computes the min (inclusive) and max (exclusive) scores for a given hash box.
 // Aligns the geohash bits to BIT_PRECISION score by left-shifting
-func GetMaxAndMinHashForBoxHash(hash uint64, steps uint) (max, min uint64) {
-	shift := BIT_PRECISION - (steps)
+func GetMaxAndMinHashForBoxHash(hash uint64, precision uint) (max, min uint64) {
+	shift := BIT_PRECISION - (precision)
 	base := hash << shift
 	rangeSize := uint64(1) << shift
 	min = base
