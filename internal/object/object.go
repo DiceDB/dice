@@ -89,6 +89,7 @@ const (
 	ObjTypeSet
 	ObjTypeSSMap
 	ObjTypeSortedSet
+	ObjTypeGeoRegistry
 	ObjTypeCountMinSketch
 	ObjTypeBF
 	ObjTypeDequeue

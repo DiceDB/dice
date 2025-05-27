@@ -110,7 +110,6 @@ func evalGEOSEARCH(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	key := c.C.Args[0]
 	params, nonParams := parseParams(c.C.Args[1:])
 
-	// Validate all the parameters
 	if len(nonParams) < 2 {
 		return GEOSEARCHResNilRes, errors.ErrInvalidSyntax("GEOSEARCH")
 	}
@@ -121,12 +120,12 @@ func evalGEOSEARCH(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	if obj == nil {
 		return GEODISTResNilRes, nil
 	}
-	if obj.Type != object.ObjTypeSortedSet {
+	if obj.Type != object.ObjTypeGeoRegistry {
 		return GEOSEARCHResNilRes, errors.ErrWrongTypeOperation
 	}
 	gr = obj.Value.(*types.GeoRegistry)
 
-	geoElements, err := gr.GeoSearchElementsWithinShape(params, nonParams)
+	geoElements, err := gr.SearchElementsWithinShape(params, nonParams)
 
 	if err != nil {
 		return GEOSEARCHResNilRes, err

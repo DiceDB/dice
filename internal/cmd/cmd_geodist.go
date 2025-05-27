@@ -31,7 +31,6 @@ localhost:7379> GEOADD Delhi 77.2096 28.6145 centralDelhi 77.2167 28.6315 CP 77.
 OK 3
 localhost:7379> GEODIST Delhi CP IndiaGate km
 OK 2.416700
-
 	`,
 	Eval:    evalGEODIST,
 	Execute: executeGEODIST,
@@ -79,7 +78,7 @@ func evalGEODIST(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	if obj == nil {
 		return GEODISTResNilRes, nil
 	}
-	if obj.Type != object.ObjTypeSortedSet {
+	if obj.Type != object.ObjTypeGeoRegistry {
 		return GEODISTResNilRes, errors.ErrWrongTypeOperation
 	}
 	gr = obj.Value.(*types.GeoRegistry)

@@ -83,7 +83,7 @@ func evalGEOADD(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 	if obj == nil {
 		gr = types.NewGeoRegistry()
 	} else {
-		if obj.Type != object.ObjTypeSortedSet {
+		if obj.Type != object.ObjTypeGeoRegistry {
 			return GEOADDResNilRes, errors.ErrWrongTypeOperation
 		}
 		gr = obj.Value.(*types.GeoRegistry)
@@ -109,7 +109,7 @@ func evalGEOADD(c *Cmd, s *dsstore.Store) (*CmdRes, error) {
 		return GEOADDResNilRes, err
 	}
 
-	s.Put(key, s.NewObj(gr, -1, object.ObjTypeSortedSet), dsstore.WithPutCmd(dsstore.ZAdd))
+	s.Put(key, s.NewObj(gr, -1, object.ObjTypeGeoRegistry), dsstore.WithPutCmd(dsstore.ZAdd))
 	return newGEOADDRes(count), nil
 }
 

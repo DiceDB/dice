@@ -181,7 +181,7 @@ func (geoReg *GeoRegistry) GetDistanceBetweenMembers(member1 string, member2 str
 }
 
 // This returns all the nodes which are in the given shape
-func (geoReg *GeoRegistry) GeoSearchElementsWithinShape(params map[Param]string, nonParams []string) ([]*wire.GEOElement, error) {
+func (geoReg *GeoRegistry) SearchElementsWithinShape(params map[Param]string, nonParams []string) ([]*wire.GEOElement, error) {
 	unit := GetUnitTypeFromParsedParams(params)
 	if len(unit) == 0 {
 		return nil, errors.ErrInvalidUnit(string(unit))
@@ -490,6 +490,60 @@ func (geoReg *GeoRegistry) GeoSearchElementsWithinShape(params map[Param]string,
 	return resultGeoElements, nil
 }
 
+// This returns 11 characters geohash representation of the position of the specified elements.
+func (geoReg *GeoRegistry) Get11BytesHash(members []string) []string {
+
+	result := make([]string, len(members))
+	geoAlphabet := []rune("0123456789bcdefghjkmnpqrstuvwxyz")
+
+	for idx, member := range members {
+
+		// Get GEOHASH of the member
+		hashNode := geoReg.GetByKey(member)
+		if hashNode == nil {
+			continue
+		}
+		hash := uint64(hashNode.Score())
+
+		// Convert the hash to 11 character string (base32)
+		hashRune := make([]rune, 11)
+		for i := 0; i < 11; i++ {
+			var idx uint64
+			if i == 10 {
+				idx = 0 // pad last char due to only 52 bits
+			} else {
+				shift := 52 - ((i + 1) * 5)
+				idx = (hash >> shift) & 0x1F
+			}
+			hashRune[i] = geoAlphabet[idx]
+		}
+		result[idx] = string(hashRune)
+
+	}
+	return result
+}
+
+// This returns coordinates (longitute, latitude) of all the members
+func (geoReg *GeoRegistry) GetCoordinates(members []string) []*GeoCoordinate {
+	result := make([]*GeoCoordinate, len(members))
+	for i, member := range members {
+		// Get GEOHASH of the member
+		hashNode := geoReg.GetByKey(member)
+		if hashNode == nil {
+			continue
+		}
+		hash := uint64(hashNode.Score())
+		coordinate, _ := NewGeoCoordinateFromHash(hash)
+		result[i] = coordinate
+	}
+	return result
+}
+
+// /////////////////////////////////////////////////////
+// //////////// Utility Functions //////////////////////
+// /////////////////////////////////////////////////////
+
+// Filter dimensions based on flags for GEO Search
 func filterDimensionsBasedOnFlags(geoElements []*wire.GEOElement, withCoord, withDist, withHash bool) {
 	for _, ele := range geoElements {
 		if !withCoord {
@@ -505,10 +559,6 @@ func filterDimensionsBasedOnFlags(geoElements []*wire.GEOElement, withCoord, wit
 		}
 	}
 }
-
-// /////////////////////////////////////////////////////
-// //////////// Utility Functions //////////////////////
-// /////////////////////////////////////////////////////
 
 // Encode given Lon and Lat to GEOHASH
 func EncodeHash(longitude, latitude float64) uint64 {
@@ -587,7 +637,7 @@ func ConvertToMeter(distance float64, unit Param) (float64, error) {
 	default:
 		return 0, errors.ErrInvalidUnit(string(unit))
 	}
-	// Round to 4 decimal places
+	// Round to 5 decimal places
 	return math.Round(result*10000) / 10000, nil
 }
 
