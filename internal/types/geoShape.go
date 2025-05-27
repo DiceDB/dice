@@ -143,7 +143,6 @@ func GetNewGeoShapeRectangle(widht float64, height float64, centerCoordinate *Ge
 // Return the bounding box of the shape
 // bounds[0] - bounds[2] is the minimum and maximum longitude
 // bounds[1] - bounds[3] is the minimum and maximum latitude.
-// Refer to this link to understand this function in detail - https://www.notion.so/Geo-Bounding-Box-Research-1f6a37dc1a9a80e7ac43feeeab7215bb?pvs=4
 // since the higher the latitude, the shorter the arc length, the box shape is as follows
 //
 //	  \-----------------/          --------               \-----------------/

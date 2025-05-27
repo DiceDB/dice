@@ -181,6 +181,7 @@ func (geoReg *GeoRegistry) GetDistanceBetweenMembers(member1 string, member2 str
 }
 
 // This returns all the nodes which are in the given shape
+// Refer to this link for a detailed explanation of the function - https://www.notion.so/Geo-Bounding-Box-Research-1f6a37dc1a9a80e7ac43feeeab7215bb
 func (geoReg *GeoRegistry) SearchElementsWithinShape(params map[Param]string, nonParams []string) ([]*wire.GEOElement, error) {
 	unit := GetUnitTypeFromParsedParams(params)
 	if len(unit) == 0 {
