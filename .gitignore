@@ -9,8 +9,8 @@ __pycache__
 .idea/
 ./dice
 *.rdb
-dice
-main
+/dice/
+/main/
 tmp/
 vendor/
 
