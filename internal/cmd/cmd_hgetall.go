@@ -50,6 +50,9 @@ func newHGETALLRes(elements []*wire.HElement) *CmdRes {
 					Elements: elements,
 				},
 			},
+			Metadata: &wire.Metadata{
+				IsWatchable: true,
+			},
 		},
 	}
 }

@@ -48,6 +48,9 @@ func newZCARDRes(count int64) *CmdRes {
 					Count: count,
 				},
 			},
+			Metadata: &wire.Metadata{
+				IsWatchable: true,
+			},
 		},
 	}
 }
