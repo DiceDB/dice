@@ -61,19 +61,14 @@ type DiceDBConfig struct {
 
 	Engine string `mapstructure:"engine" default:"ironhawk" description:"the engine to use, values: ironhawk"`
 
-	EnableWAL                         bool   `mapstructure:"enable-wal" default:"false" description:"enable write-ahead logging"`
-	WALDir                            string `mapstructure:"wal-dir" default:"logs" description:"the directory to store WAL segments"`
-	WALMode                           string `mapstructure:"wal-mode" default:"buffered" description:"wal mode to use, values: buffered, unbuffered"`
-	WALWriteMode                      string `mapstructure:"wal-write-mode" default:"default" description:"wal file write mode to use, values: default, fsync"`
-	WALBufferSizeMB                   int    `mapstructure:"wal-buffer-size-mb" default:"1" description:"the size of the wal write buffer in megabytes"`
-	WALRotationMode                   string `mapstructure:"wal-rotation-mode" default:"segment-size" description:"wal rotation mode to use, values: segment-size, time"`
-	WALMaxSegmentSizeMB               int    `mapstructure:"wal-max-segment-size-mb" default:"16" description:"the maximum size of a wal segment file in megabytes before rotation"`
-	WALMaxSegmentRotationTimeSec      int    `mapstructure:"wal-max-segment-rotation-time-sec" default:"60" description:"the time interval (in seconds) after which wal a segment is rotated"`
-	WALBufferSyncIntervalMillis       int    `mapstructure:"wal-buffer-sync-interval-ms" default:"200" description:"the interval (in milliseconds) at which the wal write buffer is synced to disk"`
-	WALRetentionMode                  string `mapstructure:"wal-retention-mode" default:"num-segments" description:"the new horizon for wal segment post cleanup. values: num-segments, time, checkpoint"`
-	WALMaxSegmentCount                int    `mapstructure:"wal-max-segment-count" default:"10" description:"the maximum number of segments to retain, if the retention mode is 'num-segments'"`
-	WALMaxSegmentRetentionDurationSec int    `mapstructure:"wal-max-segment-retention-duration-sec" default:"600" description:"the maximum duration (in seconds) for wal segments retention"`
-	WALRecoveryMode                   string `mapstructure:"wal-recovery-mode" default:"strict" description:"wal recovery mode in case of a corruption, values: strict, truncate, ignore"`
+	EnableWAL                   bool   `mapstructure:"enable-wal" default:"false" description:"enable write-ahead logging"`
+	WALVariant                  string `mapstructure:"wal-variant" default:"forge" description:"wal variant to use, values: forge"`
+	WALDir                      string `mapstructure:"wal-dir" default:"logs" description:"the directory to store WAL segments"`
+	WALBufferSizeMB             int    `mapstructure:"wal-buffer-size-mb" default:"1" description:"the size of the wal write buffer in megabytes"`
+	WALRotationMode             string `mapstructure:"wal-rotation-mode" default:"time" description:"wal rotation mode to use, values: segment-size, time"`
+	WALMaxSegmentSizeMB         int    `mapstructure:"wal-max-segment-size-mb" default:"16" description:"the maximum size of a wal segment file in megabytes before rotation"`
+	WALSegmentRotationTimeSec   int    `mapstructure:"wal-max-segment-rotation-time-sec" default:"60" description:"the time interval (in seconds) after which wal a segment is rotated"`
+	WALBufferSyncIntervalMillis int    `mapstructure:"wal-buffer-sync-interval-ms" default:"200" description:"the interval (in milliseconds) at which the wal write buffer is synced to disk"`
 }
 
 func Load(flags *pflag.FlagSet) {
