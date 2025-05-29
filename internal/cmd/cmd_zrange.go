@@ -68,6 +68,9 @@ func newZRANGERes(elements []*wire.ZElement) *CmdRes {
 			Response: &wire.Result_ZRANGERes{
 				ZRANGERes: &wire.ZRANGERes{Elements: elements},
 			},
+			Metadata: &wire.Metadata{
+				IsWatchable: true,
+			},
 		},
 	}
 }
