@@ -293,14 +293,14 @@ func (wl *walForge) segments() ([]string, error) {
 		return nil, err
 	}
 
+	fullSegmentPrefix := filepath.Join(config.Config.WALDir, segmentPrefix)
+
 	sort.Slice(files, func(i, j int) bool {
-		s1, _ := strconv.Atoi(strings.Split(strings.TrimPrefix(files[i], segmentPrefix), ".")[0])
-		s2, _ := strconv.Atoi(strings.Split(strings.TrimPrefix(files[i], segmentPrefix), ".")[0])
+		s1, _ := strconv.Atoi(strings.Split(strings.TrimPrefix(files[i], fullSegmentPrefix), ".")[0])
+		s2, _ := strconv.Atoi(strings.Split(strings.TrimPrefix(files[j], fullSegmentPrefix), ".")[0])
 		return s1 < s2
 	})
 
-	// TODO: Check that the segment files are returned in the correct order
-	// The order has to be in ascending order of the segment index.
 	return files, nil
 }
 
