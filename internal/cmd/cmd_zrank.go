@@ -57,6 +57,9 @@ func newZRANKRes(element *wire.ZElement) *CmdRes {
 					Element: element,
 				},
 			},
+			Metadata: &wire.Metadata{
+				IsWatchable: true,
+			},
 		},
 	}
 }

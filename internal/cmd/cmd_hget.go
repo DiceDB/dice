@@ -48,6 +48,9 @@ func newHGETRes(value string) *CmdRes {
 					Value: value,
 				},
 			},
+			Metadata: &wire.Metadata{
+				IsWatchable: true,
+			},
 		},
 	}
 }
