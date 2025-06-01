@@ -58,6 +58,9 @@ func (a *AOF) Close() error {
 }
 
 func (a *AOF) Load() ([]string, error) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
 	f, err := os.Open(a.path)
 	if err != nil {
 		return nil, err
