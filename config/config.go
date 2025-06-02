@@ -34,10 +34,15 @@ func init() {
 
 	// Read the VERSION file from the project root
 	// This approach works regardless of where the program is executed from
-	version, err := os.ReadFile(filepath.Join(projectRoot, "VERSION"))
+	path := filepath.Join(projectRoot, "VERSION")
+	if alt := os.Getenv("DICEDB_VERSION_PATH"); alt != "" {
+			path = alt
+	}
+
+	version, err := os.ReadFile(path)
 	if err != nil {
-		slog.Error("could not read the version file", slog.String("error", err.Error()))
-		os.Exit(1)
+			slog.Error("could not read the version file", slog.String("error", err.Error()))
+			os.Exit(1)
 	}
 
 	// Store the version string in the package-level DiceDBVersion variable
