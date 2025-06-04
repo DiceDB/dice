@@ -326,6 +326,8 @@ func (wl *walForge) ReplayCommand(cb func(*wire.Command) error) error {
 		if err != nil {
 			return fmt.Errorf("error opening wal-segment file %s: %w", segment, err)
 		}
+		
+		defer file.Close() // Ensure the file is closed after processing
 
 		reader := bufio.NewReader(file)
 		// Format: CRC32 (4 bytes) | Size of WAL entry (4 bytes) | WAL data
@@ -341,25 +343,18 @@ func (wl *walForge) ReplayCommand(cb func(*wire.Command) error) error {
 				if err == io.EOF {
 					break
 				}
-				file.Close()
 				return fmt.Errorf("error reading WAL: %w", err)
 			}
 			crc = binary.LittleEndian.Uint32(bb1h[0:4])
 			entrySize = binary.LittleEndian.Uint32(bb1h[4:8])
 
 			if _, err := io.ReadFull(reader, bb1ElementBytes[:entrySize]); err != nil {
-				file.Close()
 				return fmt.Errorf("error reading WAL data: %w", err)
 			}
 
 			// Calculate CRC32 only on the payload
 			expectedCRC := crc32.ChecksumIEEE(bb1ElementBytes[:entrySize])
 			if crc != expectedCRC {
-				// TODO: We are reprtitively closing the file here
-				// A better solution would be to move this logic to a function
-				// and use defer to close the file.
-				// The function. thus, in a way processes (replays) one segment at a time.
-				file.Close()
 
 				// TODO: THis is where we should trigger the WAL recovery
 				// Recovery process is all about truncating the segment file
@@ -372,19 +367,16 @@ func (wl *walForge) ReplayCommand(cb func(*wire.Command) error) error {
 
 			// Unmarshal the WAL entry to get the payload
 			if err := proto.Unmarshal(bb1ElementBytes[:entrySize], &el); err != nil {
-				file.Close()
 				return fmt.Errorf("error unmarshaling WAL entry: %w", err)
 			}
 
 			var c wire.Command
 			if err := proto.Unmarshal(el.Payload, &c); err != nil {
-				file.Close()
 				return fmt.Errorf("error unmarshaling command: %w", err)
 			}
 
 			// Call provided replay function with parsed command
 			if err := cb(&c); err != nil {
-				file.Close()
 				return fmt.Errorf("error replaying command: %w", err)
 			}
 		}
