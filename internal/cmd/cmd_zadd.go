@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -46,8 +47,10 @@ OK 0
 localhost:7379> ZADD users CH 11 u1
 OK 1
 `,
-	Eval:    evalZADD,
-	Execute: executeZADD,
+	Eval:     evalZADD,
+	Execute:  executeZADD,
+	Arity:    -4,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RW | flg.UPDATE},
 }
 
 func init() {

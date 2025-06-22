@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -28,8 +29,10 @@ OK 1
 localhost:7379> HSET k1 f1 v1 f2 v2 f3 v3
 OK 2
 	`,
-	Eval:    evalHSET,
-	Execute: executeHSET,
+	Eval:     evalHSET,
+	Execute:  executeHSET,
+	Arity:    -4,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RW | flg.UPDATE},
 }
 
 func init() {

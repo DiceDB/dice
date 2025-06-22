@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -32,6 +33,8 @@ OK ""
 	Eval:        evalHGET,
 	Execute:     executeHGET,
 	IsWatchable: true,
+	Arity:       3,
+	KeySpecs:    flg.KeySpecs{BeginIndex: 1, Flags: flg.RO | flg.ACCESS},
 }
 
 func init() {

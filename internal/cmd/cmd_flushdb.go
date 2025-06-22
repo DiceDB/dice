@@ -31,6 +31,7 @@ OK ""
 	`,
 	Eval:    evalFLUSHDB,
 	Execute: executeFLUSHDB,
+	Arity:   -1,
 }
 
 func init() {

@@ -6,6 +6,7 @@ package cmd
 import (
 	"time"
 
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -34,8 +35,10 @@ OK 8
 localhost:7379> TTL kn
 OK -2
 	`,
-	Eval:    evalTTL,
-	Execute: executeTTL,
+	Eval:     evalTTL,
+	Execute:  executeTTL,
+	Arity:    2,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RO | flg.ACCESS},
 }
 
 func init() {

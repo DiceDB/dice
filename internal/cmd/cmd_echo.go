@@ -20,6 +20,7 @@ localhost:7379> ECHO dicedb
 OK dicedb`,
 	Eval:    evalECHO,
 	Execute: executeECHO,
+	Arity:   1,
 }
 
 func init() {

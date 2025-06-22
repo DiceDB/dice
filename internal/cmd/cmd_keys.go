@@ -45,6 +45,7 @@ OK
 	`,
 	Eval:    evalKEYS,
 	Execute: executeKEYS,
+	Arity:   2,
 }
 
 func init() {

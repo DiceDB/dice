@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shard"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -24,8 +25,10 @@ OK
 localhost:7379> EXISTS k1 k2 k3
 OK 2
 	`,
-	Eval:    evalEXISTS,
-	Execute: executeEXISTS,
+	Eval:     evalEXISTS,
+	Execute:  executeEXISTS,
+	Arity:    -2,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RO},
 }
 
 func init() {

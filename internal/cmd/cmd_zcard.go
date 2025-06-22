@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -32,6 +33,8 @@ OK 0
 	Eval:        evalZCARD,
 	Execute:     executeZCARD,
 	IsWatchable: true,
+	Arity:       2,
+	KeySpecs:    flg.KeySpecs{BeginIndex: 1, Flags: flg.RO},
 }
 
 func init() {

@@ -25,6 +25,7 @@ OK "PONG dicedb"
 	`,
 	Eval:    evalPING,
 	Execute: executePING,
+	Arity:   -1,
 }
 
 func init() {

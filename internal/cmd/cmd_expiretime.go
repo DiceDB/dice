@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -28,8 +29,10 @@ OK true
 localhost:7379> EXPIRETIME k1
 OK 1744451192
 	`,
-	Eval:    evalEXPIRETIME,
-	Execute: executeEXPIRETIME,
+	Eval:     evalEXPIRETIME,
+	Execute:  executeEXPIRETIME,
+	Arity:    2,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RO | flg.ACCESS},
 }
 
 func init() {
