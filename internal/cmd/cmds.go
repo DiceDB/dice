@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -81,6 +82,9 @@ type CommandMeta struct {
 	IsWatchable bool
 	Eval        func(c *Cmd, s *store.Store) (*CmdRes, error)
 	Execute     func(c *Cmd, sm *shardmanager.ShardManager) (*CmdRes, error)
+	KeySpecs    flg.KeySpecs
+	Arity       int
+	GetFlags    func(args []string, ks *flg.KeySpecs)
 }
 
 type CmdRegistry struct {

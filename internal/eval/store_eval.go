@@ -20,6 +20,7 @@ import (
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/bytedance/sonic"
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/cmd"
 	diceerrors "github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/eval/geo"
@@ -5729,6 +5730,8 @@ func evalCommand(args []string, store *dstore.Store) *EvalResponse {
 		return evalCommandInfo(args[1:])
 	case Docs:
 		return evalCommandDocs(args[1:])
+	case GetKeysandFlags:
+		return evalCommandKeyandFlags(args[1:])
 	default:
 		return makeEvalError(diceerrors.ErrGeneral(fmt.Sprintf("unknown subcommand '%s'. Try COMMAND HELP.", subcommand)))
 	}
@@ -5884,6 +5887,61 @@ func evalCommandDocs(args []string) *EvalResponse {
 	}
 
 	return makeEvalResult(result)
+}
+
+func evalCommandKeyandFlags(args []string) *EvalResponse {
+	if len(args) == 0 {
+		return makeEvalError(diceerrors.ErrWrongArgumentCount("COMMAND|GETKEYSANDFLAGS"))
+	}
+
+	diceCmd, ok := cmd.CommandRegistry.CommandMetas[strings.ToUpper(args[0])]
+	if !ok {
+		return makeEvalError(diceerrors.ErrGeneral("invalid command specified"))
+	}
+
+	keySpecs := diceCmd.KeySpecs
+	if keySpecs.BeginIndex == 0 {
+		return makeEvalError(diceerrors.ErrGeneral("the command has no key arguments"))
+	}
+
+	arity := diceCmd.Arity
+	if (arity < 0 && len(args) < arity) ||
+		(arity >= 0 && len(args) != arity) {
+		return makeEvalError(diceerrors.ErrGeneral("invalid number of arguments specified for command"))
+	}
+
+	if (flg.VARIABLEFLAGS)&(keySpecs.Flags) != 0 {
+		diceCmd.GetFlags(args, &keySpecs)
+	}
+
+	// Output like
+	// [
+	//	  [1, ["RW", "access", "update"]]
+	// ]
+	keysAndFlags := []interface{}{}
+	flagNames := make([]string, 0)
+	step := max(keySpecs.Step, 1)
+
+	lastIdx := keySpecs.BeginIndex
+	if keySpecs.LastKey != 0 {
+		lastIdx = len(args) + keySpecs.LastKey
+	}
+
+	flags := flg.GetFlags()
+	flagNameMap := flg.GetFlagsNameMap()
+
+	for _, v := range flags {
+		if fname, ok := flagNameMap[v]; ok && (v&keySpecs.Flags) != 0 {
+			flagNames = append(flagNames, fname)
+		}
+	}
+
+	for i := keySpecs.BeginIndex; i <= lastIdx; i += step {
+		r := []interface{}{i, flagNames}
+		keysAndFlags = append(keysAndFlags, r)
+	}
+
+	return makeEvalResult(keysAndFlags)
 }
 
 func evalJSONARRINDEX(args []string, store *dstore.Store) *EvalResponse {

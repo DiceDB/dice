@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -59,8 +60,11 @@ OK
 localhost:7379> SET k 43 KEEPTTL
 OK
 	`,
-	Eval:    evalSET,
-	Execute: executeSET,
+	Eval:     evalSET,
+	Execute:  executeSET,
+	Arity:    -3,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RW | flg.ACCESS | flg.UPDATE | flg.VARIABLEFLAGS},
+	GetFlags: flg.SetGetKeys,
 }
 
 func init() {

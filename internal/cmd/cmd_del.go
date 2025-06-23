@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -24,8 +25,10 @@ localhost:7379> SET k2 v2
 OK
 localhost:7379> DEL k1 k2 k3
 OK 2`,
-	Eval:    evalDEL,
-	Execute: executeDEL,
+	Eval:     evalDEL,
+	Execute:  executeDEL,
+	Arity:    -2,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RM | flg.DELETE},
 }
 
 func init() {

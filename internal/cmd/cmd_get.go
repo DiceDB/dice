@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -33,6 +34,8 @@ OK ""
 	Eval:        evalGET,
 	Execute:     executeGET,
 	IsWatchable: true,
+	Arity:       2,
+	KeySpecs:    flg.KeySpecs{BeginIndex: 1, Flags: flg.RO | flg.ACCESS},
 }
 
 func init() {

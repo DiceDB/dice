@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -40,8 +41,10 @@ OK false
 localhost:7379> EXPIREAT k1 1740829942 XX
 OK false
 	`,
-	Eval:    evalEXPIREAT,
-	Execute: executeEXPIREAT,
+	Eval:     evalEXPIREAT,
+	Execute:  executeEXPIREAT,
+	Arity:    -3,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RW | flg.UPDATE},
 }
 
 func init() {

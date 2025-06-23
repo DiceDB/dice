@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -32,8 +33,10 @@ OK
 localhost:7379> DECR k2
 ERR wrongtype operation against a key holding the wrong kind of value
 	`,
-	Eval:    evalDECR,
-	Execute: executeDECR,
+	Eval:     evalDECR,
+	Execute:  executeDECR,
+	Arity:    2,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RM | flg.ACCESS | flg.UPDATE},
 }
 
 func init() {

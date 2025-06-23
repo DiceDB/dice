@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -52,8 +53,10 @@ OK "v"
 localhost:7379> EXPIRETIME k
 OK -1
 	`,
-	Eval:    evalGETEX,
-	Execute: executeGETEX,
+	Eval:     evalGETEX,
+	Execute:  executeGETEX,
+	Arity:    -2,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RW | flg.ACCESS | flg.UPDATE},
 }
 
 func init() {

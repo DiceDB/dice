@@ -5486,6 +5486,65 @@ func testEvalCOMMAND(t *testing.T, store *dstore.Store) {
 				Error:  diceerrors.ErrGeneral("unknown subcommand 'UNKNOWN'. Try COMMAND HELP."),
 			},
 		},
+		"command getKeysAndFlags (set)": {
+			input: []string{"GETKEYSANDFLAGS", "SET", "1", "2"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{
+					[]interface{}{
+						1,
+						[]interface{}{
+							"OW",
+							"update",
+						},
+					},
+				},
+				Error: nil,
+			},
+		},
+		"command getKeysAndFlags (set with get as arg)": {
+			input: []string{"GETKEYSANDFLAGS", "SET", "1", "3", "GET"},
+			migratedOutput: EvalResponse{
+				Result: []interface{}{
+					[]interface{}{
+						1,
+						[]interface{}{
+							"RW",
+							"access",
+							"update",
+						},
+					},
+				},
+				Error: nil,
+			},
+		},
+		"command getKeysAndFlags (No Args)": {
+			input: []string{"GETKEYSANDFLAGS"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrWrongArgumentCount("COMMAND|GETKEYSANDFLAGS"),
+			},
+		},
+		"command getKeysAndFlags (Invalid Command)": {
+			input: []string{"GETKEYSANDFLAGS", "GETA", "1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid command specified"),
+			},
+		},
+		"command getKeysAndFlags (Command having no keys)": {
+			input: []string{"GETKEYSANDFLAGS", "PING"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("the command has no key arguments"),
+			},
+		},
+		"command getKeysAndFlags (providing invalid number of args)": {
+			input: []string{"GETKEYSANDFLAGS", "SET", "1"},
+			migratedOutput: EvalResponse{
+				Result: nil,
+				Error:  diceerrors.ErrGeneral("invalid number of arguments specified for command"),
+			},
+		},
 	}
 
 	runMigratedEvalTests(t, tests, evalCommand, store)

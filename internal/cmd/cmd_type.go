@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -30,8 +31,10 @@ OK int
 localhost:7379> TYPE kn
 OK none
 	`,
-	Eval:    evalTYPE,
-	Execute: executeTYPE,
+	Eval:     evalTYPE,
+	Execute:  executeTYPE,
+	Arity:    1,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RO},
 }
 
 func init() {

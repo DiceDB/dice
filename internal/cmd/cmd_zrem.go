@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -35,8 +36,10 @@ localhost:7379> ZRANGE users 0 60 BYSCORE
 OK
 1) 30, charlie
 `,
-	Eval:    evalZREM,
-	Execute: executeZREM,
+	Eval:     evalZREM,
+	Execute:  executeZREM,
+	Arity:    -3,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RW | flg.DELETE},
 }
 
 func init() {

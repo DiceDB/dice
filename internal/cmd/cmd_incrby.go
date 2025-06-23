@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -33,8 +34,10 @@ OK 50
 localhost:7379> GET k2
 OK "50"
 	`,
-	Eval:    evalINCRBY,
-	Execute: executeINCRBY,
+	Eval:     evalINCRBY,
+	Execute:  executeINCRBY,
+	Arity:    2,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.UPDATE | flg.ACCESS | flg.RW},
 }
 
 func init() {

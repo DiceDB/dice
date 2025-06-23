@@ -27,6 +27,7 @@ OK
 	`,
 	Eval:    evalUNWATCH,
 	Execute: executeUNWATCH,
+	Arity:   1,
 }
 
 func init() {

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/shardmanager"
 	dstore "github.com/dicedb/dice/internal/store"
@@ -43,8 +44,10 @@ OK true
 localhost:7379> EXPIRE k2 20 NX
 OK false
 	`,
-	Eval:    evalEXPIRE,
-	Execute: executeEXPIRE,
+	Eval:     evalEXPIRE,
+	Execute:  executeEXPIRE,
+	Arity:    -3,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Step: 1, Flags: flg.RW | flg.UPDATE},
 }
 
 func init() {

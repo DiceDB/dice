@@ -6,6 +6,7 @@ package cmd
 import (
 	"strconv"
 
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -39,8 +40,10 @@ OK
 2) 20, bob
 1) 10, alice
 	`,
-	Eval:    evalZPOPMAX,
-	Execute: executeZPOPMAX,
+	Eval:     evalZPOPMAX,
+	Execute:  executeZPOPMAX,
+	Arity:    -2,
+	KeySpecs: flg.KeySpecs{BeginIndex: 1, Flags: flg.RW | flg.ACCESS | flg.DELETE},
 }
 
 func init() {

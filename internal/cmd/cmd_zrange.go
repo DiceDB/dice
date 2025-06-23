@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	flg "github.com/dicedb/dice/internal"
 	"github.com/dicedb/dice/internal/errors"
 	"github.com/dicedb/dice/internal/object"
 	"github.com/dicedb/dice/internal/shardmanager"
@@ -54,6 +55,8 @@ OK
 	Eval:        evalZRANGE,
 	Execute:     executeZRANGE,
 	IsWatchable: true,
+	Arity:       -4,
+	KeySpecs:    flg.KeySpecs{BeginIndex: 1, Flags: flg.RO | flg.ACCESS},
 }
 
 func init() {
