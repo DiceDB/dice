@@ -295,7 +295,7 @@ func (wl *walForge) segments() ([]string, error) {
 
 	sort.Slice(files, func(i, j int) bool {
 		s1, _ := strconv.Atoi(strings.Split(strings.TrimPrefix(files[i], segmentPrefix), ".")[0])
-		s2, _ := strconv.Atoi(strings.Split(strings.TrimPrefix(files[i], segmentPrefix), ".")[0])
+		s2, _ := strconv.Atoi(strings.Split(strings.TrimPrefix(files[j], segmentPrefix), ".")[0])
 		return s1 < s2
 	})
 
