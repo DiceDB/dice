@@ -20,4 +20,25 @@ const (
 	KEEPTTL Param = "KEEPTTL"
 
 	PERSIST Param = "PERSIST"
+
+	M  Param = "M"
+	KM Param = "KM"
+	MI Param = "MI"
+	FT Param = "FT"
+
+	FROMMEMBER Param = "FROMMEMBER"
+	FROMLONLAT Param = "FROMLONLAT"
+
+	BYRADIUS Param = "BYRADIUS"
+	BYBOX    Param = "BYBOX"
+
+	COUNT Param = "COUNT"
+	ANY   Param = "ANY"
+
+	ASC  Param = "ASC"
+	DESC Param = "DESC"
+
+	WITHCOORD Param = "WITHCOORD"
+	WITHDIST  Param = "WITHDIST"
+	WITHHASH  Param = "WITHHASH"
 )
