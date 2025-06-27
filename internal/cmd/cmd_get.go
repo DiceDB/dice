@@ -58,6 +58,9 @@ func newGETRes(obj *object.Obj) *CmdRes {
 					Value: value,
 				},
 			},
+			Metadata: &wire.Metadata{
+				IsWatchable: true,
+			},
 		},
 	}
 }
