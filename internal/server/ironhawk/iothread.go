@@ -106,9 +106,8 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 		// Also, CLientID is duplicated in command and io-thread.
 		// Also, we shouldn't allow execution/registration incase of invalid commands
 		// like for B.WATCH cmd since it'll err out we shall return and not create subscription
-		if err == nil {
-			t.ClientID = _c.ClientID
-		}
+		// No error handling after this as we have continued loop above if error found
+		t.ClientID = _c.ClientID
 
 		if _c.Meta.IsWatchable {
 			_cWatch := _c
@@ -116,7 +115,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 			res.Rs.Fingerprint64 = _cWatch.Fingerprint()
 		}
 
-		if c.Cmd == "HANDSHAKE" && err == nil {
+		if c.Cmd == "HANDSHAKE" {
 			t.ClientID = _c.C.Args[0]
 			t.Mode = _c.C.Args[1]
 		}
@@ -141,9 +140,7 @@ func (t *IOThread) Start(ctx context.Context, shardManager *shardmanager.ShardMa
 
 		// TODO: Streamline this because we need ordering of updates
 		// that are being sent to watchers.
-		if err == nil {
-			watchManager.NotifyWatchers(_c, shardManager, t)
-		}
+		watchManager.NotifyWatchers(_c, shardManager, t)
 	}
 }
 
