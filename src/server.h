@@ -3464,6 +3464,7 @@ void executeObserveCommand(observeCommandInfo *observeInfo, robj *fingerprint_ob
 sds generateCommandFingerprint(client *c);
 int observeSubscribeFingerprint(client *c, sds fingerprint, robj *key);
 void observeUnsubscribeFingerprint(client *c, robj *fingerprint_obj);
+void observeUnsubscribeAll(client *c);
 void observeNotifyKeyChange(robj *key, int dbid);
 void observeDebounceFlush(void);
 int observeDebounceTimerHandler(struct aeEventLoop *eventLoop, long long id, void *clientData);

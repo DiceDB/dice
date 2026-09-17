@@ -1165,4 +1165,36 @@ start_server {tags {"observe"}} {
         $rd read
         $rd close
     }
+
+    test "OBSERVE - RESET clears observe subscriptions" {
+        r SELECT 0
+        r SET rst_k "value"
+
+        set rd [valkey_deferring_client]
+        $rd SELECT 0
+        $rd read
+        $rd OBSERVE GET rst_k
+        set observe [$rd read]
+        assert_equal [lindex $observe 0] "observe"
+        set fingerprint [lindex $observe 2]
+
+        # RESET must drop all observe state, like it does for pubsub
+        $rd RESET
+        assert_equal [$rd read] "RESET"
+
+        # The fingerprint is gone: nothing left to unsubscribe
+        $rd UNOBSERVE $fingerprint
+        assert_equal [$rd read] 0
+
+        # Normal commands work again on the same connection
+        $rd SET rst_k2 "value2"
+        assert_equal [$rd read] "OK"
+
+        # No observe pushes arrive after RESET
+        r SET rst_k "updated"
+        assert_equal [$rd read_timeout 200] {}
+
+        $rd close
+        r DEL rst_k rst_k2
+    }
 }
