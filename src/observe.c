@@ -382,6 +382,37 @@ void freeObserveCommandInfo(observeCommandInfo *observeInfo) {
     zfree(observeInfo);
 }
 
+/* Unsubscribe a client from all observed fingerprints. Used when the
+ * connection state is reset (RESET) or the client is freed, so no stale
+ * subscriptions survive in the server's global observe structures.
+ * Uses a collect-then-act pattern: observeUnsubscribeFingerprint() deletes
+ * entries from c->observe_fingerprints, which would corrupt an iterator
+ * over that same dict. Keys are pinned with incrRefCount before collection
+ * so they survive being deleted from the dict during unsubscription. */
+void observeUnsubscribeAll(client *c) {
+    if (!c->observe_fingerprints) return;
+
+    list *fingerprints_to_remove = listCreate();
+    dictIterator *di = dictGetIterator(c->observe_fingerprints);
+    dictEntry *de;
+    while ((de = dictNext(di)) != NULL) {
+        robj *fingerprint_obj = dictGetKey(de);
+        listAddNodeTail(fingerprints_to_remove, fingerprint_obj);
+        incrRefCount(fingerprint_obj);
+    }
+    dictReleaseIterator(di);
+
+    listNode *ln;
+    listIter li;
+    listRewind(fingerprints_to_remove, &li);
+    while ((ln = listNext(&li))) {
+        robj *fingerprint_obj = ln->value;
+        observeUnsubscribeFingerprint(c, fingerprint_obj);
+        decrRefCount(fingerprint_obj);
+    }
+    listRelease(fingerprints_to_remove);
+}
+
 /* Unsubscribe a client from a specific fingerprint */
 void observeUnsubscribeFingerprint(client *c, robj *fingerprint_obj) {
     dictEntry *de;

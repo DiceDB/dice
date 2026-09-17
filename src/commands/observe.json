@@ -1,0 +1,32 @@
+{
+    "OBSERVE": {
+        "summary": "Observes a read-only command and streams updated result sets when the key changes.",
+        "complexity": "Depends on the observed command.",
+        "group": "pubsub",
+        "since": "8.0.0",
+        "arity": -3,
+        "function": "observeCommand",
+        "command_flags": [
+            "PUBSUB",
+            "NOSCRIPT",
+            "LOADING",
+            "STALE"
+        ],
+        "arguments": [
+            {
+                "name": "command",
+                "type": "string"
+            },
+            {
+                "name": "key",
+                "type": "string"
+            },
+            {
+                "name": "args",
+                "type": "string",
+                "optional": true,
+                "multiple": true
+            }
+        ]
+    }
+}

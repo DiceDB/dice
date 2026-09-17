@@ -1,0 +1,23 @@
+{
+    "UNOBSERVE": {
+        "summary": "Stops observing one or more query subscriptions by fingerprint.",
+        "complexity": "O(N) where N is the number of fingerprints to unobserve.",
+        "group": "pubsub",
+        "since": "8.0.0",
+        "arity": -2,
+        "function": "unobserveCommand",
+        "command_flags": [
+            "PUBSUB",
+            "NOSCRIPT",
+            "LOADING",
+            "STALE"
+        ],
+        "arguments": [
+            {
+                "name": "fingerprint",
+                "type": "string",
+                "multiple": true
+            }
+        ]
+    }
+}
